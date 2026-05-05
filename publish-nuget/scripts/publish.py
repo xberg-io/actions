@@ -52,11 +52,12 @@ def _fetch_oidc_token(audience: str = "nuget") -> str | None:
         return None
 
     url = f"{request_url}&audience={audience}"
-    req = urllib.request.Request(url, headers={"Authorization": f"bearer {request_token}"})
+    req = urllib.request.Request(url, headers={"Authorization": f"bearer {request_token}"})  # noqa: S310
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
             data = json.loads(resp.read().decode())
-        return data.get("value")
+        value = data.get("value")
+        return value if isinstance(value, str) else None
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
         print(f"Warning: OIDC token fetch failed: {e}", file=sys.stderr)
         return None
@@ -71,7 +72,7 @@ def _exchange_oidc_for_nuget_key(oidc_token: str) -> str | None:
     """
     url = "https://www.nuget.org/api/v2/OidcToken"
     body = json.dumps({"token": oidc_token}).encode()
-    req = urllib.request.Request(
+    req = urllib.request.Request(  # noqa: S310
         url,
         data=body,
         headers={"Content-Type": "application/json"},
@@ -80,7 +81,8 @@ def _exchange_oidc_for_nuget_key(oidc_token: str) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             data = json.loads(resp.read().decode())
-        return data.get("apiKey") or data.get("api_key")
+        api_key = data.get("apiKey") or data.get("api_key")
+        return api_key if isinstance(api_key, str) else None
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
         print(f"Error: NuGet OIDC token exchange failed: {e}", file=sys.stderr)
         return None
@@ -101,12 +103,18 @@ def _resolve_api_key() -> str | None:
     print("NUGET_API_KEY not set; attempting OIDC trusted-publishing flow")
     oidc_token = _fetch_oidc_token()
     if oidc_token is None:
-        print("Error: OIDC token unavailable. Either set NUGET_API_KEY or run with `permissions: id-token: write`.", file=sys.stderr)
+        print(
+            "Error: OIDC token unavailable. Either set NUGET_API_KEY or run with `permissions: id-token: write`.",
+            file=sys.stderr,
+        )
         return None
 
     api_key = _exchange_oidc_for_nuget_key(oidc_token)
     if api_key is None:
-        print("Error: failed to exchange OIDC token for a NuGet API key. Verify the trusted publisher is configured for this repo + workflow.", file=sys.stderr)
+        print(
+            "Error: failed to exchange OIDC token for a NuGet API key. Verify the trusted publisher is configured for this repo + workflow.",
+            file=sys.stderr,
+        )
         return None
 
     print("Obtained short-lived NuGet API key via OIDC")
@@ -154,6 +162,7 @@ def main() -> None:
             published += 1
             continue
 
+        assert api_key is not None  # noqa: S101 - guarded above when not dry_run
         exit_code, output = _run(
             [
                 "dotnet",

@@ -22,6 +22,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+.mcp.json
 
 # Task runner
 .task/
@@ -46,8 +47,4 @@ GEMINI.md
 .github/commands/
 .github/copilot-instructions.md
 .github/skills/
-AGENTS.md
-CLAUDE.md
-GEMINI.md
-.mcp.json
 # END ai-rulez
