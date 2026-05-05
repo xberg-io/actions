@@ -1,10 +1,14 @@
 name: Install Task
-description: Install Taskfile CLI
+description: Install the Task CLI
 inputs:
   version:
-    description: Task CLI version to install
+    description: Task CLI version to install. Use "latest" for the newest release.
     required: false
-    default: "3.45.4"
+    default: "latest"
+  install-dir:
+    description: Directory where the task binary should be installed.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -12,10 +16,10 @@ runs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}"
+        "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}" "${{ inputs.install-dir }}"
 
     - name: Setup Task (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}'
+        & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}' '${{ inputs.install-dir }}'

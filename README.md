@@ -14,8 +14,11 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `setup-openssl` | Cross-platform OpenSSL (Linux, macOS, Windows) |
 | `setup-maven` | Maven 3.x with settings.xml |
 | `setup-go-cgo-env` | Go CGO environment for FFI builds |
+| `setup-php` | PHP runtime setup |
+| `setup-elixir` | Elixir / Erlang runtime setup |
 | `setup-r` | R environment |
-| `install-task` | [Task](https://taskfile.dev) runner |
+| `install-task` | [Task](https://taskfile.dev) runner, installed from the official Task release installer (`latest` by default) |
+| `install-alef` | Alef CLI installation |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 
 ### Build
@@ -100,6 +103,24 @@ tag-based publishes).
 | `reusable-python-publish.yml` | Python package build and PyPI publish |
 | `reusable-python-lint.yml` | Python linting via uv + prek |
 
+## Repository Workflows
+
+| Workflow | Description |
+|----------|-------------|
+| `test-unit.yml` | Unit test suite for helper scripts |
+| `test-integration.yml` | Integration tests for selected composite actions |
+| `test-install-task.yml` | Cross-platform smoke test for `install-task` |
+| `test-free-disk-space.yml` | Smoke test for disk cleanup |
+| `test-publish-actions.yml` | Publish action test workflow |
+| `test-setup-maven.yml` | Smoke test for Maven setup |
+| `test-setup-node-workspace.yml` | Smoke test for Node workspace setup |
+| `test-setup-openssl.yml` | Smoke test for OpenSSL setup |
+| `test-setup-python-env.yml` | Smoke test for Python setup |
+| `test-setup-rust.yml` | Smoke test for Rust setup |
+| `test-validate.yml` | Validation workflow tests |
+| `validate-pr.yml` | Repository PR validation |
+| `validate-issues.yml` | Repository issue validation |
+
 ## Usage
 
 ### Composite actions
@@ -108,6 +129,10 @@ tag-based publishes).
 - uses: kreuzberg-dev/actions/setup-rust@v1
   with:
     use-sccache: "true"
+
+- uses: kreuzberg-dev/actions/install-task@v1
+  with:
+    version: latest
 
 - uses: kreuzberg-dev/actions/publish-npm@v1
   with:
