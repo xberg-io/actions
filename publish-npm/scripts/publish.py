@@ -105,7 +105,7 @@ def main() -> None:
     for tgz in tgz_files:
         name = tgz.name
         print(f"Publishing {name}...")
-        exit_code, output = _run(["npm", "publish", str(tgz), *flags])
+        exit_code, output = _run(["npm", "publish", str(tgz.resolve()), *flags])
 
         if exit_code == 0:
             print(f"  Published {name}")
