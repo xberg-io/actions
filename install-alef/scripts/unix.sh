@@ -26,7 +26,7 @@ detect_target() {
   Darwin)
     case "$arch" in
     arm64) echo "aarch64-apple-darwin" ;;
-    x86_64) echo "aarch64-apple-darwin" ;; # Use ARM binary via Rosetta
+    x86_64) echo "x86_64-apple-darwin" ;;
     *)
       echo "Error: unsupported macOS architecture: $arch" >&2
       return 1
