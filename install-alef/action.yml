@@ -14,11 +14,15 @@ runs:
     - name: Install Alef (Unix)
       if: runner.os != 'Windows'
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}"
 
     - name: Install Alef (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}'

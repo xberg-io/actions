@@ -40,11 +40,21 @@ detect_target() {
   esac
 }
 
-# Read pinned version from top-level `version` key in alef.toml
+# Read pinned version from alef.toml.
+# Accepts either:
+#   - top-level `version = "..."` (alef's own repo convention)
+#   - `alef_version = "..."` (consumer-repo convention; may live under [workspace])
 read_pinned_version() {
   if [[ -f "alef.toml" ]]; then
     local pinned
+    # Try top-level `version = "..."` (must appear before first [section] header)
     pinned="$(sed -n '/^\[/q; s/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' alef.toml | head -1)"
+    if [[ -n "$pinned" ]]; then
+      echo "$pinned"
+      return 0
+    fi
+    # Try `alef_version = "..."` (may appear anywhere, e.g. under [workspace])
+    pinned="$(sed -n 's/^alef_version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' alef.toml | head -1)"
     if [[ -n "$pinned" ]]; then
       echo "$pinned"
       return 0
@@ -67,8 +77,11 @@ resolve_version() {
       return 0
     fi
 
-    local tag
-    tag="$(curl --silent --fail \
+    local tag auth_args=()
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+      auth_args=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    fi
+    tag="$(curl --silent --fail "${auth_args[@]}" \
       "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest" |
       grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
     if [[ -z "$tag" ]]; then

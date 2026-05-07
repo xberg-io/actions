@@ -30,11 +30,17 @@ if ($alefVersion -eq "main") {
 # Resolve "latest" — check alef.toml for a pinned version first, then fall back to GitHub
 if ($alefVersion -eq "latest") {
   if (Test-Path "alef.toml") {
-    # Read top-level version key (before any [section] header)
+    # Read either:
+    #   - top-level `version = "..."` (alef's own repo convention; before first [section])
+    #   - `alef_version = "..."` (consumer convention; may live under [workspace])
     $pinned = $null
+    $beforeSection = $true
     foreach ($line in Get-Content "alef.toml") {
-      if ($line -match '^\[') { break }
-      if ($line -match '^\s*version\s*=\s*"([^"]+)"') {
+      if ($line -match '^\[') { $beforeSection = $false }
+      if ($beforeSection -and $line -match '^\s*version\s*=\s*"([^"]+)"') {
+        $pinned = $Matches[1]; break
+      }
+      if ($line -match '^\s*alef_version\s*=\s*"([^"]+)"') {
         $pinned = $Matches[1]; break
       }
     }
@@ -44,7 +50,12 @@ if ($alefVersion -eq "latest") {
     }
   }
   if ($alefVersion -eq "latest") {
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest"
+    $headers = @{}
+    if ($env:GITHUB_TOKEN) {
+      $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+      $headers["X-GitHub-Api-Version"] = "2022-11-28"
+    }
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest" -Headers $headers
     $alefVersion = $release.tag_name -replace '^v', ''
     Write-Output "Resolved latest version: $alefVersion"
   }
