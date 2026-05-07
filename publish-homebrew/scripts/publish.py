@@ -102,11 +102,12 @@ def build_bottle_block(
 def update_formula_url_and_sha(content: str, github_repo: str, tag: str, tarball_sha256: str) -> str:
     """Replace the source URL and its sha256 in the formula content.
 
-    Handles both single-quoted and double-quoted sha256 values.
+    Handles both single-quoted and double-quoted url and sha256 values —
+    Homebrew formulae in the wild use both styles.
     """
     escaped = re.escape(github_repo)
     updated = re.sub(
-        rf'url "https://github\.com/{escaped}/archive/[^"]+\.tar\.gz"',
+        rf"""url ['"]https://github\.com/{escaped}/archive/[^'"]+\.tar\.gz['"]""",
         f'url "https://github.com/{github_repo}/archive/{tag}.tar.gz"',
         content,
     )
