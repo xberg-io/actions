@@ -1,0 +1,50 @@
+name: Build Homebrew Bottles
+description: >
+  Build real Homebrew bottles for one or more formulas on the current platform
+  via `brew install --build-bottle` + `brew bottle --json`. Bottle tarballs are
+  uploaded to the GitHub release; bottle JSON manifests are saved to the output
+  directory for the merge step to aggregate.
+
+  This action runs on macOS (native brew) or Linux (after install-homebrew-linux).
+  It requires a tap that already publishes the formula source URLs/SHAs — i.e.
+  publish-homebrew-formula must have run before this.
+
+inputs:
+  tag:
+    description: "Git tag for the release (e.g. v1.8.0)"
+    required: true
+  version:
+    description: "Semantic version (e.g. 1.8.0)"
+    required: true
+  tap:
+    description: "Tap repo (e.g. kreuzberg-dev/tap)"
+    required: true
+  formulas:
+    description: >
+      Newline-separated list of formula names to bottle (e.g. ts-pack, libts-pack).
+    required: true
+  out-dir:
+    description: "Directory to write bottle JSON manifests to"
+    required: true
+  github-repo:
+    description: "Source repository for bottle tarball uploads (e.g. kreuzberg-dev/foo)"
+    required: true
+  token:
+    description: "GitHub token with contents:write for `gh release upload`"
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build bottles
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TAG: ${{ inputs.tag }}
+        VERSION: ${{ inputs.version }}
+        TAP: ${{ inputs.tap }}
+        FORMULAS: ${{ inputs.formulas }}
+        OUT_DIR: ${{ inputs.out-dir }}
+        GITHUB_REPO: ${{ inputs.github-repo }}
+      run: "${{ github.action_path }}/scripts/build-bottles.sh"

@@ -20,6 +20,7 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `install-task` | [Task](https://taskfile.dev) runner, installed from the official Task release installer (`latest` by default) |
 | `install-alef` | Alef CLI installation |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
+| `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
 
 ### Build
 
@@ -33,7 +34,9 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `build-php-extension` | PHP extensions |
 | `build-wasm-package` | WebAssembly packages |
 | `build-rust-cli` | Rust CLI binaries |
-| `build-homebrew-bottle` | Homebrew bottle tarballs from CLI binaries |
+| `build-homebrew-bottle` | Synthetic bottle tarballs from a single CLI binary (homemade — does not invoke `brew bottle`) |
+| `homebrew-build-bottles` | Real Homebrew bottles for one or more formulas via `brew install --build-bottle` + `brew bottle --json`; uploads tarballs to the GH release and saves bottle JSONs for the merge step |
+| `homebrew-merge-bottles` | Aggregates per-platform bottle JSON manifests into formula `bottle do ... end` blocks (jq-driven, no brew needed on the runner); emits cellar values as Ruby symbols |
 | `package-php-pie` | PIE-conventional binary archive from a built PHP extension |
 
 ### Publish

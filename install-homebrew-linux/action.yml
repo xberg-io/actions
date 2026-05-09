@@ -1,0 +1,12 @@
+name: Install Homebrew (Linux)
+description: >
+  Install Homebrew (Linuxbrew) on a Linux runner and put it on PATH so
+  subsequent steps can build bottles. No-op if brew is already installed.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Homebrew on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: "${{ github.action_path }}/scripts/install.sh"

@@ -1,0 +1,41 @@
+name: Merge Homebrew Bottle DSL
+description: >
+  Aggregate per-platform bottle JSON manifests into a `bottle do ... end` block
+  and rewrite each formula in the tap checkout. Uses jq to parse the JSON, so
+  the merge runner does not need brew installed. Emits cellar values as Ruby
+  symbols (e.g. `:any_skip_relocation`) when applicable.
+
+inputs:
+  tag:
+    description: "Git tag for the release (e.g. v1.8.0)"
+    required: true
+  version:
+    description: "Semantic version (e.g. 1.8.0)"
+    required: true
+  tap-dir:
+    description: "Path to a checked-out tap repository"
+    required: true
+  json-dir:
+    description: "Directory containing bottle JSON manifests"
+    required: true
+  formulas:
+    description: >
+      Newline-separated list of formula names to merge (e.g. ts-pack, libts-pack).
+    required: true
+  github-repo:
+    description: "Source repository for bottle root_url (e.g. kreuzberg-dev/foo)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Merge bottle DSL into formulas
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        VERSION: ${{ inputs.version }}
+        TAP_DIR: ${{ inputs.tap-dir }}
+        JSON_DIR: ${{ inputs.json-dir }}
+        FORMULAS: ${{ inputs.formulas }}
+        GITHUB_REPO: ${{ inputs.github-repo }}
+      run: "${{ github.action_path }}/scripts/merge-bottles.sh"
