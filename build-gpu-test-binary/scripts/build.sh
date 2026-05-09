@@ -6,6 +6,11 @@ package="${INPUT_PACKAGE:?INPUT_PACKAGE is required}"
 test_name="${INPUT_TEST_NAME:?INPUT_TEST_NAME is required}"
 features="${INPUT_FEATURES:-}"
 output_name="${INPUT_OUTPUT_NAME:-gpu-test-binary}"
+working_directory="${INPUT_WORKING_DIRECTORY:-.}"
+
+if [[ "$working_directory" != "." ]]; then
+  cd "$working_directory"
+fi
 
 cargo_args=(test -p "$package")
 if [[ -n "$features" ]]; then

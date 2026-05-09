@@ -1,0 +1,54 @@
+name: Test build-gpu-test-binary
+on:
+  push:
+    paths:
+      - "build-gpu-test-binary/**"
+      - ".github/workflows/test-build-gpu-test-binary.yml"
+  pull_request:
+    paths:
+      - "build-gpu-test-binary/**"
+      - ".github/workflows/test-build-gpu-test-binary.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Stage a tiny cargo workspace with one test target
+        shell: bash
+        run: |
+          mkdir -p fixture/src fixture/tests
+          cat >fixture/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-pkg"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [[test]]
+          name = "smoke"
+          path = "tests/smoke.rs"
+          TOML
+          echo 'pub fn add(a: i32, b: i32) -> i32 { a + b }' >fixture/src/lib.rs
+          echo '#[test] fn t() { assert_eq!(fixture_pkg::add(1, 1), 2); }' >fixture/tests/smoke.rs
+
+      - name: Build the test binary via the action
+        id: build
+        uses: ./build-gpu-test-binary
+        with:
+          package: fixture-pkg
+          test-name: smoke
+          output-name: smoke-test-binary
+          working-directory: fixture
+
+      - name: Verify binary was staged
+        shell: bash
+        run: |
+          test -x fixture/smoke-test-binary
+          ./fixture/smoke-test-binary
+          [ -n "${{ steps.build.outputs.binary-path }}" ]
+          test -f "${{ steps.build.outputs.binary-path }}"

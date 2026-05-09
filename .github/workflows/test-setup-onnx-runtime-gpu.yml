@@ -1,0 +1,33 @@
+name: Test setup-onnx-runtime-gpu
+on:
+  workflow_dispatch:
+  # Path-triggered runs are intentionally NOT enabled — this test downloads
+  # a ~400 MB ORT GPU tarball and is too heavy for every PR. Trigger
+  # manually after touching the action.
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage ORT GPU build
+        id: ort
+        uses: ./setup-onnx-runtime-gpu
+        with:
+          version: "1.24.2"
+
+      - name: Verify outputs and env exports
+        shell: bash
+        run: |
+          test -n "${{ steps.ort.outputs.lib-dir }}"
+          test -d "${{ steps.ort.outputs.lib-dir }}"
+          # ORT_DYLIB_PATH is set in $GITHUB_ENV; available to the next step.
+          test -n "$ORT_DYLIB_PATH"
+          test -f "$ORT_DYLIB_PATH"
+
+      - name: Re-run is idempotent (cache hit)
+        uses: ./setup-onnx-runtime-gpu
+        with:
+          version: "1.24.2"

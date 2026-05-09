@@ -20,6 +20,12 @@ inputs:
     description: "Output filename for the staged binary."
     required: false
     default: "gpu-test-binary"
+  working-directory:
+    description: >
+      Directory to run cargo from. Defaults to the repository root. Set this
+      when the package's Cargo.toml lives in a subdirectory.
+    required: false
+    default: "."
 
 outputs:
   binary-path:
@@ -37,4 +43,5 @@ runs:
         INPUT_TEST_NAME: ${{ inputs.test-name }}
         INPUT_FEATURES: ${{ inputs.features }}
         INPUT_OUTPUT_NAME: ${{ inputs.output-name }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: bash ${{ github.action_path }}/scripts/build.sh

@@ -1,0 +1,62 @@
+name: Test check-docker-image-size
+on:
+  push:
+    paths:
+      - "check-docker-image-size/**"
+      - ".github/workflows/test-check-docker-image-size.yml"
+  pull_request:
+    paths:
+      - "check-docker-image-size/**"
+      - ".github/workflows/test-check-docker-image-size.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build a tiny image
+        run: |
+          printf 'FROM scratch\nCOPY --from=alpine:3.20 /bin/sh /\nENTRYPOINT ["/sh"]\n' >Dockerfile.tiny
+          docker build -f Dockerfile.tiny -t test-tiny:latest .
+          rm -f Dockerfile.tiny
+
+      - name: Check size below threshold
+        id: ok
+        uses: ./check-docker-image-size
+        with:
+          image: test-tiny:latest
+          warn-mb: "1000"
+          label: "tiny"
+
+      - name: Verify size output
+        shell: bash
+        env:
+          SIZE: ${{ steps.ok.outputs.size-mb }}
+        run: |
+          test -n "$SIZE"
+          test "$SIZE" -ge 0
+
+      - name: Check size above warn threshold (expect warning, exit 0)
+        uses: ./check-docker-image-size
+        with:
+          image: test-tiny:latest
+          warn-mb: "0"
+          label: "tiny-warn"
+
+      - name: Check size above fail threshold (expect failure)
+        id: fail
+        uses: ./check-docker-image-size
+        continue-on-error: true
+        with:
+          image: test-tiny:latest
+          fail-mb: "0"
+          label: "tiny-fail"
+
+      - name: Confirm failure outcome
+        shell: bash
+        run: |
+          [ "${{ steps.fail.outcome }}" = "failure" ] || {
+            echo "expected failure, got ${{ steps.fail.outcome }}"
+            exit 1
+          }

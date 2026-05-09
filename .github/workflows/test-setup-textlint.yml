@@ -1,0 +1,32 @@
+name: Test setup-textlint
+on:
+  push:
+    paths:
+      - "setup-textlint/**"
+      - ".github/workflows/test-setup-textlint.yml"
+  pull_request:
+    paths:
+      - "setup-textlint/**"
+      - ".github/workflows/test-setup-textlint.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup textlint (default rule set)
+        uses: ./setup-textlint
+
+      - name: Verify textlint is on PATH
+        shell: bash
+        run: |
+          npx textlint --version
+          npx textlint --help | head -5
+
+      - name: Verify a representative rule is installed
+        shell: bash
+        run: |
+          npm ls textlint-rule-terminology >/dev/null
+          npm ls textlint-rule-alex >/dev/null
+          npm ls @textlint-rule/textlint-rule-no-unmatched-pair >/dev/null

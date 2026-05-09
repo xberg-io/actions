@@ -1,0 +1,59 @@
+name: Test configure-maven-gpg
+on:
+  push:
+    paths:
+      - "configure-maven-gpg/**"
+      - ".github/workflows/test-configure-maven-gpg.yml"
+  pull_request:
+    paths:
+      - "configure-maven-gpg/**"
+      - ".github/workflows/test-configure-maven-gpg.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage a pom.xml with the legacy two-arg pinentry pattern
+        shell: bash
+        run: |
+          mkdir -p tmp/pkg
+          cat >tmp/pkg/pom.xml <<'XML'
+          <project>
+            <build>
+              <plugins>
+                <plugin>
+                  <artifactId>maven-gpg-plugin</artifactId>
+                  <configuration>
+                    <gpgArguments>
+                      <arg>--pinentry-mode</arg>
+                      <arg>loopback</arg>
+                    </gpgArguments>
+                  </configuration>
+                </plugin>
+              </plugins>
+            </build>
+          </project>
+          XML
+
+      - name: Run action
+        uses: ./configure-maven-gpg
+        with:
+          pom-file: tmp/pkg/pom.xml
+
+      - name: Verify pom is patched
+        shell: bash
+        run: |
+          grep -q '<arg>--pinentry-mode=loopback</arg>' tmp/pkg/pom.xml
+          ! grep -qE '<arg>--pinentry-mode</arg>\s*<arg>loopback</arg>' tmp/pkg/pom.xml
+
+      - name: Re-run is idempotent
+        uses: ./configure-maven-gpg
+        with:
+          pom-file: tmp/pkg/pom.xml
+
+      - name: Pom unchanged second time
+        shell: bash
+        run: |
+          grep -q '<arg>--pinentry-mode=loopback</arg>' tmp/pkg/pom.xml

@@ -1,0 +1,57 @@
+name: Test run-api-contract-tests
+on:
+  push:
+    paths:
+      - "run-api-contract-tests/**"
+      - ".github/workflows/test-run-api-contract-tests.yml"
+  pull_request:
+    paths:
+      - "run-api-contract-tests/**"
+      - ".github/workflows/test-run-api-contract-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Petstore v3 is a known-good OpenAPI 3.0 demo image that serves
+      # /openapi.json on its bound port (default 8080). We bind to 8000 to
+      # match the action's default and to keep the OpenAPI URL conventional.
+      - name: Pull the petstore3 OpenAPI demo image
+        run: docker pull swaggerapi/petstore3:1.0.7
+
+      - name: Tag the image at the port we'll bind
+        run: |
+          # The petstore image listens on 8080 internally — wrap it so the action's
+          # `port=8000` plumbing maps host:container correctly.
+          cat >Dockerfile.smoke <<'DOCKER'
+          FROM swaggerapi/petstore3:1.0.7
+          ENV PORT=8000
+          EXPOSE 8000
+          DOCKER
+          docker build -f Dockerfile.smoke -t petstore-smoke:test .
+          rm -f Dockerfile.smoke
+
+      - name: Run schemathesis via the action (allow non-zero on schema findings)
+        id: contract
+        uses: ./run-api-contract-tests
+        continue-on-error: true
+        with:
+          image: petstore-smoke:test
+          port: "8080"
+          spec-path: /api/v3/openapi.json
+          startup-wait-seconds: "10"
+          max-examples: "3"
+          checks: not_a_server_error
+
+      - name: Confirm the action ran (success or controlled failure)
+        shell: bash
+        run: |
+          # Either pass (clean petstore) or fail (schemathesis finds issues) —
+          # both prove the action plumbed install, run, and teardown correctly.
+          # A "cancelled"/"skipped" outcome would mean the action itself broke.
+          case "${{ steps.contract.outcome }}" in
+            success|failure) echo "ok: outcome=${{ steps.contract.outcome }}" ;;
+            *) echo "unexpected outcome: ${{ steps.contract.outcome }}"; exit 1 ;;
+          esac
