@@ -85,6 +85,7 @@ tag-based publishes).
 | `generate-elixir-checksums` | RustlerPrecompiled NIF checksum generation |
 | `check-registry` | Check if a package version exists on any registry |
 | `wait-for-package` | Poll registries until a version becomes available |
+| `announce-release-discord` | Post a release announcement to Discord (skips RC tags, dedup via release-asset marker) |
 
 ### Utility
 

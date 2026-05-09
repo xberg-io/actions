@@ -1,0 +1,61 @@
+name: Announce Release on Discord
+description: >
+  Post a release announcement to a Discord channel via webhook. Skips
+  prerelease tags (anything not matching vMAJOR.MINOR.PATCH) and deduplicates
+  by uploading a marker asset to the GitHub Release after posting, so reruns
+  on a recreated tag do not announce twice.
+
+inputs:
+  tag:
+    description: "Git tag for the release (e.g. v1.2.3). Tags with a -suffix are treated as prereleases and skipped."
+    required: true
+  webhook-url:
+    description: "Discord webhook URL. Pass via secrets, never hardcode."
+    required: true
+  repo:
+    description: "owner/name of the GitHub repo. Used to derive the release URL and footer."
+    required: false
+    default: ${{ github.repository }}
+  project-name:
+    description: "Display name shown in the embed title. Defaults to the repo name."
+    required: false
+    default: ""
+  notes:
+    description: "Override the release description. When empty, the GitHub Release body is fetched."
+    required: false
+    default: ""
+  color:
+    description: "Embed accent color. Accepts decimal, 0xHEX, or #HEX. Default is Discord Blurple."
+    required: false
+    default: "0x5865F2"
+  dry-run:
+    description: "Render and log the payload without posting and without uploading the marker."
+    required: false
+    default: "false"
+  token:
+    description: "GitHub token used to read the release body and upload the dedup marker asset."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  posted:
+    description: "One of: true, false (dry-run), skipped-prerelease, skipped-already-announced."
+    value: ${{ steps.announce.outputs.posted }}
+
+runs:
+  using: composite
+  steps:
+    - name: Announce release on Discord
+      id: announce
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_WEBHOOK_URL: ${{ inputs.webhook-url }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_PROJECT_NAME: ${{ inputs.project-name }}
+        INPUT_NOTES: ${{ inputs.notes }}
+        INPUT_COLOR: ${{ inputs.color }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/announce.py
