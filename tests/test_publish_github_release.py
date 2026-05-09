@@ -54,6 +54,46 @@ def test_build_create_flags_no_generate_notes():
     assert "--title" in flags
 
 
+def test_build_create_flags_target():
+    flags = ensure_mod.build_create_flags(
+        "v1.2.3",
+        generate_notes=True,
+        draft=False,
+        prerelease=False,
+        target="abc123",
+    )
+
+    assert flags[-2:] == ["--target", "abc123"]
+
+
+def test_build_create_flags_notes_overrides_generate_notes():
+    flags = ensure_mod.build_create_flags(
+        "v1.2.3",
+        generate_notes=True,
+        draft=False,
+        prerelease=False,
+        notes="Release v1.2.3",
+    )
+
+    assert "--notes" in flags
+    assert "Release v1.2.3" in flags
+    # Mutually exclusive — gh CLI rejects both at once.
+    assert "--generate-notes" not in flags
+
+
+def test_build_create_flags_empty_notes_falls_back_to_generate():
+    flags = ensure_mod.build_create_flags(
+        "v1.2.3",
+        generate_notes=True,
+        draft=False,
+        prerelease=False,
+        notes="",
+    )
+
+    assert "--generate-notes" in flags
+    assert "--notes" not in flags
+
+
 # ---------------------------------------------------------------------------
 # expand_artifact_patterns
 # ---------------------------------------------------------------------------

@@ -14,10 +14,10 @@ import sys
 def build_create_flags(
     title: str,
     generate_notes: bool,
-    notes: str,
     draft: bool,
     prerelease: bool,
-    target: str,
+    notes: str = "",
+    target: str = "",
 ) -> list[str]:
     """Return the list of flags for `gh release create`.
 
@@ -86,7 +86,14 @@ def main() -> None:
             subprocess.run(["gh", "release", "edit", tag, "--draft=false"], check=True)
     else:
         print(f"Creating release {tag}...")
-        create_flags = build_create_flags(title, generate_notes, notes, draft, prerelease, target)
+        create_flags = build_create_flags(
+            title,
+            generate_notes,
+            draft,
+            prerelease,
+            notes=notes,
+            target=target,
+        )
         subprocess.run(["gh", "release", "create", tag, *create_flags], check=True)
 
     print(f"Release {tag} ready")
