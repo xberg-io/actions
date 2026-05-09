@@ -164,14 +164,35 @@ def post_to_discord(webhook_url: str, payload: dict[str, Any]) -> None:
         sys.exit(1)
 
 
-def upload_marker(tag: str, repo: str) -> None:
+def upload_marker(tag: str, repo: str) -> bool:
+    """Upload the dedup marker asset best-effort.
+
+    The marker contains the tag string (rather than being empty) because
+    GitHub's asset-upload API rejects zero-byte bodies with HTTP 400. Dedup
+    only checks the asset *name* (see already_announced), so any non-empty
+    content works.
+
+    Failures here do not propagate: by the time we reach this function the
+    Discord post has already happened, so failing the step would create
+    noisy CI for no useful reason. We log a warning and move on; the worst
+    case is a duplicate announcement on the next workflow rerun.
+    """
     marker = Path(MARKER_ASSET_NAME)
-    marker.write_text("")
+    marker.write_text(f"{tag}\n")
     try:
         cmd = ["gh", "release", "upload", tag, str(marker), "--clobber"]
         if repo:
             cmd.extend(["--repo", repo])
-        subprocess.run(cmd, check=True)
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"Warning: failed to upload {MARKER_ASSET_NAME} marker (exit {exc.returncode}); "
+                "Discord post already succeeded, continuing.",
+                file=sys.stderr,
+            )
+            return False
+        return True
     finally:
         marker.unlink(missing_ok=True)
 
@@ -239,8 +260,8 @@ def main() -> None:
     post_to_discord(webhook_url, payload)
     print(f"Posted {tag} announcement to Discord")
 
-    upload_marker(tag, repo)
-    print(f"Uploaded {MARKER_ASSET_NAME} marker to release {tag}")
+    if upload_marker(tag, repo):
+        print(f"Uploaded {MARKER_ASSET_NAME} marker to release {tag}")
     write_output("posted", "true")
 
 
