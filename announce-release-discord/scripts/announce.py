@@ -28,7 +28,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any, cast
 
-MARKER_ASSET_NAME = ".discord-announced"
+# Asset names starting with a dot get renamed by GitHub's release-asset API
+# (e.g. `.discord-announced` becomes `default.discord-announced`), which breaks
+# dedup — so we use a plain name. The legacy dot-prefixed form is also
+# accepted by `already_announced` for backward compat with releases that were
+# marked before this fix.
+MARKER_ASSET_NAME = "discord-announced.marker"
+LEGACY_MARKER_ASSET_NAMES = frozenset({".discord-announced", "default.discord-announced"})
 DISCORD_DESCRIPTION_LIMIT = 4000
 DEFAULT_EMBED_COLOR = 0x5865F2  # Discord Blurple
 STABLE_TAG_PATTERN = re.compile(r"^v\d+\.\d+\.\d+$")
@@ -79,7 +85,8 @@ def already_announced(tag: str, repo: str) -> bool:
     payload = gh_release_view(tag, "assets", repo)
     if not payload:
         return False
-    return any(asset.get("name") == MARKER_ASSET_NAME for asset in payload.get("assets") or [])
+    accepted = LEGACY_MARKER_ASSET_NAMES | {MARKER_ASSET_NAME}
+    return any(asset.get("name") in accepted for asset in payload.get("assets") or [])
 
 
 def fetch_release(tag: str, repo: str) -> dict[str, Any]:
