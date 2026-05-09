@@ -15,43 +15,41 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build a tiny image
-        run: |
-          printf 'FROM scratch\nCOPY --from=alpine:3.20 /bin/sh /\nENTRYPOINT ["/sh"]\n' >Dockerfile.tiny
-          docker build -f Dockerfile.tiny -t test-tiny:latest .
-          rm -f Dockerfile.tiny
+      - name: Pull alpine image
+        run: docker pull alpine:3.20
 
       - name: Check size below threshold
         id: ok
         uses: ./check-docker-image-size
         with:
-          image: test-tiny:latest
-          warn-mb: "1000"
-          label: "tiny"
+          image: alpine:3.20
+          warn-mb: "100"
+          label: "alpine"
 
-      - name: Verify size output
+      - name: Verify size output is non-zero
         shell: bash
         env:
           SIZE: ${{ steps.ok.outputs.size-mb }}
         run: |
           test -n "$SIZE"
-          test "$SIZE" -ge 0
+          [ "$SIZE" -ge 1 ]
+          [ "$SIZE" -le 50 ]
 
-      - name: Check size above warn threshold (expect warning, exit 0)
+      - name: Threshold below size triggers warn (still exit 0)
         uses: ./check-docker-image-size
         with:
-          image: test-tiny:latest
-          warn-mb: "0"
-          label: "tiny-warn"
+          image: alpine:3.20
+          warn-mb: "1"
+          label: "alpine-warn"
 
-      - name: Check size above fail threshold (expect failure)
+      - name: Threshold below size with fail-mb triggers failure
         id: fail
         uses: ./check-docker-image-size
         continue-on-error: true
         with:
-          image: test-tiny:latest
-          fail-mb: "0"
-          label: "tiny-fail"
+          image: alpine:3.20
+          fail-mb: "1"
+          label: "alpine-fail"
 
       - name: Confirm failure outcome
         shell: bash

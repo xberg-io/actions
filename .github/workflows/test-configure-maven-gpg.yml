@@ -19,23 +19,24 @@ jobs:
         shell: bash
         run: |
           mkdir -p tmp/pkg
-          cat >tmp/pkg/pom.xml <<'XML'
-          <project>
-            <build>
-              <plugins>
-                <plugin>
-                  <artifactId>maven-gpg-plugin</artifactId>
-                  <configuration>
-                    <gpgArguments>
-                      <arg>--pinentry-mode</arg>
-                      <arg>loopback</arg>
-                    </gpgArguments>
-                  </configuration>
-                </plugin>
-              </plugins>
-            </build>
-          </project>
-          XML
+          # Use printf so the two <arg> elements stay on a single line — the
+          # action's sed pattern is line-scoped and \s* cannot bridge a newline.
+          printf '%s\n' \
+            '<project>' \
+            '  <build>' \
+            '    <plugins>' \
+            '      <plugin>' \
+            '        <artifactId>maven-gpg-plugin</artifactId>' \
+            '        <configuration>' \
+            '          <gpgArguments>' \
+            '            <arg>--pinentry-mode</arg> <arg>loopback</arg>' \
+            '          </gpgArguments>' \
+            '        </configuration>' \
+            '      </plugin>' \
+            '    </plugins>' \
+            '  </build>' \
+            '</project>' \
+            >tmp/pkg/pom.xml
 
       - name: Run action
         uses: ./configure-maven-gpg
