@@ -172,3 +172,167 @@ jobs:
           package: serde
           version: "1.0.200"
           max-attempts: "3"
+
+  test-publish-gleam-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          gleam-version: "1.6"
+
+      - name: Scaffold a Gleam package
+        run: gleam new pkg
+
+      - name: Test publish-gleam (dry-run)
+        uses: ./publish-gleam
+        with:
+          package-dir: pkg
+          setup-beam: "false"
+          dry-run: "true"
+
+  test-publish-hex-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.17"
+
+      - name: Scaffold an Elixir mix project
+        run: mix new pkg
+
+      - name: Test publish-hex (dry-run)
+        uses: ./publish-hex
+        with:
+          package-dir: pkg
+          dry-run: "true"
+
+  # publish-homebrew is intentionally skipped: even in dry-run it requires
+  # real .bottle.tar.gz artifacts, a real tap repository to clone, and
+  # downloads the source tarball from GitHub. Manufacturing those stubs in
+  # CI would essentially re-implement the action; smoke value is low.
+
+  test-publish-maven-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Stage a minimal pom.xml
+        shell: bash
+        run: |
+          mkdir -p pkg
+          cat >pkg/pom.xml <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>dev.kreuzberg.test</groupId>
+            <artifactId>dry-run</artifactId>
+            <version>0.0.1</version>
+            <packaging>jar</packaging>
+          </project>
+          XML
+
+      - name: Test publish-maven (dry-run)
+        uses: ./publish-maven
+        with:
+          pom-file: pkg/pom.xml
+          dry-run: "true"
+
+  test-publish-maven-gradle-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage a minimal Gradle project dir
+        run: |
+          mkdir -p pkg
+          touch pkg/build.gradle.kts
+
+      - name: Test publish-maven-gradle (dry-run)
+        uses: ./publish-maven-gradle
+        with:
+          working-directory: pkg
+          setup-java: "false"
+          setup-gradle: "false"
+          dry-run: "true"
+
+  test-publish-pub-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Scaffold a Dart package
+        run: dart create -t package pkg
+
+      - name: Test publish-pub (dry-run)
+        uses: ./publish-pub
+        with:
+          package-dir: pkg
+          setup-dart: "false"
+          dry-run: "true"
+
+  test-publish-swift-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Stage a minimal Package.swift
+        run: |
+          mkdir -p pkg
+          cat >pkg/Package.swift <<'SWIFT'
+          // swift-tools-version:5.10
+          import PackageDescription
+          let package = Package(name: "DryRun")
+          SWIFT
+
+      - name: Test publish-swift (dry-run)
+        uses: ./publish-swift
+        with:
+          working-directory: pkg
+          tag: v1.0.0
+          setup-swift: "false"
+          ping-spi: "false"
+          dry-run: "true"
+
+  test-publish-zig-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Stage a minimal build.zig.zon
+        run: |
+          mkdir -p pkg
+          cat >pkg/build.zig.zon <<'ZON'
+          .{
+              .name = "dry_run",
+              .version = "0.0.1",
+              .paths = .{""},
+          }
+          ZON
+
+      - name: Test publish-zig (dry-run)
+        uses: ./publish-zig
+        with:
+          working-directory: pkg
+          tag: v1.0.0
+          setup-zig: "false"
+          update-release-notes: "false"
+          dry-run: "true"
