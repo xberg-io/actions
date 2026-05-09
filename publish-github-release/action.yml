@@ -16,9 +16,20 @@ inputs:
     required: false
     default: ""
   generate-notes:
-    description: "Auto-generate release notes"
+    description: >
+      Auto-generate release notes from commits since the previous tag. Mutually
+      exclusive with `notes` — if `notes` is non-empty, `generate-notes` is
+      ignored.
     required: false
     default: "true"
+  notes:
+    description: >
+      Literal release-notes body. When non-empty, takes precedence over
+      `generate-notes` and is forwarded to `gh release create --notes <value>`.
+      Useful for ensure-exists placeholder releases that get overwritten by a
+      later finalize step.
+    required: false
+    default: ""
   draft:
     description: "Create as draft release"
     required: false
@@ -27,6 +38,14 @@ inputs:
     description: "Mark as pre-release"
     required: false
     default: "false"
+  target:
+    description: >
+      Commit-ish (SHA, branch, or tag name) to anchor the release to when
+      the tag does not yet exist on the remote. Forwarded to
+      `gh release create --target <value>`. Empty (default) lets gh choose
+      the default branch HEAD.
+    required: false
+    default: ""
   dry-run:
     description: "Perform a dry run without creating the release"
     required: false
@@ -46,8 +65,10 @@ runs:
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_TITLE: ${{ inputs.title }}
         INPUT_GENERATE_NOTES: ${{ inputs.generate-notes }}
+        INPUT_NOTES: ${{ inputs.notes }}
         INPUT_DRAFT: ${{ inputs.draft }}
         INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_TARGET: ${{ inputs.target }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
         python3 ${{ github.action_path }}/scripts/ensure_release.py

@@ -11,15 +11,30 @@ import subprocess
 import sys
 
 
-def build_create_flags(title: str, generate_notes: bool, draft: bool, prerelease: bool) -> list[str]:
-    """Return the list of flags for `gh release create`."""
+def build_create_flags(
+    title: str,
+    generate_notes: bool,
+    notes: str,
+    draft: bool,
+    prerelease: bool,
+    target: str,
+) -> list[str]:
+    """Return the list of flags for `gh release create`.
+
+    `notes` takes precedence over `generate_notes` when non-empty: gh CLI
+    rejects `--notes` and `--generate-notes` used together.
+    """
     flags: list[str] = ["--title", title]
-    if generate_notes:
+    if notes:
+        flags.extend(["--notes", notes])
+    elif generate_notes:
         flags.append("--generate-notes")
     if draft:
         flags.append("--draft")
     if prerelease:
         flags.append("--prerelease")
+    if target:
+        flags.extend(["--target", target])
     return flags
 
 
@@ -29,6 +44,8 @@ def main() -> None:
     generate_notes = os.environ.get("INPUT_GENERATE_NOTES", "true").lower() == "true"
     draft = os.environ.get("INPUT_DRAFT", "false").lower() == "true"
     prerelease = os.environ.get("INPUT_PRERELEASE", "false").lower() == "true"
+    notes = os.environ.get("INPUT_NOTES", "")
+    target = os.environ.get("INPUT_TARGET", "").strip()
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
 
     if not tag:
@@ -44,6 +61,8 @@ def main() -> None:
         print(f"  Generate notes: {generate_notes}")
         print(f"  Draft: {draft}")
         print(f"  Pre-release: {prerelease}")
+        if target:
+            print(f"  Target: {target}")
         sys.exit(0)
 
     # Check if release already exists
@@ -67,7 +86,7 @@ def main() -> None:
             subprocess.run(["gh", "release", "edit", tag, "--draft=false"], check=True)
     else:
         print(f"Creating release {tag}...")
-        create_flags = build_create_flags(title, generate_notes, draft, prerelease)
+        create_flags = build_create_flags(title, generate_notes, notes, draft, prerelease, target)
         subprocess.run(["gh", "release", "create", tag, *create_flags], check=True)
 
     print(f"Release {tag} ready")
