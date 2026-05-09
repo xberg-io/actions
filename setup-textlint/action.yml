@@ -1,0 +1,29 @@
+name: Setup textlint
+description: >
+  Install textlint plus the kreuzberg-dev standard rule set in one
+  batched npm install. Pairs with a project-local `.textlintrc` and
+  caller-provided runner script.
+
+inputs:
+  node-version:
+    description: "Node.js version to install via actions/setup-node."
+    required: false
+    default: "24"
+  extra-packages:
+    description: "Whitespace-separated list of extra npm package specs to install alongside the standard set."
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install textlint and rules
+      shell: bash
+      env:
+        INPUT_EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+      run: bash ${{ github.action_path }}/scripts/install.sh

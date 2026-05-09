@@ -1,0 +1,31 @@
+name: Configure Maven GPG
+description: >
+  Prepare the GPG environment for Maven publishing. Prefers gpg2 if
+  available (shimmed onto PATH as `gpg`) and patches the legacy
+  `--pinentry-mode loopback` two-arg form in `pom.xml` so it works
+  across Maven GPG plugin versions.
+
+inputs:
+  pom-file:
+    description: "Path to pom.xml to patch."
+    required: false
+    default: "packages/java/pom.xml"
+  patch-pom:
+    description: "Whether to patch the pom.xml. Set 'false' to only run the gpg2 shim setup."
+    required: false
+    default: "true"
+  prefer-gpg2:
+    description: "Whether to install a gpg2 shim as `gpg` on PATH when gpg2 is present."
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Configure GPG
+      shell: bash
+      env:
+        INPUT_POM_FILE: ${{ inputs.pom-file }}
+        INPUT_PATCH_POM: ${{ inputs.patch-pom }}
+        INPUT_PREFER_GPG2: ${{ inputs.prefer-gpg2 }}
+      run: bash ${{ github.action_path }}/scripts/configure.sh

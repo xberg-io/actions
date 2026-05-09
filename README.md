@@ -21,6 +21,9 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `install-alef` | Alef CLI installation |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 | `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
+| `setup-textlint` | textlint + the kreuzberg-dev standard rule set in one batched npm install |
+| `setup-onnx-runtime-gpu` | Download and stage the GPU/CUDA build of ONNX Runtime; exports `ORT_DYLIB_PATH` + `LD_LIBRARY_PATH` |
+| `configure-maven-gpg` | Prefer `gpg2` (shimmed as `gpg`) and patch legacy `--pinentry-mode loopback` two-arg form in `pom.xml` |
 
 ### Build
 
@@ -45,6 +48,7 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `homebrew-build-bottles` | Real Homebrew bottles for one or more formulas via `brew install --build-bottle` + `brew bottle --json`; uploads tarballs to the GH release and saves bottle JSONs for the merge step |
 | `homebrew-merge-bottles` | Aggregates per-platform bottle JSON manifests into formula `bottle do ... end` blocks (jq-driven, no brew needed on the runner); emits cellar values as Ruby symbols |
 | `package-php-pie` | PIE-conventional binary archive from a built PHP extension |
+| `build-gpu-test-binary` | `cargo test --no-run` + JSON message parse to extract the executable for cross-runner GPU CI |
 
 ### Publish
 
@@ -106,6 +110,8 @@ tag-based publishes).
 | `cleanup-rust-cache` | Clean Rust build artifacts |
 | `restore-cargo-cache` | Restore Cargo cache |
 | `test-java-ffi` | Java Panama FFI test setup |
+| `check-docker-image-size` | Inspect a locally-loaded image, warn or fail on size threshold, write step summary |
+| `run-api-contract-tests` | Run schemathesis property-based contract tests against a containerised API |
 
 ## Reusable Workflows
 

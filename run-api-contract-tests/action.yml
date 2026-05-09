@@ -1,0 +1,60 @@
+name: Run API Contract Tests
+description: >
+  Run schemathesis property-based contract tests against a running
+  API. Starts the supplied Docker image, waits for the OpenAPI
+  endpoint to respond, then invokes schemathesis with the standard
+  kreuzberg-dev check set. Always tears the container down.
+
+inputs:
+  image:
+    description: "Docker image to run as the system under test (must already be loaded into the local daemon)."
+    required: true
+  port:
+    description: "Host port to bind to the container. The container is expected to listen on the same port internally."
+    required: false
+    default: "8000"
+  spec-path:
+    description: "Path component of the OpenAPI document, e.g. /openapi.json."
+    required: false
+    default: "/openapi.json"
+  startup-wait-seconds:
+    description: "Seconds to sleep after `docker run -d` before invoking schemathesis."
+    required: false
+    default: "5"
+  max-examples:
+    description: "schemathesis --max-examples value."
+    required: false
+    default: "10"
+  request-timeout-ms:
+    description: "schemathesis --request-timeout (milliseconds)."
+    required: false
+    default: "30000"
+  checks:
+    description: "Comma-separated schemathesis checks."
+    required: false
+    default: "not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance,negative_data_rejection"
+  schemathesis-version:
+    description: "Optional pip spec for schemathesis (e.g. 'schemathesis==3.39.0'). Defaults to latest."
+    required: false
+    default: "schemathesis"
+  extra-args:
+    description: "Extra arguments appended to the schemathesis run command."
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Run schemathesis
+      shell: bash
+      env:
+        INPUT_IMAGE: ${{ inputs.image }}
+        INPUT_PORT: ${{ inputs.port }}
+        INPUT_SPEC_PATH: ${{ inputs.spec-path }}
+        INPUT_STARTUP_WAIT_SECONDS: ${{ inputs.startup-wait-seconds }}
+        INPUT_MAX_EXAMPLES: ${{ inputs.max-examples }}
+        INPUT_REQUEST_TIMEOUT_MS: ${{ inputs.request-timeout-ms }}
+        INPUT_CHECKS: ${{ inputs.checks }}
+        INPUT_SCHEMATHESIS_VERSION: ${{ inputs.schemathesis-version }}
+        INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: bash ${{ github.action_path }}/scripts/run.sh

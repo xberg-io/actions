@@ -1,0 +1,31 @@
+name: Setup ONNX Runtime (GPU/CUDA)
+description: >
+  Download the GPU/CUDA build of ONNX Runtime, extract it under
+  $RUNNER_TEMP, and export ORT_DYLIB_PATH + LD_LIBRARY_PATH for
+  downstream steps. Idempotent — skips download if the target
+  directory already exists.
+
+inputs:
+  version:
+    description: "ONNX Runtime release version, e.g. 1.24.2"
+    required: true
+  platform:
+    description: "Platform identifier matching the upstream release tarball naming (default: linux-x64-gpu)."
+    required: false
+    default: "linux-x64-gpu"
+
+outputs:
+  lib-dir:
+    description: "Path to the staged ORT lib directory."
+    value: ${{ steps.setup.outputs.lib-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download and stage ONNX Runtime
+      id: setup
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_PLATFORM: ${{ inputs.platform }}
+      run: bash ${{ github.action_path }}/scripts/setup.sh

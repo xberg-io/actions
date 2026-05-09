@@ -1,0 +1,39 @@
+name: Check Docker Image Size
+description: >
+  Inspect a locally-built Docker image and warn (or fail) if its size
+  exceeds a threshold. Writes a step summary line.
+
+inputs:
+  image:
+    description: "Image reference to inspect (e.g. kreuzberg:cli)"
+    required: true
+  warn-mb:
+    description: "Emit a workflow warning if image is larger than this many MB. Empty = no warn threshold."
+    required: false
+    default: ""
+  fail-mb:
+    description: "Fail the step if image is larger than this many MB. Empty = no fail threshold."
+    required: false
+    default: ""
+  label:
+    description: "Optional label used in step summary (defaults to image name)."
+    required: false
+    default: ""
+
+outputs:
+  size-mb:
+    description: "Image size in megabytes (integer)."
+    value: ${{ steps.check.outputs.size-mb }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check image size
+      id: check
+      shell: bash
+      env:
+        INPUT_IMAGE: ${{ inputs.image }}
+        INPUT_WARN_MB: ${{ inputs.warn-mb }}
+        INPUT_FAIL_MB: ${{ inputs.fail-mb }}
+        INPUT_LABEL: ${{ inputs.label }}
+      run: bash ${{ github.action_path }}/scripts/check.sh

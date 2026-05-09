@@ -1,0 +1,40 @@
+name: Build GPU Test Binary
+description: >
+  Build a single cargo test binary with --no-run and JSON message
+  output, extract the resulting executable path via jq, and copy
+  it to a stable name suitable for upload-artifact. Used for
+  cross-runner GPU/CUDA test execution.
+
+inputs:
+  package:
+    description: "Cargo package to build tests for (`-p <package>`)."
+    required: true
+  test-name:
+    description: "Test target name (`--test <name>`)."
+    required: true
+  features:
+    description: "Comma-separated cargo features to enable."
+    required: false
+    default: ""
+  output-name:
+    description: "Output filename for the staged binary."
+    required: false
+    default: "gpu-test-binary"
+
+outputs:
+  binary-path:
+    description: "Path to the staged test binary."
+    value: ${{ steps.build.outputs.binary-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build cargo test binary
+      id: build
+      shell: bash
+      env:
+        INPUT_PACKAGE: ${{ inputs.package }}
+        INPUT_TEST_NAME: ${{ inputs.test-name }}
+        INPUT_FEATURES: ${{ inputs.features }}
+        INPUT_OUTPUT_NAME: ${{ inputs.output-name }}
+      run: bash ${{ github.action_path }}/scripts/build.sh
