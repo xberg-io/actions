@@ -1,0 +1,53 @@
+name: Test build-rust-ffi
+on:
+  push:
+    paths:
+      - "build-rust-ffi/**"
+      - ".github/workflows/test-build-rust-ffi.yml"
+  pull_request:
+    paths:
+      - "build-rust-ffi/**"
+      - ".github/workflows/test-build-rust-ffi.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Stage a tiny cdylib FFI crate
+        shell: bash
+        run: |
+          mkdir -p fixture/src
+          cat >fixture/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-ffi"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib", "rlib"]
+          TOML
+          cat >fixture/src/lib.rs <<'RS'
+          #[unsafe(no_mangle)]
+          pub extern "C" fn fixture_add(a: i32, b: i32) -> i32 { a + b }
+          RS
+
+      - name: Build FFI library via the action
+        id: build
+        uses: ./build-rust-ffi
+        with:
+          crate-name: fixture-ffi
+          manifest-path: fixture/Cargo.toml
+          verbose: "false"
+
+      - name: Verify shared library was produced
+        shell: bash
+        run: |
+          [ -n "${{ steps.build.outputs.library-path }}" ]
+          test -f "${{ steps.build.outputs.library-path }}"
+          file "${{ steps.build.outputs.library-path }}" | grep -Ei 'shared object|dynamic library|dll'

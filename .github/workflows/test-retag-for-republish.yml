@@ -1,0 +1,66 @@
+name: Test retag-for-republish
+on:
+  push:
+    paths:
+      - "retag-for-republish/**"
+      - ".github/workflows/test-retag-for-republish.yml"
+  pull_request:
+    paths:
+      - "retag-for-republish/**"
+      - ".github/workflows/test-retag-for-republish.yml"
+
+# IMPORTANT: retag-for-republish has no dry-run mode and would actually delete
+# and recreate a real Git tag if invoked. We do NOT run the action here —
+# instead, we statically validate the script's input contract so a smoke job
+# still proves the script is syntactically valid and accepts INPUT_TAG.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compile the retag script (syntax check)
+        shell: bash
+        run: |
+          python3 -m py_compile retag-for-republish/scripts/retag.py
+
+      - name: Confirm script rejects missing INPUT_TAG
+        shell: bash
+        run: |
+          # Without INPUT_TAG the script must exit 1 and print the expected error.
+          set +e
+          output=$(python3 retag-for-republish/scripts/retag.py 2>&1)
+          rc=$?
+          set -e
+          if [[ "${rc}" -eq 0 ]]; then
+            echo "expected non-zero exit when INPUT_TAG is missing, got rc=0"
+            exit 1
+          fi
+          echo "${output}" | grep -q "INPUT_TAG is required" || {
+            echo "expected error 'INPUT_TAG is required', got: ${output}"
+            exit 1
+          }
+
+      - name: Confirm script rejects missing GITHUB_REPOSITORY
+        shell: bash
+        env:
+          INPUT_TAG: v0.0.0-fixture
+          GITHUB_REPOSITORY: ""
+        run: |
+          set +e
+          output=$(python3 retag-for-republish/scripts/retag.py 2>&1)
+          rc=$?
+          set -e
+          if [[ "${rc}" -eq 0 ]]; then
+            echo "expected non-zero exit when GITHUB_REPOSITORY is empty, got rc=0"
+            exit 1
+          fi
+          echo "${output}" | grep -q "GITHUB_REPOSITORY is required" || {
+            echo "expected error 'GITHUB_REPOSITORY is required', got: ${output}"
+            exit 1
+          }

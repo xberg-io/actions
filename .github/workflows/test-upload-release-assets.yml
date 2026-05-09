@@ -1,0 +1,60 @@
+name: Test upload-release-assets
+on:
+  push:
+    paths:
+      - "upload-release-assets/**"
+      - ".github/workflows/test-upload-release-assets.yml"
+  pull_request:
+    paths:
+      - "upload-release-assets/**"
+      - ".github/workflows/test-upload-release-assets.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage three fixture asset files
+        shell: bash
+        run: |
+          mkdir -p _assets
+          printf 'one\n'   >_assets/asset-one.txt
+          printf 'two\n'   >_assets/asset-two.txt
+          printf 'three\n' >_assets/asset-three.txt
+
+      - name: Run upload-release-assets in dry-run mode
+        id: upload
+        uses: ./upload-release-assets
+        with:
+          tag: v0.0.0-fixture
+          assets: |
+            _assets/asset-one.txt
+            _assets/asset-two.txt
+            _assets/asset-three.txt
+          dry-run: "true"
+
+      # In dry-run the script writes uploaded-count=0 but still lists the
+      # would-be uploads in uploaded-paths. Both assertions below confirm
+      # the action plumbed inputs through to the script correctly.
+      - name: Confirm dry-run uploaded-count is 0
+        shell: bash
+        env:
+          COUNT: ${{ steps.upload.outputs.uploaded-count }}
+        run: |
+          if [[ "${COUNT}" != "0" ]]; then
+            echo "expected uploaded-count=0 in dry-run, got ${COUNT}"
+            exit 1
+          fi
+
+      - name: Confirm dry-run uploaded-paths lists all three fixtures
+        shell: bash
+        env:
+          PATHS: ${{ steps.upload.outputs.uploaded-paths }}
+        run: |
+          lines=$(printf '%s\n' "${PATHS}" | grep -c 'asset-' || true)
+          if [[ "${lines}" -ne 3 ]]; then
+            echo "expected 3 asset-* paths in uploaded-paths, got ${lines}"
+            printf '%s\n' "${PATHS}"
+            exit 1
+          fi

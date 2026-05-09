@@ -1,0 +1,69 @@
+name: Test package-php-pie
+on:
+  push:
+    paths:
+      - "package-php-pie/**"
+      - ".github/workflows/test-package-php-pie.yml"
+  pull_request:
+    paths:
+      - "package-php-pie/**"
+      - ".github/workflows/test-package-php-pie.yml"
+
+# package-php-pie shells out to `alef publish package --lang php` against a
+# real built .so/.dylib/.dll produced by build-php-extension. Reproducing that
+# end-to-end on a fixture would require a full Rust build of a PHP extension
+# crate plus the matching PHP toolchain — out of scope for a smoke test. We
+# instead validate the action surface (yaml + input validation branch) so a
+# break in the action wrapper still surfaces here.
+jobs:
+  validate-input-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # The action's first step rejects windows targets without a
+      # windows-compiler input. This is a pure-bash branch with no external
+      # dependencies — perfect for a smoke check.
+      - name: Run with a windows target but no windows-compiler (expect failure)
+        id: missing-compiler
+        uses: ./package-php-pie
+        continue-on-error: true
+        with:
+          php-version: "8.5"
+          php-ts: "nts"
+          target: x86_64-pc-windows-msvc
+          # windows-compiler intentionally omitted
+
+      - name: Confirm action failed validation
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.missing-compiler.outcome }}
+        run: |
+          if [[ "${OUTCOME}" != "failure" ]]; then
+            echo "expected failure outcome for windows target without windows-compiler, got ${OUTCOME}"
+            exit 1
+          fi
+
+  parse-action-yml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Confirm action.yml parses and declares expected outputs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import sys
+          import yaml
+          with open("package-php-pie/action.yml", "r", encoding="utf-8") as fh:
+              spec = yaml.safe_load(fh)
+          outputs = set(spec.get("outputs", {}).keys())
+          expected = {"archive-path", "archive-name", "sha256"}
+          missing = expected - outputs
+          if missing:
+              print(f"action.yml missing expected outputs: {missing}", file=sys.stderr)
+              sys.exit(1)
+          PY

@@ -1,0 +1,56 @@
+name: Test announce-release-discord
+on:
+  push:
+    paths:
+      - "announce-release-discord/**"
+      - ".github/workflows/test-announce-release-discord.yml"
+  pull_request:
+    paths:
+      - "announce-release-discord/**"
+      - ".github/workflows/test-announce-release-discord.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run announce-release-discord in dry-run with a fake webhook
+        id: announce
+        uses: ./announce-release-discord
+        with:
+          tag: v0.0.0
+          webhook-url: https://example.com/dummy-webhook
+          project-name: smoke-test
+          notes: "Smoke-test fixture release notes."
+          dry-run: "true"
+
+      - name: Confirm dry-run path returns posted=false
+        shell: bash
+        env:
+          POSTED: ${{ steps.announce.outputs.posted }}
+        run: |
+          # The dry-run branch in scripts/announce.py writes posted=false
+          # without contacting Discord and without uploading the marker.
+          if [[ "${POSTED}" != "false" ]]; then
+            echo "expected posted=false in dry-run, got ${POSTED}"
+            exit 1
+          fi
+
+      - name: Run with a prerelease-style tag (must skip without posting)
+        id: prerelease
+        uses: ./announce-release-discord
+        with:
+          tag: v0.0.0-rc.1
+          webhook-url: https://example.com/dummy-webhook
+          dry-run: "true"
+
+      - name: Confirm prerelease tag was skipped
+        shell: bash
+        env:
+          POSTED: ${{ steps.prerelease.outputs.posted }}
+        run: |
+          if [[ "${POSTED}" != "skipped-prerelease" ]]; then
+            echo "expected posted=skipped-prerelease for v0.0.0-rc.1, got ${POSTED}"
+            exit 1
+          fi

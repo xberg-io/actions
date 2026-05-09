@@ -1,0 +1,79 @@
+name: Test build-python-wheels
+on:
+  push:
+    paths:
+      - "build-python-wheels/**"
+      - ".github/workflows/test-build-python-wheels.yml"
+  pull_request:
+    paths:
+      - "build-python-wheels/**"
+      - ".github/workflows/test-build-python-wheels.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Stage a tiny PyO3 + maturin package
+        shell: bash
+        run: |
+          mkdir -p packages/python/src
+          cat >packages/python/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-pyext"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          name = "fixture_pyext"
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          pyo3 = { version = "0.22", features = ["extension-module"] }
+          TOML
+          cat >packages/python/pyproject.toml <<'TOML'
+          [build-system]
+          requires = ["maturin>=1.5,<2.0"]
+          build-backend = "maturin"
+
+          [project]
+          name = "fixture-pyext"
+          version = "0.0.1"
+          requires-python = ">=3.10"
+
+          [tool.maturin]
+          module-name = "fixture_pyext"
+          TOML
+          cat >packages/python/src/lib.rs <<'RS'
+          use pyo3::prelude::*;
+
+          #[pyfunction]
+          fn add(a: i64, b: i64) -> i64 { a + b }
+
+          #[pymodule]
+          fn fixture_pyext(m: &Bound<'_, PyModule>) -> PyResult<()> {
+              m.add_function(wrap_pyfunction!(add, m)?)?;
+              Ok(())
+          }
+          RS
+
+      - name: Build wheels via the action
+        id: build
+        uses: ./build-python-wheels
+        with:
+          package-dir: packages/python
+          cibw-build: "cp312-manylinux_x86_64"
+          cibw-skip: ""
+          upload-artifact: "false"
+
+      - name: Verify wheel produced
+        shell: bash
+        run: |
+          ls -la wheelhouse/
+          test -n "$(ls wheelhouse/*.whl 2>/dev/null)"

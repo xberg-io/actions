@@ -1,0 +1,81 @@
+name: Test prepare-release-metadata
+on:
+  push:
+    paths:
+      - "prepare-release-metadata/**"
+      - ".github/workflows/test-prepare-release-metadata.yml"
+  pull_request:
+    paths:
+      - "prepare-release-metadata/**"
+      - ".github/workflows/test-prepare-release-metadata.yml"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to resolve"
+        required: false
+        default: "v0.0.0-fixture"
+      dry_run:
+        description: "Dry-run flag forwarded to alef"
+        required: false
+        default: "true"
+      force_republish:
+        description: "Force republish flag"
+        required: false
+        default: "false"
+      ref:
+        description: "Git ref override"
+        required: false
+        default: ""
+      targets:
+        description: "Comma-separated release targets"
+        required: false
+        default: "all"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # The action expects an alef.toml in the working directory so it can
+      # resolve target metadata. Stage a minimal fixture here (the action only
+      # cares that the file exists and can be parsed).
+      - name: Stage minimal alef.toml
+        shell: bash
+        run: |
+          cat >alef.toml <<'TOML'
+          [project]
+          name = "fixture"
+          version = "0.0.0-fixture"
+
+          [targets]
+          python = true
+          TOML
+
+      # Default fixture inputs come from workflow_dispatch defaults; for
+      # push/PR runs we synthesize equivalents via the env block below so the
+      # action's "github.event.inputs.*" references resolve to non-empty
+      # values across all event types.
+      - name: Resolve metadata via the action
+        id: prepare
+        uses: ./prepare-release-metadata
+        env:
+          # The action reads github.event.inputs.* for tag/dry_run/etc.; on
+          # push/pull_request these are empty, so we emulate the dispatch
+          # defaults via env vars consumed inside the composite step.
+          GITHUB_REF_NAME: v0.0.0-fixture
+        with:
+          available-targets: "python,node,ruby"
+          alef-version: latest
+
+      - name: Confirm core outputs are populated
+        shell: bash
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_TARGETS: ${{ steps.prepare.outputs.release_targets }}
+        run: |
+          test -n "${TAG}"
+          test -n "${VERSION}"
+          test -n "${RELEASE_TARGETS}"
+          echo "tag=${TAG} version=${VERSION} release_targets=${RELEASE_TARGETS}"

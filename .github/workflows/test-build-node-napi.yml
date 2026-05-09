@@ -1,0 +1,81 @@
+name: Test build-node-napi
+on:
+  push:
+    paths:
+      - "build-node-napi/**"
+      - ".github/workflows/test-build-node-napi.yml"
+  pull_request:
+    paths:
+      - "build-node-napi/**"
+      - ".github/workflows/test-build-node-napi.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Install napi CLI
+        shell: bash
+        run: npm install -g @napi-rs/cli
+
+      - name: Stage a tiny NAPI-RS crate
+        shell: bash
+        run: |
+          mkdir -p packages/node/src
+          cat >packages/node/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-napi"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          napi = { version = "2", default-features = false, features = ["napi4"] }
+          napi-derive = "2"
+
+          [build-dependencies]
+          napi-build = "2"
+          TOML
+          cat >packages/node/build.rs <<'RS'
+          fn main() { napi_build::setup(); }
+          RS
+          cat >packages/node/src/lib.rs <<'RS'
+          #![deny(clippy::all)]
+          use napi_derive::napi;
+
+          #[napi]
+          pub fn add(a: i32, b: i32) -> i32 { a + b }
+          RS
+          cat >packages/node/package.json <<'JSON'
+          {
+            "name": "fixture-napi",
+            "version": "0.0.1",
+            "main": "index.js",
+            "files": ["index.js", "index.d.ts", "*.node"],
+            "napi": { "name": "fixture-napi" }
+          }
+          JSON
+
+      - name: Build NAPI bindings via the action
+        uses: ./build-node-napi
+        with:
+          crate-dir: packages/node
+          build-command: "napi build --platform --release"
+
+      - name: Verify .node artifact produced
+        shell: bash
+        run: |
+          ls -la packages/node/
+          test -n "$(ls packages/node/*.node 2>/dev/null)"

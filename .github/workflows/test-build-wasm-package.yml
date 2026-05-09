@@ -1,0 +1,62 @@
+name: Test build-wasm-package
+on:
+  push:
+    paths:
+      - "build-wasm-package/**"
+      - ".github/workflows/test-build-wasm-package.yml"
+  pull_request:
+    paths:
+      - "build-wasm-package/**"
+      - ".github/workflows/test-build-wasm-package.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        shell: bash
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Stage a tiny wasm-bindgen crate
+        shell: bash
+        run: |
+          mkdir -p packages/wasm/src
+          cat >packages/wasm/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-wasm"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib", "rlib"]
+
+          [dependencies]
+          wasm-bindgen = "0.2"
+          TOML
+          cat >packages/wasm/src/lib.rs <<'RS'
+          use wasm_bindgen::prelude::*;
+
+          #[wasm_bindgen]
+          pub fn add(a: i32, b: i32) -> i32 { a + b }
+          RS
+
+      - name: Build WASM package via the action
+        uses: ./build-wasm-package
+        with:
+          crate-dir: packages/wasm
+          build-command: "wasm-pack build --release --target web"
+
+      - name: Verify pkg/ produced
+        shell: bash
+        run: |
+          ls -la packages/wasm/pkg/
+          test -d packages/wasm/pkg
+          test -n "$(ls packages/wasm/pkg/*.wasm 2>/dev/null)"

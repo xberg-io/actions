@@ -1,0 +1,63 @@
+name: Test build-csharp-natives
+on:
+  push:
+    paths:
+      - "build-csharp-natives/**"
+      - ".github/workflows/test-build-csharp-natives.yml"
+  pull_request:
+    paths:
+      - "build-csharp-natives/**"
+      - ".github/workflows/test-build-csharp-natives.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Stage workspace with FFI crate
+        shell: bash
+        run: |
+          mkdir -p crates/fixture-ffi/src
+          cat >Cargo.toml <<'TOML'
+          [workspace]
+          resolver = "2"
+          members = ["crates/fixture-ffi"]
+          TOML
+          cat >crates/fixture-ffi/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-ffi"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib"]
+          TOML
+          cat >crates/fixture-ffi/src/lib.rs <<'RS'
+          #[unsafe(no_mangle)]
+          pub extern "C" fn fixture_add(a: i32, b: i32) -> i32 { a + b }
+          RS
+
+      - name: Build C# natives via the action
+        id: build
+        uses: ./build-csharp-natives
+        with:
+          target: x86_64-unknown-linux-gnu
+          crate-name: fixture-ffi
+          rid: linux-x64
+
+      - name: Verify NuGet RID staging layout
+        shell: bash
+        run: |
+          [ -n "${{ steps.build.outputs.library-path }}" ]
+          test -f "${{ steps.build.outputs.library-path }}"
+          [ -n "${{ steps.build.outputs.staging-dir }}" ]
+          test -d dist/csharp-natives/runtimes/linux-x64/native
+          ls -la dist/csharp-natives/runtimes/linux-x64/native
+          test -f dist/csharp-natives/runtimes/linux-x64/native/libfixture_ffi.so

@@ -1,0 +1,66 @@
+name: Test build-php-extension
+on:
+  push:
+    paths:
+      - "build-php-extension/**"
+      - ".github/workflows/test-build-php-extension.yml"
+  pull_request:
+    paths:
+      - "build-php-extension/**"
+      - ".github/workflows/test-build-php-extension.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: none
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Stage a tiny ext-php-rs crate
+        shell: bash
+        run: |
+          mkdir -p src
+          cat >Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-phpext"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          name = "fixture_phpext"
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          ext-php-rs = "0.13"
+          TOML
+          cat >src/lib.rs <<'RS'
+          use ext_php_rs::prelude::*;
+
+          #[php_function]
+          pub fn fixture_add(a: i64, b: i64) -> i64 { a + b }
+
+          #[php_module]
+          pub fn module(module: ModuleBuilder) -> ModuleBuilder { module }
+          RS
+
+      - name: Build PHP extension via the action
+        id: build
+        uses: ./build-php-extension
+        with:
+          crate-name: fixture-phpext
+          lib-name: fixture_phpext
+
+      - name: Verify extension produced
+        shell: bash
+        run: |
+          [ -n "${{ steps.build.outputs.extension-path }}" ]
+          test -f "${{ steps.build.outputs.extension-path }}"
+          file "${{ steps.build.outputs.extension-path }}"

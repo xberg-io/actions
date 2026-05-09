@@ -1,0 +1,60 @@
+name: Test finalize-release
+on:
+  push:
+    paths:
+      - "finalize-release/**"
+      - ".github/workflows/test-finalize-release.yml"
+  pull_request:
+    paths:
+      - "finalize-release/**"
+      - ".github/workflows/test-finalize-release.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run finalize-release in dry-run on a fake tag
+        id: finalize
+        uses: ./finalize-release
+        with:
+          tag: v0.0.0-fixture
+          is-prerelease: "auto"
+          dry-run: "true"
+
+      - name: Confirm finalized=false (dry-run path)
+        shell: bash
+        env:
+          FINALIZED: ${{ steps.finalize.outputs.finalized }}
+          PRERELEASE_FLAG: ${{ steps.finalize.outputs.prerelease-flag }}
+        run: |
+          test -n "${FINALIZED}"
+          # In dry-run the script writes finalized=false unconditionally.
+          if [[ "${FINALIZED}" != "false" ]]; then
+            echo "expected finalized=false in dry-run, got ${FINALIZED}"
+            exit 1
+          fi
+          # tag has no -rc/-alpha/-beta/-pre suffix, so prerelease-flag=false.
+          if [[ "${PRERELEASE_FLAG}" != "false" ]]; then
+            echo "expected prerelease-flag=false for v0.0.0-fixture, got ${PRERELEASE_FLAG}"
+            exit 1
+          fi
+
+      - name: Run finalize-release in dry-run on a prerelease-style tag
+        id: prerelease
+        uses: ./finalize-release
+        with:
+          tag: v0.0.0-rc.1
+          is-prerelease: "auto"
+          dry-run: "true"
+
+      - name: Confirm prerelease-flag=true for -rc tag
+        shell: bash
+        env:
+          PRERELEASE_FLAG: ${{ steps.prerelease.outputs.prerelease-flag }}
+        run: |
+          if [[ "${PRERELEASE_FLAG}" != "true" ]]; then
+            echo "expected prerelease-flag=true for v0.0.0-rc.1, got ${PRERELEASE_FLAG}"
+            exit 1
+          fi

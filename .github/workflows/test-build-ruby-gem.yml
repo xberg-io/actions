@@ -1,0 +1,95 @@
+name: Test build-ruby-gem
+on:
+  # Manual-only smoke. The action depends on a fully wired Magnus + rb_sys
+  # gem (gemspec + Rakefile + ext/extconf.rb + rake-compiler config) plus
+  # `bundle install` resolving rb_sys/rake-compiler-dock from a Gemfile.
+  # Faking that scaffolding inside the test is brittle; we wait for downstream
+  # repos (kreuzberg-rb, html-to-markdown-rb) to exercise the real path.
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Stage a tiny Magnus gem
+        shell: bash
+        run: |
+          mkdir -p packages/ruby/ext/fixture_magnus/src packages/ruby/lib
+          cat >packages/ruby/Gemfile <<'RB'
+          source "https://rubygems.org"
+          gemspec
+          gem "rake"
+          gem "rake-compiler"
+          gem "rb_sys", "~> 0.9"
+          RB
+          cat >packages/ruby/fixture_magnus.gemspec <<'RB'
+          Gem::Specification.new do |s|
+            s.name = "fixture_magnus"
+            s.version = "0.0.1"
+            s.summary = "fixture"
+            s.authors = ["fixture"]
+            s.files = Dir["lib/**/*", "ext/**/*"]
+            s.extensions = ["ext/fixture_magnus/extconf.rb"]
+            s.required_ruby_version = ">= 3.0"
+          end
+          RB
+          cat >packages/ruby/Rakefile <<'RB'
+          require "rake/extensiontask"
+          require "rb_sys/extensiontask"
+          GEMSPEC = Gem::Specification.load("fixture_magnus.gemspec")
+          RbSys::ExtensionTask.new("fixture_magnus", GEMSPEC) do |ext|
+            ext.lib_dir = "lib/fixture_magnus"
+          end
+          RB
+          cat >packages/ruby/ext/fixture_magnus/extconf.rb <<'RB'
+          require "mkmf"
+          require "rb_sys/mkmf"
+          create_rust_makefile("fixture_magnus/fixture_magnus")
+          RB
+          cat >packages/ruby/ext/fixture_magnus/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture_magnus"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          magnus = "0.7"
+          TOML
+          cat >packages/ruby/ext/fixture_magnus/src/lib.rs <<'RS'
+          use magnus::{function, prelude::*, Error, Ruby};
+
+          fn add(a: i64, b: i64) -> i64 { a + b }
+
+          #[magnus::init]
+          fn init(ruby: &Ruby) -> Result<(), Error> {
+              let module = ruby.define_module("FixtureMagnus")?;
+              module.define_singleton_method("add", function!(add, 2))?;
+              Ok(())
+          }
+          RS
+          mkdir -p packages/ruby/lib/fixture_magnus
+          echo 'require "fixture_magnus/fixture_magnus"' >packages/ruby/lib/fixture_magnus.rb
+
+      - name: Build Ruby gem via the action
+        uses: ./build-ruby-gem
+        with:
+          package-dir: packages/ruby
+
+      - name: Verify native extension built
+        shell: bash
+        run: |
+          ls -la packages/ruby/lib/fixture_magnus/
+          test -n "$(ls packages/ruby/lib/fixture_magnus/*.so 2>/dev/null)"

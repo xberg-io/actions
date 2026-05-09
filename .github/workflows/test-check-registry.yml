@@ -1,0 +1,56 @@
+name: Test check-registry
+on:
+  push:
+    paths:
+      - "check-registry/**"
+      - ".github/workflows/test-check-registry.yml"
+  pull_request:
+    paths:
+      - "check-registry/**"
+      - ".github/workflows/test-check-registry.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Known-good public PyPI version: assert exists=true.
+      - name: Query an existing PyPI version
+        id: hit
+        uses: ./check-registry
+        with:
+          registry: pypi
+          package: requests
+          version: "2.31.0"
+          alef-version: latest
+
+      - name: Confirm exists=true for known-good version
+        shell: bash
+        env:
+          EXISTS: ${{ steps.hit.outputs.exists }}
+        run: |
+          if [[ "${EXISTS}" != "true" ]]; then
+            echo "expected exists=true, got exists=${EXISTS}"
+            exit 1
+          fi
+
+      # Known-bad version: assert exists=false.
+      - name: Query a non-existent PyPI version
+        id: miss
+        uses: ./check-registry
+        with:
+          registry: pypi
+          package: requests
+          version: "999.999.999"
+          alef-version: latest
+
+      - name: Confirm exists=false for known-bad version
+        shell: bash
+        env:
+          EXISTS: ${{ steps.miss.outputs.exists }}
+        run: |
+          if [[ "${EXISTS}" != "false" ]]; then
+            echo "expected exists=false, got exists=${EXISTS}"
+            exit 1
+          fi

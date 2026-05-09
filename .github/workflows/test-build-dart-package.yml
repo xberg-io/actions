@@ -1,0 +1,42 @@
+name: Test build-dart-package
+on:
+  push:
+    paths:
+      - "build-dart-package/**"
+      - ".github/workflows/test-build-dart-package.yml"
+  pull_request:
+    paths:
+      - "build-dart-package/**"
+      - ".github/workflows/test-build-dart-package.yml"
+
+jobs:
+  # Smoke via dry-run only. A live invocation requires a fully wired
+  # flutter_rust_bridge config (rust_input/dart_output paths, generated
+  # bindings, pubspec) inside the package directory. We validate that the
+  # action's input-handling and command planning work; downstream binding
+  # repos exercise the real codegen + cargo build path.
+  test-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage minimal package dir
+        shell: bash
+        run: |
+          mkdir -p packages/dart
+          : >packages/dart/pubspec.yaml
+
+      - name: Dry-run build-dart-package
+        id: build
+        uses: ./build-dart-package
+        with:
+          package-dir: packages/dart
+          crate-name: fixture-dart
+          dry-run: "true"
+
+      - name: Verify dry-run output
+        shell: bash
+        run: |
+          [ -n "${{ steps.build.outputs.library-path }}" ]
+          echo "planned library-path: ${{ steps.build.outputs.library-path }}"

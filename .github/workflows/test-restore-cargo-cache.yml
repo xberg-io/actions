@@ -1,0 +1,51 @@
+name: Test restore-cargo-cache
+on:
+  push:
+    paths:
+      - "restore-cargo-cache/**"
+      - ".github/workflows/test-restore-cargo-cache.yml"
+  pull_request:
+    paths:
+      - "restore-cargo-cache/**"
+      - ".github/workflows/test-restore-cargo-cache.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Stage a Cargo.lock so the action's hash step has something to hash.
+      # Without one it falls back to the literal "no-lock" key — also valid
+      # but we prefer the realistic path.
+      - name: Stage a Cargo.lock fixture
+        shell: bash
+        run: |
+          cat >Cargo.lock <<'TOML'
+          # Auto-generated fixture for restore-cargo-cache smoke test.
+          version = 4
+          [[package]]
+          name = "fixture"
+          version = "0.0.0"
+          TOML
+
+      - name: Run restore-cargo-cache (expect cache miss on a fresh smoke run)
+        id: restore
+        uses: ./restore-cargo-cache
+        with:
+          shared-key: smoke-restore-cargo-cache
+          prefix: cargo-smoke
+
+      - name: Confirm action ran and reported a cache-hit value
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        run: |
+          # First-ever run for a fresh shared-key always misses; either
+          # "false" or "" is acceptable. "true" would only happen if a
+          # previous job populated the cache key — also fine, just unusual
+          # for a smoke test.
+          case "${CACHE_HIT}" in
+            ""|true|false) echo "ok: cache-hit=${CACHE_HIT:-<empty>}" ;;
+            *) echo "unexpected cache-hit value: ${CACHE_HIT}"; exit 1 ;;
+          esac

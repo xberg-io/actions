@@ -1,0 +1,51 @@
+name: Test verify-release-assets
+on:
+  push:
+    paths:
+      - "verify-release-assets/**"
+      - ".github/workflows/test-verify-release-assets.yml"
+  pull_request:
+    paths:
+      - "verify-release-assets/**"
+      - ".github/workflows/test-verify-release-assets.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Use a known-good public release in the kreuzberg-dev org that has
+      # stable named assets. v0.15.10 of alef ships at least one
+      # alef-aarch64-* tarball that we can fnmatch against.
+      - name: Verify against an existing kreuzberg-dev release
+        id: verify
+        uses: ./verify-release-assets
+        with:
+          tag: v0.15.10
+          expected-assets: |
+            alef-aarch64-apple-darwin.tar.gz
+            alef-x86_64-unknown-linux-gnu.tar.gz
+        env:
+          # gh release view inside the script needs a repo override since the
+          # smoke workflow runs in kreuzberg-dev/actions but verifies a
+          # release in kreuzberg-dev/alef. The script doesn't expose --repo,
+          # so we rely on GH_REPO which gh CLI honors as a default.
+          GH_REPO: kreuzberg-dev/alef
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Confirm both expected patterns matched
+        shell: bash
+        env:
+          VERIFIED: ${{ steps.verify.outputs.verified-count }}
+          MISSING: ${{ steps.verify.outputs.missing }}
+        run: |
+          if [[ "${VERIFIED}" != "2" ]]; then
+            echo "expected verified-count=2, got ${VERIFIED}"
+            echo "missing: ${MISSING}"
+            exit 1
+          fi
+          if [[ -n "${MISSING}" ]]; then
+            echo "expected empty missing list, got: ${MISSING}"
+            exit 1
+          fi

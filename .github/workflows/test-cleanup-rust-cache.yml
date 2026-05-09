@@ -1,0 +1,51 @@
+name: Test cleanup-rust-cache
+on:
+  push:
+    paths:
+      - "cleanup-rust-cache/**"
+      - ".github/workflows/test-cleanup-rust-cache.yml"
+  pull_request:
+    paths:
+      - "cleanup-rust-cache/**"
+      - ".github/workflows/test-cleanup-rust-cache.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Stage a fake target/ directory containing both a small .rlib (kept)
+      # and a large .so plus an incremental cache (both removed). The
+      # action uses `find -size +10M` by default to threshold the lib files.
+      - name: Stage a fake Cargo target directory
+        shell: bash
+        run: |
+          mkdir -p target/debug/incremental/foo
+          mkdir -p target/release
+          # Small file — should be retained (below the +10M threshold).
+          dd if=/dev/zero of=target/debug/small.rlib bs=1024 count=1 status=none
+          # Large file — should be removed (above the +10M threshold).
+          dd if=/dev/zero of=target/release/big.so bs=1M count=12 status=none
+          # Incremental cache — should be removed unconditionally.
+          touch target/debug/incremental/foo/marker
+
+      - name: Run cleanup-rust-cache
+        uses: ./cleanup-rust-cache
+
+      - name: Confirm large .so removed and incremental cache cleared
+        shell: bash
+        run: |
+          if [[ -f target/release/big.so ]]; then
+            echo "expected target/release/big.so to be removed"
+            exit 1
+          fi
+          if [[ -d target/debug/incremental/foo ]]; then
+            echo "expected target/debug/incremental/foo to be removed"
+            exit 1
+          fi
+          # The small .rlib should still exist — it was below the size threshold.
+          if [[ ! -f target/debug/small.rlib ]]; then
+            echo "expected target/debug/small.rlib to be retained"
+            exit 1
+          fi

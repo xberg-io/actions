@@ -1,0 +1,67 @@
+name: Test build-go-ffi
+on:
+  push:
+    paths:
+      - "build-go-ffi/**"
+      - ".github/workflows/test-build-go-ffi.yml"
+  pull_request:
+    paths:
+      - "build-go-ffi/**"
+      - ".github/workflows/test-build-go-ffi.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Stage workspace with FFI crate + C header
+        shell: bash
+        run: |
+          mkdir -p crates/fixture-ffi/src crates/fixture-ffi/include
+          cat >Cargo.toml <<'TOML'
+          [workspace]
+          resolver = "2"
+          members = ["crates/fixture-ffi"]
+          TOML
+          cat >crates/fixture-ffi/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-ffi"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          crate-type = ["cdylib", "staticlib"]
+          TOML
+          cat >crates/fixture-ffi/src/lib.rs <<'RS'
+          #[unsafe(no_mangle)]
+          pub extern "C" fn fixture_add(a: i32, b: i32) -> i32 { a + b }
+          RS
+          cat >crates/fixture-ffi/include/fixture.h <<'H'
+          #pragma once
+          int fixture_add(int a, int b);
+          H
+
+      - name: Build Go FFI archive via the action
+        id: build
+        uses: ./build-go-ffi
+        with:
+          target: x86_64-unknown-linux-gnu
+          crate-name: fixture-ffi
+          header-path: crates/fixture-ffi/include/fixture.h
+
+      - name: Verify tarball produced
+        shell: bash
+        run: |
+          [ -n "${{ steps.build.outputs.archive-path }}" ]
+          test -f "${{ steps.build.outputs.archive-path }}"
+          [ -n "${{ steps.build.outputs.archive-sha256 }}" ]
+          tar -tzf "${{ steps.build.outputs.archive-path }}" | tee /tmp/contents.txt
+          grep -q '\.so' /tmp/contents.txt
+          grep -q '\.h' /tmp/contents.txt
