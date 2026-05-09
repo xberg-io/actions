@@ -97,6 +97,21 @@ outputs:
   release_c_ffi:
     value: ${{ steps.prepare.outputs.release_c_ffi }}
     description: "Whether the c_ffi target is enabled"
+  release_dart:
+    value: ${{ steps.prepare.outputs.release_dart }}
+    description: "Whether the dart target is enabled (requires alef >= 0.15.8)"
+  release_swift:
+    value: ${{ steps.prepare.outputs.release_swift }}
+    description: "Whether the swift target is enabled (requires alef >= 0.15.8)"
+  release_gleam:
+    value: ${{ steps.prepare.outputs.release_gleam }}
+    description: "Whether the gleam target is enabled (requires alef >= 0.15.8)"
+  release_zig:
+    value: ${{ steps.prepare.outputs.release_zig }}
+    description: "Whether the zig target is enabled (requires alef >= 0.15.8)"
+  release_kotlin:
+    value: ${{ steps.prepare.outputs.release_kotlin }}
+    description: "Whether the kotlin target is enabled (requires alef >= 0.15.8)"
 runs:
   using: composite
   steps:

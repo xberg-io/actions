@@ -1,0 +1,60 @@
+name: Build Go FFI Library
+description: >
+  Build a Rust FFI crate for one Rust target and bundle the resulting
+  shared library together with its C header into a tar.gz suitable for
+  consumption by the Go cgo binding.
+
+inputs:
+  target:
+    description: "Rust target triple (e.g. x86_64-unknown-linux-gnu)"
+    required: true
+  crate-name:
+    description: "Cargo package name to build"
+    required: false
+    default: "kreuzberg-ffi"
+  lib-name:
+    description: "Base name of the produced library (defaults to crate-name with hyphens converted to underscores)"
+    required: false
+    default: ""
+  header-path:
+    description: "Path to the C header that ships alongside the library"
+    required: false
+    default: "crates/kreuzberg-ffi/include/kreuzberg.h"
+  output-dir:
+    description: "Directory where the staging tree and tar.gz are written"
+    required: false
+    default: "dist/go-ffi"
+  archive-name:
+    description: "Override the default archive filename ({lib-name}-{target}.tar.gz)"
+    required: false
+    default: ""
+  dry-run:
+    description: "Skip cargo build and produce a plan instead"
+    required: false
+    default: "false"
+
+outputs:
+  archive-path:
+    description: "Absolute path to the produced tar.gz archive"
+    value: ${{ steps.build.outputs.archive-path }}
+  archive-sha256:
+    description: "SHA256 digest of the produced archive"
+    value: ${{ steps.build.outputs.archive-sha256 }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Go FFI archive
+      id: build
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_HEADER_PATH: ${{ inputs.header-path }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_ARCHIVE_NAME: ${{ inputs.archive-name }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        set -euo pipefail
+        python3 "${{ github.action_path }}/scripts/build.py"

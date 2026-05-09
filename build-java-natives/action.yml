@@ -1,0 +1,54 @@
+name: Build Java Native Libraries
+description: >
+  Build the FFI crate for one Rust target and stage the resulting native
+  library at the Panama FFM-expected resource path so it can later be
+  packed into a `kreuzberg-natives-{classifier}` JAR. Caller is
+  responsible for setup-rust + target install.
+
+inputs:
+  target:
+    description: "Rust target triple, e.g. x86_64-unknown-linux-gnu"
+    required: true
+  crate-name:
+    description: "Cargo package name to build"
+    required: false
+    default: "kreuzberg-ffi"
+  lib-name:
+    description: "Base name of the produced library (default: crate-name with - → _)"
+    required: false
+    default: ""
+  classifier:
+    description: "Maven classifier, e.g. linux-x86_64, linux-aarch64-musl, darwin-aarch64, windows-x86_64"
+    required: true
+  output-dir:
+    description: "Directory for the staging tree"
+    required: false
+    default: "dist/java-natives"
+  dry-run:
+    description: "Skip cargo build and emit a plan only"
+    required: false
+    default: "false"
+
+outputs:
+  library-path:
+    description: "Path to the staged library"
+    value: ${{ steps.build.outputs.library-path }}
+  staging-dir:
+    description: "Directory containing native/{classifier}/{lib} ready for Maven packaging"
+    value: ${{ steps.build.outputs.staging-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Java natives
+      id: build
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_CLASSIFIER: ${{ inputs.classifier }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/build.py

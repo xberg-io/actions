@@ -1,0 +1,82 @@
+name: Build Dart Package
+description: >
+  Build a Dart package that wraps a Rust binding crate via flutter_rust_bridge.
+  Installs Flutter (optional), installs flutter_rust_bridge_codegen, runs the
+  FRB codegen step inside the package directory, then builds the named cargo
+  crate. Emits the path to the resulting dynamic/static library.
+
+  This action assumes the calling workflow has already checked out the repo
+  and set up Rust (via kreuzberg-dev/actions/setup-rust@v1).
+
+inputs:
+  package-dir:
+    description: "Directory containing pubspec.yaml + flutter_rust_bridge config"
+    required: false
+    default: "packages/dart"
+  crate-name:
+    description: "Cargo package name of the Rust binding crate"
+    required: false
+    default: "kreuzberg-dart"
+  build-profile:
+    description: "Cargo build profile (release, dev, or a custom named profile)"
+    required: false
+    default: "release"
+  setup-flutter:
+    description: "Install Flutter via subosito/flutter-action. Set to 'false' if Flutter is already present."
+    required: false
+    default: "true"
+  flutter-version:
+    description: "Flutter version (passed to subosito/flutter-action)"
+    required: false
+    default: "3.27.0"
+  frb-codegen-version:
+    description: "flutter_rust_bridge_codegen version to install via cargo"
+    required: false
+    default: "2.12.0"
+  dry-run:
+    description: "Print the commands that would run and exit without building"
+    required: false
+    default: "false"
+
+outputs:
+  library-path:
+    description: "Absolute path to the built dynamic/static library"
+    value: ${{ steps.build.outputs.library-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Flutter
+      if: inputs.setup-flutter == 'true' && inputs.dry-run != 'true'
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: stable
+
+    - name: Install flutter_rust_bridge_codegen
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        INPUT_FRB_CODEGEN_VERSION: ${{ inputs.frb-codegen-version }}
+      run: |
+        set -euo pipefail
+        if command -v flutter_rust_bridge_codegen >/dev/null 2>&1; then
+          installed=$(flutter_rust_bridge_codegen --version 2>/dev/null | awk '{print $NF}' || true)
+          if [[ "$installed" == "$INPUT_FRB_CODEGEN_VERSION" ]]; then
+            echo "flutter_rust_bridge_codegen $installed already installed"
+            exit 0
+          fi
+        fi
+        echo "Installing flutter_rust_bridge_codegen@$INPUT_FRB_CODEGEN_VERSION"
+        cargo install flutter_rust_bridge_codegen --version "$INPUT_FRB_CODEGEN_VERSION" --locked
+
+    - name: Build Dart package
+      id: build
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        bash "${{ github.action_path }}/scripts/build.sh"

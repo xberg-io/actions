@@ -34,6 +34,13 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `build-php-extension` | PHP extensions |
 | `build-wasm-package` | WebAssembly packages |
 | `build-rust-cli` | Rust CLI binaries |
+| `build-go-ffi` | Build the FFI crate for one Rust target and bundle lib + header into a tar.gz for Go cgo |
+| `build-java-natives` | Build the FFI crate for one Rust target, stage at Panama FFM `native/{classifier}/` layout |
+| `build-csharp-natives` | Build the FFI crate for one Rust target, stage at NuGet `runtimes/{rid}/native/` layout |
+| `build-elixir-natives` | Cross-compile a Rustler NIF for one Rust target, package as RustlerPrecompiled tar.gz |
+| `build-dart-package` | flutter_rust_bridge codegen + cargo build for the Dart package's Rust crate |
+| `build-swift-package` | cargo build + sync swift-bridge generated headers/sources into the Swift package |
+| `build-zig-package` | cargo build the FFI crate + `zig build` smoke check |
 | `build-homebrew-bottle` | Synthetic bottle tarballs from a single CLI binary (homemade — does not invoke `brew bottle`) |
 | `homebrew-build-bottles` | Real Homebrew bottles for one or more formulas via `brew install --build-bottle` + `brew bottle --json`; uploads tarballs to the GH release and saves bottle JSONs for the merge step |
 | `homebrew-merge-bottles` | Aggregates per-platform bottle JSON manifests into formula `bottle do ... end` blocks (jq-driven, no brew needed on the runner); emits cellar values as Ruby symbols |
@@ -79,12 +86,15 @@ tag-based publishes).
 
 | Action | Description |
 |--------|-------------|
-| `prepare-release-metadata` | Extract tag/version/ref/targets from workflow events |
+| `prepare-release-metadata` | Extract tag/version/ref/targets from workflow events (alef-backed; emits 19 `release_*` flags incl. dart/swift/gleam/zig/kotlin) |
 | `validate-versions` | Cross-manifest version consistency checks |
 | `retag-for-republish` | Delete and recreate Git tags for republishing |
 | `generate-elixir-checksums` | RustlerPrecompiled NIF checksum generation |
 | `check-registry` | Check if a package version exists on any registry |
 | `wait-for-package` | Poll registries until a version becomes available |
+| `upload-release-assets` | Generic GH Release uploader; glob-expand a list of paths/patterns and upload with `--clobber` |
+| `verify-release-assets` | Verify the GH Release contains every expected asset (fnmatch patterns, optional min size) |
+| `finalize-release` | Edit GH Release from draft → published, set/clear prerelease, optionally create Go module tag |
 | `announce-release-discord` | Post a release announcement to Discord (skips RC tags, dedup via release-asset marker) |
 
 ### Utility

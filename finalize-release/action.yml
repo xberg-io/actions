@@ -1,0 +1,55 @@
+name: Finalize Release
+description: >
+  Post-publish: edit the GitHub Release from draft to published, set or
+  clear the prerelease flag, optionally create a Go module tag, and write
+  a step summary. Idempotent — safe to re-run on already-finalized
+  releases.
+
+inputs:
+  tag:
+    description: "Git tag for the release"
+    required: true
+  is-prerelease:
+    description: >
+      "true"/"false" to force the prerelease flag, or "auto" to derive from
+      the tag suffix (-rc/-alpha/-beta/-pre).
+    required: false
+    default: "auto"
+  go-module-path:
+    description: >
+      If non-empty, additionally create the tag `{go-module-path}/{tag}` so
+      Go module consumers can resolve the version. Example: `packages/go/v5`.
+    required: false
+    default: ""
+  dry-run:
+    description: "Print intended actions without modifying the release"
+    required: false
+    default: "false"
+  token:
+    description: "GitHub token for authentication"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  finalized:
+    description: "One of: true, false, already-finalized"
+    value: ${{ steps.finalize.outputs.finalized }}
+  prerelease-flag:
+    description: "Resolved prerelease flag (true or false)"
+    value: ${{ steps.finalize.outputs.prerelease-flag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Finalize release
+      id: finalize
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_IS_PRERELEASE: ${{ inputs.is-prerelease }}
+        INPUT_GO_MODULE_PATH: ${{ inputs.go-module-path }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_REPO: ${{ github.repository }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/finalize_release.py

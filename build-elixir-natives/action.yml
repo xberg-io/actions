@@ -1,0 +1,67 @@
+name: Build Elixir NIF Native Library
+description: >
+  Cross-compile a Rustler NIF for one Rust target, package as the
+  tar.gz expected by RustlerPrecompiled, and emit checksum metadata.
+  Output filenames are compatible with the
+  `generate-elixir-checksums` action's `build_nif_artifact_name`.
+
+inputs:
+  target:
+    description: "Rust target triple, e.g. x86_64-unknown-linux-gnu"
+    required: true
+  nif-crate-name:
+    description: "Cargo package name of the NIF crate"
+    required: false
+    default: "kreuzberg_nif"
+  nif-crate-path:
+    description: "Path to the NIF crate's manifest directory"
+    required: false
+    default: "packages/elixir/native/kreuzberg_nif"
+  package-dir:
+    description: "Path to the Elixir package (containing mix.exs)"
+    required: false
+    default: "packages/elixir"
+  nif-version:
+    description: "Package version embedded in the artifact name (e.g. 5.0.0)"
+    required: true
+  nif-api-version:
+    description: "Erlang NIF API version (e.g. 2.16). Empty → auto-detect via erl"
+    required: false
+    default: ""
+  output-dir:
+    description: "Directory for the staging tree and archive"
+    required: false
+    default: "dist/elixir-natives"
+  dry-run:
+    description: "Skip cargo build and emit a plan only"
+    required: false
+    default: "false"
+
+outputs:
+  archive-path:
+    description: "Absolute path to the produced .tar.gz"
+    value: ${{ steps.build.outputs.archive-path }}
+  archive-sha256:
+    description: "Hex-encoded SHA256 of the archive"
+    value: ${{ steps.build.outputs.archive-sha256 }}
+  archive-name:
+    description: "Filename of the archive (RustlerPrecompiled-conformant)"
+    value: ${{ steps.build.outputs.archive-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Elixir NIF
+      id: build
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_NIF_CRATE_NAME: ${{ inputs.nif-crate-name }}
+        INPUT_NIF_CRATE_PATH: ${{ inputs.nif-crate-path }}
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+        INPUT_NIF_VERSION: ${{ inputs.nif-version }}
+        INPUT_NIF_API_VERSION: ${{ inputs.nif-api-version }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/build.py

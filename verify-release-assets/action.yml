@@ -1,0 +1,50 @@
+name: Verify Release Assets
+description: >
+  Confirm that a GitHub Release contains every expected asset. Patterns
+  are matched (fnmatch) against the release's asset list, NOT the local
+  filesystem. Optional minimum file size check catches empty uploads.
+
+inputs:
+  tag:
+    description: "Git tag for the release"
+    required: true
+  expected-assets:
+    description: >
+      Newline-separated list of expected asset filenames or fnmatch
+      patterns. Lines starting with `#` are comments and skipped.
+    required: true
+  min-size-bytes:
+    description: "Fail any asset smaller than this many bytes (0 disables the check)"
+    required: false
+    default: "0"
+  dry-run:
+    description: "Print intended verification without failing the job"
+    required: false
+    default: "false"
+  token:
+    description: "GitHub token for authentication"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  verified-count:
+    description: "Number of expected patterns that matched at least one asset (and met min-size)"
+    value: ${{ steps.verify.outputs.verified-count }}
+  missing:
+    description: "Newline-separated list of expected patterns with no matching asset (empty when all matched)"
+    value: ${{ steps.verify.outputs.missing }}
+
+runs:
+  using: composite
+  steps:
+    - name: Verify release assets
+      id: verify
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_EXPECTED_ASSETS: ${{ inputs.expected-assets }}
+        INPUT_MIN_SIZE_BYTES: ${{ inputs.min-size-bytes }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/verify_assets.py

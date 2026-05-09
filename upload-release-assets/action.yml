@@ -1,0 +1,58 @@
+name: Upload Release Assets
+description: >
+  Generic GitHub Release asset uploader. Glob-expands a list of paths or
+  patterns and uploads each matching file to a tag's GitHub Release with
+  `gh release upload --clobber`. Idempotent: re-runs simply re-upload.
+
+inputs:
+  tag:
+    description: "Git tag for the release"
+    required: true
+  assets:
+    description: "Newline- or comma-separated list of file paths and/or glob patterns to upload"
+    required: true
+  clobber:
+    description: "Pass --clobber to gh release upload (overwrite existing assets)"
+    required: false
+    default: "true"
+  fail-if-empty:
+    description: "Exit 1 if no files matched. When false, log a warning and exit 0."
+    required: false
+    default: "true"
+  working-directory:
+    description: "Base directory for resolving relative paths and glob patterns"
+    required: false
+    default: "."
+  dry-run:
+    description: "Print intended uploads without invoking gh"
+    required: false
+    default: "false"
+  token:
+    description: "GitHub token for authentication"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  uploaded-count:
+    description: "Number of files uploaded (0 in dry-run mode)"
+    value: ${{ steps.upload.outputs.uploaded-count }}
+  uploaded-paths:
+    description: "Newline-separated list of uploaded file paths"
+    value: ${{ steps.upload.outputs.uploaded-paths }}
+
+runs:
+  using: composite
+  steps:
+    - name: Upload release assets
+      id: upload
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_ASSETS: ${{ inputs.assets }}
+        INPUT_CLOBBER: ${{ inputs.clobber }}
+        INPUT_FAIL_IF_EMPTY: ${{ inputs.fail-if-empty }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/upload_assets.py

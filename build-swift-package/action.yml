@@ -1,0 +1,50 @@
+name: Build Swift Package
+description: >
+  Build a Swift Package that wraps a Rust binding crate via swift-bridge.
+
+  Builds the named cargo crate, locates the swift-bridge generated artifacts
+  under `target/<profile>/build/<crate>-*/out/`, and syncs them into the
+  Swift package's `Sources/RustBridgeC/` (combined C header) and
+  `Sources/RustBridge/` (Swift bridge files, with `import RustBridgeC`
+  prepended). After this action runs the package is ready for tagging and
+  Swift Package Index notification (e.g. via
+  `kreuzberg-dev/actions/publish-swift@v1`).
+
+  Assumes the calling workflow has already checked out the repo and set up
+  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`).
+
+inputs:
+  package-dir:
+    description: "Directory containing Package.swift"
+    required: false
+    default: "packages/swift"
+  crate-name:
+    description: "Cargo package name of the Rust binding crate"
+    required: false
+    default: "kreuzberg-swift"
+  build-profile:
+    description: "Cargo build profile (release, dev, or a custom named profile)"
+    required: false
+    default: "release"
+  dry-run:
+    description: "Print the planned commands and exit without building or syncing"
+    required: false
+    default: "false"
+
+outputs:
+  package-dir:
+    description: "Passthrough of the package-dir input (handy for downstream steps)"
+    value: ${{ inputs.package-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Swift package and sync swift-bridge artifacts
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        bash "${{ github.action_path }}/scripts/build.sh"

@@ -1,0 +1,60 @@
+name: Build Zig Package
+description: >
+  Build the workspace FFI crate that the Zig package links against and run
+  `zig build` (and `zig build test` if a `test` step exists in `build.zig`)
+  as a smoke check. Zig packages publish via Git tag tarballs, so this
+  action's job is health-checking — not producing an upload artifact.
+
+  Assumes the calling workflow has already checked out the repo and set up
+  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`).
+
+inputs:
+  ffi-crate:
+    description: "Workspace FFI crate name (the C library Zig links against)"
+    required: false
+    default: "kreuzberg-ffi"
+  package-dir:
+    description: "Directory containing build.zig and build.zig.zon"
+    required: false
+    default: "packages/zig"
+  build-profile:
+    description: "Cargo build profile for the FFI crate (release, dev, or a custom named profile)"
+    required: false
+    default: "release"
+  setup-zig:
+    description: "Install Zig via mlugg/setup-zig. Set to 'false' if Zig is already installed."
+    required: false
+    default: "true"
+  zig-version:
+    description: "Zig version (passed to mlugg/setup-zig)"
+    required: false
+    default: "0.16.0"
+  dry-run:
+    description: "Print the planned commands and exit without building"
+    required: false
+    default: "false"
+
+outputs:
+  ffi-library-path:
+    description: "Absolute path to the built FFI library that Zig links against"
+    value: ${{ steps.build.outputs.ffi-library-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Zig
+      if: inputs.setup-zig == 'true' && inputs.dry-run != 'true'
+      uses: mlugg/setup-zig@v2
+      with:
+        version: ${{ inputs.zig-version }}
+
+    - name: Build FFI crate and run zig build
+      id: build
+      shell: bash
+      env:
+        INPUT_FFI_CRATE: ${{ inputs.ffi-crate }}
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+        INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        bash "${{ github.action_path }}/scripts/build.sh"

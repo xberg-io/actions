@@ -1,0 +1,54 @@
+name: Build C# Native Libraries
+description: >
+  Build the FFI crate for one Rust target and stage the resulting native
+  library under the NuGet RID-specific runtimes path
+  (`runtimes/{rid}/native/`) ready for `dotnet pack`. Caller is
+  responsible for setup-rust + target install.
+
+inputs:
+  target:
+    description: "Rust target triple, e.g. x86_64-unknown-linux-gnu"
+    required: true
+  crate-name:
+    description: "Cargo package name to build"
+    required: false
+    default: "kreuzberg-ffi"
+  lib-name:
+    description: "Base name of the produced library (default: crate-name with - → _)"
+    required: false
+    default: ""
+  rid:
+    description: ".NET RID, e.g. linux-x64, linux-arm64, linux-musl-x64, osx-arm64, win-x64"
+    required: true
+  output-dir:
+    description: "Directory for the staging tree"
+    required: false
+    default: "dist/csharp-natives"
+  dry-run:
+    description: "Skip cargo build and emit a plan only"
+    required: false
+    default: "false"
+
+outputs:
+  library-path:
+    description: "Path to the staged native library"
+    value: ${{ steps.build.outputs.library-path }}
+  staging-dir:
+    description: "Directory containing runtimes/{rid}/native/ ready for dotnet pack"
+    value: ${{ steps.build.outputs.staging-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build C# natives
+      id: build
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_RID: ${{ inputs.rid }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 ${{ github.action_path }}/scripts/build.py
