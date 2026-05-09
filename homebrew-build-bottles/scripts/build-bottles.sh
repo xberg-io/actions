@@ -66,17 +66,20 @@ build_one_bottle() {
   done
 
   echo "Uploading ${renamed_tarball} to release ${tag}"
-  gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo"
+  gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
 
   echo "::endgroup::"
 }
 
-# Iterate the newline-separated formula list.
-while IFS= read -r formula; do
+# Iterate the newline-separated formula list. Read from FD 3 so that commands
+# inside the loop body (notably `gh`) cannot consume the loop's stdin and end
+# iteration early — observed on macOS bash 3.2 where `gh release upload`
+# absorbed the remaining lines.
+while IFS= read -r formula <&3; do
   formula="${formula// /}"
   [[ -z "$formula" ]] && continue
   build_one_bottle "$formula"
-done <<<"$formulas_raw"
+done 3<<<"$formulas_raw"
 
 echo "Bottles built; JSON manifests saved to ${out_dir}:"
 ls -la "$out_dir"
