@@ -1,0 +1,27 @@
+name: Test install-alef
+on:
+  push:
+    paths:
+      - "install-alef/**"
+      - ".github/workflows/test-install-alef.yml"
+  pull_request:
+    paths:
+      - "install-alef/**"
+      - ".github/workflows/test-install-alef.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Alef (latest)
+        uses: ./install-alef
+        with:
+          version: "latest"
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          alef --version
+          which alef

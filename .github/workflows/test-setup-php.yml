@@ -1,0 +1,26 @@
+name: Test setup-php
+on:
+  push:
+    paths:
+      - "setup-php/**"
+      - ".github/workflows/test-setup-php.yml"
+  pull_request:
+    paths:
+      - "setup-php/**"
+      - ".github/workflows/test-setup-php.yml"
+
+jobs:
+  # TODO: extend matrix to macos when needed
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: ./setup-php
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          php --version
+          composer --version

@@ -1,0 +1,31 @@
+name: Test install-wasi-sdk
+on:
+  push:
+    paths:
+      - "install-wasi-sdk/**"
+      - ".github/workflows/test-install-wasi-sdk.yml"
+  pull_request:
+    paths:
+      - "install-wasi-sdk/**"
+      - ".github/workflows/test-install-wasi-sdk.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install WASI SDK
+        uses: ./install-wasi-sdk
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          test -n "${WASI_SDK_PATH}"
+          echo "WASI_SDK_PATH=${WASI_SDK_PATH}"
+          test -d "${WASI_SDK_PATH}"
+          test -d "${WASI_SDK_PATH}/share/wasi-sysroot"
+          test -n "${WASI_SYSROOT}"
+          echo "WASI_SYSROOT=${WASI_SYSROOT}"
+          test -x "${WASI_SDK_PATH}/bin/clang"
+          "${WASI_SDK_PATH}/bin/clang" --version

@@ -1,0 +1,39 @@
+name: Test setup-go-cgo-env
+on:
+  push:
+    paths:
+      - "setup-go-cgo-env/**"
+      - ".github/workflows/test-setup-go-cgo-env.yml"
+  pull_request:
+    paths:
+      - "setup-go-cgo-env/**"
+      - ".github/workflows/test-setup-go-cgo-env.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create stub FFI library directory
+        shell: bash
+        run: |
+          # The action requires the FFI library directory to exist; smoke
+          # test only verifies the env wiring, not the actual link step.
+          mkdir -p target/release
+          mkdir -p crates/kreuzberg-ffi/include
+
+      - name: Setup Go cgo env
+        uses: ./setup-go-cgo-env
+
+      - name: Verify cgo environment
+        shell: bash
+        run: |
+          test "${CGO_ENABLED}" = "1"
+          echo "CGO_ENABLED=${CGO_ENABLED}"
+          echo "CGO_CFLAGS=${CGO_CFLAGS}"
+          echo "CGO_LDFLAGS=${CGO_LDFLAGS}"
+          echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}"
+          test -n "${CGO_LDFLAGS}"
+          test -n "${CGO_CFLAGS}"
+          test -n "${PKG_CONFIG_PATH}"

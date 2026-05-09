@@ -1,0 +1,25 @@
+name: Test install-homebrew-linux
+on:
+  push:
+    paths:
+      - "install-homebrew-linux/**"
+      - ".github/workflows/test-install-homebrew-linux.yml"
+  pull_request:
+    paths:
+      - "install-homebrew-linux/**"
+      - ".github/workflows/test-install-homebrew-linux.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Homebrew (Linux)
+        uses: ./install-homebrew-linux
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          brew --version
+          which brew
