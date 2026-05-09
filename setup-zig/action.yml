@@ -1,0 +1,24 @@
+name: Setup Zig
+description: Install the Zig toolchain by resolving the official ziglang.org download index
+inputs:
+  version:
+    description: >
+      Zig version to install. Accepts a tagged release ("0.16.0"), "master" for
+      the latest nightly, or "latest" to resolve the most recent tagged release
+      from ziglang.org/download/index.json.
+    required: false
+    default: "latest"
+runs:
+  using: composite
+  steps:
+    - name: Install Zig (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}"
+
+    - name: Install Zig (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}'
