@@ -59,14 +59,14 @@ def parse_color(raw: str) -> int:
         return DEFAULT_EMBED_COLOR
 
 
-def gh_release_view(tag: str, fields: str) -> dict[str, Any] | None:
-    result = subprocess.run(
-        ["gh", "release", "view", tag, "--json", fields],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def gh_release_view(tag: str, fields: str, repo: str) -> dict[str, Any] | None:
+    cmd = ["gh", "release", "view", tag, "--json", fields]
+    if repo:
+        cmd.extend(["--repo", repo])
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
+        if result.stderr:
+            print(f"Warning: gh release view failed: {result.stderr.strip()}", file=sys.stderr)
         return None
     try:
         parsed = json.loads(result.stdout)
@@ -75,15 +75,15 @@ def gh_release_view(tag: str, fields: str) -> dict[str, Any] | None:
     return cast("dict[str, Any]", parsed) if isinstance(parsed, dict) else None
 
 
-def already_announced(tag: str) -> bool:
-    payload = gh_release_view(tag, "assets")
+def already_announced(tag: str, repo: str) -> bool:
+    payload = gh_release_view(tag, "assets", repo)
     if not payload:
         return False
     return any(asset.get("name") == MARKER_ASSET_NAME for asset in payload.get("assets") or [])
 
 
-def fetch_release(tag: str) -> dict[str, Any]:
-    payload = gh_release_view(tag, "body,name,publishedAt,url")
+def fetch_release(tag: str, repo: str) -> dict[str, Any]:
+    payload = gh_release_view(tag, "body,name,publishedAt,url", repo)
     return payload or {}
 
 
@@ -164,14 +164,14 @@ def post_to_discord(webhook_url: str, payload: dict[str, Any]) -> None:
         sys.exit(1)
 
 
-def upload_marker(tag: str) -> None:
+def upload_marker(tag: str, repo: str) -> None:
     marker = Path(MARKER_ASSET_NAME)
     marker.write_text("")
     try:
-        subprocess.run(
-            ["gh", "release", "upload", tag, str(marker), "--clobber"],
-            check=True,
-        )
+        cmd = ["gh", "release", "upload", tag, str(marker), "--clobber"]
+        if repo:
+            cmd.extend(["--repo", repo])
+        subprocess.run(cmd, check=True)
     finally:
         marker.unlink(missing_ok=True)
 
@@ -208,7 +208,7 @@ def main() -> None:
         write_output("posted", "skipped-prerelease")
         return
 
-    if not dry_run and already_announced(tag):
+    if not dry_run and already_announced(tag, repo):
         print(f"Already announced {tag} — skipping (marker asset present on release)")
         write_output("posted", "skipped-already-announced")
         return
@@ -217,7 +217,7 @@ def main() -> None:
         description = normalize_notes(notes_override, tag)
         timestamp = _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
     else:
-        release = fetch_release(tag)
+        release = fetch_release(tag, repo)
         description = normalize_notes(release.get("body", ""), tag)
         timestamp = release.get("publishedAt") or _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
 
@@ -239,7 +239,7 @@ def main() -> None:
     post_to_discord(webhook_url, payload)
     print(f"Posted {tag} announcement to Discord")
 
-    upload_marker(tag)
+    upload_marker(tag, repo)
     print(f"Uploaded {MARKER_ASSET_NAME} marker to release {tag}")
     write_output("posted", "true")
 
