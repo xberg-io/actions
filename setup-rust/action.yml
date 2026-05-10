@@ -1,5 +1,5 @@
 name: Setup Rust Environment
-description: Install Rust toolchain with caching for build artifacts
+description: Install Rust toolchain with caching for build artifacts. For *-unknown-linux-musl targets, automatically installs musl-tools and configures cc-rs environment variables.
 inputs:
   components:
     description: Comma-separated list of Rust components to install
