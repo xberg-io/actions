@@ -73,6 +73,7 @@ to print the command without executing.
 | `publish-zig` | Git tag | none | Validates `build.zig.zon` + tag; emits the tarball SHA-256 downstream consumers need for `build.zig.zon`'s `hash` field; can append a fetch snippet to the GH release notes |
 | `publish-homebrew` | Homebrew tap | `HOMEBREW_TOKEN` | Formula updates with bottle hashes |
 | `publish-github-release` | GitHub Releases | `GITHUB_TOKEN` | Release-asset uploads |
+| `publish-helm-chart` | OCI registry (GHCR, GAR, ECR, …) | username + password / token | Stamps `version`/`appVersion`, runs `helm dependency build` + `package` + `push`; idempotent on re-publish |
 
 **Idempotency contract.** Each `publish-*` action either:
 
