@@ -50,6 +50,14 @@ inputs:
     description: Whether to upload the wheels as an artifact
     required: false
     default: "true"
+  manylinux-x86_64-image:
+    description: CIBW_MANYLINUX_X86_64_IMAGE (e.g. manylinux2014, manylinux_2_28)
+    required: false
+    default: "manylinux2014"
+  manylinux-aarch64-image:
+    description: CIBW_MANYLINUX_AARCH64_IMAGE
+    required: false
+    default: "manylinux2014"
 
 outputs:
   artifact-name:
@@ -86,8 +94,8 @@ runs:
         CIBW_ENVIRONMENT_WINDOWS: ${{ inputs.cibw-environment-windows }}
         CIBW_ENVIRONMENT_MACOS: ${{ inputs.cibw-environment-macos }}
         CIBW_SKIP: ${{ inputs.cibw-skip }}
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+        CIBW_MANYLINUX_X86_64_IMAGE: ${{ inputs.manylinux-x86_64-image }}
+        CIBW_MANYLINUX_AARCH64_IMAGE: ${{ inputs.manylinux-aarch64-image }}
 
     - name: Determine artifact name
       if: inputs.upload-artifact == 'true'
