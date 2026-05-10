@@ -58,4 +58,4 @@ runs:
         INPUT_COLOR: ${{ inputs.color }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/announce.py
+        python3 "${{ github.action_path }}/scripts/announce.py"

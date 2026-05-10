@@ -22,4 +22,4 @@ runs:
         INPUT_GEMS_DIR: ${{ inputs.gems-dir }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/publish.py
+        python3 "${{ github.action_path }}/scripts/publish.py"

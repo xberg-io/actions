@@ -28,4 +28,4 @@ runs:
         INPUT_POM_FILE: ${{ inputs.pom-file }}
         INPUT_PATCH_POM: ${{ inputs.patch-pom }}
         INPUT_PREFER_GPG2: ${{ inputs.prefer-gpg2 }}
-      run: bash ${{ github.action_path }}/scripts/configure.sh
+      run: bash "${{ github.action_path }}/scripts/configure.sh"

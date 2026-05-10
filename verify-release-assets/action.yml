@@ -47,4 +47,4 @@ runs:
         INPUT_MIN_SIZE_BYTES: ${{ inputs.min-size-bytes }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/verify_assets.py
+        python3 "${{ github.action_path }}/scripts/verify_assets.py"

@@ -44,4 +44,4 @@ runs:
         INPUT_FEATURES: ${{ inputs.features }}
         INPUT_OUTPUT_NAME: ${{ inputs.output-name }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-      run: bash ${{ github.action_path }}/scripts/build.sh
+      run: bash "${{ github.action_path }}/scripts/build.sh"

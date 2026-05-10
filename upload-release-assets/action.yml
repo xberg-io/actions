@@ -55,4 +55,4 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/upload_assets.py
+        python3 "${{ github.action_path }}/scripts/upload_assets.py"

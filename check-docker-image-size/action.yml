@@ -36,4 +36,4 @@ runs:
         INPUT_WARN_MB: ${{ inputs.warn-mb }}
         INPUT_FAIL_MB: ${{ inputs.fail-mb }}
         INPUT_LABEL: ${{ inputs.label }}
-      run: bash ${{ github.action_path }}/scripts/check.sh
+      run: bash "${{ github.action_path }}/scripts/check.sh"

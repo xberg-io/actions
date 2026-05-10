@@ -57,4 +57,4 @@ runs:
         INPUT_CHECKS: ${{ inputs.checks }}
         INPUT_SCHEMATHESIS_VERSION: ${{ inputs.schemathesis-version }}
         INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
-      run: bash ${{ github.action_path }}/scripts/run.sh
+      run: bash "${{ github.action_path }}/scripts/run.sh"

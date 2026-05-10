@@ -26,4 +26,4 @@ runs:
       shell: bash
       env:
         INPUT_EXTRA_PACKAGES: ${{ inputs.extra-packages }}
-      run: bash ${{ github.action_path }}/scripts/install.sh
+      run: bash "${{ github.action_path }}/scripts/install.sh"

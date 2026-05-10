@@ -71,8 +71,7 @@ runs:
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/ensure_release.py
-
+        python3 "${{ github.action_path }}/scripts/ensure_release.py"
     - name: Upload release artifacts
       if: inputs.artifacts != '' && inputs.dry-run != 'true'
       shell: bash
@@ -81,4 +80,4 @@ runs:
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_ARTIFACTS: ${{ inputs.artifacts }}
       run: |
-        python3 ${{ github.action_path }}/scripts/upload_artifacts.py
+        python3 "${{ github.action_path }}/scripts/upload_artifacts.py"

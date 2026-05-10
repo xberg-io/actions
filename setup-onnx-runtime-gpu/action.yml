@@ -28,4 +28,4 @@ runs:
       env:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_PLATFORM: ${{ inputs.platform }}
-      run: bash ${{ github.action_path }}/scripts/setup.sh
+      run: bash "${{ github.action_path }}/scripts/setup.sh"

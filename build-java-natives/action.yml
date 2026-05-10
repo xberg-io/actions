@@ -51,4 +51,4 @@ runs:
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 ${{ github.action_path }}/scripts/build.py
+        python3 "${{ github.action_path }}/scripts/build.py"

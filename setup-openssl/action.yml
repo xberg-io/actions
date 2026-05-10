@@ -7,14 +7,12 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        ${{ github.action_path }}/scripts/linux-install.sh
-
+        "${{ github.action_path }}/scripts/linux-install.sh"
     - name: Configure OpenSSL environment (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        ${{ github.action_path }}/scripts/linux-configure.sh
-
+        "${{ github.action_path }}/scripts/linux-configure.sh"
     - name: Get Homebrew prefix (macOS)
       if: runner.os == 'macOS'
       id: homebrew-prefix
@@ -35,14 +33,12 @@ runs:
       if: runner.os == 'macOS' && steps.cache-macos.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        ${{ github.action_path }}/scripts/macos-install.sh
-
+        "${{ github.action_path }}/scripts/macos-install.sh"
     - name: Configure OpenSSL environment (macOS)
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        ${{ github.action_path }}/scripts/macos-configure.sh
-
+        "${{ github.action_path }}/scripts/macos-configure.sh"
     - name: Check vcpkg installation (Windows)
       if: runner.os == 'Windows'
       id: vcpkg-check
