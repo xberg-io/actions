@@ -1,0 +1,68 @@
+name: Publish Helm Chart
+description: >
+  Package and push a Helm chart to an OCI registry (GHCR, GAR, ECR, Docker Hub, etc.).
+  Stamps the chart's version and appVersion in Chart.yaml before packaging. Idempotent:
+  re-running with the same version exits 0 with skipped=true if the chart already exists.
+
+inputs:
+  chart-path:
+    description: "Path to the chart directory (e.g. charts/my-chart)"
+    required: true
+  version:
+    description: "Chart version (semver, no 'v' prefix). Example: 0.1.0 or 0.1.0-rc.1."
+    required: true
+  app-version:
+    description: "App version stamped into Chart.yaml. Defaults to chart version."
+    required: false
+    default: ""
+  registry:
+    description: >
+      OCI registry URL (e.g. oci://ghcr.io/my-org/charts). The host is extracted for
+      `helm registry login`; the full URL is the push target.
+    required: true
+  username:
+    description: "Registry username (e.g. github.actor for GHCR, oauth2accesstoken for GCP AR)"
+    required: true
+  password:
+    description: "Registry password / token (e.g. GITHUB_TOKEN for GHCR)"
+    required: true
+  helm-version:
+    description: "Helm version to install (e.g. v3.16.0). Defaults to latest stable."
+    required: false
+    default: ""
+  dry-run:
+    description: "If 'true', lint and package but skip registry login and push"
+    required: false
+    default: "false"
+
+outputs:
+  published:
+    description: "'true' if the chart was pushed, 'false' if dry-run or skipped"
+    value: ${{ steps.publish.outputs.published }}
+  skipped:
+    description: "'true' if the chart version already existed in the registry"
+    value: ${{ steps.publish.outputs.skipped }}
+  chart-tarball:
+    description: "Absolute path to the packaged .tgz file"
+    value: ${{ steps.publish.outputs.chart-tarball }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: ${{ inputs.helm-version || 'latest' }}
+
+    - name: Publish chart
+      id: publish
+      shell: bash
+      env:
+        INPUT_CHART_PATH: ${{ inputs.chart-path }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_APP_VERSION: ${{ inputs.app-version }}
+        INPUT_REGISTRY: ${{ inputs.registry }}
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_PASSWORD: ${{ inputs.password }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: python3 "${GITHUB_ACTION_PATH}/scripts/publish.py"

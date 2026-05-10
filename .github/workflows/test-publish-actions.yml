@@ -336,3 +336,38 @@ jobs:
           setup-zig: "false"
           update-release-notes: "false"
           dry-run: "true"
+
+  test-publish-helm-chart-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Stage a minimal helm chart
+        run: |
+          mkdir -p pkg/templates
+          cat >pkg/Chart.yaml <<'YAML'
+          apiVersion: v2
+          name: dry-run-chart
+          description: Smoke-test fixture
+          type: application
+          version: 0.0.0
+          appVersion: "0.0.0"
+          YAML
+          cat >pkg/templates/configmap.yaml <<'YAML'
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: smoke
+          data:
+            hello: world
+          YAML
+
+      - name: Test publish-helm-chart (dry-run)
+        uses: ./publish-helm-chart
+        with:
+          chart-path: pkg
+          version: 0.1.0
+          registry: oci://ghcr.io/kreuzberg-dev/charts
+          username: dummy
+          password: dummy
+          dry-run: "true"
