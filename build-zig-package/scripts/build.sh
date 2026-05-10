@@ -75,15 +75,17 @@ if [[ ! -f "$ffi_library_path" ]]; then
   fi
 fi
 
-echo "=== Running zig build in $PACKAGE_DIR ==="
+ffi_dir="$target_dir/$target_subdir"
+
+echo "=== Running zig build in $PACKAGE_DIR (-Dffi_path=$ffi_dir) ==="
 (
   cd "$PACKAGE_DIR"
-  zig build
+  zig build -Dffi_path="$ffi_dir"
   # If build.zig declares a `test` step, run it. We grep loosely; users may
   # write either `b.step("test", ...)` or surrounding whitespace variants.
   if [[ -f build.zig ]] && grep -Eq 'b\.step\(\s*"test"' build.zig; then
     echo "=== Running zig build test ==="
-    zig build test
+    zig build test -Dffi_path="$ffi_dir"
   else
     echo "No 'test' step found in build.zig; skipping zig build test"
   fi
