@@ -13,6 +13,10 @@ inputs:
     description: Whether to pack the result as a tarball
     required: false
     default: "false"
+  wasm-pack-version:
+    description: wasm-pack version to install (or 'skip' to skip install)
+    required: false
+    default: "0.13.1"
 
 outputs:
   tarball:
@@ -22,6 +26,20 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Install wasm-pack
+      if: inputs.wasm-pack-version != 'skip'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v wasm-pack >/dev/null && wasm-pack --version | grep -q "${{ inputs.wasm-pack-version }}"; then
+          echo "wasm-pack ${{ inputs.wasm-pack-version }} already installed"
+        else
+          curl -sSfL https://github.com/rustwasm/wasm-pack/releases/download/v${{ inputs.wasm-pack-version }}/wasm-pack-v${{ inputs.wasm-pack-version }}-x86_64-unknown-linux-musl.tar.gz \
+            | tar -xzv --strip-components=1 -C /usr/local/bin --wildcards '*/wasm-pack'
+          chmod +x /usr/local/bin/wasm-pack
+          wasm-pack --version
+        fi
+
     - name: Build WASM bundle
       shell: bash
       working-directory: ${{ inputs.crate-dir }}
