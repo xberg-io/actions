@@ -1,0 +1,80 @@
+name: Verify Install from Registry
+description: >
+  Install a published package from its registry (or from a local wheelhouse /
+  workflow artifact in dry-run) and run a generated alef test_app against it.
+  This is the consumer-side smoke for a publish job: it asserts the artifact
+  actually installs and exercises the binding from a clean environment.
+
+  The action assumes the language toolchain is already on PATH (uv/pnpm/
+  bundler/mvn/dotnet/composer/mix/go/cargo). Callers wire the matching
+  setup-* action upstream. The action does NOT install toolchains.
+
+  Expects a `test_apps/<language>/` directory in the repo (committed). If
+  missing, runs `alef e2e generate --registry` first.
+
+inputs:
+  language:
+    description: >
+      Language to verify. One of: python, node, wasm, ruby, java, csharp,
+      php, elixir, go, rust, c.
+    required: true
+  version:
+    description: "Version being verified (e.g. 1.4.0-rc.27)."
+    required: true
+  package-name:
+    description: "Package name as published (e.g. liter-llm, @kreuzberg/liter-llm-node)."
+    required: true
+  artifact-source:
+    description: >
+      Where to install from. `registry` (default, real publish) installs
+      from the public registry. `wheelhouse` / `artifact` installs from a
+      local directory pointed to by `local-path` — used in dry-run.
+    required: false
+    default: "registry"
+  local-path:
+    description: >
+      Local directory containing the artifact when artifact-source != registry.
+      For python: a wheelhouse pip --find-links can use.
+      For node: a directory containing the .tgz from `pnpm pack`.
+      For ruby: directory with the .gem file. Etc.
+    required: false
+    default: ""
+  test-apps-dir:
+    description: "Path to the test_apps directory (default: test_apps)."
+    required: false
+    default: "test_apps"
+  smoke-only:
+    description: "Run only the smoke test, not the full suite."
+    required: false
+    default: "true"
+  regenerate:
+    description: >
+      Run `alef e2e generate --registry` before installing. Set to true if
+      the repo doesn't commit test_apps/, false (default) if it does.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Regenerate test_apps (optional)
+      if: inputs.regenerate == 'true'
+      shell: bash
+      run: |
+        if ! command -v alef >/dev/null 2>&1; then
+          echo "::error::alef not on PATH; call install-alef@v1 before this action"
+          exit 1
+        fi
+        alef e2e generate --registry
+
+    - name: Verify install + smoke
+      shell: bash
+      env:
+        INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_PACKAGE_NAME: ${{ inputs.package-name }}
+        INPUT_ARTIFACT_SOURCE: ${{ inputs.artifact-source }}
+        INPUT_LOCAL_PATH: ${{ inputs.local-path }}
+        INPUT_TEST_APPS_DIR: ${{ inputs.test-apps-dir }}
+        INPUT_SMOKE_ONLY: ${{ inputs.smoke-only }}
+      run: bash "${{ github.action_path }}/scripts/verify.sh"

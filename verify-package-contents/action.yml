@@ -1,0 +1,63 @@
+name: Verify Package Contents
+description: >
+  Inspect a built package artifact (wheel, gem, npm tarball, jar, nupkg,
+  crate, hex tarball, homebrew bottle, composer zip) and assert it ships
+  the language-specific expected files: type stubs (.pyi, .d.ts, .rbs),
+  marker files (py.typed), native binaries (.so/.dylib/.dll/.node) under
+  the correct relative paths, plus LICENSE and README.
+
+  This guards against publish-side regressions where a wheel ships without
+  py.typed, an npm package without index.d.ts, a NuGet package missing the
+  runtimes/<rid>/ layout, etc. Run inside the publish job, before the
+  upload step, so a broken artifact fails fast.
+
+inputs:
+  language:
+    description: >
+      Language of the artifact. One of: python, node, wasm, ruby, java,
+      csharp, php, elixir, go, rust, c, homebrew.
+    required: true
+  artifact-path:
+    description: "Path to the artifact file (.whl, .gem, .tgz, .jar, .nupkg, .crate, .tar)"
+    required: true
+  package-name:
+    description: >
+      Expected package name (for cross-checking embedded metadata). Optional;
+      most checks don't require it.
+    required: false
+    default: ""
+  required-extras:
+    description: >
+      Newline-separated extra glob patterns that must also match in the
+      artifact. Useful for project-specific files (e.g. a custom .so layout).
+    required: false
+    default: ""
+  strict:
+    description: "Fail on any allowlist miss (true) or warn only (false)."
+    required: false
+    default: "true"
+
+outputs:
+  matched:
+    description: "Number of allowlist patterns that matched at least one file."
+    value: ${{ steps.verify.outputs.matched }}
+  missing:
+    description: "Newline-separated list of allowlist patterns with no matches."
+    value: ${{ steps.verify.outputs.missing }}
+  file-count:
+    description: "Total number of files inspected in the artifact."
+    value: ${{ steps.verify.outputs.file-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Verify package contents
+      id: verify
+      shell: bash
+      env:
+        INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        INPUT_PACKAGE_NAME: ${{ inputs.package-name }}
+        INPUT_REQUIRED_EXTRAS: ${{ inputs.required-extras }}
+        INPUT_STRICT: ${{ inputs.strict }}
+      run: python3 "${{ github.action_path }}/scripts/verify.py"
