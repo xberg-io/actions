@@ -1,0 +1,68 @@
+name: Build Swift Artifact Bundle
+description: >
+  Build a Swift Package Manager SE-0305 artifact bundle containing static
+  Rust libraries for macOS (arm64, x86_64), iOS (device arm64, simulator
+  arm64+x86_64), and Linux (arm64, x86_64). Produces a zip suitable for
+  SPM .binaryTarget distribution.
+
+  Assumes the calling workflow has already checked out the repo and set up
+  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`). Must run on
+  macos-latest. Linux targets are cross-compiled using the `cross` CLI.
+
+inputs:
+  crate-name:
+    description: "Cargo package name"
+    required: false
+    default: "kreuzberg-swift"
+  lib-name:
+    description: "Library base name (default = crate-name with '-' replaced by '_')"
+    required: false
+    default: ""
+  artifact-name:
+    description: "Artifact bundle name without extension (default = PascalCase of lib-name)"
+    required: false
+    default: ""
+  header-path:
+    description: "Optional path to C headers directory to embed in bundle"
+    required: false
+    default: ""
+  output-dir:
+    description: "Output directory for the artifact bundle"
+    required: false
+    default: "dist/swift-artifactbundle"
+  build-profile:
+    description: "Cargo build profile (release, dev, or a custom named profile)"
+    required: false
+    default: "release"
+  dry-run:
+    description: "Print the planned commands and exit without building"
+    required: false
+    default: "false"
+
+outputs:
+  bundle-path:
+    description: "Absolute path to the .artifactbundle directory"
+    value: ${{ steps.build.outputs.bundle-path }}
+  bundle-zip:
+    description: "Absolute path to the zipped .artifactbundle.zip"
+    value: ${{ steps.build.outputs.bundle-zip }}
+  checksum:
+    description: "SHA256 checksum of the artifact bundle zip"
+    value: ${{ steps.build.outputs.checksum }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build artifact bundle
+      id: build
+      shell: bash
+      env:
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUT_HEADER_PATH: ${{ inputs.header-path }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        bash "${{ github.action_path }}/scripts/build.sh"
