@@ -1,0 +1,49 @@
+name: Setup Android NDK
+description: >
+  Resolve a preinstalled Android NDK on the runner, export ANDROID_NDK_HOME /
+  ANDROID_NDK_ROOT / NDK_HOME, prepend the NDK host toolchain bin directory
+  to PATH, install requested Rust Android targets, and (optionally) install
+  cargo-ndk. Designed for reuse across kreuzberg-dev Rust libraries that
+  cross-compile to Android targets.
+
+  Assumes the caller has already set up a Rust toolchain (e.g. via
+  kreuzberg-dev/actions/setup-rust@v1).
+
+inputs:
+  ndk-version:
+    description: >
+      Specific NDK directory name under $ANDROID_HOME/ndk/ to use
+      (e.g. "27.2.12479018"). When empty, the highest semver-sorted
+      directory is picked.
+    required: false
+    default: ""
+  targets:
+    description: "Comma-separated Rust Android targets to add via rustup"
+    required: false
+    default: "aarch64-linux-android,x86_64-linux-android"
+  install-cargo-ndk:
+    description: "Install cargo-ndk via cargo install"
+    required: false
+    default: "true"
+  cargo-ndk-version:
+    description: "cargo-ndk version (empty = latest stable)"
+    required: false
+    default: ""
+
+outputs:
+  ndk-home:
+    description: "Absolute path to the resolved NDK root"
+    value: ${{ steps.setup.outputs.ndk-home }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Android NDK
+      id: setup
+      shell: bash
+      env:
+        INPUT_NDK_VERSION: ${{ inputs.ndk-version }}
+        INPUT_TARGETS: ${{ inputs.targets }}
+        INPUT_INSTALL_CARGO_NDK: ${{ inputs.install-cargo-ndk }}
+        INPUT_CARGO_NDK_VERSION: ${{ inputs.cargo-ndk-version }}
+      run: bash "${{ github.action_path }}/scripts/setup.sh"
