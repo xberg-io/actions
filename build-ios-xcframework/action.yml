@@ -1,0 +1,62 @@
+name: Build iOS XCFramework
+description: >
+  Cross-compile a Rust crate for all iOS targets (device arm64, simulator
+  arm64+x86_64) and bundle into an XCFramework. Caller must have already
+  called kreuzberg-dev/actions/setup-rust@v1. Must run on macos-latest.
+
+inputs:
+  crate-name:
+    description: "Cargo package name"
+    required: true
+  lib-name:
+    description: "Base library name (default: crate-name with - → _)"
+    required: false
+    default: ""
+  xcframework-name:
+    description: "XCFramework name (default: lib-name PascalCase)"
+    required: false
+    default: ""
+  header-path:
+    description: "Optional path to C header directory to embed"
+    required: false
+    default: ""
+  output-dir:
+    description: "Output directory for the XCFramework"
+    required: false
+    default: "dist/ios-xcframework"
+  build-profile:
+    description: "Cargo build profile (dev, release, or custom)"
+    required: false
+    default: "release"
+  dry-run:
+    description: "Skip build steps and emit a plan only"
+    required: false
+    default: "false"
+
+outputs:
+  xcframework-path:
+    description: "Absolute path to the created .xcframework directory"
+    value: ${{ steps.build.outputs.xcframework-path }}
+  xcframework-zip:
+    description: "Absolute path to the zipped .xcframework"
+    value: ${{ steps.build.outputs.xcframework-zip }}
+  checksum:
+    description: "SHA256 checksum for Swift Package Manager"
+    value: ${{ steps.build.outputs.checksum }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build iOS XCFramework
+      id: build
+      shell: bash
+      env:
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_XCFRAMEWORK_NAME: ${{ inputs.xcframework-name }}
+        INPUT_HEADER_PATH: ${{ inputs.header-path }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        bash "${{ github.action_path }}/scripts/build.sh"

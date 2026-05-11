@@ -1,0 +1,52 @@
+name: Build Android Native Libraries
+description: >
+  Cross-compile a Rust crate for Android ABIs using cargo-ndk and stage
+  the resulting .so files under dist/android-natives/{abi}/lib{lib}.so.
+  Caller must have already called kreuzberg-dev/actions/setup-rust@v1
+  and set up the Android SDK (android-actions/setup-android@v3).
+
+inputs:
+  crate-name:
+    description: "Cargo package name"
+    required: true
+  lib-name:
+    description: "Base library name (default: crate-name with - → _)"
+    required: false
+    default: ""
+  abis:
+    description: "Comma-separated Android ABIs, e.g. arm64-v8a,x86_64"
+    required: false
+    default: "arm64-v8a,x86_64"
+  api-level:
+    description: "Android API level for cargo-ndk"
+    required: false
+    default: "21"
+  output-dir:
+    description: "Directory for the staging tree"
+    required: false
+    default: "dist/android-natives"
+  dry-run:
+    description: "Skip cargo build and emit a plan only"
+    required: false
+    default: "false"
+
+outputs:
+  output-dir:
+    description: "Absolute path to the staging root directory"
+    value: ${{ steps.build.outputs.output-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Android natives
+      id: build
+      shell: bash
+      env:
+        INPUT_CRATE_NAME: ${{ inputs.crate-name }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+        INPUT_ABIS: ${{ inputs.abis }}
+        INPUT_API_LEVEL: ${{ inputs.api-level }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        python3 "${{ github.action_path }}/scripts/build.py"
