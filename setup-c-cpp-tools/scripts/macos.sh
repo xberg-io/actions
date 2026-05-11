@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Install cppcheck, clang-format, shellcheck via Homebrew.
+set -euo pipefail
+
+CPPCHECK_VERSION="${CPPCHECK_VERSION:-2.20.0}"
+INSTALL_CLANG_FORMAT="${INSTALL_CLANG_FORMAT:-true}"
+INSTALL_SHELLCHECK="${INSTALL_SHELLCHECK:-true}"
+
+brew_packages=(cppcheck)
+[[ "$INSTALL_CLANG_FORMAT" == "true" ]] && brew_packages+=(clang-format)
+[[ "$INSTALL_SHELLCHECK" == "true" ]] && brew_packages+=(shellcheck)
+
+brew install "${brew_packages[@]}" || brew upgrade "${brew_packages[@]}"
+
+installed_version="$(cppcheck --version | awk '{print $2}')"
+if [[ "$installed_version" != "$CPPCHECK_VERSION" ]]; then
+  echo "Warning: brew installed cppcheck $installed_version, expected $CPPCHECK_VERSION" >&2
+fi
+
+cppcheck --version

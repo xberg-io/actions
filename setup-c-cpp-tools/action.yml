@@ -1,0 +1,44 @@
+name: Setup C/C++ Tools
+description: |
+  Install the C/C++ toolchain used by kreuzberg-dev pre-commit hooks (cppcheck,
+  clang-format, shellcheck). Pins cppcheck to the version expected by
+  kreuzberg-dev/pre-commit-hooks (currently 2.20.0) — Ubuntu's stock package is
+  too old, so cppcheck is built from source via CMake when not already on PATH
+  at the expected version.
+
+inputs:
+  cppcheck-version:
+    description: cppcheck version to install (must match the pin in kreuzberg-dev/pre-commit-hooks)
+    required: false
+    default: "2.20.0"
+  install-clang-format:
+    description: Install clang-format via apt (Linux only).
+    required: false
+    default: "true"
+  install-shellcheck:
+    description: Install shellcheck via apt (Linux only).
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install C/C++ tools (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        CPPCHECK_VERSION: ${{ inputs.cppcheck-version }}
+        INSTALL_CLANG_FORMAT: ${{ inputs.install-clang-format }}
+        INSTALL_SHELLCHECK: ${{ inputs.install-shellcheck }}
+      run: |
+        "${{ github.action_path }}/scripts/linux.sh"
+
+    - name: Install C/C++ tools (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        CPPCHECK_VERSION: ${{ inputs.cppcheck-version }}
+        INSTALL_CLANG_FORMAT: ${{ inputs.install-clang-format }}
+        INSTALL_SHELLCHECK: ${{ inputs.install-shellcheck }}
+      run: |
+        "${{ github.action_path }}/scripts/macos.sh"
