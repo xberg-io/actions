@@ -1,0 +1,27 @@
+name: Test setup-wasm-pack
+on:
+  push:
+    paths:
+      - "setup-wasm-pack/**"
+      - ".github/workflows/test-setup-wasm-pack.yml"
+  pull_request:
+    paths:
+      - "setup-wasm-pack/**"
+      - ".github/workflows/test-setup-wasm-pack.yml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup wasm-pack
+        uses: ./setup-wasm-pack
+
+      - name: Verify installation
+        shell: bash
+        run: wasm-pack --version
