@@ -1,0 +1,32 @@
+name: Test setup-chrome
+on:
+  push:
+    paths:
+      - "setup-chrome/**"
+      - ".github/workflows/test-setup-chrome.yml"
+  pull_request:
+    paths:
+      - "setup-chrome/**"
+      - ".github/workflows/test-setup-chrome.yml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Chrome
+        uses: ./setup-chrome
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          command -v google-chrome >/dev/null && google-chrome --version && exit 0
+          command -v chromium >/dev/null && chromium --version && exit 0
+          command -v chrome >/dev/null && chrome --version && exit 0
+          echo "Chrome not found on PATH" >&2
+          exit 1

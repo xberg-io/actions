@@ -1,0 +1,18 @@
+name: Setup Chrome
+description: >
+  Install Google Chrome / Chromium via `browser-actions/setup-chrome@v1`.
+  Supports Linux (including `ubuntu-24.04-arm`), macOS, and Windows runners.
+
+inputs:
+  chrome-version:
+    description: "Chrome channel or version (e.g. 'stable', 'beta', 'dev', or an explicit version)"
+    required: false
+    default: "stable"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: ${{ inputs.chrome-version }}
