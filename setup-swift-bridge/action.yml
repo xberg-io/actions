@@ -1,0 +1,95 @@
+name: Setup swift-bridge
+description: >
+  Locate the most recent `swift-bridge` cargo build output and stage the
+  generated `SwiftBridgeCore.{h,swift}` plus the binding-specific
+  `<crate>.{h,swift}` files into `<packages-dir>/Sources/RustBridgeC` and
+  `<packages-dir>/Sources/RustBridge`. Works on both BSD (`stat -f`) and
+  GNU (`stat -c`) hosts. Run after `cargo build -p <crate-name>`.
+
+inputs:
+  profile:
+    description: "Cargo build profile (release or debug). Maps to target/<profile>/build/."
+    required: false
+    default: "release"
+  crate-name:
+    description: "swift-bridge cargo crate name suffix. Used to match `*<crate-name>-*/out` directories under target/<profile>/build/."
+    required: false
+    default: "kreuzcrawl-swift"
+  packages-dir:
+    description: "Directory hosting the Swift package. RustBridgeC/ and RustBridge/ are created beneath `<packages-dir>/Sources/`."
+    required: false
+    default: "packages/swift"
+
+runs:
+  using: composite
+  steps:
+    - name: Stage swift-bridge artefacts
+      shell: bash
+      env:
+        PROFILE: ${{ inputs.profile }}
+        CRATE_NAME: ${{ inputs.crate-name }}
+        PACKAGES_DIR: ${{ inputs.packages-dir }}
+      run: |
+        set -euo pipefail
+
+        BUILD_DIR="target/${PROFILE}/build"
+
+        if [ ! -d "$BUILD_DIR" ]; then
+          echo "ERROR: build directory '$BUILD_DIR' does not exist. Did 'cargo build --profile ${PROFILE}' run?" >&2
+          exit 1
+        fi
+
+        # Detect stat flavor: BSD (macOS) uses `-f`, GNU (Linux) uses `-c`.
+        if stat -f '%m' "$BUILD_DIR" >/dev/null 2>&1; then
+          STAT_FMT=(-f '%m %N')
+        elif stat -c '%Y %n' "$BUILD_DIR" >/dev/null 2>&1; then
+          STAT_FMT=(-c '%Y %n')
+        else
+          echo "ERROR: neither BSD nor GNU 'stat' is usable on this host." >&2
+          exit 1
+        fi
+
+        OUT="$(find "$BUILD_DIR" -maxdepth 2 -type d -name out -path "*${CRATE_NAME}-*/out" \
+          -exec stat "${STAT_FMT[@]}" {} + 2>/dev/null \
+          | sort -rn \
+          | head -n 1 \
+          | cut -d' ' -f2-)"
+
+        if [ -z "${OUT:-}" ] || [ ! -d "$OUT" ]; then
+          echo "ERROR: could not find swift-bridge out/ directory matching '*${CRATE_NAME}-*/out' in ${BUILD_DIR}" >&2
+          echo "Candidates under ${BUILD_DIR}:" >&2
+          find "$BUILD_DIR" -maxdepth 2 -type d -name out 2>/dev/null >&2 || true
+          exit 1
+        fi
+
+        echo "Using swift-bridge output: $OUT"
+
+        CORE_HEADER="$OUT/SwiftBridgeCore.h"
+        CORE_SWIFT="$OUT/SwiftBridgeCore.swift"
+        CRATE_HEADER="$OUT/${CRATE_NAME}/${CRATE_NAME}.h"
+        CRATE_SWIFT="$OUT/${CRATE_NAME}/${CRATE_NAME}.swift"
+
+        for f in "$CORE_HEADER" "$CORE_SWIFT" "$CRATE_HEADER" "$CRATE_SWIFT"; do
+          if [ ! -f "$f" ]; then
+            echo "ERROR: expected swift-bridge artefact missing: $f" >&2
+            exit 1
+          fi
+        done
+
+        BRIDGE_C_DIR="${PACKAGES_DIR}/Sources/RustBridgeC"
+        BRIDGE_DIR="${PACKAGES_DIR}/Sources/RustBridge"
+        mkdir -p "$BRIDGE_C_DIR" "$BRIDGE_DIR"
+
+        cat "$CORE_HEADER" "$CRATE_HEADER" >"$BRIDGE_C_DIR/RustBridgeC.h"
+
+        {
+          printf 'import RustBridgeC\n'
+          cat "$CORE_SWIFT"
+        } >"$BRIDGE_DIR/SwiftBridgeCore.swift"
+
+        {
+          printf 'import RustBridgeC\n'
+          cat "$CRATE_SWIFT"
+        } >"$BRIDGE_DIR/${CRATE_NAME}.swift"
+
+        echo "Swift-bridge files setup complete"
