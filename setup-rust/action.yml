@@ -92,15 +92,6 @@ runs:
         restore-keys: |
           ${{ inputs.shared-core-cache == 'true' && format('shared-core-v4-{0}-{1}-', runner.os, runner.arch) || format('{0}-v4-{1}-{2}-{3}-', inputs.cache-key-prefix, runner.os, runner.arch, inputs.target || 'default') }}
 
-    - name: Cache cargo-llvm-cov
-      if: inputs.install-llvm-cov == 'true'
-      uses: actions/cache@v5
-      with:
-        path: ~/.cargo/bin/cargo-llvm-cov
-        key: cargo-llvm-cov-v6-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml') }}
-        restore-keys: |
-          cargo-llvm-cov-v6-${{ runner.os }}-${{ runner.arch }}-
-
     - name: Validate sccache installation
       if: inputs.use-sccache == 'true'
       shell: bash
@@ -124,11 +115,11 @@ runs:
       run: |
         "$GITHUB_ACTION_PATH/scripts/cleanup-fingerprints.sh"
 
-    - name: Install cargo-llvm-cov if not cached
+    - name: Install cargo-llvm-cov
       if: inputs.install-llvm-cov == 'true'
-      shell: bash
-      run: |
-        "$GITHUB_ACTION_PATH/scripts/install-cargo-llvm-cov.sh"
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-llvm-cov
 
     - name: Report sccache statistics
       if: inputs.use-sccache == 'true' && inputs.report-stats == 'true' && always()
