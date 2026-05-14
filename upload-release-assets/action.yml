@@ -31,6 +31,10 @@ inputs:
     description: "GitHub token for authentication"
     required: false
     default: ${{ github.token }}
+  repo:
+    description: "owner/name of the repository hosting the release. Defaults to github.repository."
+    required: false
+    default: ${{ github.repository }}
 
 outputs:
   uploaded-count:
@@ -48,6 +52,7 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ inputs.repo }}
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_ASSETS: ${{ inputs.assets }}
         INPUT_CLOBBER: ${{ inputs.clobber }}
