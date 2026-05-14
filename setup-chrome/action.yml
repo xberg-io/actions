@@ -1,18 +1,50 @@
 name: Setup Chrome
 description: >
-  Install Google Chrome / Chromium via `browser-actions/setup-chrome@v1`.
-  Supports Linux (including `ubuntu-24.04-arm`), macOS, and Windows runners.
+  Install Google Chrome / Chromium for headless browser tests. On
+  ubuntu-*-arm runners installs `chromium-browser` via apt because
+  `browser-actions/setup-chrome@v1` does not support linux-arm64. On
+  every other runner delegates to `browser-actions/setup-chrome@v1`
+  with the requested channel/version.
 
 inputs:
   chrome-version:
-    description: "Chrome channel or version (e.g. 'stable', 'beta', 'dev', or an explicit version)"
+    description: "Chrome channel or version (e.g. 'stable', 'beta', 'dev', or an explicit version). Ignored on linux-arm64 (apt-installed chromium does not honour channel selection)."
     required: false
     default: "stable"
 
 runs:
   using: composite
   steps:
-    - name: Setup Chrome
+    - name: Detect platform
+      id: detect
+      shell: bash
+      run: |
+        os="$(uname -s)"
+        arch="$(uname -m)"
+        if [ "$os" = "Linux" ] && [ "$arch" = "aarch64" ]; then
+          echo "linux_arm64=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "linux_arm64=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install chromium via apt (linux-arm64)
+      if: steps.detect.outputs.linux_arm64 == 'true'
+      shell: bash
+      run: |
+        set -euxo pipefail
+        sudo apt-get update -qq
+        # chromium-browser is a transitional snap-stub on noble; the real
+        # binary on ubuntu-24.04-arm is `chromium`.
+        sudo apt-get install -y --no-install-recommends chromium
+        chromium --version
+        # Provide `google-chrome` and `chrome` aliases since many test
+        # harnesses look those up first.
+        for alias in google-chrome chrome; do
+          sudo ln -sf "$(command -v chromium)" "/usr/local/bin/$alias"
+        done
+
+    - name: Setup Chrome (non-arm64)
+      if: steps.detect.outputs.linux_arm64 != 'true'
       uses: browser-actions/setup-chrome@v1
       with:
         chrome-version: ${{ inputs.chrome-version }}
