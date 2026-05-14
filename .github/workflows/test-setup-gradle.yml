@@ -1,0 +1,32 @@
+name: Test setup-gradle
+on:
+  push:
+    paths:
+      - "setup-gradle/**"
+      - ".github/workflows/test-setup-gradle.yml"
+  pull_request:
+    paths:
+      - "setup-gradle/**"
+      - ".github/workflows/test-setup-gradle.yml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: ./setup-gradle
+
+      - name: Verify installation
+        shell: bash
+        run: gradle --version

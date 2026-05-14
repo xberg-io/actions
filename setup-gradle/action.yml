@@ -1,0 +1,23 @@
+name: Setup Gradle
+description: >
+  Install Gradle via `gradle/actions/setup-gradle@v4` with kreuzberg-dev
+  defaults. Mirrors the wiring used inside `publish-maven-gradle`.
+
+inputs:
+  gradle-version:
+    description: "Gradle version to install"
+    required: false
+    default: "8.11"
+  cache-cleanup:
+    description: "Cache cleanup policy passed through to gradle/actions/setup-gradle"
+    required: false
+    default: "on-success"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: ${{ inputs.gradle-version }}
+        cache-cleanup: ${{ inputs.cache-cleanup }}
