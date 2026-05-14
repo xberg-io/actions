@@ -113,6 +113,7 @@ tag-based publishes).
 | `test-java-ffi` | Java Panama FFI test setup |
 | `check-docker-image-size` | Inspect a locally-loaded image, warn or fail on size threshold, write step summary |
 | `run-api-contract-tests` | Run schemathesis property-based contract tests against a containerised API |
+| `pack-source-bundle` | Tar+zstd a set of paths into a release-ready bundle with sha256 sidecar |
 
 ## Reusable Workflows
 

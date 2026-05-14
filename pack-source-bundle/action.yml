@@ -1,0 +1,98 @@
+name: Pack source bundle
+description: >
+  Tar+zstd a set of paths into a release-ready source bundle and emit a
+  sha256 sidecar. Used to ship grammar/source archives alongside a GitHub
+  Release so build scripts can fetch them from-source installs.
+
+inputs:
+  paths:
+    description: Newline-separated list of paths (files or directories) to include
+    required: true
+  excludes:
+    description: |
+      Newline-separated tar `--exclude=` patterns. Each non-empty line is
+      passed verbatim to tar as `--exclude=<pattern>`.
+    required: false
+    default: ""
+  output:
+    description: Full output path including extension (e.g. dist/parser-sources-1.8.1.tar.zst)
+    required: true
+  compression-level:
+    description: zstd compression level (1–22, higher = smaller, slower)
+    required: false
+    default: "19"
+
+outputs:
+  bundle-path:
+    description: Absolute path to the generated bundle
+    value: ${{ steps.pack.outputs.bundle-path }}
+  sha256-path:
+    description: Absolute path to the .sha256 sidecar
+    value: ${{ steps.pack.outputs.sha256-path }}
+  sha256:
+    description: Hex sha256 digest of the bundle
+    value: ${{ steps.pack.outputs.sha256 }}
+  size-bytes:
+    description: Bundle size in bytes
+    value: ${{ steps.pack.outputs.size-bytes }}
+
+runs:
+  using: composite
+  steps:
+    - name: Pack source bundle
+      id: pack
+      shell: bash
+      env:
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_EXCLUDES: ${{ inputs.excludes }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_LEVEL: ${{ inputs.compression-level }}
+      run: |
+        set -euo pipefail
+
+        if [[ -z "${INPUT_PATHS// /}" ]]; then
+          echo "::error::pack-source-bundle: 'paths' input is empty"
+          exit 1
+        fi
+        if [[ -z "${INPUT_OUTPUT}" ]]; then
+          echo "::error::pack-source-bundle: 'output' input is empty"
+          exit 1
+        fi
+
+        out="${INPUT_OUTPUT}"
+        mkdir -p "$(dirname "${out}")"
+
+        tar_args=()
+        while IFS= read -r line; do
+          [[ -n "${line// /}" ]] || continue
+          tar_args+=("--exclude=${line}")
+        done <<< "${INPUT_EXCLUDES}"
+
+        path_args=()
+        while IFS= read -r line; do
+          [[ -n "${line// /}" ]] || continue
+          path_args+=("${line}")
+        done <<< "${INPUT_PATHS}"
+
+        ZSTD_CLEVEL="${INPUT_LEVEL}" tar --zstd -cf "${out}" "${tar_args[@]}" "${path_args[@]}"
+
+        size=$(wc -c < "${out}" | tr -d ' ')
+        if command -v sha256sum >/dev/null; then
+          sum=$(sha256sum "${out}" | awk '{print $1}')
+        else
+          sum=$(shasum -a 256 "${out}" | awk '{print $1}')
+        fi
+        sha_path="${out}.sha256"
+        echo "${sum}  $(basename "${out}")" > "${sha_path}"
+
+        abs_out=$(cd "$(dirname "${out}")" && pwd)/$(basename "${out}")
+        abs_sha=$(cd "$(dirname "${sha_path}")" && pwd)/$(basename "${sha_path}")
+
+        {
+          echo "bundle-path=${abs_out}"
+          echo "sha256-path=${abs_sha}"
+          echo "sha256=${sum}"
+          echo "size-bytes=${size}"
+        } >> "${GITHUB_OUTPUT}"
+
+        echo "Packed ${out} ($((size / 1024 / 1024)) MB, sha256=${sum})"
