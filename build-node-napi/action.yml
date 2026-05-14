@@ -1,35 +1,123 @@
 name: Build Node.js NAPI-RS Bindings
-description: Builds NAPI-RS Node.js bindings and optionally creates tarball
+description: >
+  Build NAPI-RS Node.js bindings for a single target. Defaults to a host build
+  via `pnpm run build`; pass `target` to drive a `napi build --target ...`
+  cross-compile with optional `--use-napi-cross`, run `napi artifacts` to
+  collect platform binaries into `npm/`, and pack the staged tree as a
+  tarball. All steps are bash-based so the same step block runs on Linux,
+  macOS, and Windows (Git Bash).
 
 inputs:
   crate-dir:
     description: Path to the NAPI-RS crate directory (relative to repo root)
     required: true
   build-command:
-    description: Command to build the bindings
+    description: >
+      Override build command (legacy mode). Used only when `target` is empty
+      — passing `target` triggers an explicit `napi build` invocation and
+      ignores this input.
     required: false
     default: "pnpm run build"
-  pack-tarball:
-    description: Whether to pack the result as a tarball
+  target:
+    description: Cargo target triple to build (e.g. x86_64-unknown-linux-gnu). When set, the action runs `napi build --target <target>` and ignores `build-command`.
+    required: false
+    default: ""
+  use-napi-cross:
+    description: Pass `--use-napi-cross` to napi build for cross-compilation (only used when `target` is set).
     required: false
     default: "false"
+  release:
+    description: Build in release mode (only used when `target` is set).
+    required: false
+    default: "true"
+  js-name:
+    description: Generated JS entry filename (only used when `target` is set).
+    required: false
+    default: "index.js"
+  dts-name:
+    description: Generated TypeScript declaration filename (only used when `target` is set).
+    required: false
+    default: "index.d.ts"
+  collect-artifacts:
+    description: After building, run `napi artifacts` to collect platform binaries into the npm directory.
+    required: false
+    default: "true"
+  npm-dir:
+    description: napi staging directory under crate-dir (e.g. `npm`).
+    required: false
+    default: "npm"
+  install-deps:
+    description: Run `pnpm install --filter ./<crate-dir>...` before building. Set to `false` if the caller has already done it.
+    required: false
+    default: "true"
+  pack-tarball:
+    description: Legacy mode — npm-pack the crate-dir and expose the .tgz path via the `tarball` output.
+    required: false
+    default: "false"
+  pack-target-tarball:
+    description: >
+      When non-empty, tar the staged `npm/` tree as the given filename
+      (relative to `$GITHUB_WORKSPACE`) and expose its absolute path via
+      the `target-tarball` output. Intended for matrix builds that ship
+      per-target staged bindings as artifacts.
+    required: false
+    default: ""
 
 outputs:
   tarball:
-    description: Path to the packed tarball (if pack-tarball is true)
+    description: Path to the legacy `npm pack` tarball (when `pack-tarball=true`).
     value: ${{ steps.pack.outputs.tarball }}
+  target-tarball:
+    description: Path to the per-target tarball (when `pack-target-tarball` is set).
+    value: ${{ steps.pack-target.outputs.target-tarball }}
 
 runs:
   using: composite
   steps:
-    - name: Build NAPI-RS bindings
+    - name: Install pnpm workspace deps
+      if: inputs.install-deps == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        pnpm install --filter ./${{ inputs.crate-dir }}...
+
+    - name: Build NAPI-RS bindings (default / legacy)
+      if: inputs.target == ''
       shell: bash
       working-directory: ${{ inputs.crate-dir }}
       run: |
         set -euo pipefail
         ${{ inputs.build-command }}
 
-    - name: Pack Node tarball
+    - name: Build NAPI-RS bindings (target)
+      if: inputs.target != ''
+      shell: bash
+      working-directory: ${{ inputs.crate-dir }}
+      env:
+        TARGET: ${{ inputs.target }}
+        USE_NAPI_CROSS: ${{ inputs.use-napi-cross }}
+        RELEASE: ${{ inputs.release }}
+        JS_NAME: ${{ inputs.js-name }}
+        DTS_NAME: ${{ inputs.dts-name }}
+        NPM_DIR: ${{ inputs.npm-dir }}
+        COLLECT_ARTIFACTS: ${{ inputs.collect-artifacts }}
+      run: |
+        set -euo pipefail
+        rm -rf "${NPM_DIR}"
+        pnpm exec napi create-npm-dirs
+        napi_args=(napi build --platform --target "${TARGET}" --js "${JS_NAME}" --dts "${DTS_NAME}")
+        if [ "${RELEASE}" = "true" ]; then
+          napi_args+=(--release)
+        fi
+        if [ "${USE_NAPI_CROSS}" = "true" ]; then
+          napi_args+=(--use-napi-cross)
+        fi
+        pnpm exec "${napi_args[@]}"
+        if [ "${COLLECT_ARTIFACTS}" = "true" ]; then
+          pnpm exec napi artifacts --output-dir . --npm-dir "${NPM_DIR}"
+        fi
+
+    - name: Pack Node tarball (legacy)
       if: inputs.pack-tarball == 'true'
       id: pack
       shell: bash
@@ -37,6 +125,19 @@ runs:
         set -euo pipefail
         pushd "${{ inputs.crate-dir }}" >/dev/null
         NODE_TGZ=$(npm pack | tail -1)
-        mv "$NODE_TGZ" "$GITHUB_WORKSPACE/$NODE_TGZ"
+        mv "${NODE_TGZ}" "${GITHUB_WORKSPACE}/${NODE_TGZ}"
         popd >/dev/null
-        echo "tarball=$GITHUB_WORKSPACE/$NODE_TGZ" >> "$GITHUB_OUTPUT"
+        echo "tarball=${GITHUB_WORKSPACE}/${NODE_TGZ}" >> "${GITHUB_OUTPUT}"
+
+    - name: Pack per-target tarball
+      if: inputs.pack-target-tarball != ''
+      id: pack-target
+      shell: bash
+      env:
+        CRATE_DIR: ${{ inputs.crate-dir }}
+        NPM_DIR: ${{ inputs.npm-dir }}
+        TARBALL_NAME: ${{ inputs.pack-target-tarball }}
+      run: |
+        set -euo pipefail
+        tar -czf "${GITHUB_WORKSPACE}/${TARBALL_NAME}" -C "${CRATE_DIR}" "${NPM_DIR}"
+        echo "target-tarball=${GITHUB_WORKSPACE}/${TARBALL_NAME}" >> "${GITHUB_OUTPUT}"
