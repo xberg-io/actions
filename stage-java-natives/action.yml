@@ -1,0 +1,41 @@
+name: Stage Java Native Resources
+description: >
+  Stage `java-natives-*` artifacts (produced by build-java-natives) into a
+  Maven resources directory at `{resources-dir}/{classifier}/{libfile}` and
+  verify every required classifier is present. Pairs with build-java-natives
+  on the build side and publish-maven on the publish side.
+
+inputs:
+  artifacts-dir:
+    description: >
+      Directory the java-natives-* artifacts were downloaded into. The script
+      walks the tree and treats the parent directory of every `*.so`/`*.dylib`/
+      `*.dll` file as the classifier — i.e. it expects the build-java-natives
+      output layout `native/{classifier}/{libfile}`.
+    required: false
+    default: "artifacts/java-natives"
+  resources-dir:
+    description: "Maven resources directory. Libraries are staged as `{resources-dir}/{classifier}/{libfile}`."
+    required: true
+  required-classifiers:
+    description: >
+      Whitespace-separated list of Maven classifiers (e.g. `linux-x86_64
+      linux-aarch64 macos-arm64 macos-x86_64 windows-x86_64 windows-aarch64`)
+      that MUST be present after staging. The action fails if any are missing.
+    required: true
+  lib-name:
+    description: "Base library name (e.g. `kreuzberg_ffi`). Used to verify each classifier has a matching lib."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Stage Java native resources
+      shell: bash
+      env:
+        INPUT_ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
+        INPUT_RESOURCES_DIR: ${{ inputs.resources-dir }}
+        INPUT_REQUIRED_CLASSIFIERS: ${{ inputs.required-classifiers }}
+        INPUT_LIB_NAME: ${{ inputs.lib-name }}
+      run: |
+        python3 "${{ github.action_path }}/scripts/stage.py"
