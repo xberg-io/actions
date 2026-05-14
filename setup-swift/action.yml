@@ -1,0 +1,32 @@
+name: Setup Swift
+description: >
+  Install the Swift toolchain across Linux (including ubuntu-24.04-arm), macOS,
+  and Windows. Wraps SwiftyLab/setup-swift, which supports aarch64 Linux
+  runners (where swift-actions/setup-swift@v2 currently returns a corrupted
+  binary). No-ops if `swift` is already on PATH.
+
+inputs:
+  swift-version:
+    description: "Swift version to install (e.g. '6.0')"
+    required: false
+    default: "6.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Check existing Swift
+      id: existing
+      shell: bash
+      run: |
+        if command -v swift >/dev/null 2>&1; then
+          echo "Swift already installed: $(swift --version | head -n1)"
+          echo "installed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "installed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install Swift via SwiftyLab/setup-swift
+      if: steps.existing.outputs.installed != 'true'
+      uses: SwiftyLab/setup-swift@latest
+      with:
+        swift-version: ${{ inputs.swift-version }}

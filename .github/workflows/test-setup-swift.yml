@@ -1,0 +1,27 @@
+name: Test setup-swift
+on:
+  push:
+    paths:
+      - "setup-swift/**"
+      - ".github/workflows/test-setup-swift.yml"
+  pull_request:
+    paths:
+      - "setup-swift/**"
+      - ".github/workflows/test-setup-swift.yml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Swift
+        uses: ./setup-swift
+
+      - name: Verify installation
+        shell: bash
+        run: swift --version
