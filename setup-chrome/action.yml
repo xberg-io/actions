@@ -1,14 +1,15 @@
 name: Setup Chrome
 description: >
-  Install Google Chrome / Chromium for headless browser tests. On
-  ubuntu-*-arm runners installs `chromium-browser` via apt because
-  `browser-actions/setup-chrome@v1` does not support linux-arm64. On
-  every other runner delegates to `browser-actions/setup-chrome@v1`
-  with the requested channel/version.
+  Install Google Chrome for headless browser tests. On `ubuntu-*-arm`
+  runners installs the official `chrome-for-testing` Linux ARM64 build
+  from Google's storage bucket (the apt `chromium` on noble is a snap
+  shim that rejects standard Chrome flags like `--use-mock-keychain`
+  and breaks chromiumoxide automation). On every other runner delegates
+  to `browser-actions/setup-chrome@v1` with the requested channel/version.
 
 inputs:
   chrome-version:
-    description: "Chrome channel or version (e.g. 'stable', 'beta', 'dev', or an explicit version). Ignored on linux-arm64 (apt-installed chromium does not honour channel selection)."
+    description: "Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. On linux-arm64 channel names resolve via the chrome-for-testing last-known-good-versions feed."
     required: false
     default: "stable"
 
@@ -27,21 +28,52 @@ runs:
           echo "linux_arm64=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Install chromium via apt (linux-arm64)
+    - name: Install chrome-for-testing (linux-arm64)
       if: steps.detect.outputs.linux_arm64 == 'true'
       shell: bash
+      env:
+        CHROME_VERSION_INPUT: ${{ inputs.chrome-version }}
       run: |
         set -euxo pipefail
+
+        # jq is preinstalled on GHA runners but verify.
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends jq
+        fi
+
+        version="$CHROME_VERSION_INPUT"
+        case "$version" in
+          stable|beta|dev)
+            channel="$(echo "$version" | tr '[:lower:]' '[:upper:]' | cut -c1)$(echo "$version" | tr '[:upper:]' '[:lower:]' | cut -c2-)"
+            version="$(curl -fsSL https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json | jq -r ".channels.${channel}.version")"
+            ;;
+        esac
+
+        if [ -z "$version" ] || [ "$version" = "null" ]; then
+          echo "ERROR: could not resolve chrome-for-testing version from input '$CHROME_VERSION_INPUT'" >&2
+          exit 1
+        fi
+
+        url="https://storage.googleapis.com/chrome-for-testing-public/${version}/linux-arm64/chrome-linux-arm64.zip"
+        echo "Downloading chrome-for-testing $version from $url"
+        curl -fsSL "$url" -o /tmp/chrome.zip
+        sudo unzip -q -o /tmp/chrome.zip -d /opt
+        rm -f /tmp/chrome.zip
+
+        # Install runtime libs chrome needs (chrome-for-testing bundles
+        # most things but still relies on system libnss/libgbm/etc.).
         sudo apt-get update -qq
-        # chromium-browser is a transitional snap-stub on noble; the real
-        # binary on ubuntu-24.04-arm is `chromium`.
-        sudo apt-get install -y --no-install-recommends chromium
-        chromium --version
-        # Provide `google-chrome` and `chrome` aliases since many test
-        # harnesses look those up first.
+        sudo apt-get install -y --no-install-recommends \
+          libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64 libxshmfence1 \
+          libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libpango-1.0-0 \
+          libcairo2 libcups2 libdrm2 fonts-liberation || true
+
         for alias in google-chrome chrome; do
-          sudo ln -sf "$(command -v chromium)" "/usr/local/bin/$alias"
+          sudo ln -sf /opt/chrome-linux-arm64/chrome "/usr/local/bin/$alias"
         done
+
+        google-chrome --version
 
     - name: Setup Chrome (non-arm64)
       if: steps.detect.outputs.linux_arm64 != 'true'
