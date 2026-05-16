@@ -153,10 +153,12 @@ if ! command -v alef >/dev/null 2>&1; then
   else
     # Try the released binary first. If the pinned tag has no published
     # binary yet (the polyglot repo bumped to an unreleased alef version),
-    # fall back to building the matching git tag from source.
+    # fall back to building the matching git tag from source, then to main
+    # if even the tag is not yet present (alef workspace bumped locally
+    # but neither published nor tagged).
     if ! install_from_release; then
       resolved_version="$(resolve_version)"
-      echo "Falling back to cargo install --git --tag v${resolved_version} ..."
+      echo "Falling back to cargo install --git --tag v${resolved_version} alef-cli ..."
       if ! command -v cargo >/dev/null 2>&1; then
         echo "Error: cargo not found — required for source fallback" >&2
         exit 1
@@ -166,13 +168,13 @@ if ! command -v alef >/dev/null 2>&1; then
         --git https://github.com/kreuzberg-dev/alef \
         --tag "v${resolved_version}" \
         --locked \
-        --bin alef ||
+        alef-cli ||
         CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
           cargo install \
           --git https://github.com/kreuzberg-dev/alef \
           --branch main \
           --locked \
-          --bin alef
+          alef-cli
     fi
   fi
 else
