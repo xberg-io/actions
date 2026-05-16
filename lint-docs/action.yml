@@ -30,6 +30,14 @@ runs:
     - name: Setup Node.js
       uses: kreuzberg-dev/actions/setup-node-workspace@v1
 
+    - name: Install lychee + textlint
+      uses: taiki-e/install-action@v2
+      with:
+        tool: lychee
+
+    - name: Install textlint + kreuzberg rule set
+      uses: kreuzberg-dev/actions/setup-textlint@v1
+
     - name: Lint documentation links
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -38,7 +46,7 @@ runs:
         if [ -x "$(command -v task)" ]; then
           task docs:lint:links || true
         else
-          npx --yes lychee --offline --no-progress docs/ .github/ || true
+          lychee --offline --no-progress docs/ .github/ || true
         fi
 
     - name: Lint documentation prose
@@ -53,7 +61,7 @@ runs:
             task docs:lint:prose || true
           fi
         else
-          npx --yes textlint docs/ 2>&1 || [ "${{ inputs.strict }}" = "false" ]
+          textlint docs/ 2>&1 || [ "${{ inputs.strict }}" = "false" ]
         fi
 
     - name: Cache cargo build artifacts (for alef-snippets install)
