@@ -50,6 +50,13 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `package-php-pie` | PIE-conventional binary archive from a built PHP extension |
 | `build-gpu-test-binary` | `cargo test --no-run` + JSON message parse to extract the executable for cross-runner GPU CI |
 
+### Docs
+
+| Action | Description |
+|--------|-------------|
+| `lint-docs` | Link check (lychee) + prose lint (textlint), with optional `alef-snippets` validation of code examples. When `validate-snippets: "true"`, installs the `alef-snippets` CLI from `kreuzberg-dev/alef` (cached via `Swatinem/rust-cache@v2`) and runs `task docs:snippets:validate` (or falls back to `alef-snippets validate --snippets docs/snippets --level syntax` when `task` is unavailable). Pin alef via the `alef-ref` input (defaults to `main`). |
+| `build-docs` | Build the documentation site with [zensical](https://zensical.org). Sets up Python via `setup-python-env`, then runs `task docs:build:strict` (or `zensical build --strict --clean` as a fallback). `python-version` defaults to `3.13`; `strict` defaults to `true`. |
+
 ### Publish
 
 All publish actions are idempotent: re-running on an already-published version
