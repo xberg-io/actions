@@ -1,0 +1,39 @@
+name: Build Documentation
+description: >
+  Build the documentation site with zensical.
+  Supports strict mode for CI (fail on warnings) vs dev mode (permissive).
+
+inputs:
+  working-directory:
+    description: "Working directory for docs commands"
+    required: false
+    default: "."
+  strict:
+    description: "Use strict build mode (fail on warnings, for CI)"
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python environment
+      uses: kreuzberg-dev/actions/setup-python-env@v1
+
+    - name: Build documentation
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          if [ -x "$(command -v task)" ]; then
+            task docs:build:strict
+          else
+            zensical build --strict --clean
+          fi
+        else
+          if [ -x "$(command -v task)" ]; then
+            task docs:build
+          else
+            zensical build --clean
+          fi
+        fi
