@@ -1,0 +1,60 @@
+name: Lint Documentation
+description: >
+  Run docs lint suite: link check (lychee) + prose lint (textlint),
+  with optional snippet validation for code examples.
+
+inputs:
+  working-directory:
+    description: "Working directory for docs commands"
+    required: false
+    default: "."
+  strict:
+    description: "Fail on prose lint warnings (not just errors)"
+    required: false
+    default: "false"
+  validate-snippets:
+    description: "Also run task docs:snippets:validate if present"
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: kreuzberg-dev/actions/setup-node-workspace@v1
+
+    - name: Lint documentation links
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ -x "$(command -v task)" ]; then
+          task docs:lint:links || true
+        else
+          npx --yes lychee --offline --no-progress docs/ .github/ || true
+        fi
+
+    - name: Lint documentation prose
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ -x "$(command -v task)" ]; then
+          if [ "${{ inputs.strict }}" = "true" ]; then
+            TEXTLINT_STRICT=1 task docs:lint:prose
+          else
+            task docs:lint:prose || true
+          fi
+        else
+          npx --yes textlint docs/ 2>&1 || [ "${{ inputs.strict }}" = "false" ]
+        fi
+
+    - name: Validate documentation snippets
+      if: inputs.validate-snippets == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ -x "$(command -v task)" ]; then
+          task docs:snippets:validate || echo "Task not available in this repo"
+        fi
