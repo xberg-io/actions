@@ -12,12 +12,18 @@ inputs:
     description: "Use strict build mode (fail on warnings, for CI)"
     required: false
     default: "true"
+  python-version:
+    description: "Python version to use for the docs build"
+    required: false
+    default: "3.13"
 
 runs:
   using: composite
   steps:
     - name: Setup Python environment
       uses: kreuzberg-dev/actions/setup-python-env@v1
+      with:
+        python-version: ${{ inputs.python-version }}
 
     - name: Build documentation
       shell: bash
