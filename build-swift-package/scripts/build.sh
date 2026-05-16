@@ -46,6 +46,26 @@ build_root="$target_dir/$target_subdir/build"
 bridge_c_dst="$PACKAGE_DIR/Sources/RustBridgeC"
 bridge_swift_dst="$PACKAGE_DIR/Sources/RustBridge"
 
+normalize_swift_bridge_core() {
+  local file="$1"
+  local tmp
+  tmp="$(mktemp)"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+    "extension RustStr: Identifiable {")
+      printf '%s\n' "extension RustStr: @retroactive Identifiable {"
+      ;;
+    "extension RustStr: Equatable {")
+      printf '%s\n' "extension RustStr: @retroactive Equatable {"
+      ;;
+    *)
+      printf '%s\n' "$line"
+      ;;
+    esac
+  done <"$file" >"$tmp"
+  mv "$tmp" "$file"
+}
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag"
   echo "[dry-run] would resolve out/ under $build_root/$CRATE_NAME-*/out"
@@ -121,6 +141,9 @@ copy_swift_with_import() {
     echo "import RustBridgeC"
     cat "$src"
   } >"$dst"
+  if [[ "$(basename "$src")" == "SwiftBridgeCore.swift" ]]; then
+    normalize_swift_bridge_core "$dst"
+  fi
   echo "Wrote $dst"
 }
 

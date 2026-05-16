@@ -86,6 +86,22 @@ runs:
           printf 'import RustBridgeC\n'
           cat "$CORE_SWIFT"
         } >"$BRIDGE_DIR/SwiftBridgeCore.swift"
+        CORE_SWIFT_OUT="$BRIDGE_DIR/SwiftBridgeCore.swift"
+        CORE_SWIFT_TMP="$(mktemp)"
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in
+            "extension RustStr: Identifiable {")
+              printf '%s\n' "extension RustStr: @retroactive Identifiable {"
+              ;;
+            "extension RustStr: Equatable {")
+              printf '%s\n' "extension RustStr: @retroactive Equatable {"
+              ;;
+            *)
+              printf '%s\n' "$line"
+              ;;
+          esac
+        done <"$CORE_SWIFT_OUT" >"$CORE_SWIFT_TMP"
+        mv "$CORE_SWIFT_TMP" "$CORE_SWIFT_OUT"
 
         {
           printf 'import RustBridgeC\n'
