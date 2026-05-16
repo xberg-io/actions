@@ -24,6 +24,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install Task
+      uses: kreuzberg-dev/actions/install-task@v1
+
     - name: Setup Node.js
       uses: kreuzberg-dev/actions/setup-node-workspace@v1
 
