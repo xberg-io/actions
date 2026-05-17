@@ -19,14 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v5
+      - name: Setup Maven (with Java 21)
+        uses: ./setup-maven
         with:
-          distribution: temurin
           java-version: "21"
 
-      - name: Setup Maven
-        uses: ./setup-maven
-
-      - name: Verify installation
+      - name: Verify Maven installation
         shell: bash
         run: mvn --version
+
+      - name: Verify Java installation
+        shell: bash
+        run: java -version

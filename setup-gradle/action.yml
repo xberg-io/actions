@@ -12,10 +12,19 @@ inputs:
     description: "Cache cleanup policy passed through to gradle/actions/setup-gradle"
     required: false
     default: "on-success"
+  java-version:
+    description: "Java version to install"
+    required: false
+    default: "21"
 
 runs:
   using: composite
   steps:
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
     - name: Set up Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
