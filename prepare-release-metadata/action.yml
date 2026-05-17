@@ -176,6 +176,25 @@ runs:
           ;;
         esac
 
+        # When dry-running without an explicit tag, synthesize one from the
+        # repo's canonical version so the publish pipeline can dry-build
+        # against HEAD without a real release. Read alef.toml or Cargo.toml
+        # for the version. Falls back to GITHUB_REF_NAME if neither exists.
+        if [[ -z "${tag}" && "${dry_run}" == "true" ]]; then
+          synth_version=""
+          if [[ -f "Cargo.toml" ]]; then
+            synth_version="$(sed -n '/^\[workspace\.package\]/,/^\[/{s/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p}' Cargo.toml | head -1)"
+            if [[ -z "${synth_version}" ]]; then
+              synth_version="$(sed -n '/^\[package\]/,/^\[/{s/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p}' Cargo.toml | head -1)"
+            fi
+          fi
+          if [[ -z "${synth_version}" ]]; then
+            synth_version="${GITHUB_REF_NAME:-0.0.0-dryrun}"
+          fi
+          tag="v${synth_version#v}-dryrun-${GITHUB_SHA:0:7}"
+          echo "::notice::synthesized dry-run tag: ${tag}"
+        fi
+
         if [[ -z "${tag}" ]]; then
           echo "::error::release tag could not be determined from event=${EVENT_NAME}" >&2
           exit 1
