@@ -28,7 +28,8 @@ jobs:
         shell: bash
         run: |
           # setup-textlint installs globally; resolve via NODE_PATH=$(npm root -g)
-          export NODE_PATH="$(npm root -g)"
+          NODE_PATH="$(npm root -g)"
+          export NODE_PATH
           node -e "require('textlint-rule-terminology')"
           node -e "require('textlint-rule-alex')"
           node -e "require('@textlint-rule/textlint-rule-no-unmatched-pair')"
