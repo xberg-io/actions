@@ -215,6 +215,15 @@ runs:
         fi
 
         json=$(alef "${args[@]}")
+
+        # For dry-run with a synthesized tag, the synth tag does not exist as a
+        # real git ref — downstream actions/checkout calls would fail trying to
+        # check out refs/tags/<synth>. Override checkout_ref + target_sha to the
+        # current commit so the dry-run pipeline can build against HEAD.
+        if [[ "${dry_run}" == "true" ]]; then
+          json=$(echo "${json}" | jq --arg sha "${GITHUB_SHA}" '. + {checkout_ref: $sha, target_sha: $sha, matrix_ref: ("main")}')
+        fi
+
         echo "${json}" | jq .
 
         # Emit each top-level field as a GITHUB_OUTPUT line.
