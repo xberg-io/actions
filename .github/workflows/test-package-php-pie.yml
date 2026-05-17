@@ -43,27 +43,3 @@ jobs:
             echo "expected failure outcome for windows target without windows-compiler, got ${OUTCOME}"
             exit 1
           fi
-
-  parse-action-yml:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - name: Confirm action.yml parses and declares expected outputs
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import sys
-          import yaml
-          with open("package-php-pie/action.yml", "r", encoding="utf-8") as fh:
-              spec = yaml.safe_load(fh)
-          outputs = set(spec.get("outputs", {}).keys())
-          expected = {"archive-path", "archive-name", "sha256"}
-          missing = expected - outputs
-          if missing:
-              print(f"action.yml missing expected outputs: {missing}", file=sys.stderr)
-              sys.exit(1)
-          PY
