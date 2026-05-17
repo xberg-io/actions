@@ -22,7 +22,7 @@ if ($alefVersion -eq "main") {
     throw "cargo not found - required for installing from main branch"
   }
   $env:CARGO_INSTALL_ROOT = $alefBinDir
-  cargo install --git https://github.com/kreuzberg-dev/alef --locked --bin alef alef-cli
+  cargo install --git https://github.com/kreuzberg-dev/alef --locked alef-cli
   "$alefBinDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
   exit 0
 }

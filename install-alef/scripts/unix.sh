@@ -143,7 +143,7 @@ install_from_main() {
     return 1
   fi
   CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
-    cargo install --git https://github.com/kreuzberg-dev/alef --locked --bin alef alef-cli
+    cargo install --git https://github.com/kreuzberg-dev/alef --locked alef-cli
   echo "Alef installed from main branch"
 }
 

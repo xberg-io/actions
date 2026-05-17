@@ -1,7 +1,7 @@
 name: Lint Documentation
 description: >
   Run docs lint suite: link check (lychee) + prose lint (textlint),
-  with optional snippet validation for code examples via alef-snippets.
+  with optional snippet validation for code examples via `alef snippets`.
 
 inputs:
   working-directory:
@@ -17,7 +17,7 @@ inputs:
     required: false
     default: "false"
   alef-ref:
-    description: "Git ref (branch/tag/sha) of kreuzberg-dev/alef to install alef-snippets from"
+    description: "Alef version to install (passed to install-alef@v1) — used by snippet validation"
     required: false
     default: "main"
 
@@ -66,33 +66,11 @@ runs:
           textlint docs/ 2>&1 || [ "${{ inputs.strict }}" = "false" ]
         fi
 
-    - name: Cache cargo build artifacts (for alef-snippets install)
+    - name: Install alef CLI
       if: inputs.validate-snippets == 'true'
-      uses: Swatinem/rust-cache@v2
+      uses: kreuzberg-dev/actions/install-alef@v1
       with:
-        key: alef-snippets-${{ inputs.alef-ref }}
-
-    - name: Install alef-snippets
-      if: inputs.validate-snippets == 'true'
-      shell: bash
-      run: |
-        set -euo pipefail
-        if command -v alef-snippets >/dev/null 2>&1; then
-          echo "alef-snippets already on PATH: $(alef-snippets --help 2>&1 | head -1 || true)"
-          exit 0
-        fi
-        cargo install \
-          --locked \
-          --git https://github.com/kreuzberg-dev/alef \
-          --rev "${{ inputs.alef-ref }}" \
-          --features cli \
-          alef-snippets || \
-        cargo install \
-          --locked \
-          --git https://github.com/kreuzberg-dev/alef \
-          --branch "${{ inputs.alef-ref }}" \
-          --features cli \
-          alef-snippets
+        version: ${{ inputs.alef-ref }}
 
     - name: Validate documentation snippets
       if: inputs.validate-snippets == 'true'
@@ -103,5 +81,5 @@ runs:
         if [ -x "$(command -v task)" ]; then
           task docs:snippets:validate
         else
-          alef-snippets validate --snippets docs/snippets --level syntax --timeout 120 -j 4
+          alef snippets validate --snippets docs/snippets --level syntax --timeout 120 -j 4
         fi
