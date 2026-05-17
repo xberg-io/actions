@@ -24,3 +24,12 @@ jobs:
         run: |
           php --version
           composer --version
+
+      - name: Setup PHP with phpstan
+        uses: ./setup-php
+        with:
+          tools: phpstan
+
+      - name: Verify phpstan installation
+        shell: bash
+        run: phpstan --version
