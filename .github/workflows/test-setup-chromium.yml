@@ -1,0 +1,65 @@
+name: test-setup-chromium
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - setup-chromium/**
+      - .github/workflows/test-setup-chromium.yml
+  pull_request:
+    paths:
+      - setup-chromium/**
+      - .github/workflows/test-setup-chromium.yml
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-latest-arm, macos-latest, macos-latest-large, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Chromium
+        id: chromium
+        uses: ./setup-chromium
+
+      - name: Verify binary exists
+        shell: bash
+        run: |
+          if [ ! -f "${{ steps.chromium.outputs.chromium-path }}" ]; then
+            echo "ERROR: Chromium binary not found at ${{ steps.chromium.outputs.chromium-path }}"
+            exit 1
+          fi
+          echo "✓ Chromium binary found"
+
+      - name: Test headless flag (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          "${{ steps.chromium.outputs.chromium-path }}" \
+            --headless \
+            --no-sandbox \
+            --disable-features=TranslateUI \
+            --version
+          echo "✓ Headless flags accepted"
+
+      - name: Test headless flag (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "${{ steps.chromium.outputs.chromium-path }}" `
+            --headless `
+            --no-sandbox `
+            --disable-features=TranslateUI `
+            --version
+          Write-Host "✓ Headless flags accepted"
+
+      - name: Test version output
+        shell: bash
+        run: |
+          "${{ steps.chromium.outputs.chromium-path }}" --version
+          echo "✓ Version command works"

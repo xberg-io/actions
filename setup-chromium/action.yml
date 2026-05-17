@@ -1,0 +1,75 @@
+name: Setup Chromium
+description: >
+  Install non-snap Chromium for headless browser e2e tests on Ubuntu runners.
+  Uses Playwright's browser installer (https://github.com/microsoft/playwright)
+  to provision a properly configured, non-sandboxed Chromium binary that accepts
+  all headless flags (--no-sandbox, --headless, --disable-features, etc.).
+  Outputs the binary path for consumers to use directly or via environment variables.
+
+outputs:
+  chromium-path:
+    description: Absolute path to the Chromium binary
+    value: ${{ steps.install.outputs.chromium-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install Chromium via Playwright
+      id: install
+      shell: bash
+      run: |
+        set -euxo pipefail
+        # Create a temporary workspace for playwright
+        tmpdir=$(mktemp -d)
+        cd "$tmpdir"
+
+        # Initialize a minimal package.json
+        cat > package.json <<'EOF'
+        {
+          "name": "chromium-installer",
+          "version": "1.0.0",
+          "dependencies": {
+            "@playwright/test": "^1.40.0"
+          }
+        }
+        EOF
+
+        # Install playwright (this downloads browsers)
+        npm install --omit=dev > /dev/null 2>&1
+
+        # Locate the chromium binary
+        chromium_path=$(npx playwright exec chromium --version 2>&1 | grep -oP '^\K[^:].*' || true)
+        if [ -z "$chromium_path" ]; then
+          # Fallback: search playwright cache directory
+          chromium_path=$(find ~/.cache/ms-playwright -name chromium -o -name chromium-* -type d 2>/dev/null | head -1)
+          if [ -z "$chromium_path" ]; then
+            echo "ERROR: Failed to locate Chromium binary after Playwright install" >&2
+            exit 1
+          fi
+          chromium_path=$(find "$chromium_path" -name "chrome" -o -name "chromium" -type f 2>/dev/null | head -1)
+        fi
+
+        # Verify the binary works
+        "$chromium_path" --version
+
+        # Output the path
+        echo "chromium-path=$chromium_path" >> "$GITHUB_OUTPUT"
+
+        # Cleanup
+        cd /
+        rm -rf "$tmpdir"
+
+    - name: Verify Chromium headless flags
+      shell: bash
+      run: |
+        set -euxo pipefail
+        "${{ steps.install.outputs.chromium-path }}" \
+          --headless \
+          --no-sandbox \
+          --disable-features=TranslateUI \
+          --version

@@ -17,6 +17,8 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `setup-php` | PHP runtime setup |
 | `setup-elixir` | Elixir / Erlang runtime setup |
 | `setup-r` | R environment |
+| `setup-chrome` | Chrome-compatible browser via `browser-actions/setup-chrome` (or aptmium on linux-arm64) |
+| `setup-chromium` | Non-snap Chromium for headless e2e tests; uses Playwright browser installer; outputs `chromium-path` for direct binary use |
 | `install-task` | [Task](https://taskfile.dev) runner, installed from the official Task release installer (`latest` by default) |
 | `install-alef` | Alef CLI installation |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
