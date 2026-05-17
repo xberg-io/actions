@@ -9,6 +9,14 @@ inputs:
     description: Use frozen lockfile for pnpm install
     required: false
     default: "false"
+  ignore-scripts:
+    description: >
+      Skip running install scripts (e.g. native-binding postinstalls).
+      Use when the workspace only needs JS tooling (lint, format) and not
+      compiled native modules — avoids node-gyp builds that may fail on
+      newer Node ABIs.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -24,11 +32,14 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
+        args=()
         if [ "${{ inputs.frozen-lockfile }}" = "true" ]; then
-          pnpm install --frozen-lockfile
-        else
-          pnpm install
+          args+=(--frozen-lockfile)
         fi
+        if [ "${{ inputs.ignore-scripts }}" = "true" ]; then
+          args+=(--ignore-scripts)
+        fi
+        pnpm install "${args[@]}"
 
     - name: Add pnpm bin to PATH
       shell: bash
