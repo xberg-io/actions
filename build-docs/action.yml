@@ -16,6 +16,13 @@ inputs:
     description: "Python version to use for the docs build"
     required: false
     default: "3.13"
+  docs-group:
+    description: >
+      Name of the uv dependency group that pulls in the docs builder
+      (zensical + theme + plugins). Override when a repo names this group
+      something other than `doc` (e.g. `docs`).
+    required: false
+    default: "doc"
 
 runs:
   using: composite
@@ -28,9 +35,10 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
         # The default install-command only syncs the `dev` group; the docs
-        # build needs `doc` (zensical + theme + plugins) too. Include both
-        # so `task docs:build` (which uses `uv run --no-sync`) can succeed.
-        install-command: "uv sync --all-extras --all-packages --group dev --group doc --no-install-project --no-install-workspace"
+        # build needs the docs group (zensical + theme + plugins) too.
+        # Include both so `task docs:build` (which uses `uv run --no-sync`)
+        # can succeed.
+        install-command: "uv sync --all-extras --all-packages --group dev --group ${{ inputs.docs-group }} --no-install-project --no-install-workspace"
 
     - name: Build documentation
       shell: bash
