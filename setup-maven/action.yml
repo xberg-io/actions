@@ -1,22 +1,13 @@
 name: Setup Maven
-description: Install Maven and Java in a cross-platform way
+description: Install Maven in a cross-platform way (Java must be installed by the caller)
 inputs:
   version:
     description: Maven version to install
     required: false
     default: "3.9.11"
-  java-version:
-    description: Java version to install
-    required: false
-    default: "21"
 runs:
   using: composite
   steps:
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: ${{ inputs.java-version }}
     - name: Setup Maven
       shell: bash
       run: |
