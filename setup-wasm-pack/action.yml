@@ -1,14 +1,14 @@
 name: Setup wasm-pack
 description: >
   Install `wasm-pack` at a pinned version with OS/arch detection. Downloads
-  the appropriate prebuilt release tarball from rustwasm/wasm-pack and places
+  the appropriate prebuilt release tarball from wasm-bindgen/wasm-pack and places
   the binary on PATH. No-ops if the requested version is already installed.
 
 inputs:
   wasm-pack-version:
     description: "wasm-pack version to install (without the leading 'v')"
     required: false
-    default: "0.13.1"
+    default: "0.15.0"
 
 runs:
   using: composite
@@ -40,7 +40,7 @@ runs:
             ;;
         esac
 
-        url="https://github.com/rustwasm/wasm-pack/releases/download/v${WASM_PACK_VERSION}/wasm-pack-v${WASM_PACK_VERSION}-${target}.tar.gz"
+        url="https://github.com/wasm-bindgen/wasm-pack/releases/download/v${WASM_PACK_VERSION}/wasm-pack-v${WASM_PACK_VERSION}-${target}.tar.gz"
         echo "Downloading ${url}"
 
         install_dir="/usr/local/bin"
@@ -73,8 +73,8 @@ runs:
         }
 
         $target = 'x86_64-pc-windows-msvc'
-        $archive = "wasm-pack-v$env:WASM_PACK_VERSION-$target.zip"
-        $url = "https://github.com/rustwasm/wasm-pack/releases/download/v$env:WASM_PACK_VERSION/$archive"
+        $archive = "wasm-pack-v$env:WASM_PACK_VERSION-$target.tar.gz"
+        $url = "https://github.com/wasm-bindgen/wasm-pack/releases/download/v$env:WASM_PACK_VERSION/$archive"
         $tmp = Join-Path $env:RUNNER_TEMP $archive
         $extractDir = Join-Path $env:RUNNER_TEMP "wasm-pack-extract"
 
