@@ -26,7 +26,12 @@ jobs:
   validate-issue-title:
     name: Issue Title
     runs-on: ubuntu-latest
-    if: github.event.action == 'opened' || github.event.action == 'edited'
+    # Skip bot-authored issues (Renovate's "Dependency Dashboard", Dependabot,
+    # etc.) — their titles are tool-controlled and don't follow our prefix
+    # convention. github.event.issue.user.type is "Bot" for app/bot accounts.
+    if: |
+      (github.event.action == 'opened' || github.event.action == 'edited') &&
+      github.event.issue.user.type != 'Bot'
     outputs:
       prefix: ${{ steps.check.outputs.prefix }}
     steps:
