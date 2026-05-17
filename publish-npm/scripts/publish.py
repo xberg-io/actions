@@ -48,8 +48,8 @@ def is_already_published(output: str) -> bool:
 
 
 def find_tgz_files(directory: Path) -> list[Path]:
-    """Return all *.tgz files in directory (non-recursive)."""
-    return sorted(directory.glob("*.tgz"))
+    """Return all *.tgz files in directory (non-recursive) and subdirectories."""
+    return sorted(directory.glob("**/*.tgz"))
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
