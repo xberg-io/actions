@@ -1,10 +1,10 @@
 name: Setup Chromium
 description: >
-  Install non-snap Chromium for headless browser e2e tests on Ubuntu runners.
-  Uses Playwright's browser installer (https://github.com/microsoft/playwright)
-  to provision a properly configured, non-sandboxed Chromium binary that accepts
-  all headless flags (--no-sandbox, --headless, --disable-features, etc.).
-  Outputs the binary path for consumers to use directly or via environment variables.
+  Install non-snap Chromium for headless browser e2e tests. Uses Playwright's
+  browser installer to provision a Chromium binary that accepts all CLI flags
+  (--no-sandbox, --headless, --disable-features, etc.) — required on Ubuntu
+  runners where the default `chromium` package is a snap wrapper that rejects
+  Chromium flags. Outputs the absolute binary path for consumers.
 
 outputs:
   chromium-path:
@@ -23,53 +23,43 @@ runs:
       id: install
       shell: bash
       run: |
-        set -euxo pipefail
-        # Create a temporary workspace for playwright
-        tmpdir=$(mktemp -d)
+        set -euo pipefail
+        tmpdir="${RUNNER_TEMP:-/tmp}/setup-chromium-$$"
+        mkdir -p "$tmpdir"
         cd "$tmpdir"
 
-        # Initialize a minimal package.json
         cat > package.json <<'EOF'
-        {
-          "name": "chromium-installer",
-          "version": "1.0.0",
-          "dependencies": {
-            "@playwright/test": "^1.40.0"
-          }
-        }
+        { "name": "chromium-installer", "version": "1.0.0", "private": true }
         EOF
 
-        # Install playwright (this downloads browsers)
-        npm install --omit=dev > /dev/null 2>&1
+        # Install the standalone playwright runtime (no test framework needed)
+        npm install --no-audit --no-fund --silent playwright@^1.49.0
 
-        # Locate the chromium binary
-        chromium_path=$(npx playwright exec chromium --version 2>&1 | grep -oP '^\K[^:].*' || true)
-        if [ -z "$chromium_path" ]; then
-          # Fallback: search playwright cache directory
-          chromium_path=$(find ~/.cache/ms-playwright -name chromium -o -name chromium-* -type d 2>/dev/null | head -1)
-          if [ -z "$chromium_path" ]; then
-            echo "ERROR: Failed to locate Chromium binary after Playwright install" >&2
-            exit 1
-          fi
-          chromium_path=$(find "$chromium_path" -name "chrome" -o -name "chromium" -type f 2>/dev/null | head -1)
+        # Download Chromium browser binaries
+        if [ "${RUNNER_OS:-}" = "Linux" ]; then
+          npx --no-install playwright install --with-deps chromium
+        else
+          npx --no-install playwright install chromium
         fi
 
-        # Verify the binary works
-        "$chromium_path" --version
+        # Resolve the executable path via Playwright's own API
+        chromium_path=$(node -e "console.log(require('playwright').chromium.executablePath())")
+        if [ -z "$chromium_path" ] || [ ! -x "$chromium_path" ]; then
+          echo "ERROR: Chromium binary not found at: $chromium_path" >&2
+          exit 1
+        fi
 
-        # Output the path
+        echo "Chromium binary: $chromium_path"
         echo "chromium-path=$chromium_path" >> "$GITHUB_OUTPUT"
 
-        # Cleanup
-        cd /
-        rm -rf "$tmpdir"
-
-    - name: Verify Chromium headless flags
+    - name: Verify Chromium accepts headless flags
       shell: bash
       run: |
-        set -euxo pipefail
+        set -euo pipefail
+        "${{ steps.install.outputs.chromium-path }}" --version
         "${{ steps.install.outputs.chromium-path }}" \
-          --headless \
+          --headless=new \
           --no-sandbox \
           --disable-features=TranslateUI \
-          --version
+          --dump-dom \
+          about:blank > /dev/null
