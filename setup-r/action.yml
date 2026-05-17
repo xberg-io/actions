@@ -33,7 +33,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y libssl-dev pkg-config libcurl4-openssl-dev libxml2-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev libtiff-dev libjpeg-dev libwebp-dev
+        sudo apt-get install -y libssl-dev pkg-config libcurl4-openssl-dev libxml2-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev libtiff-dev libjpeg-dev libwebp-dev libgit2-dev
 
     - name: Cache R library
       uses: actions/cache@v4
