@@ -244,8 +244,23 @@ def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str]) -> None:
 
 
 def _full_target_dir(config: BuildConfig) -> Path:
-    """Compute the cargo output directory for the given build configuration."""
-    base = config.cargo_target_dir or "target"
+    """Compute the cargo output directory for the given build configuration.
+
+    If CARGO_TARGET_DIR is set, use it as the base. Otherwise, if manifest_path
+    is provided, anchor the target dir at manifest_path.parent / target.
+    Otherwise, use ./target as the base.
+    """
+    # Explicit CARGO_TARGET_DIR env var always wins
+    if config.cargo_target_dir:
+        base = config.cargo_target_dir
+    # If manifest_path is provided (not at repo root), anchor to its parent
+    elif config.manifest_path:
+        manifest = Path(config.manifest_path)
+        base = str(manifest.parent / "target")
+    # Default: ./target at repo root
+    else:
+        base = "target"
+
     target_subdir = f"{config.target}/" if config.target else ""
     profile_dir = "release" if config.build_profile == "release" else "debug"
     return Path(base) / f"{target_subdir}{profile_dir}"
