@@ -98,6 +98,9 @@ resolve_version() {
 install_from_release() {
   local resolved_version target max_attempts=3 attempt=1 wait_time=2
   resolved_version="$(resolve_version)"
+  # Strip leading 'v' if present so we don't form vv-tagged URLs when callers
+  # pass an already-prefixed tag like "v0.16.23".
+  resolved_version="${resolved_version#v}"
   target="$(detect_target)"
   local url="https://github.com/kreuzberg-dev/alef/releases/download/v${resolved_version}/alef-${target}.tar.gz"
 

@@ -62,6 +62,8 @@ if ($alefVersion -eq "latest") {
 }
 
 $zipPath = "$alefBinDir\alef.zip"
+# Strip leading 'v' if present so we don't form vv-tagged URLs when callers pass an already-prefixed tag.
+$alefVersion = $alefVersion -replace '^v', ''
 $directUrl = "https://github.com/kreuzberg-dev/alef/releases/download/v$alefVersion/alef-x86_64-pc-windows-gnu.zip"
 
 try {
