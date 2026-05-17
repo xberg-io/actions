@@ -27,6 +27,8 @@ jobs:
       - name: Verify a representative rule is installed
         shell: bash
         run: |
-          npm ls textlint-rule-terminology >/dev/null
-          npm ls textlint-rule-alex >/dev/null
-          npm ls @textlint-rule/textlint-rule-no-unmatched-pair >/dev/null
+          # setup-textlint installs globally; resolve via NODE_PATH=$(npm root -g)
+          export NODE_PATH="$(npm root -g)"
+          node -e "require('textlint-rule-terminology')"
+          node -e "require('textlint-rule-alex')"
+          node -e "require('@textlint-rule/textlint-rule-no-unmatched-pair')"
