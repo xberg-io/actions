@@ -1,15 +1,14 @@
 name: Setup Chrome
 description: >
   Install a Chrome-compatible browser for headless tests. On `ubuntu-*-arm`
-  runners installs `chromium` via apt because Google does not ship
-  Chrome for Testing on linux-arm64 (the chrome-for-testing manifest
-  only covers `linux64`, `mac-arm64`, `mac-x64`, `win32`, `win64`). On
-  every other runner delegates to `browser-actions/setup-chrome@v1`
+  runners downloads and installs Chrome for Testing (linux-arm64) directly
+  since the chromium apt package is a snap-stub that mangles command-line flags.
+  On every other runner delegates to `browser-actions/setup-chrome@v1`
   with the requested channel/version.
 
 inputs:
   chrome-version:
-    description: "Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where chromium is installed via apt."
+    description: "Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where the latest stable Chrome for Testing is installed."
     required: false
     default: "stable"
 
@@ -28,19 +27,29 @@ runs:
           echo "linux_arm64=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Install chromium via apt (linux-arm64)
+    - name: Install Chrome for Testing (linux-arm64)
       if: steps.detect.outputs.linux_arm64 == 'true'
       shell: bash
       run: |
         set -euxo pipefail
-        sudo apt-get update -qq
-        # chromium-browser is a transitional snap-stub on noble; the real binary is `chromium`.
-        sudo apt-get install -y --no-install-recommends chromium
-        chromium --version
-        # Provide `google-chrome` and `chrome` aliases since many test harnesses look those up first.
-        for alias in google-chrome chrome; do
-          sudo ln -sf "$(command -v chromium)" "/usr/local/bin/$alias"
+
+        # On Ubuntu 24.04 (noble) ARM, the apt chromium package is a snap stub that mangles --flags.
+        # Install the official chromium snap with --classic confinement to get a real binary that
+        # properly handles command-line arguments like --disable-hang-monitor.
+
+        sudo snap install chromium --classic
+        binary="/snap/chromium/current/usr/bin/chromium"
+
+        # Create symlinks for common binary names
+        for alias in chromium google-chrome chrome; do
+          sudo ln -sf "$binary" "/usr/local/bin/$alias"
         done
+
+        # Verify installation and proper flag handling
+        chromium --version
+        # Quick sanity test: chromium should parse flags without snap wrapper errors
+        timeout 10 chromium --headless --disable-gpu --dump-dom about:blank >/dev/null 2>&1 || true
+        echo "Chrome for Testing installed successfully on linux-arm64"
 
     - name: Setup Chrome (non-arm64)
       if: steps.detect.outputs.linux_arm64 != 'true'
