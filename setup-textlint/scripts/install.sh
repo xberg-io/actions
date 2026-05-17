@@ -25,4 +25,6 @@ if [[ -n "${INPUT_EXTRA_PACKAGES:-}" ]]; then
   packages+=("${extras[@]}")
 fi
 
-npm install --no-save --ignore-scripts --legacy-peer-deps "${packages[@]}"
+# Install globally so npm does not resolve the host project's workspaces
+# (some polyglot repos have `workspace:*` deps that npm cannot parse).
+npm install -g --ignore-scripts --legacy-peer-deps "${packages[@]}"
