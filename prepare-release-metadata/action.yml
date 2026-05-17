@@ -221,7 +221,7 @@ runs:
         # check out refs/tags/<synth>. Override checkout_ref + target_sha to the
         # current commit so the dry-run pipeline can build against HEAD.
         if [[ "${dry_run}" == "true" ]]; then
-          json=$(echo "${json}" | jq --arg sha "${GITHUB_SHA}" '. + {checkout_ref: $sha, target_sha: $sha, matrix_ref: ("main")}')
+          json=$(echo "${json}" | jq --arg sha "${GITHUB_SHA}" '. + {ref: $sha, checkout_ref: $sha, target_sha: $sha, matrix_ref: ("main")}')
         fi
 
         echo "${json}" | jq .
