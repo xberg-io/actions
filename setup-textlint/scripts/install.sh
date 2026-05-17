@@ -25,4 +25,4 @@ if [[ -n "${INPUT_EXTRA_PACKAGES:-}" ]]; then
   packages+=("${extras[@]}")
 fi
 
-npm install --no-save "${packages[@]}"
+npm install --no-save --legacy-peer-deps "${packages[@]}"
