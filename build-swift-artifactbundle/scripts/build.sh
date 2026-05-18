@@ -64,8 +64,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   else
     echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
   fi
-  echo "[dry-run] cross build -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
-  echo "[dry-run] cross build -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
   echo "[dry-run] would assemble $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle"
   echo "[dry-run] would generate info.json with SE-0305 metadata"
   if [[ -n "$HEADER_PATH" ]]; then
@@ -88,9 +88,19 @@ fi
 rustup target add "${apple_targets[@]}" \
   aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu
 
-# Install cross if not already present
-echo "=== Ensuring cross is installed ==="
-cargo install cross --locked 2>/dev/null || true
+# cross-rs requires Docker/Podman, which GH-hosted macos-latest runners
+# don't ship. cargo-zigbuild uses Zig as a built-in cross-linker and works
+# on macOS without a container engine. Install Zig (via Homebrew) + cargo-
+# zigbuild so the Linux variants of the Swift bundle can be produced.
+echo "=== Ensuring cargo-zigbuild + Zig are installed ==="
+if ! command -v zig >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    brew install zig 2>/dev/null || true
+  fi
+fi
+if ! command -v cargo-zigbuild >/dev/null 2>&1; then
+  cargo install --locked cargo-zigbuild 2>/dev/null || true
+fi
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -128,31 +138,17 @@ else
   echo "Skipping x86_64-apple-ios (include-ios-x86_64=false)"
 fi
 
-# Build Linux targets using cross
-# cross-rs 0.2.5+ tries to auto-install the matching toolchain on the host
-# (e.g. `1.95-x86_64-unknown-linux-gnu`) when a rust-toolchain.toml pins a
-# channel. On a non-Linux host this trips rustup's host-architecture guard
-# ("toolchain ... may not be able to run on this system"). Pre-installing
-# with --force-non-host primes rustup so cross's add becomes a no-op.
-echo "=== Building Linux targets (cross) ==="
-if [[ -f rust-toolchain.toml ]]; then
-  toolchain_channel="$(awk -F'"' '/^[[:space:]]*channel/ {print $2; exit}' rust-toolchain.toml)"
-  if [[ -n "$toolchain_channel" ]]; then
-    for triple in aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
-      echo "Pre-installing ${toolchain_channel}-${triple} (non-host)..."
-      rustup toolchain install "${toolchain_channel}-${triple}" \
-        --force-non-host --profile minimal --no-self-update || true
-    done
-  fi
-fi
+# Build Linux targets using cargo-zigbuild.
+# Linker is Zig (auto-selected by cargo-zigbuild); no Docker/Podman required.
+echo "=== Building Linux targets (cargo-zigbuild) ==="
 
 echo "Building aarch64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cross build -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
+cargo zigbuild -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
 
 echo "Building x86_64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cross build -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
+cargo zigbuild -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
 
 # Determine the target subdirectory for library lookup
 case "$BUILD_PROFILE" in
