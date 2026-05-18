@@ -23,11 +23,28 @@ def is_already_published(output: str) -> bool:
 
 
 def validate_gem_structure(path: Path) -> bool:
-    """Return True if path is a non-empty, readable gem with valid structure."""
+    """Return True if path is a non-empty, readable gem with valid structure.
+
+    On `gem spec` failure, surface stderr to the GitHub Actions log so the
+    underlying cause (corrupt archive, missing metadata, gem command issue,
+    etc.) is visible — otherwise the caller only sees a generic
+    "invalid gem structure" with no diagnostic detail.
+    """
     if not path.is_file() or not os.access(path, os.R_OK) or path.stat().st_size == 0:
+        print(f"  Diagnostic: {path.name} is missing/unreadable/empty", file=sys.stderr)
         return False
-    result = subprocess.run(["gem", "spec", str(path)], capture_output=True, check=False)
-    return result.returncode == 0
+    result = subprocess.run(["gem", "spec", str(path)], capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        print(
+            f"  Diagnostic: `gem spec {path.name}` exited with code {result.returncode}",
+            file=sys.stderr,
+        )
+        if result.stderr.strip():
+            print(f"    stderr: {result.stderr.strip()[:500]}", file=sys.stderr)
+        if result.stdout.strip():
+            print(f"    stdout (first 200 chars): {result.stdout.strip()[:200]}", file=sys.stderr)
+        return False
+    return True
 
 
 def find_gem_files(directory: Path) -> list[Path]:
