@@ -129,7 +129,23 @@ else
 fi
 
 # Build Linux targets using cross
+# cross-rs 0.2.5+ tries to auto-install the matching toolchain on the host
+# (e.g. `1.95-x86_64-unknown-linux-gnu`) when a rust-toolchain.toml pins a
+# channel. On a non-Linux host this trips rustup's host-architecture guard
+# ("toolchain ... may not be able to run on this system"). Pre-installing
+# with --force-non-host primes rustup so cross's add becomes a no-op.
 echo "=== Building Linux targets (cross) ==="
+if [[ -f rust-toolchain.toml ]]; then
+  toolchain_channel="$(awk -F'"' '/^[[:space:]]*channel/ {print $2; exit}' rust-toolchain.toml)"
+  if [[ -n "$toolchain_channel" ]]; then
+    for triple in aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+      echo "Pre-installing ${toolchain_channel}-${triple} (non-host)..."
+      rustup toolchain install "${toolchain_channel}-${triple}" \
+        --force-non-host --profile minimal --no-self-update || true
+    done
+  fi
+fi
+
 echo "Building aarch64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
 cross build -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
