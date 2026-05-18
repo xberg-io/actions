@@ -16,11 +16,19 @@ if (Test-Path $alefExe) {
   exit 0
 }
 
+function Ensure-Cargo {
+  if (Get-Command cargo -ErrorAction SilentlyContinue) { return }
+  Write-Output "cargo not found - bootstrapping minimal Rust toolchain via rustup..."
+  $rustupInit = "$env:TEMP\rustup-init.exe"
+  Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile $rustupInit
+  & $rustupInit --default-toolchain stable --profile minimal -y --no-modify-path
+  if ($LASTEXITCODE -ne 0) { throw "rustup-init failed with exit code $LASTEXITCODE" }
+  $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+}
+
 if ($alefVersion -eq "main") {
   Write-Output "Installing alef from main branch via cargo install..."
-  if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    throw "cargo not found - required for installing from main branch"
-  }
+  Ensure-Cargo
   $env:CARGO_INSTALL_ROOT = $alefBinDir
   cargo install --git https://github.com/kreuzberg-dev/alef --locked alef-cli
   "$alefBinDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

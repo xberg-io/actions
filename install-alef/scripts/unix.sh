@@ -138,13 +138,26 @@ install_from_release() {
   return 1
 }
 
+# Bootstrap a minimal Rust toolchain via rustup when cargo is missing on the
+# runner. Required for source installs (main branch or tag fallback) when the
+# host doesn't ship Rust by default (e.g. minimal Linux runners). PATH is
+# updated for the current shell only — callers append $HOME/.cargo/bin to
+# $GITHUB_PATH separately if they need it for later steps.
+ensure_cargo() {
+  if command -v cargo >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "cargo not found — bootstrapping minimal Rust toolchain via rustup..."
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+    sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path
+  # shellcheck source=/dev/null
+  . "$HOME/.cargo/env"
+}
+
 # Install from main branch via cargo install
 install_from_main() {
   echo "Installing alef from main branch via cargo install..."
-  if ! command -v cargo >/dev/null 2>&1; then
-    echo "Error: cargo not found — required for installing from main branch" >&2
-    return 1
-  fi
+  ensure_cargo
   CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
     cargo install --git https://github.com/kreuzberg-dev/alef --locked alef-cli
   echo "Alef installed from main branch"
@@ -162,10 +175,7 @@ if ! command -v alef >/dev/null 2>&1; then
     if ! install_from_release; then
       resolved_version="$(resolve_version)"
       echo "Falling back to cargo install --git --tag v${resolved_version} alef-cli ..."
-      if ! command -v cargo >/dev/null 2>&1; then
-        echo "Error: cargo not found — required for source fallback" >&2
-        exit 1
-      fi
+      ensure_cargo
       CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
         cargo install \
         --git https://github.com/kreuzberg-dev/alef \
