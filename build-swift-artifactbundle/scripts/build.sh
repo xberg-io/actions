@@ -20,6 +20,8 @@ ARTIFACT_NAME="${INPUT_ARTIFACT_NAME:-}"
 HEADER_PATH="${INPUT_HEADER_PATH:-}"
 OUTPUT_DIR="${INPUT_OUTPUT_DIR:-dist/swift-artifactbundle}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
+INCLUDE_MACOS_X86_64="${INPUT_INCLUDE_MACOS_X86_64:-true}"
+INCLUDE_IOS_X86_64="${INPUT_INCLUDE_IOS_X86_64:-true}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 
 # Set defaults for lib_name and artifact_name
@@ -49,13 +51,21 @@ target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-darwin"
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-darwin"
+  if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+    echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-darwin"
+  else
+    echo "[dry-run] skip x86_64-apple-darwin (include-macos-x86_64=false)"
+  fi
   echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-ios"
   echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-ios-sim"
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-ios"
+  if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
+    echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-ios"
+    echo "[dry-run] lipo arm64-sim x86_64 -> ios-sim fat"
+  else
+    echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
+  fi
   echo "[dry-run] cross build -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
   echo "[dry-run] cross build -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
-  echo "[dry-run] lipo arm64-sim x86_64 -> ios-sim fat"
   echo "[dry-run] would assemble $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle"
   echo "[dry-run] would generate info.json with SE-0305 metadata"
   if [[ -n "$HEADER_PATH" ]]; then
@@ -68,8 +78,14 @@ fi
 
 # Add required targets
 echo "=== Adding Rust targets ==="
-rustup target add aarch64-apple-darwin x86_64-apple-darwin \
-  aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios \
+apple_targets=(aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim)
+if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+  apple_targets+=(x86_64-apple-darwin)
+fi
+if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
+  apple_targets+=(x86_64-apple-ios)
+fi
+rustup target add "${apple_targets[@]}" \
   aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu
 
 # Install cross if not already present
@@ -88,9 +104,13 @@ echo "Building aarch64-apple-darwin..."
 # shellcheck disable=SC2086
 cargo build -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
 
-echo "Building x86_64-apple-darwin..."
-# shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
+if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+  echo "Building x86_64-apple-darwin..."
+  # shellcheck disable=SC2086
+  cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
+else
+  echo "Skipping x86_64-apple-darwin (include-macos-x86_64=false)"
+fi
 
 echo "Building aarch64-apple-ios..."
 # shellcheck disable=SC2086
@@ -100,9 +120,13 @@ echo "Building aarch64-apple-ios-sim..."
 # shellcheck disable=SC2086
 cargo build -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
 
-echo "Building x86_64-apple-ios..."
-# shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
+if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
+  echo "Building x86_64-apple-ios..."
+  # shellcheck disable=SC2086
+  cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
+else
+  echo "Skipping x86_64-apple-ios (include-ios-x86_64=false)"
+fi
 
 # Build Linux targets using cross
 echo "=== Building Linux targets (cross) ==="
@@ -130,7 +154,9 @@ esac
 # Copy/create bundle directories
 echo "=== Creating artifact bundle structure ==="
 mkdir -p "$bundle_dir/$ARTIFACT_NAME-macos-arm64"
-mkdir -p "$bundle_dir/$ARTIFACT_NAME-macos-x86_64"
+if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+  mkdir -p "$bundle_dir/$ARTIFACT_NAME-macos-x86_64"
+fi
 mkdir -p "$bundle_dir/$ARTIFACT_NAME-ios-arm64"
 mkdir -p "$bundle_dir/$ARTIFACT_NAME-ios-sim"
 mkdir -p "$bundle_dir/$ARTIFACT_NAME-linux-x86_64"
@@ -141,26 +167,32 @@ echo "=== Copying static libraries ==="
 cp "$target_dir/aarch64-apple-darwin/$target_subdir/lib${LIB_NAME}.a" \
   "$bundle_dir/$ARTIFACT_NAME-macos-arm64/lib${LIB_NAME}.a"
 
-cp "$target_dir/x86_64-apple-darwin/$target_subdir/lib${LIB_NAME}.a" \
-  "$bundle_dir/$ARTIFACT_NAME-macos-x86_64/lib${LIB_NAME}.a"
+if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+  cp "$target_dir/x86_64-apple-darwin/$target_subdir/lib${LIB_NAME}.a" \
+    "$bundle_dir/$ARTIFACT_NAME-macos-x86_64/lib${LIB_NAME}.a"
+fi
 
 cp "$target_dir/aarch64-apple-ios/$target_subdir/lib${LIB_NAME}.a" \
   "$bundle_dir/$ARTIFACT_NAME-ios-arm64/lib${LIB_NAME}.a"
 
-cp "$target_dir/aarch64-apple-ios-sim/$target_subdir/lib${LIB_NAME}.a" \
-  "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64"
-
-cp "$target_dir/x86_64-apple-ios/$target_subdir/lib${LIB_NAME}.a" \
-  "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64"
-
-# Create fat iOS simulator library
-echo "=== Creating iOS simulator fat library ==="
-lipo -create \
-  "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64" \
-  "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64" \
-  -output "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a"
-rm "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64" \
-  "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64"
+if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
+  # Build a fat sim binary covering both arm64 + x86_64 simulators.
+  cp "$target_dir/aarch64-apple-ios-sim/$target_subdir/lib${LIB_NAME}.a" \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64"
+  cp "$target_dir/x86_64-apple-ios/$target_subdir/lib${LIB_NAME}.a" \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64"
+  echo "=== Creating iOS simulator fat library ==="
+  lipo -create \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64" \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64" \
+    -output "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a"
+  rm "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.arm64" \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a.x86_64"
+else
+  # arm64-only simulator — copy the arm64-sim library directly.
+  cp "$target_dir/aarch64-apple-ios-sim/$target_subdir/lib${LIB_NAME}.a" \
+    "$bundle_dir/$ARTIFACT_NAME-ios-sim/lib${LIB_NAME}.a"
+fi
 
 cp "$target_dir/aarch64-unknown-linux-gnu/$target_subdir/lib${LIB_NAME}.a" \
   "$bundle_dir/$ARTIFACT_NAME-linux-aarch64/lib${LIB_NAME}.a"
@@ -177,47 +209,36 @@ fi
 
 # Generate info.json per SE-0305
 echo "=== Generating info.json ==="
-cat >"$bundle_dir/info.json" <<'EOF'
+variants=()
+variants+=("$(printf '{"path": "%s-macos-arm64/lib%s.a", "supportedTriples": ["arm64-apple-macosx"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
+  variants+=("$(printf '{"path": "%s-macos-x86_64/lib%s.a", "supportedTriples": ["x86_64-apple-macosx"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+fi
+variants+=("$(printf '{"path": "%s-ios-arm64/lib%s.a", "supportedTriples": ["arm64-apple-ios"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
+  variants+=("$(printf '{"path": "%s-ios-sim/lib%s.a", "supportedTriples": ["arm64-apple-ios-simulator", "x86_64-apple-ios-simulator"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+else
+  variants+=("$(printf '{"path": "%s-ios-sim/lib%s.a", "supportedTriples": ["arm64-apple-ios-simulator"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+fi
+variants+=("$(printf '{"path": "%s-linux-x86_64/lib%s.a", "supportedTriples": ["x86_64-unknown-linux-gnu"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+variants+=("$(printf '{"path": "%s-linux-aarch64/lib%s.a", "supportedTriples": ["aarch64-unknown-linux-gnu"]}' "$ARTIFACT_NAME" "$LIB_NAME")")
+
+variants_csv=$(
+  IFS=,
+  echo "${variants[*]}"
+)
+cat >"$bundle_dir/info.json" <<EOF
 {
   "schemaVersion": "1.0",
   "artifacts": {
     "$ARTIFACT_NAME": {
       "type": "staticLibrary",
       "version": "1.0.0",
-      "variants": [
-        {
-          "path": "$ARTIFACT_NAME-macos-arm64/lib$LIB_NAME.a",
-          "supportedTriples": ["arm64-apple-macosx"]
-        },
-        {
-          "path": "$ARTIFACT_NAME-macos-x86_64/lib$LIB_NAME.a",
-          "supportedTriples": ["x86_64-apple-macosx"]
-        },
-        {
-          "path": "$ARTIFACT_NAME-ios-arm64/lib$LIB_NAME.a",
-          "supportedTriples": ["arm64-apple-ios"]
-        },
-        {
-          "path": "$ARTIFACT_NAME-ios-sim/lib$LIB_NAME.a",
-          "supportedTriples": ["arm64-apple-ios-simulator", "x86_64-apple-ios-simulator"]
-        },
-        {
-          "path": "$ARTIFACT_NAME-linux-x86_64/lib$LIB_NAME.a",
-          "supportedTriples": ["x86_64-unknown-linux-gnu"]
-        },
-        {
-          "path": "$ARTIFACT_NAME-linux-aarch64/lib$LIB_NAME.a",
-          "supportedTriples": ["aarch64-unknown-linux-gnu"]
-        }
-      ]
+      "variants": [$variants_csv]
     }
   }
 }
 EOF
-
-# Use sed to substitute placeholders (bash doesn't support variable expansion in heredoc with -v)
-sed -i '' "s/\$ARTIFACT_NAME/$ARTIFACT_NAME/g" "$bundle_dir/info.json"
-sed -i '' "s/\$LIB_NAME/$LIB_NAME/g" "$bundle_dir/info.json"
 
 echo "Created $bundle_dir/info.json"
 

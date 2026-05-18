@@ -50,7 +50,7 @@ runs:
   using: composite
   steps:
     - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@v1.16.1
       with:
         toolchain: ${{ inputs.toolchain }}
         components: ${{ inputs.components }}
@@ -64,7 +64,7 @@ runs:
 
     - name: Setup sccache
       if: inputs.use-sccache == 'true'
-      uses: mozilla-actions/sccache-action@v0.0.9
+      uses: mozilla-actions/sccache-action@v0.0.10
       continue-on-error: true
 
     - name: Configure Rust flags
@@ -81,7 +81,7 @@ runs:
     - name: Cache Rust build artifacts
       id: cache-rust
       if: inputs.disable-cache != 'true'
-      uses: actions/cache@v5
+      uses: actions/cache@v5.0.5
       with:
         path: |
           ~/.cargo/registry/index
@@ -117,7 +117,7 @@ runs:
 
     - name: Install cargo-llvm-cov
       if: inputs.install-llvm-cov == 'true'
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@v2.79.0
       with:
         tool: cargo-llvm-cov
 

@@ -51,7 +51,7 @@ runs:
   steps:
     - name: Set up Zig
       if: inputs.setup-zig == 'true'
-      uses: mlugg/setup-zig@v2
+      uses: mlugg/setup-zig@v2.2.1
       with:
         version: ${{ inputs.zig-version }}
 
@@ -89,6 +89,7 @@ runs:
         fi
 
     - name: Verify tag is fetchable
+      if: inputs.dry-run != 'true'
       shell: bash
       env:
         TAG: ${{ steps.tag.outputs.tag }}
@@ -105,11 +106,18 @@ runs:
       shell: bash
       env:
         TAG: ${{ steps.tag.outputs.tag }}
+        DRY_RUN: ${{ inputs.dry-run }}
       run: |
         url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
         echo "Tarball URL: $url"
 
-        sha=$(curl -sSL -m 60 "$url" | sha256sum | awk '{print $1}')
+        if [[ "$DRY_RUN" == "true" ]]; then
+          # In dry-run the tag does not exist on the remote, so the tarball
+          # download will 404. Skip the SHA computation entirely.
+          sha="(dry-run: tarball SHA not computed)"
+        else
+          sha=$(curl -sSL -m 60 "$url" | sha256sum | awk '{print $1}')
+        fi
         echo "Tarball SHA-256: $sha"
 
         echo "tarball-url=$url" >> "$GITHUB_OUTPUT"

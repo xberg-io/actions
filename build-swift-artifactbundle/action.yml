@@ -34,6 +34,24 @@ inputs:
     description: "Cargo build profile (release, dev, or a custom named profile)"
     required: false
     default: "release"
+  include-macos-x86_64:
+    description: >
+      Build for x86_64-apple-darwin (Intel Mac). Apple has been deprecating
+      Intel Macs since 2020 and some Rust dependencies (notably pyke ort
+      2.0.0-rc.12+) no longer ship prebuilt binaries for this triple. Set
+      to "false" to skip the target and omit it from the bundle.
+    required: false
+    default: "true"
+  include-ios-x86_64:
+    description: >
+      Build for x86_64-apple-ios (deprecated Intel iOS simulator). The
+      Apple-Silicon simulator covers modern dev hosts; Intel simulator
+      support requires both pyke ORT prebuilts and an Intel Mac host.
+      Set to "false" to skip the target. When skipped, the iOS-sim
+      variant in the bundle uses the aarch64-apple-ios-sim library
+      directly (no lipo fat-binary step).
+    required: false
+    default: "true"
   dry-run:
     description: "Print the planned commands and exit without building"
     required: false
@@ -63,6 +81,8 @@ runs:
         INPUT_HEADER_PATH: ${{ inputs.header-path }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
+        INPUT_INCLUDE_MACOS_X86_64: ${{ inputs.include-macos-x86_64 }}
+        INPUT_INCLUDE_IOS_X86_64: ${{ inputs.include-ios-x86_64 }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
         bash "${{ github.action_path }}/scripts/build.sh"

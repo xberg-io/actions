@@ -19,7 +19,7 @@ jobs:
   validate-input-branch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       # The action's first step rejects windows targets without a
       # windows-compiler input. This is a pure-bash branch with no external

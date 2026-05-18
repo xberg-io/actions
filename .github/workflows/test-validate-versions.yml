@@ -13,7 +13,7 @@ jobs:
   matching:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       # Stage a fixture at the workspace root so alef.toml + manifests are
       # all colocated with the action's working directory ($GITHUB_WORKSPACE).
@@ -60,7 +60,7 @@ jobs:
   mismatch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       # Stage a fixture where versions DON'T match. alef must exit non-zero
       # and the step's outcome must be "failure".
