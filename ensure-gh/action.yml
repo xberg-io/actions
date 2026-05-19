@@ -1,0 +1,31 @@
+name: Ensure gh CLI
+description: >
+  Install the GitHub CLI (gh) into the runner's PATH when missing. No-op on
+  runners that already ship gh (ubuntu-latest, macos-latest, etc). Required
+  on bare runners (runner-medium, self-hosted) where gh is not preinstalled.
+inputs:
+  version:
+    description: >
+      gh CLI version to install when bootstrapping. Use a release tag without
+      the leading 'v' (e.g. "2.65.0"), or "latest" to resolve the most recent
+      release from the GitHub API.
+    required: false
+    default: "latest"
+runs:
+  using: composite
+  steps:
+    - name: Ensure gh (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}"
+
+    - name: Ensure gh (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}'

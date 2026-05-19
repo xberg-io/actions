@@ -49,7 +49,7 @@ repos:
 
       - id: oxfmt
       - id: mypy
-        exclude: ^tests/
+        exclude: (^tests/|/tests/)
   # GitHub Actions: linting
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
