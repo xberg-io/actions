@@ -7,35 +7,105 @@ Usage (GitHub Actions via env vars):
 
 import json
 import os
-import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any
 
 
-def build_create_flags(
+def get_github_api_headers(token: str) -> dict[str, str]:
+    """Return headers for GitHub REST API v2022-11-28."""
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "kreuzberg-dev-actions-publish-github-release",
+    }
+
+
+def github_request(method: str, url: str, token: str, data: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    """Make a GitHub REST API request and return (status_code, response_json).
+
+    Raises SystemExit on non-2xx responses (except 404 for GETs).
+    """
+    headers = get_github_api_headers(token)
+
+    body = None
+    if data is not None:
+        body = json.dumps(data).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)  # noqa: S310
+
+    try:
+        with urllib.request.urlopen(req) as response:  # noqa: S310
+            response_data = json.loads(response.read().decode("utf-8"))
+            return response.status, response_data
+    except urllib.error.HTTPError as e:
+        # For GET requests checking existence (404), return gracefully
+        if method == "GET" and e.code == 404:
+            return 404, {}
+        # For all other errors, print and exit
+        error_body = e.read().decode("utf-8")
+        print(
+            f"Error: HTTP {e.code} {e.reason} from {url}",
+            file=sys.stderr,
+        )
+        print(error_body, file=sys.stderr)
+        sys.exit(1)
+
+
+def get_release_by_tag(owner: str, repo: str, tag: str, token: str) -> dict[str, Any] | None:
+    """Get release info for a tag. Returns dict if found, None if 404."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
+    status, data = github_request("GET", url, token)
+    return data if status == 200 else None
+
+
+def create_release(
+    owner: str,
+    repo: str,
+    tag: str,
     title: str,
     generate_notes: bool,
     draft: bool,
     prerelease: bool,
     notes: str = "",
     target: str = "",
-) -> list[str]:
-    """Return the list of flags for `gh release create`.
+    token: str = "",
+) -> dict[str, Any]:
+    """Create a release via POST /repos/{owner}/{repo}/releases."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases"
 
-    `notes` takes precedence over `generate_notes` when non-empty: gh CLI
-    rejects `--notes` and `--generate-notes` used together.
-    """
-    flags: list[str] = ["--title", title]
+    body_dict = {
+        "tag_name": tag,
+        "name": title,
+        "draft": draft,
+        "prerelease": prerelease,
+    }
+
+    # notes takes precedence over generate_notes
     if notes:
-        flags.extend(["--notes", notes])
+        body_dict["body"] = notes
     elif generate_notes:
-        flags.append("--generate-notes")
-    if draft:
-        flags.append("--draft")
-    if prerelease:
-        flags.append("--prerelease")
+        body_dict["generate_release_notes"] = True
+
     if target:
-        flags.extend(["--target", target])
-    return flags
+        body_dict["target_commitish"] = target
+
+    _status, data = github_request("POST", url, token, body_dict)
+    return data
+
+
+def update_release(owner: str, repo: str, release_id: int, draft: bool, token: str) -> dict[str, Any]:
+    """Update a release via PATCH /repos/{owner}/{repo}/releases/{id}."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases/{release_id}"
+
+    body_dict = {"draft": draft}
+
+    _status, data = github_request("PATCH", url, token, body_dict)
+    return data
 
 
 def main() -> None:
@@ -47,6 +117,8 @@ def main() -> None:
     notes = os.environ.get("INPUT_NOTES", "")
     target = os.environ.get("INPUT_TARGET", "").strip()
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
+    token = os.environ.get("GH_TOKEN", "")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
 
     if not tag:
         print("Error: INPUT_TAG is required", file=sys.stderr)
@@ -54,6 +126,16 @@ def main() -> None:
 
     if not title:
         title = tag
+
+    if not token:
+        print("Error: GH_TOKEN is required", file=sys.stderr)
+        sys.exit(1)
+
+    if not repository:
+        print("Error: GITHUB_REPOSITORY is required", file=sys.stderr)
+        sys.exit(1)
+
+    owner, repo = repository.split("/", 1)
 
     if dry_run:
         print(f"[dry-run] Would create/ensure release for tag: {tag}")
@@ -66,35 +148,29 @@ def main() -> None:
         sys.exit(0)
 
     # Check if release already exists
-    view_result = subprocess.run(
-        ["gh", "release", "view", tag, "--json", "isDraft,tagName"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    existing = get_release_by_tag(owner, repo, tag, token)
 
-    if view_result.returncode == 0:
+    if existing:
         print(f"Release {tag} already exists")
-        try:
-            existing = json.loads(view_result.stdout)
-        except json.JSONDecodeError:
-            existing = {}
-
-        is_draft = bool(existing.get("isDraft", False))
+        is_draft = existing.get("draft", False)
         if is_draft and not draft:
             print(f"Publishing draft release {tag}...")
-            subprocess.run(["gh", "release", "edit", tag, "--draft=false"], check=True)
+            release_id: int = existing.get("id", 0)
+            update_release(owner, repo, release_id, False, token)
     else:
         print(f"Creating release {tag}...")
-        create_flags = build_create_flags(
+        create_release(
+            owner,
+            repo,
+            tag,
             title,
             generate_notes,
             draft,
             prerelease,
             notes=notes,
             target=target,
+            token=token,
         )
-        subprocess.run(["gh", "release", "create", tag, *create_flags], check=True)
 
     print(f"Release {tag} ready")
 
