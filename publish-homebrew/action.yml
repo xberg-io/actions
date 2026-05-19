@@ -49,6 +49,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Ensure gh CLI is available
+      uses: kreuzberg-dev/actions/ensure-gh@v1
+
     - name: Update Homebrew formula
       shell: bash
       env:
