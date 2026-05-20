@@ -1,20 +1,18 @@
 $ErrorActionPreference = "Stop"
 
-$alefVersion = $args[0]
-if ([string]::IsNullOrWhiteSpace($alefVersion)) {
-  throw "Usage: windows.ps1 <alefVersion>"
+# Install alef under %USERPROFILE%\AppData\Local\alef\alef.exe. The composite
+# action resolves "latest" / "main" / a tag to a concrete install ref before
+# invoking this script and handles caching + PATH wiring itself, so this script
+# only deals with the actual download + (optional) source build.
+
+$installRef = $args[0]
+if ([string]::IsNullOrWhiteSpace($installRef)) {
+  throw "Usage: windows.ps1 <installRef>"
 }
 
 $alefBinDir = "$env:USERPROFILE\AppData\Local\alef"
 New-Item -ItemType Directory -Force -Path $alefBinDir | Out-Null
-
 $alefExe = "$alefBinDir\alef.exe"
-
-if (Test-Path $alefExe) {
-  Write-Output "Alef already installed at $alefExe"
-  "$alefBinDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-  exit 0
-}
 
 function Ensure-Cargo {
   if (Get-Command cargo -ErrorAction SilentlyContinue) { return }
@@ -26,88 +24,79 @@ function Ensure-Cargo {
   $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
 }
 
-if ($alefVersion -eq "main") {
-  Write-Output "Installing alef from main branch via cargo install..."
+function Build-FromSource {
+  param([string] $ref)
   Ensure-Cargo
   $env:CARGO_INSTALL_ROOT = $alefBinDir
-  cargo install --git https://github.com/kreuzberg-dev/alef --locked alef-cli
-  "$alefBinDir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-  exit 0
-}
-
-# Resolve "latest" — check alef.toml for a pinned version first, then fall back to GitHub
-if ($alefVersion -eq "latest") {
-  if (Test-Path "alef.toml") {
-    # Read either:
-    #   - top-level `version = "..."` (alef's own repo convention; before first [section])
-    #   - `alef_version = "..."` (consumer convention; may live under [workspace])
-    $pinned = $null
-    $beforeSection = $true
-    foreach ($line in Get-Content "alef.toml") {
-      if ($line -match '^\[') { $beforeSection = $false }
-      if ($beforeSection -and $line -match '^\s*version\s*=\s*"([^"]+)"') {
-        $pinned = $Matches[1]; break
-      }
-      if ($line -match '^\s*alef_version\s*=\s*"([^"]+)"') {
-        $pinned = $Matches[1]; break
-      }
-    }
-    if ($pinned) {
-      Write-Output "Using pinned version from alef.toml: $pinned"
-      $alefVersion = $pinned
+  if ($ref -eq "main") {
+    Write-Output "Building alef from main branch via cargo install..."
+    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef-cli
+  } else {
+    Write-Output "Building alef v$ref from source via cargo install --tag..."
+    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked alef-cli
+    if ($LASTEXITCODE -ne 0) {
+      Write-Output "Tag build failed; falling back to main branch..."
+      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef-cli
     }
   }
-  if ($alefVersion -eq "latest") {
+  # cargo installs into $alefBinDir\bin; move the binary so it lives directly
+  # at $alefBinDir\alef.exe (matches the released-binary layout + cache path).
+  $built = "$alefBinDir\bin\alef.exe"
+  if (Test-Path $built) {
+    Move-Item -Force -Path $built -Destination $alefExe
+  } elseif (-not (Test-Path $alefExe)) {
+    throw "cargo install did not produce alef.exe at $built"
+  }
+}
+
+function Install-FromRelease {
+  param([string] $version)
+  $zipPath = "$alefBinDir\alef.zip"
+  $directUrl = "https://github.com/kreuzberg-dev/alef/releases/download/v$version/alef-x86_64-pc-windows-gnu.zip"
+
+  try {
+    Invoke-WebRequest -Uri $directUrl -OutFile $zipPath
+  } catch {
     $headers = @{}
     if ($env:GITHUB_TOKEN) {
       $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
       $headers["X-GitHub-Api-Version"] = "2022-11-28"
     }
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest" -Headers $headers
-    $alefVersion = $release.tag_name -replace '^v', ''
-    Write-Output "Resolved latest version: $alefVersion"
-  }
-}
-
-$zipPath = "$alefBinDir\alef.zip"
-# Strip leading 'v' if present so we don't form vv-tagged URLs when callers pass an already-prefixed tag.
-$alefVersion = $alefVersion -replace '^v', ''
-$directUrl = "https://github.com/kreuzberg-dev/alef/releases/download/v$alefVersion/alef-x86_64-pc-windows-gnu.zip"
-
-try {
-  Invoke-WebRequest -Uri $directUrl -OutFile $zipPath
-} catch {
-  $headers = @{}
-  if ($env:GITHUB_TOKEN) {
-    $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
-    $headers["X-GitHub-Api-Version"] = "2022-11-28"
-  }
-  $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/tags/v$alefVersion" -Headers $headers
-  $asset = $release.assets | Where-Object { $_.name -match "windows.*\.zip" } | Select-Object -First 1
-
-  if (-not $asset) {
-    throw "Could not find Windows release for alef v$alefVersion"
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/tags/v$version" -Headers $headers
+    $asset = $release.assets | Where-Object { $_.name -match "windows.*\.zip" } | Select-Object -First 1
+    if (-not $asset) {
+      throw "Could not find Windows release for alef v$version"
+    }
+    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
   }
 
-  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+  $extractDir = "$alefBinDir\extract"
+  if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+  New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+  Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+  Remove-Item $zipPath
+
+  $found = Get-ChildItem -Path $extractDir -Recurse -Filter "alef.exe" | Select-Object -First 1
+  if (-not $found) {
+    throw "alef.exe not found in extracted archive at $extractDir"
+  }
+  Move-Item -Force -Path $found.FullName -Destination $alefExe
+  Remove-Item -Recurse -Force $extractDir
 }
 
-$extractDir = "$alefBinDir\extract"
-if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
-New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
-Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-Remove-Item $zipPath
-
-$found = Get-ChildItem -Path $extractDir -Recurse -Filter "alef.exe" | Select-Object -First 1
-if (-not $found) {
-  throw "alef.exe not found in extracted archive at $extractDir"
+if ($installRef -eq "main") {
+  Build-FromSource -ref "main"
+} else {
+  try {
+    Install-FromRelease -version $installRef
+  } catch {
+    Write-Output "Release download failed: $_"
+    Write-Output "Falling back to source build..."
+    Build-FromSource -ref $installRef
+  }
 }
-Move-Item -Force -Path $found.FullName -Destination $alefExe
-Remove-Item -Recurse -Force $extractDir
 
 if (-not (Test-Path $alefExe)) {
   throw "Failed to install alef.exe at $alefExe"
 }
-Write-Output "Alef installed at $alefExe"
-
-"$alefBinDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+Write-Output "Alef is ready at $alefExe"

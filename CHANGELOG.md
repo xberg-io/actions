@@ -6,11 +6,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
+- `install-alef`: Cache the installed alef binary inside the composite action via `actions/cache@v4`, keyed on host triple + resolved version. Cache hits skip the download/build entirely. For `version: main`, the cache key embeds the current `kreuzberg-dev/alef` HEAD commit's short SHA, so a new main commit invalidates the cache automatically.
+- `install-alef`: New `scripts/resolve.sh` factored out of `unix.sh` — resolves `latest`/`main`/tag to a stable cache key and install ref before any download/build runs, so the cache lookup can fire before the slow path.
 - `setup-php`: Add `tools` input to install global PHP tools (phpstan, psalm, composer, etc.) via shivammathur/setup-php
 - `setup-maven`: Add `java-version` input (default `"21"`) to install Java via `actions/setup-java`
 - `setup-gradle`: Add `java-version` input (default `"21"`) to install Java via `actions/setup-java`
 
 ### Changed
+
+- `install-alef`: On release-binary download failure, the source-build fallback (`cargo install --git --tag v<X.Y.Z> --locked alef-cli`) now writes the produced binary into the cache, so subsequent jobs in the same workflow that share the cache key skip the cargo build entirely. Previously every job re-built from source whenever the release assets were late.
+- `install-alef`: PATH wiring moved out of the platform install scripts into the composite action itself so it runs on cache hits too.
 
 ### Fixed
 

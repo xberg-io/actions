@@ -5,24 +5,61 @@ inputs:
     description: >
       Alef version to install. Use a semver tag (e.g. "0.7.1"), "latest" to read
       the pinned version from alef.toml (falls back to the most recent GitHub
-      release), or "main" to build from the main branch.
+      release), or "main" to build the current main commit from source.
     required: false
     default: "latest"
 runs:
   using: composite
   steps:
-    - name: Install Alef (Unix)
-      if: runner.os != 'Windows'
+    - name: Resolve alef version + target
+      id: meta
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        "${{ github.action_path }}/scripts/unix.sh" "${{ inputs.version }}"
+        "${{ github.action_path }}/scripts/resolve.sh" "${{ inputs.version }}"
+
+    - name: Cache alef binary (Unix)
+      id: cache-unix
+      if: runner.os != 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/bin/alef
+        key: alef-${{ steps.meta.outputs.target }}-${{ steps.meta.outputs.resolved_version }}
+
+    - name: Cache alef binary (Windows)
+      id: cache-windows
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Local\alef\alef.exe
+        key: alef-${{ steps.meta.outputs.target }}-${{ steps.meta.outputs.resolved_version }}
+
+    - name: Install Alef (Unix)
+      if: runner.os != 'Windows' && steps.cache-unix.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        "${{ github.action_path }}/scripts/unix.sh" "${{ steps.meta.outputs.install_ref }}"
 
     - name: Install Alef (Windows)
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && steps.cache-windows.outputs.cache-hit != 'true'
       shell: pwsh
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        & '${{ github.action_path }}/scripts/windows.ps1' '${{ inputs.version }}'
+        & '${{ github.action_path }}/scripts/windows.ps1' '${{ steps.meta.outputs.install_ref }}'
+
+    - name: Add alef to PATH (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        chmod +x "$HOME/.local/bin/alef"
+        echo "$HOME/.local/bin" >>"$GITHUB_PATH"
+
+    - name: Add alef to PATH (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        "$env:USERPROFILE\AppData\Local\alef" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
