@@ -93,6 +93,7 @@ runs:
         fi
 
     - name: Verify tag is fetchable
+      if: inputs.dry-run != 'true'
       shell: bash
       env:
         TAG: ${{ steps.tag.outputs.tag }}
