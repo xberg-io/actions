@@ -14,6 +14,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `reusable-validate-issues`: Soft-fail project-board add when token lacks org-level Projects: write scope
+
 ### Deprecated
 
 ### Removed

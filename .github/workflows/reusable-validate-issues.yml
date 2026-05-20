@@ -90,4 +90,7 @@ jobs:
             echo "::warning::No project token available; skipping project board assignment"
             exit 0
           fi
-          gh project item-add 1 --owner kreuzberg-dev --url "$ISSUE_URL"
+          if ! gh project item-add 1 --owner kreuzberg-dev --url "$ISSUE_URL"; then
+            echo "::warning::Failed to add issue to project board (token may lack organization Projects: write scope)"
+            exit 0
+          fi
