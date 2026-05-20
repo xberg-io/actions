@@ -77,9 +77,14 @@ install_ref=""
 
 if [[ "$version" == "main" ]]; then
   install_ref="main"
+  # Resolve a SHA-pinned cache key when possible, but tolerate API/network
+  # failures: `set -euo pipefail` would otherwise abort the pipeline before
+  # the fallback branch runs. Disable errexit/pipefail just around the lookup.
+  set +e +o pipefail
   sha="$(curl --silent --fail "${auth_args[@]}" \
     "https://api.github.com/repos/kreuzberg-dev/alef/commits/main" |
     grep -m1 '"sha"' | sed -E 's/.*"([0-9a-f]+)".*/\1/')"
+  set -eo pipefail
   if [[ -n "$sha" ]]; then
     resolved_version="main-${sha:0:12}"
   else
@@ -93,9 +98,11 @@ else
       echo "Using pinned version from alef.toml: $pinned" >&2
       resolved_version="$pinned"
     else
+      set +e +o pipefail
       tag="$(curl --silent --fail "${auth_args[@]}" \
         "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest" |
         grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
+      set -eo pipefail
       if [[ -z "$tag" ]]; then
         echo "Error: could not resolve latest alef release" >&2
         exit 1

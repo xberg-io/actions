@@ -20,6 +20,7 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 ### Fixed
 
 - `reusable-validate-issues`: Soft-fail project-board add when token lacks org-level Projects: write scope
+- `install-alef`: `resolve.sh` no longer aborts the workflow when the GitHub Commits/Releases API request fails or returns no matching JSON. The intended fallback (`resolved_version=main` / explicit error on `latest`) now runs because `set -e`/`pipefail` are scoped narrowly around the curl pipeline.
 
 ### Deprecated
 
