@@ -24,6 +24,33 @@ inputs:
     description: "Additional Maven arguments (space-separated)"
     required: false
     default: ""
+  setup-java:
+    description: >
+      Run `actions/setup-java@v5`. Required for `mvn deploy` to find a
+      `<server id="${server-id}">` entry in `~/.m2/settings.xml` with the
+      `MAVEN_USERNAME` / `MAVEN_PASSWORD` env-var references. Set to
+      `false` if the caller already ran setup-java with the right
+      `server-id` / `server-username` / `server-password` parameters.
+    required: false
+    default: "true"
+  java-version:
+    description: "JDK version to install via setup-java (ignored when `setup-java=false`)"
+    required: false
+    default: "21"
+  java-distribution:
+    description: "JDK distribution for setup-java (ignored when `setup-java=false`)"
+    required: false
+    default: "temurin"
+  server-id:
+    description: >
+      Server id used by the publishing-maven-plugin (must match
+      `<publishingServerId>` in the project's pom.xml). Maven Central via
+      the Sonatype Central Portal canonically uses `ossrh`; the newer
+      `central-publishing-maven-plugin` defaults to `central`. setup-java
+      writes a `<server id="${server-id}">` block keyed on the
+      `MAVEN_USERNAME` / `MAVEN_PASSWORD` env vars.
+    required: false
+    default: "ossrh"
   dry-run:
     description: "Perform a dry run without actually publishing"
     required: false
@@ -32,6 +59,16 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up Java
+      if: inputs.setup-java == 'true'
+      uses: actions/setup-java@v5
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+        server-id: ${{ inputs.server-id }}
+        server-username: MAVEN_USERNAME
+        server-password: MAVEN_PASSWORD
+
     - name: Import GPG key
       if: env.MAVEN_GPG_PRIVATE_KEY != ''
       shell: bash
