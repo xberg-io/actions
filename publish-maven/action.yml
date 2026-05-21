@@ -39,20 +39,22 @@ runs:
         MAVEN_GPG_PRIVATE_KEY: ${{ env.MAVEN_GPG_PRIVATE_KEY }}
         MAVEN_GPG_PASSPHRASE: ${{ env.MAVEN_GPG_PASSPHRASE }}
       run: |
-        # Auto-detect format: armored PGP or base64-encoded
-        if echo "$MAVEN_GPG_PRIVATE_KEY" | head -1 | grep -q "-----BEGIN PGP PRIVATE KEY BLOCK-----"; then
-          echo "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import || {
-            echo "Error: MAVEN_GPG_PRIVATE_KEY failed to import as armored OpenPGP" >&2
-            exit 1
-          }
+        # Try importing as raw (armored) first; on failure, try base64-decoded.
+        # GH Actions log-masks any substring that matches a registered secret,
+        # so prefix-detection via a literal armor-header grep is brittle.
+        # Trying both forms unconditionally is simpler and more robust.
+        gpg_err=$(mktemp)
+        if printf '%s' "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import 2>"$gpg_err"; then
+          echo "Imported MAVEN_GPG_PRIVATE_KEY as armored OpenPGP"
+        elif printf '%s' "$MAVEN_GPG_PRIVATE_KEY" | base64 -d 2>/dev/null | gpg --batch --import 2>"$gpg_err"; then
+          echo "Imported MAVEN_GPG_PRIVATE_KEY (base64-decoded)"
         else
-          if printf '%s' "$MAVEN_GPG_PRIVATE_KEY" | base64 -d 2>/dev/null | gpg --batch --import 2>/dev/null; then
-            :
-          else
-            echo "Error: MAVEN_GPG_PRIVATE_KEY is neither armored OpenPGP nor base64 of one" >&2
-            exit 1
-          fi
+          echo "Error: MAVEN_GPG_PRIVATE_KEY could not be imported as armored OpenPGP or base64-encoded OpenPGP." >&2
+          echo "gpg output from last attempt:" >&2
+          sed 's/^/  /' "$gpg_err" >&2
+          exit 1
         fi
+        rm -f "$gpg_err"
         # Make the key usable for non-interactive signing
         for fpr in $(gpg --list-secret-keys --with-colons | awk -F: '$1 == "fpr" {print $10; exit}'); do
           echo "$fpr:6:" | gpg --import-ownertrust
