@@ -1,5 +1,10 @@
 name: Publish to PyPI
-description: Publish Python packages to PyPI with pre-validation
+description: >
+  Publish Python packages to PyPI via uv's trusted-publishing (OIDC) flow.
+  Avoids the pypa/gh-action-pypi-publish Docker action, which fails when
+  invoked inside a composite action because it caches its image at
+  ghcr.io/<composite-action-repo>:<ref> — a namespace the composite repo
+  rarely has permission to publish/pull from.
 
 inputs:
   packages-dir:
@@ -9,6 +14,10 @@ inputs:
     description: "Perform a dry run without publishing"
     required: false
     default: "false"
+  repository-url:
+    description: "Override the upload URL (e.g. https://test.pypi.org/legacy/)"
+    required: false
+    default: "https://upload.pypi.org/legacy/"
 
 outputs:
   published:
@@ -26,12 +35,26 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: python3 "${{ github.action_path }}/scripts/publish.py"
 
-    - name: Publish to PyPI
+    - name: Install uv
       if: inputs.dry-run != 'true'
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: astral-sh/setup-uv@v6
       with:
-        packages-dir: ${{ inputs.packages-dir }}
-        skip-existing: true
+        enable-cache: false
+
+    - name: Publish to PyPI via trusted publishing
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        UV_PUBLISH_URL: ${{ inputs.repository-url }}
+        PACKAGES_DIR: ${{ inputs.packages-dir }}
+      run: |
+        set -euo pipefail
+        # uv discovers the GHA OIDC token via ACTIONS_ID_TOKEN_REQUEST_{URL,TOKEN}
+        # and exchanges it with PyPI's mint-token endpoint automatically.
+        uv publish \
+          --trusted-publishing automatic \
+          --publish-url "$UV_PUBLISH_URL" \
+          "$PACKAGES_DIR"/*
 
     - name: Set output
       id: publish
