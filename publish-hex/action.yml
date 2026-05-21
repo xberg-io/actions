@@ -36,6 +36,16 @@ runs:
         fi
         cd "$PACKAGE_DIR"
         mix local.hex --force
+        mix local.rebar --force
+
+    - name: Fetch Mix dependencies
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        cd "$PACKAGE_DIR"
+        mix deps.get
 
     - name: Publish to Hex.pm
       if: inputs.dry-run != 'true'
