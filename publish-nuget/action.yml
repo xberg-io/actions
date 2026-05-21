@@ -5,7 +5,9 @@ description: >
     1. OIDC trusted publishing (preferred). Configure a trusted publisher
        on https://www.nuget.org/account/trustedpublishing pointing at the
        caller's repo + workflow file; then set `permissions: id-token: write`
-       on the calling workflow/job. No secret needed.
+       on the calling workflow/job and pass the nuget.org username via the
+       `nuget-user` input (or the `NUGET_USER` env var on the action call).
+       No long-lived secret needed.
     2. Static API key. Set NUGET_API_KEY in the calling workflow's env.
   The script picks OIDC when `NUGET_API_KEY` is empty.
 
@@ -17,6 +19,13 @@ inputs:
     description: "NuGet source URL"
     required: false
     default: "https://api.nuget.org/v3/index.json"
+  nuget-user:
+    description: >
+      nuget.org username (profile name, NOT email). Required for OIDC trusted
+      publishing — the token exchange POSTs this as the API key owner.
+      Ignored when NUGET_API_KEY is set.
+    required: false
+    default: ""
   dry-run:
     description: "Perform a dry run without actually publishing"
     required: false
@@ -41,6 +50,7 @@ runs:
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
         INPUT_PACKAGES_DIR: ${{ inputs.packages-dir }}
         INPUT_SOURCE: ${{ inputs.source }}
+        INPUT_NUGET_USER: ${{ inputs.nuget-user }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
         python3 "${{ github.action_path }}/scripts/publish.py"

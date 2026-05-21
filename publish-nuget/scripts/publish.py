@@ -39,7 +39,7 @@ def _run(cmd: list[str]) -> tuple[int, str]:
     return result.returncode, result.stdout + result.stderr
 
 
-def _fetch_oidc_token(audience: str = "nuget") -> str | None:
+def _fetch_oidc_token(audience: str = "https://www.nuget.org") -> str | None:
     """Fetch a GitHub Actions OIDC ID token for the given audience.
 
     Requires `permissions: id-token: write` on the calling workflow/job.
@@ -63,19 +63,26 @@ def _fetch_oidc_token(audience: str = "nuget") -> str | None:
         return None
 
 
-def _exchange_oidc_for_nuget_key(oidc_token: str) -> str | None:
+def _exchange_oidc_for_nuget_key(oidc_token: str, nuget_username: str) -> str | None:
     """Exchange a GitHub OIDC token for a short-lived NuGet API key.
 
-    Uses the api.nuget.org trusted-publishing endpoint. Returns None on
-    failure; the caller should treat that as a hard error (we attempted
-    OIDC and it didn't work — don't silently fall back to no auth).
+    Mirrors the protocol used by the official `NuGet/login@v1` action:
+    POST `https://www.nuget.org/api/v2/token` with body
+    `{"username": "<nuget-username>", "tokenType": "ApiKey"}` and the
+    OIDC token in the `Authorization: Bearer <token>` header. Audience
+    on the OIDC token must be `https://www.nuget.org`. Returns None on
+    failure; the caller treats that as a hard error.
     """
-    url = "https://www.nuget.org/api/v2/OidcToken"
-    body = json.dumps({"token": oidc_token}).encode()
+    url = "https://www.nuget.org/api/v2/token"
+    body = json.dumps({"username": nuget_username, "tokenType": "ApiKey"}).encode()
     req = urllib.request.Request(  # noqa: S310
         url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {oidc_token}",
+            "User-Agent": "kreuzberg-dev-actions/publish-nuget",
+        },
         method="POST",
     )
     try:
@@ -83,7 +90,14 @@ def _exchange_oidc_for_nuget_key(oidc_token: str) -> str | None:
             data = json.loads(resp.read().decode())
         api_key = data.get("apiKey") or data.get("api_key")
         return api_key if isinstance(api_key, str) else None
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode(errors="replace") if e.fp else ""
+        print(
+            f"Error: NuGet OIDC token exchange failed: HTTP {e.code}: {e.reason} {body_text}".rstrip(),
+            file=sys.stderr,
+        )
+        return None
+    except (urllib.error.URLError, TimeoutError) as e:
         print(f"Error: NuGet OIDC token exchange failed: {e}", file=sys.stderr)
         return None
 
@@ -100,7 +114,16 @@ def _resolve_api_key() -> str | None:
         print("Using static NUGET_API_KEY")
         return static_key
 
-    print("NUGET_API_KEY not set; attempting OIDC trusted-publishing flow")
+    nuget_username = os.environ.get("INPUT_NUGET_USER", "").strip()
+    if not nuget_username:
+        print(
+            "Error: NUGET_API_KEY is empty and `nuget-user` input is not set. "
+            "OIDC trusted publishing requires the nuget.org username (profile name, not email).",
+            file=sys.stderr,
+        )
+        return None
+
+    print(f"NUGET_API_KEY not set; attempting OIDC trusted-publishing flow as nuget user '{nuget_username}'")
     oidc_token = _fetch_oidc_token()
     if oidc_token is None:
         print(
@@ -109,7 +132,7 @@ def _resolve_api_key() -> str | None:
         )
         return None
 
-    api_key = _exchange_oidc_for_nuget_key(oidc_token)
+    api_key = _exchange_oidc_for_nuget_key(oidc_token, nuget_username)
     if api_key is None:
         print(
             "Error: failed to exchange OIDC token for a NuGet API key. Verify the trusted publisher is configured for this repo + workflow.",

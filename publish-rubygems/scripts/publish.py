@@ -52,9 +52,26 @@ def find_gem_files(directory: Path) -> list[Path]:
     return sorted(directory.glob("*.gem"))
 
 
-def _run(cmd: list[str]) -> tuple[int, str]:
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+def _run(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
     return result.returncode, result.stdout + result.stderr
+
+
+def _resolve_push_key() -> str:
+    """Return the rubygems push API key from the env, or empty string.
+
+    `gem push` reads `GEM_HOST_API_KEY`. When the caller's workflow sets
+    `GEM_HOST_API_KEY` at step-level via an empty secret, that empty value
+    shadows whatever `rubygems/configure-rubygems-credentials` wrote via
+    `core.exportVariable`. We recover the credential from `BUNDLE_GEM__PUSH_KEY`
+    (also exported by configure-rubygems-credentials and not overridden by the
+    caller's step env), with `RUBYGEMS_API_KEY` as a third fallback.
+    """
+    for var in ("GEM_HOST_API_KEY", "BUNDLE_GEM__PUSH_KEY", "RUBYGEMS_API_KEY"):
+        value = os.environ.get(var, "").strip()
+        if value:
+            return value
+    return ""
 
 
 def main() -> None:
@@ -78,6 +95,18 @@ def main() -> None:
     failed = 0
     published = 0
 
+    push_env: dict[str, str] | None = None
+    if not dry_run:
+        push_key = _resolve_push_key()
+        if not push_key:
+            print(
+                "Error: no rubygems push credential available "
+                "(GEM_HOST_API_KEY/BUNDLE_GEM__PUSH_KEY/RUBYGEMS_API_KEY all empty)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        push_env = {**os.environ, "GEM_HOST_API_KEY": push_key}
+
     print(f"Publishing {len(gem_files)} gem(s)...")
 
     for gem_file in gem_files:
@@ -100,7 +129,7 @@ def main() -> None:
             published += 1
             continue
 
-        exit_code, output = _run(["gem", "push", str(gem_file)])
+        exit_code, output = _run(["gem", "push", str(gem_file)], env=push_env)
 
         if exit_code == 0:
             print(f"  Published {name}")
