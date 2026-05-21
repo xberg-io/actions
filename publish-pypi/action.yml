@@ -23,26 +23,30 @@ outputs:
   published:
     description: "Whether packages were published"
     value: ${{ steps.publish.outputs.published }}
+  skipped:
+    description: "Whether the publish was skipped because the version was already on the registry"
+    value: ${{ steps.validate.outputs.version_published }}
 
 runs:
   using: composite
   steps:
-    - name: Validate packages
+    - name: Validate packages and check idempotency
       id: validate
       shell: bash
       env:
         INPUT_PACKAGES_DIR: ${{ inputs.packages-dir }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_REPOSITORY_URL: ${{ inputs.repository-url }}
       run: python3 "${{ github.action_path }}/scripts/publish.py"
 
     - name: Install uv
-      if: inputs.dry-run != 'true'
+      if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: false
 
     - name: Publish to PyPI via trusted publishing
-      if: inputs.dry-run != 'true'
+      if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
       shell: bash
       env:
         UV_PUBLISH_URL: ${{ inputs.repository-url }}
@@ -59,4 +63,9 @@ runs:
     - name: Set output
       id: publish
       shell: bash
-      run: echo "published=${{ inputs.dry-run != 'true' }}" >> "$GITHUB_OUTPUT"
+      run: |
+        if [ "${{ steps.validate.outputs.version_published }}" = "true" ] || [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "published=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "published=true" >> "$GITHUB_OUTPUT"
+        fi
