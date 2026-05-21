@@ -3,6 +3,14 @@ description: >
   Deploy Maven artifacts to Maven Central with GPG signing.
   Handles already-published versions idempotently.
 
+  Auth via env: `MAVEN_USERNAME`, `MAVEN_PASSWORD` (Sonatype Central Portal
+  user token), `MAVEN_GPG_PASSPHRASE`. The GPG private key is imported from
+  the `MAVEN_GPG_PRIVATE_KEY` env var. Accepts both ASCII-armored format
+  (`-----BEGIN PGP PRIVATE KEY BLOCK-----`) and base64-encoded armored
+  (auto-detected). If the GPG key is already in the keyring (e.g. you ran
+  `actions/setup-java@v5` with `gpg-private-key`), leave `MAVEN_GPG_PRIVATE_KEY`
+  unset and this action will skip the import step.
+
 inputs:
   pom-file:
     description: "Path to pom.xml file"
@@ -24,6 +32,32 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Import GPG key
+      if: env.MAVEN_GPG_PRIVATE_KEY != ''
+      shell: bash
+      env:
+        MAVEN_GPG_PRIVATE_KEY: ${{ env.MAVEN_GPG_PRIVATE_KEY }}
+        MAVEN_GPG_PASSPHRASE: ${{ env.MAVEN_GPG_PASSPHRASE }}
+      run: |
+        # Auto-detect format: armored PGP or base64-encoded
+        if echo "$MAVEN_GPG_PRIVATE_KEY" | head -1 | grep -q "-----BEGIN PGP PRIVATE KEY BLOCK-----"; then
+          echo "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import || {
+            echo "Error: MAVEN_GPG_PRIVATE_KEY failed to import as armored OpenPGP" >&2
+            exit 1
+          }
+        else
+          if printf '%s' "$MAVEN_GPG_PRIVATE_KEY" | base64 -d 2>/dev/null | gpg --batch --import 2>/dev/null; then
+            :
+          else
+            echo "Error: MAVEN_GPG_PRIVATE_KEY is neither armored OpenPGP nor base64 of one" >&2
+            exit 1
+          fi
+        fi
+        # Make the key usable for non-interactive signing
+        for fpr in $(gpg --list-secret-keys --with-colons | awk -F: '$1 == "fpr" {print $10; exit}'); do
+          echo "$fpr:6:" | gpg --import-ownertrust
+        done
+
     - name: Deploy to Maven Central
       shell: bash
       env:
