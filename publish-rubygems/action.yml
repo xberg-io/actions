@@ -1,7 +1,13 @@
 name: Publish to RubyGems
 description: >
   Publish Ruby gems with validation and idempotent handling.
-  Supports trusted publishing via rubygems/configure-rubygems-credentials.
+
+  Authentication: OIDC-first. When GEM_HOST_API_KEY is empty/unset, this
+  action invokes rubygems/configure-rubygems-credentials which
+  exchanges the GHA OIDC token (audience: rubygems.org) for a short-lived
+  RubyGems credential via the trusted publishing flow. The caller's job
+  only needs `permissions: id-token: write`. Classic API-key auth is
+  still supported by setting GEM_HOST_API_KEY in the caller's env.
 
 inputs:
   gems-dir:
@@ -15,6 +21,10 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Configure RubyGems trusted publishing (OIDC)
+      if: ${{ env.GEM_HOST_API_KEY == '' && inputs.dry-run != 'true' }}
+      uses: rubygems/configure-rubygems-credentials@v2.0.0
+
     - name: Publish gems
       shell: bash
       env:

@@ -57,6 +57,37 @@ def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
     return result.returncode, result.stdout + result.stderr
 
 
+def _strip_empty_npm_auth_token() -> None:
+    """Strip empty NODE_AUTH_TOKEN env + empty _authToken lines in .npmrc.
+
+    When a caller writes `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and the
+    secret is undefined, the env var is set to "" and `setup-node` writes a
+    `//registry.npmjs.org/:_authToken=` line into .npmrc. npm CLI then sees
+    an empty token and skips OIDC trusted publishing, even though npm@11+
+    would otherwise exchange the GHA OIDC token for a short-lived credential
+    automatically. Strip both so OIDC can take over.
+    """
+    token = os.environ.get("NODE_AUTH_TOKEN", "")
+    if token.strip():
+        return
+
+    os.environ.pop("NODE_AUTH_TOKEN", None)
+
+    npmrc_path = Path(os.environ.get("NPM_CONFIG_USERCONFIG") or Path.home() / ".npmrc")
+    if not npmrc_path.is_file():
+        return
+
+    original = npmrc_path.read_text()
+    cleaned = "".join(
+        line
+        for line in original.splitlines(keepends=True)
+        if not re.match(r"^\s*//[^:]+:_authToken\s*=\s*$", line)
+    )
+    if cleaned != original:
+        npmrc_path.write_text(cleaned)
+        print(f"Stripped empty _authToken from {npmrc_path}; npm will use OIDC trusted publishing")
+
+
 def main() -> None:
     packages_dir = os.environ.get("INPUT_PACKAGES_DIR", "")
     package_dir = os.environ.get("INPUT_PACKAGE_DIR", "")
@@ -64,6 +95,8 @@ def main() -> None:
     access = os.environ.get("INPUT_ACCESS", "public")
     provenance = os.environ.get("INPUT_PROVENANCE", "true").lower() == "true"
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
+
+    _strip_empty_npm_auth_token()
 
     mode = validate_inputs(packages_dir, package_dir)
     flags = build_publish_flags(access, npm_tag, provenance, dry_run)

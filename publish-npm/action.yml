@@ -5,6 +5,12 @@ description: >
   or direct publish from a package directory (package-dir).
   Handles already-published versions idempotently.
 
+  Authentication: OIDC-first. When NODE_AUTH_TOKEN is empty/unset, npm
+  CLI v11+ exchanges the GHA OIDC token (audience: npm) for a short-lived
+  npm credential via npmjs.org's trusted publishing flow — the caller's
+  job only needs `permissions: id-token: write`. Classic NPM_TOKEN auth
+  is still supported by setting NODE_AUTH_TOKEN in the caller's env.
+
 inputs:
   packages-dir:
     description: "Directory containing .tgz package files (mutually exclusive with package-dir)"
