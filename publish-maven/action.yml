@@ -36,7 +36,7 @@ inputs:
   java-version:
     description: "JDK version to install via setup-java (ignored when `setup-java=false`)"
     required: false
-    default: "21"
+    default: "25"
   java-distribution:
     description: "JDK distribution for setup-java (ignored when `setup-java=false`)"
     required: false

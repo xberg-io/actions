@@ -39,7 +39,7 @@ inputs:
   java-version:
     description: "JDK version to install via setup-java (no-op if setup-java is 'false')"
     required: false
-    default: "21"
+    default: "25"
   setup-java:
     description: "Run actions/setup-java@v5. Set to 'false' if already configured."
     required: false
