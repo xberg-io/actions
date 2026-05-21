@@ -46,6 +46,10 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
+        # The finalize job typically runs without `actions/checkout`, so the gh
+        # CLI has no git remote to auto-detect the repo from. Set GH_REPO so
+        # `gh release view`/`edit` resolve correctly.
+        GH_REPO: ${{ github.repository }}
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_IS_PRERELEASE: ${{ inputs.is-prerelease }}
         INPUT_GO_MODULE_PATH: ${{ inputs.go-module-path }}
