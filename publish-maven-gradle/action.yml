@@ -75,7 +75,22 @@ runs:
         MAVEN_GPG_PRIVATE_KEY: ${{ env.MAVEN_GPG_PRIVATE_KEY }}
         MAVEN_GPG_PASSPHRASE: ${{ env.MAVEN_GPG_PASSPHRASE }}
       run: |
-        echo "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import
+        # Auto-detect format: armored PGP or base64-encoded
+        if echo "$MAVEN_GPG_PRIVATE_KEY" | head -1 | grep -q "-----BEGIN PGP PRIVATE KEY BLOCK-----"; then
+          # Armored format: pipe directly
+          echo "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import || {
+            echo "Error: MAVEN_GPG_PRIVATE_KEY failed to import as armored OpenPGP" >&2
+            exit 1
+          }
+        else
+          # Try base64 decode
+          if printf '%s' "$MAVEN_GPG_PRIVATE_KEY" | base64 -d 2>/dev/null | gpg --batch --import 2>/dev/null; then
+            :  # Success
+          else
+            echo "Error: MAVEN_GPG_PRIVATE_KEY is neither armored OpenPGP nor base64 of one" >&2
+            exit 1
+          fi
+        fi
         # Make the key usable for non-interactive signing
         for fpr in $(gpg --list-secret-keys --with-colons | awk -F: '$1 == "fpr" {print $10; exit}'); do
           echo "$fpr:6:" | gpg --import-ownertrust

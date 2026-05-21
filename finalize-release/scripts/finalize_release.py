@@ -44,19 +44,34 @@ def resolve_prerelease(raw: str, tag: str) -> bool:
 
 
 def gh_release_view(tag: str) -> dict[str, Any] | None:
-    result = subprocess.run(
-        ["gh", "release", "view", tag, "--json", "isDraft,isPrerelease,name,url"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        return None
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return None
-    return payload if isinstance(payload, dict) else None
+    """View a release, retrying up to 6 times with 5s sleep between attempts.
+
+    Handles race where the release was just created and the API hasn't caught up.
+    """
+    import time
+    max_attempts = 6
+    for attempt in range(1, max_attempts + 1):
+        result = subprocess.run(
+            ["gh", "release", "view", tag, "--json", "isDraft,isPrerelease,name,url"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout)
+                return payload if isinstance(payload, dict) else None
+            except json.JSONDecodeError:
+                return None
+
+        if attempt < max_attempts:
+            print(f"Release {tag} not found (attempt {attempt}/{max_attempts}), retrying in 5s...", file=sys.stderr)
+            time.sleep(5)
+        else:
+            print(f"Release {tag} not found after {max_attempts} attempts", file=sys.stderr)
+            return None
+
+    return None
 
 
 def gh_release_edit(tag: str, *, draft: bool, prerelease: bool) -> None:
