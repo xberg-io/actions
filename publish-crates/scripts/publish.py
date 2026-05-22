@@ -24,13 +24,31 @@ ALREADY_PUBLISHED_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# cargo emits this when packaging a crate whose intra-workspace dependency is
+# not yet resolvable through the index — i.e. the upstream crate was published
+# but has not finished propagating. It is transient and clears on retry.
+DEPENDENCY_NOT_READY_PATTERN = re.compile(
+    r"failed to select a version for",
+    re.IGNORECASE,
+)
+
 INDEX_POLL_TIMEOUT_SECONDS = 300
 INDEX_POLL_INTERVAL_SECONDS = 5
+
+# Retry budget for a downstream `cargo publish` that fails because an
+# upstream crate has not propagated yet.
+PUBLISH_RETRY_ATTEMPTS = 6
+PUBLISH_RETRY_DELAY_SECONDS = 30
 
 
 def is_already_published(output: str) -> bool:
     """Return True if cargo publish output indicates the crate was already published."""
     return bool(ALREADY_PUBLISHED_PATTERN.search(output))
+
+
+def is_dependency_not_ready(output: str) -> bool:
+    """Return True if cargo publish failed because an upstream crate has not propagated."""
+    return bool(DEPENDENCY_NOT_READY_PATTERN.search(output))
 
 
 def build_manifest_args(manifest_path: str) -> list[str]:
@@ -79,8 +97,15 @@ def wait_for_index(crate: str, version: str) -> None:
     url = _sparse_index_url(crate)
     deadline = time.monotonic() + INDEX_POLL_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
+        # The sparse index is served through a CDN. A plain GET can keep
+        # returning a stale cached body that never shows the just-published
+        # version, so the poll must explicitly defeat any cached response.
+        request = urllib.request.Request(  # noqa: S310 — fixed crates.io URL
+            url,
+            headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+        )
         try:
-            with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310 — fixed crates.io URL
+            with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 — fixed crates.io URL
                 body = response.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
             if exc.code != 404:
@@ -97,6 +122,28 @@ def wait_for_index(crate: str, version: str) -> None:
         f"{INDEX_POLL_TIMEOUT_SECONDS}s; proceeding anyway",
         file=sys.stderr,
     )
+
+
+def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
+    """Run ``cargo publish`` for ``crate``, retrying while an upstream crate is still propagating.
+
+    Each retry re-invokes ``cargo publish``, which re-fetches the sparse index,
+    so a dependency that finished propagating between attempts is picked up.
+    """
+    exit_code, output = 0, ""
+    for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
+        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args])
+        if exit_code == 0 or is_already_published(output) or not is_dependency_not_ready(output):
+            return exit_code, output
+        if attempt < PUBLISH_RETRY_ATTEMPTS:
+            print(
+                f"  {crate}: an upstream dependency is not yet resolvable on the index "
+                f"(attempt {attempt}/{PUBLISH_RETRY_ATTEMPTS}); retrying in "
+                f"{PUBLISH_RETRY_DELAY_SECONDS}s",
+                file=sys.stderr,
+            )
+            time.sleep(PUBLISH_RETRY_DELAY_SECONDS)
+    return exit_code, output
 
 
 def main() -> None:
@@ -124,7 +171,7 @@ def main() -> None:
             _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run"])
             continue
 
-        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args])
+        exit_code, output = publish_crate(crate, manifest_args)
 
         if exit_code == 0:
             print(f"  Published {crate}@{version}")
