@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.5] - 2026-05-23
+
+### Fixed
+
+- `publish-hex`: Treat Hex.pm's `inserted_at: can only modify a release up to one hour after publication` error as a success-equivalent skip. Hex allows in-place re-uploads only within a one-hour window after the first publish; after that, a re-run of the same version (e.g. when retrying a partial publish run that failed on a sibling registry) returns the validation error above with non-zero exit. The release is already live on hex.pm, so the action now matches this string in the same skip-grep as `already published` / `version already exists`. Surfaced in liter-llm v1.4.0-rc.30 publish run 26339094710 (`liter_llm 1.4.0-rc.30` had been on hexpm since the first publish dispatch hours earlier).
+
 ## [1.0.4] - 2026-05-23
 
 ### Fixed

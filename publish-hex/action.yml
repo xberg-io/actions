@@ -74,7 +74,10 @@ runs:
 
         if [[ $exit_code -eq 0 ]]; then
           echo "Published successfully"
-        elif echo "$output" | grep -qi "already published\|version already exists\|already been published"; then
+        elif echo "$output" | grep -qi "already published\|version already exists\|already been published\|can only modify a release"; then
+          # Hex returns "can only modify a release up to one hour after publication"
+          # when a re-publish lands >1h after the original push. The release is
+          # already live, so treat as success-equivalent skip.
           echo "Package already published, skipping"
         else
           echo "Error publishing:" >&2
