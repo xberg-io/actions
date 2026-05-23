@@ -49,16 +49,47 @@ def check_npm(package: str, version: str) -> bool:
     return status == HTTP_OK
 
 
+def _pep440_normalize(version: str) -> str:
+    """Convert a SemVer pre-release suffix to PEP 440 form.
+
+    Examples: ``1.4.0-rc.30`` → ``1.4.0rc30`` (PyPI's normalized form),
+    ``1.0.0-beta.2`` → ``1.0.0b2``, ``1.2.3`` → ``1.2.3`` (unchanged).
+    """
+    match = re.match(r"^(\d+\.\d+\.\d+)(?:-(alpha|beta|rc|a|b)\.?(\d+))?$", version)
+    if not match:
+        return version
+    base, label, num = match.groups()
+    if not label:
+        return base
+    pep_label = {"alpha": "a", "beta": "b"}.get(label, label)
+    return f"{base}{pep_label}{num}"
+
+
 def check_pypi(package: str, version: str) -> bool:
-    """Check PyPI JSON API for the exact version."""
-    status, body = http_get(f"https://pypi.org/pypi/{package}/{version}/json")
-    if status != HTTP_OK or not body:
-        return False
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return False
-    return bool(data.get("info", {}).get("version") == version)
+    """Check PyPI JSON API for the exact version.
+
+    PyPI normalizes versions to PEP 440 (e.g. SemVer ``1.4.0-rc.30`` → ``1.4.0rc30``)
+    and the JSON endpoint only resolves the canonical form, so try the as-given
+    form first then fall back to the PEP 440-normalized form.
+    """
+    candidates = [version]
+    normalized = _pep440_normalize(version)
+    if normalized != version:
+        candidates.append(normalized)
+    for candidate in candidates:
+        status, body = http_get(f"https://pypi.org/pypi/{package}/{candidate}/json")
+        if status != HTTP_OK or not body:
+            continue
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            continue
+        # PyPI's `info.version` is always the canonical PEP 440 form, so accept
+        # either the as-given or the normalized form when matching.
+        resolved = data.get("info", {}).get("version")
+        if resolved in (version, normalized):
+            return True
+    return False
 
 
 def _cratesio_prefix(name: str) -> str:

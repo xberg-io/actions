@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.3] - 2026-05-23
+
+### Fixed
+
+- `wait-for-package` (pypi): try both the as-given SemVer version (`1.4.0-rc.30`) AND the PEP 440-normalized form (`1.4.0rc30`) when polling PyPI's JSON endpoint. PyPI's API only resolves the canonical PEP 440 form (`/pypi/<pkg>/1.4.0rc30/json` returns 200 while `/pypi/<pkg>/1.4.0-rc.30/json` returns 404), so callers passing the SemVer-form tag downstream saw `not found on pypi after 20 attempts` even though the package was successfully published. Surfaced in liter-llm v1.4.0-rc.30 publish run 26336349972 — `Verify install Python` job failed after 16 min of polls while `liter-llm@1.4.0rc30` had been live on PyPI the entire time. The new `_pep440_normalize` helper covers `rc/alpha/beta/a/b` prereleases and the unchanged-on-release case.
+
 ## [1.0.2] - 2026-05-23
 
 ### Fixed
