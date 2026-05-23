@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.4] - 2026-05-23
+
+### Fixed
+
+- `upload-release-assets`: forward `GITHUB_TOKEN` (or `INPUT_TOKEN`) into the `gh release upload` subprocess as `GH_TOKEN` so the call authenticates. The composite step's `${{ secrets.GITHUB_TOKEN }}` was already available in `os.environ`, but `gh` only looks at `GH_TOKEN` and its keyring (which is empty on hosted runners), so the upload returned `HTTP 401: Bad credentials`. Surfaced in liter-llm v1.4.0-rc.30 publish run 26337912364 (Upload PHP extension assets job).
+
 ## [1.0.3] - 2026-05-23
 
 ### Fixed
