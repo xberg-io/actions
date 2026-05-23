@@ -30,13 +30,13 @@ function Build-FromSource {
   $env:CARGO_INSTALL_ROOT = $alefBinDir
   if ($ref -eq "main") {
     Write-Output "Building alef from main branch via cargo install..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef-cli
+    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef
   } else {
     Write-Output "Building alef v$ref from source via cargo install --tag..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked alef-cli
+    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked alef
     if ($LASTEXITCODE -ne 0) {
       Write-Output "Tag build failed; falling back to main branch..."
-      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef-cli
+      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef
     }
   }
   # cargo installs into $alefBinDir\bin; move the binary so it lives directly

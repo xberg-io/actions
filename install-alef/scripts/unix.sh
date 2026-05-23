@@ -110,7 +110,7 @@ build_from_source() {
       --git https://github.com/kreuzberg-dev/alef \
       --branch main \
       --locked \
-      alef-cli
+      alef
   else
     echo "Building alef v${ref} from source via cargo install --tag..."
     if ! CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
@@ -118,14 +118,14 @@ build_from_source() {
       --git https://github.com/kreuzberg-dev/alef \
       --tag "v${ref}" \
       --locked \
-      alef-cli; then
+      alef; then
       echo "Tag build failed; falling back to main branch..." >&2
       CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
         cargo install \
         --git https://github.com/kreuzberg-dev/alef \
         --branch main \
         --locked \
-        alef-cli
+        alef
     fi
   fi
 }
