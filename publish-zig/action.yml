@@ -24,7 +24,7 @@ inputs:
   zig-version:
     description: "Zig version (passed to mlugg/setup-zig)"
     required: false
-    default: "0.13.0"
+    default: "0.16.0"
   setup-zig:
     description: "Install Zig via mlugg/setup-zig. Set to 'false' if Zig is already installed."
     required: false
