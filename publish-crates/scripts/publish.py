@@ -32,13 +32,15 @@ DEPENDENCY_NOT_READY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-INDEX_POLL_TIMEOUT_SECONDS = 300
+INDEX_POLL_TIMEOUT_SECONDS = 600
 INDEX_POLL_INTERVAL_SECONDS = 5
 
 # Retry budget for a downstream `cargo publish` that fails because an
-# upstream crate has not propagated yet.
-PUBLISH_RETRY_ATTEMPTS = 6
-PUBLISH_RETRY_DELAY_SECONDS = 30
+# upstream crate has not propagated yet. Budgets are deliberately generous —
+# on bad CDN days the sparse-index propagation can exceed 8 minutes, which
+# is what blew up alef v0.17.35 at slot 21/29.
+PUBLISH_RETRY_ATTEMPTS = 10
+PUBLISH_RETRY_DELAY_SECONDS = 60
 
 
 def is_already_published(output: str) -> bool:
