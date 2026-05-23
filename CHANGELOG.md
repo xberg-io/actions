@@ -6,6 +6,26 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+## [1.0.2] - 2026-05-23
+
+### Fixed
+
+- `setup-gradle`: Bump default `gradle-version` from `"8.11"` to `"8.13"`. Android Gradle Plugin 8.13.0 (consumed by alef-emitted `packages/kotlin-android/build.gradle.kts`) refuses to apply on Gradle <8.13 with `Minimum supported Gradle version is 8.13. Current version is 8.11.` Surfaced as tslp CI Mobile `kotlin-android AAR check` failures across all four ABIs after the alef 0.18.0 regen.
+
+## [1.0.1] - 2026-05-23
+
+### Added
+
 - `install-alef`: Cache the installed alef binary inside the composite action via `actions/cache@v4`, keyed on host triple + resolved version. Cache hits skip the download/build entirely. For `version: main`, the cache key embeds the current `kreuzberg-dev/alef` HEAD commit's short SHA, so a new main commit invalidates the cache automatically.
 - `install-alef`: New `scripts/resolve.sh` factored out of `unix.sh` — resolves `latest`/`main`/tag to a stable cache key and install ref before any download/build runs, so the cache lookup can fire before the slow path.
 - `setup-php`: Add `tools` input to install global PHP tools (phpstan, psalm, composer, etc.) via shivammathur/setup-php
