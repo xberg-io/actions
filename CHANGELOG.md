@@ -16,6 +16,18 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.1] - 2026-05-24
+
+### Fixed
+
+- `build-csharp-natives`, `build-java-natives`, `build-elixir-natives`:
+  switch musl Docker image from `alpine:3.21` to `rust:1-alpine3.21`. The
+  bare alpine image lacks `rustup` and `cargo`, so the in-container
+  `rustup target add ...` call returned exit code 127 and aborted every
+  musl native build. `rust:1-alpine3.21` ships with the toolchain
+  pre-installed; the existing `apk add` line still provides the C build
+  deps the cdylib link step needs.
+
 ## [1.6.0] - 2026-05-24
 
 ### Added

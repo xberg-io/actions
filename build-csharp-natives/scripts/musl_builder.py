@@ -45,7 +45,9 @@ def build_in_docker(
         raise ValueError(f"Docker build is only for musl targets, got {target}")
 
     get_alpine_arch(target)  # Validates architecture is supported
-    image = "alpine:3.21"
+    # rust:1-alpine3.21 ships with rustup + cargo pre-installed; plain
+    # alpine:3.21 does not, so `rustup target add` fails with exit 127.
+    image = "rust:1-alpine3.21"
 
     # Prepare build environment
     cwd = Path.cwd().resolve()
