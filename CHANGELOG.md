@@ -6,12 +6,6 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
-- `publish-hex`: new optional input `tarball-path` accepts a pre-built Hex
-  source tarball (.tar) from `build-elixir-hex@v1`, allowing publish without
-  rebuilding. When set, publishes the tarball directly via `mix hex.publish
-  package <tarball-path>` instead of rebuilding from source. Preserves
-  dry-run and idempotency (already-published) handling.
-
 ### Changed
 
 ### Fixed
@@ -21,6 +15,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 ### Removed
 
 ### Security
+
+## [1.6.0] - 2026-05-24
+
+### Added
+
+- `publish-hex`: new optional input `tarball-path` accepts a pre-built Hex
+  source tarball (.tar) from `build-elixir-hex@v1`, allowing publish without
+  rebuilding. When set, publishes the tarball directly via `mix hex.publish
+  package <tarball-path>` instead of rebuilding from source. Preserves
+  dry-run and idempotency (already-published) handling.
 
 ## [1.5.1] - 2026-05-24
 
