@@ -57,6 +57,8 @@ jobs:
         with:
           crate-name: fixture-phpext
           lib-name: fixture_phpext
+          # Standalone fixture crate with no alef.toml — nothing to rewrite.
+          rewrite-native-deps: "false"
 
       - name: Verify extension produced
         shell: bash

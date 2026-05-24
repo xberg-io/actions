@@ -34,6 +34,7 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `build-rust-ffi` | Rust FFI library (cdylib) with error diagnostics |
 | `build-and-cache-binding` | Language binding build with intelligent caching |
 | `build-python-wheels` | Python wheels via cibuildwheel/maturin |
+| `build-python-sdist` | Python sdist via maturin, with baked-in path-dep → registry rewrite for source installs |
 | `build-node-napi` | Node.js NAPI-RS native modules |
 | `build-ruby-gem` | Platform-specific Ruby gems |
 | `build-php-extension` | PHP extensions |
@@ -50,6 +51,7 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `homebrew-build-bottles` | Real Homebrew bottles for one or more formulas via `brew install --build-bottle` + `brew bottle --json`; uploads tarballs to the GH release and saves bottle JSONs for the merge step |
 | `homebrew-merge-bottles` | Aggregates per-platform bottle JSON manifests into formula `bottle do ... end` blocks (jq-driven, no brew needed on the runner); emits cellar values as Ruby symbols |
 | `package-php-pie` | PIE-conventional binary archive from a built PHP extension |
+| `rewrite-native-deps` | Rewrite a source package's workspace path-deps → registry version-deps via `alef publish prepare --require-registry` (embedded in `build-ruby-gem`/`build-php-extension`/`build-elixir-natives`/`build-python-sdist`) |
 | `build-gpu-test-binary` | `cargo test --no-run` + JSON message parse to extract the executable for cross-runner GPU CI |
 
 ### Docs

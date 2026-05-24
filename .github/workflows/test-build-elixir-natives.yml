@@ -60,6 +60,8 @@ jobs:
           package-dir: packages/elixir
           nif-version: "0.0.1"
           nif-api-version: "2.16"
+          # Standalone fixture crate with no alef.toml — nothing to rewrite.
+          rewrite-native-deps: "false"
 
       - name: Verify NIF tarball produced
         shell: bash

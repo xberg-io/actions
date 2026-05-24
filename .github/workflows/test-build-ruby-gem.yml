@@ -87,6 +87,8 @@ jobs:
         uses: ./build-ruby-gem
         with:
           package-dir: packages/ruby
+          # Standalone fixture crate with no alef.toml — nothing to rewrite.
+          rewrite-native-deps: "false"
 
       - name: Verify native extension built
         shell: bash
