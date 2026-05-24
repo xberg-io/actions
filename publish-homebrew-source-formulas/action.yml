@@ -1,0 +1,72 @@
+name: Publish Homebrew source formulas
+description: >
+  Render one or more Homebrew formulas from per-formula templates with
+  release-asset SHA256s + version + tag substituted in, and write them into a
+  checked-out tap repository. Distinct from publish-homebrew (which is the
+  single-formula bottle-only updater): this action handles repos that ship
+  multiple formulas whose source URLs point at pre-built tarballs (e.g.
+  html-to-markdown ships a CLI formula + a libffi formula, both downloading
+  release tarballs at install time, with the bottle DSL merged in later by
+  homebrew-merge-bottles). Tolerant of dry-run releases: when --dry-run is set
+  and a release/asset is missing, it substitutes a zero-SHA placeholder and
+  emits a warning so the rendered shape can still be diffed.
+
+  Replaces the per-repo `scripts/publish/update-homebrew-formula.sh` boilerplate
+  with a single shared invocation + a YAML config + .rb.tmpl templates. The
+  calling workflow is responsible for committing/pushing the resulting tap
+  changes — bot identity is repo-specific.
+
+inputs:
+  tap-dir:
+    description: "Path to a checked-out tap repository (must contain Formula/)."
+    required: true
+  config-file:
+    description: >
+      Path (relative to the source repo) to a YAML config describing each
+      formula: its template path, its release-asset filenames, and the
+      template variable name each SHA binds to. See README for schema.
+    required: true
+  tag:
+    description: "Git tag for the release (e.g. v3.4.0-rc.42)."
+    required: true
+  version:
+    description: "Semantic version (e.g. 3.4.0-rc.42)."
+    required: true
+  github-repo:
+    description: "Source repository for `gh release download` (e.g. kreuzberg-dev/html-to-markdown)."
+    required: true
+  dry-run:
+    description: >
+      When 'true', tolerate missing release/assets (substitute zero-SHA
+      placeholders + warn) so dry-run pipelines can render and diff formulas
+      before the real release exists.
+    required: false
+    default: "false"
+  token:
+    description: "GitHub token with read access for `gh release download`."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  formulas-changed:
+    description: "Newline-separated list of formula paths written into tap-dir/Formula/."
+    value: ${{ steps.render.outputs.formulas-changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure gh CLI is available
+      uses: kreuzberg-dev/actions/ensure-gh@v1
+
+    - name: Render formulas
+      id: render
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAP_DIR: ${{ inputs.tap-dir }}
+        INPUT_CONFIG_FILE: ${{ inputs.config-file }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_GITHUB_REPO: ${{ inputs.github-repo }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: python3 "${{ github.action_path }}/scripts/render.py"

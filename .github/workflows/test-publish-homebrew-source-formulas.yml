@@ -1,0 +1,78 @@
+name: Test publish-homebrew-source-formulas
+on:
+  push:
+    paths:
+      - "publish-homebrew-source-formulas/**"
+      - ".github/workflows/test-publish-homebrew-source-formulas.yml"
+  pull_request:
+    paths:
+      - "publish-homebrew-source-formulas/**"
+      - ".github/workflows/test-publish-homebrew-source-formulas.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Stage a tiny multi-formula tap + templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tap/Formula scripts/publish
+          cat >scripts/publish/cli.rb.tmpl <<'TMPL'
+          class Cli < Formula
+            version "${version}"
+            tag_was "${tag}"
+            cli_sha "${cli_sha}"
+          end
+          TMPL
+          cat >scripts/publish/lib.rb.tmpl <<'TMPL'
+          class Lib < Formula
+            version "${version}"
+            ffi_sha "${ffi_sha}"
+          end
+          TMPL
+          cat >scripts/publish/homebrew.json <<'JSON'
+          {
+            "formulas": [
+              {
+                "name": "cli",
+                "template": "scripts/publish/cli.rb.tmpl",
+                "assets": {"cli_sha": "cli-x86_64.tar.gz"}
+              },
+              {
+                "name": "lib",
+                "template": "scripts/publish/lib.rb.tmpl",
+                "assets": {"ffi_sha": "lib-${tag}-x86_64.tar.gz"}
+              }
+            ]
+          }
+          JSON
+
+      # On the integration test we exercise the dry-run path so we don't need
+      # a real release to download from. The render step substitutes the
+      # zero-SHA placeholder for each missing asset (covered by unit tests too).
+      - name: Render formulas via the action (dry-run)
+        id: render
+        uses: ./publish-homebrew-source-formulas
+        with:
+          tap-dir: tap
+          config-file: scripts/publish/homebrew.json
+          tag: v9.9.9-dryrun
+          version: 9.9.9-dryrun
+          github-repo: ${{ github.repository }}
+          dry-run: "true"
+
+      - name: Verify both formulas rendered with placeholder SHAs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la tap/Formula/
+          test -f tap/Formula/cli.rb
+          test -f tap/Formula/lib.rb
+          grep -q 'version "9.9.9-dryrun"' tap/Formula/cli.rb
+          grep -q 'cli_sha "0000000000000000000000000000000000000000000000000000000000000000"' tap/Formula/cli.rb
+          grep -q 'ffi_sha "0000000000000000000000000000000000000000000000000000000000000000"' tap/Formula/lib.rb
+          test -n "${{ steps.render.outputs.formulas-changed }}"

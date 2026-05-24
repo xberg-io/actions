@@ -16,6 +16,29 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.4.0] - 2026-05-24
+
+### Added
+
+- `publish-homebrew-source-formulas`: New composite action — the multi-formula,
+  tarball-source counterpart of `publish-homebrew` (which only handles
+  single-formula bottle updates). Renders N Homebrew formulas from per-formula
+  `.rb.tmpl` templates with `${tag}` / `${version}` / per-asset `${<sha_key>}`
+  substitution, downloading release tarballs via `gh release download` and
+  computing their SHA256 digests. Tolerant of dry-run releases: when
+  `dry-run: true` and an asset is missing, it substitutes the zero-SHA
+  placeholder + emits a warning so dry-run pipelines can still render and diff
+  formulas before the real release exists. Replaces the per-repo
+  `scripts/publish/update-homebrew-formula.sh` boilerplate (e.g.
+  html-to-markdown's 184-line dual-formula updater) with a thin shared
+  invocation + a JSON config + templates. Ships with a
+  `test-publish-homebrew-source-formulas` integration workflow exercising the
+  dry-run placeholder path end-to-end. Surfaced by html-to-markdown
+  3.5.0-rc.2 publish dry-run, where the inline script failed at
+  `gh release download` with "release not found" against the synthesized
+  dry-run tag — blocking the entire bottle pipeline (which `needs` the
+  formula update to succeed) from exercising even in dry-run mode.
+
 ## [1.3.1] - 2026-05-24
 
 ### Fixed
