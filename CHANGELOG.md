@@ -16,6 +16,19 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.2.1] - 2026-05-24
+
+### Fixed
+
+- `build-php-extension`, `build-python-sdist`: Added a `dry-run` input that, when
+  `true`, skips the embedded `rewrite-native-deps` step. Dry-run publish workflows
+  run before the core `liter-llm` crate is on crates.io, so the rewrite's
+  `--require-registry` lookup hard-failed (`failed to select a version for the
+  requirement liter-llm = "^X.Y.Z-rc.N"`) and blocked the entire PHP PIE matrix
+  (and would do the same for the Python sdist build) from going green in dry-run.
+  Mirrors the existing `dry-run` guard on `build-elixir-natives`. Surfaced in
+  liter-llm v1.4.0-rc.31 publish dry-run.
+
 ## [1.2.0] - 2026-05-24
 
 ### Added

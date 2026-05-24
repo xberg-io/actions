@@ -27,6 +27,13 @@ inputs:
     description: "Alef version for the dependency rewrite (passed to install-alef@v1)"
     required: false
     default: "latest"
+  dry-run:
+    description: >
+      Skip the rewrite-native-deps step when true. Dry-run publish workflows run
+      before the core crate is on crates.io, so requiring the registry would
+      hard-fail on a chicken-and-egg version lookup.
+    required: false
+    default: "false"
 
 outputs:
   extension-path:
@@ -37,7 +44,7 @@ runs:
   using: composite
   steps:
     - name: Rewrite native dependencies to registry versions
-      if: inputs.rewrite-native-deps == 'true'
+      if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
       uses: kreuzberg-dev/actions/rewrite-native-deps@v1
       with:
         lang: php

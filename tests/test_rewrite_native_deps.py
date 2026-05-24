@@ -74,6 +74,11 @@ def test_source_build_action_embeds_rewrite(action_dir: str, lang: str):
     assert "if: inputs.rewrite-native-deps == 'true'" in content
 
 
-def test_elixir_rewrite_skipped_on_dry_run():
-    content = _read("build-elixir-natives")
+@pytest.mark.parametrize(
+    "action_dir",
+    ["build-elixir-natives", "build-php-extension", "build-python-sdist"],
+)
+def test_source_build_action_skips_rewrite_on_dry_run(action_dir: str):
+    content = _read(action_dir)
+    assert "dry-run:" in content
     assert "if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'" in content
