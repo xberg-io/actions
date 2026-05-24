@@ -1,0 +1,85 @@
+name: Test build-python-sdist
+on:
+  push:
+    paths:
+      - "build-python-sdist/**"
+      - ".github/workflows/test-build-python-sdist.yml"
+  pull_request:
+    paths:
+      - "build-python-sdist/**"
+      - ".github/workflows/test-build-python-sdist.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Stage a tiny PyO3 + maturin package
+        shell: bash
+        run: |
+          mkdir -p packages/python/src
+          cat >packages/python/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-pyext"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [lib]
+          name = "fixture_pyext"
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          pyo3 = { version = "0.22", features = ["extension-module"] }
+          TOML
+          cat >packages/python/pyproject.toml <<'TOML'
+          [build-system]
+          requires = ["maturin>=1.5,<2.0"]
+          build-backend = "maturin"
+
+          [project]
+          name = "fixture-pyext"
+          version = "0.0.1"
+          requires-python = ">=3.10"
+
+          [tool.maturin]
+          module-name = "fixture_pyext"
+          TOML
+          cat >packages/python/src/lib.rs <<'RS'
+          use pyo3::prelude::*;
+
+          #[pyfunction]
+          fn add(a: i64, b: i64) -> i64 { a + b }
+
+          #[pymodule]
+          fn fixture_pyext(m: &Bound<'_, PyModule>) -> PyResult<()> {
+              m.add_function(wrap_pyfunction!(add, m)?)?;
+              Ok(())
+          }
+          RS
+
+      # rewrite-native-deps is disabled: the fixture is a standalone crate with no
+      # workspace/alef.toml, so there is nothing to rewrite. The rewrite path is
+      # covered by test-rewrite-native-deps + alef's own tests; here we validate the
+      # action's maturin-sdist invocation, mode selection, and output resolution.
+      - name: Build sdist via the action (package-dir mode)
+        uses: ./build-python-sdist
+        with:
+          package-dir: packages/python
+          output-dir: dist
+          rewrite-native-deps: "false"
+
+      - name: Verify sdist produced
+        shell: bash
+        run: |
+          ls -la dist/
+          test -n "$(ls dist/*.tar.gz 2>/dev/null)"

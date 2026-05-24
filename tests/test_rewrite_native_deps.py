@@ -43,7 +43,7 @@ def test_rewrite_action_require_registry_is_conditional():
 def test_rewrite_action_validates_lang_charset():
     content = _read("rewrite-native-deps")
     # lang is constrained to comma-separated lowercase names before reaching alef.
-    assert '=~ ^[a-z]+(,[a-z]+)*$' in content
+    assert "=~ ^[a-z]+(,[a-z]+)*$" in content
 
 
 def test_rewrite_action_runs_at_repo_root_by_default():
@@ -62,6 +62,7 @@ def test_rewrite_action_runs_at_repo_root_by_default():
         ("build-ruby-gem", "ruby"),
         ("build-php-extension", "php"),
         ("build-elixir-natives", "elixir"),
+        ("build-python-sdist", "python"),
     ],
 )
 def test_source_build_action_embeds_rewrite(action_dir: str, lang: str):

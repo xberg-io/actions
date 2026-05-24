@@ -1,0 +1,84 @@
+name: Build Python sdist
+description: >
+  Build a Python source distribution (sdist) with maturin, after rewriting the
+  binding crate's workspace path-dependencies to registry version-dependencies so
+  the sdist compiles standalone on a consumer machine (no workspace present). This
+  is the python-sdist analog of build-ruby-gem: it bakes in the dependency rewrite
+  so it can't be forgotten. The built sdist is written to <output-dir>; the caller
+  uploads it. The caller must have set up the Rust and Python toolchains first
+  (maturin/cargo-metadata and the rewrite's cargo generate-lockfile both need cargo).
+  Run any pre-build steps that bundle extra files into the package (e.g. a CLI binary)
+  as workflow steps BEFORE this action.
+
+inputs:
+  package-dir:
+    description: "Python package directory containing pyproject.toml. Used unless manifest-path is set."
+    required: false
+    default: "packages/python"
+  manifest-path:
+    description: >
+      Optional path to the PyO3 crate's Cargo.toml. When set, maturin runs with
+      `-m <manifest-path>` from the repo root instead of cd-ing into package-dir.
+    required: false
+    default: ""
+  output-dir:
+    description: "Directory (relative to the repo root) the sdist is written to."
+    required: false
+    default: "dist"
+  rewrite-native-deps:
+    description: >
+      Rewrite workspace path-deps to registry version-deps before building, so the
+      sdist resolves on a consumer machine. Disable for non-release CI that builds
+      against the local workspace.
+    required: false
+    default: "true"
+  alef-version:
+    description: "Alef version for the dependency rewrite (passed to install-alef@v1)."
+    required: false
+    default: "latest"
+  maturin-version:
+    description: >
+      PEP 440 version specifier appended to the maturin pip install (e.g. ">=1.5,<2.0",
+      "==1.7.0"). Set empty to install the latest maturin.
+    required: false
+    default: ">=1.5,<2.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Rewrite native dependencies to registry versions
+      if: inputs.rewrite-native-deps == 'true'
+      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      with:
+        lang: python
+        alef-version: ${{ inputs.alef-version }}
+        require-registry: "true"
+
+    - name: Install maturin
+      shell: bash
+      env:
+        INPUT_MATURIN_VERSION: ${{ inputs.maturin-version }}
+      run: python -m pip install --upgrade pip "maturin${INPUT_MATURIN_VERSION}"
+
+    - name: Build sdist
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+        INPUT_MANIFEST_PATH: ${{ inputs.manifest-path }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        set -euo pipefail
+        # Resolve output-dir under the workspace unless an absolute path was given.
+        case "${INPUT_OUTPUT_DIR}" in
+          /*) out="${INPUT_OUTPUT_DIR}" ;;
+          *) out="${GITHUB_WORKSPACE}/${INPUT_OUTPUT_DIR}" ;;
+        esac
+        mkdir -p "$out"
+        if [ -n "${INPUT_MANIFEST_PATH}" ]; then
+          echo "Building sdist: maturin sdist -m '${INPUT_MANIFEST_PATH}' -o '${out}'"
+          maturin sdist -m "${INPUT_MANIFEST_PATH}" -o "$out"
+        else
+          echo "Building sdist: (cd '${INPUT_PACKAGE_DIR}') maturin sdist --out '${out}'"
+          cd "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"
+          maturin sdist --out "$out"
+        fi

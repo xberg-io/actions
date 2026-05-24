@@ -16,6 +16,21 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.2.0] - 2026-05-24
+
+### Added
+
+- `build-python-sdist`: New composite action — the python-sdist analog of
+  `build-ruby-gem`. It rewrites the binding crate's workspace path-dependencies to
+  registry version-dependencies (via `rewrite-native-deps`, default-on) and then runs
+  `maturin sdist`, so the source distribution compiles standalone on a consumer machine
+  instead of failing on missing workspace paths. Supports both package-dir mode
+  (`cd <package-dir> && maturin sdist`) and manifest-path mode (`maturin sdist -m
+  <Cargo.toml>`), a `maturin-version` pin (default `>=1.5,<2.0`), and writes the sdist to
+  a repo-relative or absolute `output-dir`. Replaces the hand-rolled inline `maturin
+  sdist` step across the polyglot repos and bakes in the dependency rewrite so it cannot
+  be omitted. Ships with a `test-build-python-sdist` integration workflow.
+
 ## [1.1.0] - 2026-05-24
 
 ### Added
