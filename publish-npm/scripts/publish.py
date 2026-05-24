@@ -58,14 +58,21 @@ def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
 
 
 def _strip_empty_npm_auth_token() -> None:
-    """Strip empty NODE_AUTH_TOKEN env + empty _authToken lines in .npmrc.
+    """Strip empty NODE_AUTH_TOKEN env + _authToken lines in .npmrc.
 
     When a caller writes `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and the
     secret is undefined, the env var is set to "" and `setup-node` writes a
-    `//registry.npmjs.org/:_authToken=` line into .npmrc. npm CLI then sees
-    an empty token and skips OIDC trusted publishing, even though npm@11+
-    would otherwise exchange the GHA OIDC token for a short-lived credential
-    automatically. Strip both so OIDC can take over.
+    `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` line into .npmrc.
+    npm CLI then sees an empty token and skips OIDC trusted publishing, even
+    though npm@11+ would otherwise exchange the GHA OIDC token for a
+    short-lived credential automatically. Strip both so OIDC can take over.
+
+    Note: `setup-node` writes the literal placeholder string
+    `_authToken=${NODE_AUTH_TOKEN}` to .npmrc and relies on npm CLI to expand
+    the env var at read time. When NODE_AUTH_TOKEN is empty/unset, that
+    expansion produces an empty token but the line itself is non-empty —
+    so we must strip lines matching the placeholder form too, not just the
+    post-expansion `_authToken=` form.
     """
     token = os.environ.get("NODE_AUTH_TOKEN", "")
     if token.strip():
@@ -77,11 +84,15 @@ def _strip_empty_npm_auth_token() -> None:
     if not npmrc_path.is_file():
         return
 
+    # Strip lines where _authToken is either: empty (`=` then whitespace) or
+    # references the now-unset NODE_AUTH_TOKEN placeholder. We keep any line
+    # whose token value is a real secret (no ${...} reference and non-empty).
+    strip_pattern = re.compile(
+        r"^\s*//[^:]+:_authToken\s*=\s*(?:\$\{NODE_AUTH_TOKEN\}\s*)?$",
+    )
     original = npmrc_path.read_text()
     cleaned = "".join(
-        line
-        for line in original.splitlines(keepends=True)
-        if not re.match(r"^\s*//[^:]+:_authToken\s*=\s*$", line)
+        line for line in original.splitlines(keepends=True) if not strip_pattern.match(line)
     )
     if cleaned != original:
         npmrc_path.write_text(cleaned)

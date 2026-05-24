@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.6] - 2026-05-24
+
+### Fixed
+
+- `publish-npm`: Strip `//<registry>/:_authToken=${NODE_AUTH_TOKEN}` placeholder lines from `.npmrc` (in addition to the post-expansion empty form `_authToken=`). `actions/setup-node@v6` writes the literal placeholder string `_authToken=${NODE_AUTH_TOKEN}` to `.npmrc` and defers env-var expansion to npm CLI at read time. When the caller's job doesn't set `NODE_AUTH_TOKEN` (because they're relying on OIDC trusted publishing), npm expands the placeholder to an empty token at PUT time → `404 Not Found` from the npm registry, with no fallback to OIDC. The previous `_strip_empty_npm_auth_token` only matched the post-expansion empty case (`=` then EOL); the new regex also matches the unexpanded `=${NODE_AUTH_TOKEN}` form so OIDC trusted publishing actually takes over. Surfaced in liter-llm v1.4.0-rc.30 publish run 26339094710 (`Publish Node packages` and `Publish WASM package` both 404'd after provenance signing succeeded — trusted publisher config on npmjs.org was correct, the line was just shadowing OIDC).
+
 ## [1.0.5] - 2026-05-23
 
 ### Fixed
