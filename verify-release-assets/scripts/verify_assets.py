@@ -53,8 +53,16 @@ def parse_expected(raw: str) -> list[str]:
 
 
 def fetch_release_assets(tag: str) -> list[dict[str, Any]]:
+    # Pass -R explicitly: this action does not check out the repo, so `gh`
+    # cannot infer the remote from the working directory. GITHUB_REPOSITORY
+    # is always set in GitHub Actions; falling back to GH_REPO covers the
+    # rare local-test path where someone exports it manually.
+    repo = os.environ.get("GITHUB_REPOSITORY") or os.environ.get("GH_REPO")
+    argv = ["gh", "release", "view", tag, "--json", "assets"]
+    if repo:
+        argv.extend(["-R", repo])
     result = subprocess.run(
-        ["gh", "release", "view", tag, "--json", "assets"],
+        argv,
         capture_output=True,
         text=True,
         check=False,
