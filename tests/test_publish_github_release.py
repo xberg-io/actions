@@ -19,43 +19,95 @@ upload_mod = _import_script("upload_artifacts", _UPLOAD_ARTIFACTS_PATH)
 
 
 # ---------------------------------------------------------------------------
-# build_create_flags
+# create_release — payload-building behaviour (replaces old build_create_flags)
 # ---------------------------------------------------------------------------
+#
+# create_release() builds a REST payload dict and passes it to github_request().
+# We monkeypatch github_request on the dynamically-imported module so the real
+# HTTP call is never made, then assert the exact payload that was sent.
 
 
-def test_build_create_flags_default():
-    flags = ensure_mod.build_create_flags("v1.2.3", generate_notes=True, draft=False, prerelease=False)
+def _capture_payload(monkeypatch):
+    """Return a list that will be populated with the body_dict passed to github_request."""
+    captured = []
 
-    assert "--title" in flags
-    assert "v1.2.3" in flags
-    assert "--generate-notes" in flags
-    assert "--draft" not in flags
-    assert "--prerelease" not in flags
+    def _fake_github_request(method, url, token, data=None):
+        captured.append(data)
+        return 201, {"id": 1, "upload_url": "https://uploads.example.com/assets{?name,label}"}
 
-
-def test_build_create_flags_draft():
-    flags = ensure_mod.build_create_flags("v1.2.3", generate_notes=True, draft=True, prerelease=False)
-
-    assert "--draft" in flags
-    assert "--prerelease" not in flags
+    monkeypatch.setattr(ensure_mod, "github_request", _fake_github_request)
+    return captured
 
 
-def test_build_create_flags_prerelease():
-    flags = ensure_mod.build_create_flags("v1.2.3", generate_notes=True, draft=False, prerelease=True)
+def test_create_release_default(monkeypatch):
+    captured = _capture_payload(monkeypatch)
 
-    assert "--prerelease" in flags
-    assert "--draft" not in flags
+    ensure_mod.create_release("owner", "repo", "v1.2.3", "v1.2.3", generate_notes=True, draft=False, prerelease=False)
+
+    payload = captured[0]
+    assert payload["tag_name"] == "v1.2.3"
+    assert payload["name"] == "v1.2.3"
+    assert payload["draft"] is False
+    assert payload["prerelease"] is False
+    assert payload["generate_release_notes"] is True
+    assert "body" not in payload
+    assert "target_commitish" not in payload
 
 
-def test_build_create_flags_no_generate_notes():
-    flags = ensure_mod.build_create_flags("v1.2.3", generate_notes=False, draft=False, prerelease=False)
+def test_create_release_posts_to_releases_endpoint(monkeypatch):
+    calls = []
 
-    assert "--generate-notes" not in flags
-    assert "--title" in flags
+    def _fake_github_request(method, url, token, data=None):
+        calls.append((method, url))
+        return 201, {"id": 1}
+
+    monkeypatch.setattr(ensure_mod, "github_request", _fake_github_request)
+    ensure_mod.create_release("owner", "repo", "v1.2.3", "v1.2.3", generate_notes=True, draft=False, prerelease=False)
+
+    method, url = calls[0]
+    assert method == "POST"
+    assert url == "https://api.github.com/repos/owner/repo/releases"
 
 
-def test_build_create_flags_target():
-    flags = ensure_mod.build_create_flags(
+def test_create_release_draft(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release("owner", "repo", "v1.2.3", "v1.2.3", generate_notes=True, draft=True, prerelease=False)
+
+    payload = captured[0]
+    assert payload["draft"] is True
+    assert payload["prerelease"] is False
+
+
+def test_create_release_prerelease(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release("owner", "repo", "v1.2.3", "v1.2.3", generate_notes=True, draft=False, prerelease=True)
+
+    payload = captured[0]
+    assert payload["prerelease"] is True
+    assert payload["draft"] is False
+
+
+def test_create_release_no_generate_notes(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release("owner", "repo", "v1.2.3", "v1.2.3", generate_notes=False, draft=False, prerelease=False)
+
+    payload = captured[0]
+    assert "generate_release_notes" not in payload
+    assert "body" not in payload
+    assert payload["tag_name"] == "v1.2.3"
+    assert payload["name"] == "v1.2.3"
+
+
+def test_create_release_target_commitish(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release(
+        "owner",
+        "repo",
+        "v1.2.3",
         "v1.2.3",
         generate_notes=True,
         draft=False,
@@ -63,11 +115,17 @@ def test_build_create_flags_target():
         target="abc123",
     )
 
-    assert flags[-2:] == ["--target", "abc123"]
+    payload = captured[0]
+    assert payload["target_commitish"] == "abc123"
 
 
-def test_build_create_flags_notes_overrides_generate_notes():
-    flags = ensure_mod.build_create_flags(
+def test_create_release_notes_overrides_generate_notes(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release(
+        "owner",
+        "repo",
+        "v1.2.3",
         "v1.2.3",
         generate_notes=True,
         draft=False,
@@ -75,14 +133,19 @@ def test_build_create_flags_notes_overrides_generate_notes():
         notes="Release v1.2.3",
     )
 
-    assert "--notes" in flags
-    assert "Release v1.2.3" in flags
-    # Mutually exclusive — gh CLI rejects both at once.
-    assert "--generate-notes" not in flags
+    payload = captured[0]
+    assert payload["body"] == "Release v1.2.3"
+    # notes takes precedence — generate_release_notes must not be set
+    assert "generate_release_notes" not in payload
 
 
-def test_build_create_flags_empty_notes_falls_back_to_generate():
-    flags = ensure_mod.build_create_flags(
+def test_create_release_empty_notes_falls_back_to_generate(monkeypatch):
+    captured = _capture_payload(monkeypatch)
+
+    ensure_mod.create_release(
+        "owner",
+        "repo",
+        "v1.2.3",
         "v1.2.3",
         generate_notes=True,
         draft=False,
@@ -90,8 +153,9 @@ def test_build_create_flags_empty_notes_falls_back_to_generate():
         notes="",
     )
 
-    assert "--generate-notes" in flags
-    assert "--notes" not in flags
+    payload = captured[0]
+    assert payload["generate_release_notes"] is True
+    assert "body" not in payload
 
 
 # ---------------------------------------------------------------------------

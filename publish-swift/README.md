@@ -11,12 +11,12 @@ are well-formed and pings the Swift Package Index to expedite re-indexing.
 1. Validates `Package.swift` (full parse if `swift` CLI is available; sanity
    check otherwise).
 2. Verifies the Git tag is present on `origin`.
-3. Pings https://swiftpackageindex.com/owner/repo to warm the SPI cache.
+3. Pings <https://swiftpackageindex.com/owner/repo> to warm the SPI cache.
 
 ## What this action does NOT do
 
 - **First-time submission to the Swift Package Index.** That requires a
-  manual PR to https://github.com/SwiftPackageIndex/PackageList. After the
+  manual PR to <https://github.com/SwiftPackageIndex/PackageList>. After the
   initial submission, SPI auto-discovers new tags.
 - **Push to a registry.** SPM has no central registry; consumers reference
   the Git tag directly via `.package(url: ..., from: "x.y.z")`.

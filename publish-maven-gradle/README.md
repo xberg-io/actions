@@ -14,7 +14,7 @@ The action invokes a single Gradle task. The most common publish setups are:
   (recommended): one-line `publishAndReleaseToMavenCentral` does the full
   staging-and-release dance against the new Sonatype Central Portal.
 - **vanilla `maven-publish` + `signing`**: invoke `publish`, then close +
-  release the staging repository manually on https://central.sonatype.com.
+  release the staging repository manually on <https://central.sonatype.com>.
 
 ## Authentication
 

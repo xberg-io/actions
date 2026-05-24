@@ -6,7 +6,7 @@ Install non-snap Chromium for headless browser e2e tests on Ubuntu runners.
 
 The standard `setup-chrome` action delegates to `browser-actions/setup-chrome@v1` on x86_64 Ubuntu runners, which may pull the snap-wrapped `chromium` package from apt. Snap-wrapped Chromium rejects command-line flags:
 
-```
+```text
 error: unknown command "----disable-features=..." see 'snap help'.
 error: unknown flag `no-sandbox'
 error: unknown flag `headless'

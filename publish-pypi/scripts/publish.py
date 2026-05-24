@@ -130,7 +130,10 @@ def main() -> None:
         return
 
     if len(versions) > 1:
-        print(f"Warning: dist files span multiple versions ({sorted(versions)}); skipping idempotency check", file=sys.stderr)
+        print(
+            f"Warning: dist files span multiple versions ({sorted(versions)}); skipping idempotency check",
+            file=sys.stderr,
+        )
         _emit_output("version_published", "false")
         return
 

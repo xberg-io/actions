@@ -17,6 +17,10 @@ ALREADY_PUBLISHED_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# `actions/setup-node@v6` exports NODE_AUTH_TOKEN as this 23-char placeholder
+# (hardcoded in setup-node's authutil.ts) when no real token is provided.
+SETUP_NODE_PLACEHOLDER = "XXXXX-XXXXX-XXXXX-XXXXX"
+
 
 def validate_inputs(packages_dir: str, package_dir: str) -> str:
     """Validate mutually exclusive inputs; return mode 'tgz' or 'dir'.
@@ -82,7 +86,6 @@ def _strip_empty_npm_auth_token() -> None:
     # gets sent to the registry as the actual auth credential — yielding
     # `404 Not Found` and shadowing OIDC trusted publishing. Treat the
     # placeholder the same as empty so OIDC can take over.
-    SETUP_NODE_PLACEHOLDER = "XXXXX-XXXXX-XXXXX-XXXXX"
     if token.strip() and token.strip() != SETUP_NODE_PLACEHOLDER:
         print(f"NODE_AUTH_TOKEN is set ({len(token)} chars); skipping OIDC fallback strip")
         return
@@ -118,9 +121,7 @@ def _strip_empty_npm_auth_token() -> None:
             continue
 
         original = npmrc_path.read_text()
-        cleaned = "".join(
-            line for line in original.splitlines(keepends=True) if not strip_pattern.match(line)
-        )
+        cleaned = "".join(line for line in original.splitlines(keepends=True) if not strip_pattern.match(line))
         if cleaned != original:
             npmrc_path.write_text(cleaned)
             print(f"Stripped _authToken lines from {npmrc_path}; npm will use OIDC trusted publishing")

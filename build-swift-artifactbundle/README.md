@@ -8,6 +8,7 @@ as a `.binaryTarget`.
 ## Overview
 
 This action:
+
 1. Adds required Rust targets for cross-compilation
 2. Builds the Rust crate for all Apple platforms (macOS, iOS) using native `cargo`
 3. Builds Linux targets using the `cross` CLI
@@ -64,7 +65,7 @@ The artifact bundle is suitable for distribution via Swift Package Manager:
 
 The artifact bundle is organized by target platform and architecture:
 
-```
+```text
 MyRustLib.artifactbundle/
   info.json
   MyRustLib-macos-arm64/libmy_rust_crate.a
@@ -78,6 +79,7 @@ MyRustLib.artifactbundle/
 ```
 
 The `info.json` follows SE-0305 and declares:
+
 - **Artifact name**: matches `artifact-name` input
 - **Type**: `staticLibrary`
 - **Variants**: per-platform triples and library paths

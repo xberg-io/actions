@@ -16,6 +16,24 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.1.0] - 2026-05-24
+
+### Added
+
+- `rewrite-native-deps`: New composite action that rewrites a source-build language package's workspace path-dependencies to registry version-dependencies via `alef publish prepare --lang <lang> [--require-registry]`. Source-build packages (Ruby gem, Python sdist, Elixir NIF, PHP extension, Swift) ship a `Cargo.toml` whose core-crate deps point at workspace paths that no longer exist once the package is unpacked on a consumer machine — breaking `gem install`, source `pip install`, and SPM builds. The action strips those paths and pins the published version so the shipped manifest resolves. Requires alef >= 0.19.0. Inputs: `lang` (required, comma-separated), `alef-version` (default `latest`), `require-registry` (default `true`), `working-directory` (default `.`). The `lang` value is charset-validated before reaching the CLI.
+
+### Changed
+
+- `build-ruby-gem`, `build-php-extension`, `build-elixir-natives`: Run `rewrite-native-deps` before the native build by default, so the artifacts these actions produce resolve their core-crate dependencies from the registry rather than the workspace. New inputs `rewrite-native-deps` (default `true`) and `alef-version` (default `latest`); set `rewrite-native-deps: false` to build against the local workspace in non-release CI. The Elixir build additionally skips the rewrite on `dry-run`. Because the rewrite passes `--require-registry`, the core crates must already be published to the registry when these actions run during a release.
+- Bumped dev dependencies (`uv.lock`) and pre-commit hook revisions (`kreuzberg-dev/pre-commit-hooks` v1.1.13 → v1.1.18, `ruff-pre-commit` v0.15.13 → v0.15.14).
+
+### Fixed
+
+- `publish-github-release`: Replaced the stale `build_create_flags` tests (the gh-CLI flag helper was removed when the action moved to the GitHub REST API) with tests that assert the `create_release()` REST payload and endpoint.
+- `publish-npm`: Hoisted the `SETUP_NODE_PLACEHOLDER` sentinel to a module-level constant (ruff `N806`).
+- `detect-private-key`: Excluded `CHANGELOG.md` and `publish-maven/action.yml`, whose only matches are documentation references to the `-----BEGIN PGP PRIVATE KEY BLOCK-----` armor header, not real keys.
+- Applied `ruff-format` and `rumdl` formatting to previously-undrifted scripts and READMEs.
+
 ## [1.0.9] - 2026-05-24
 
 ### Fixed

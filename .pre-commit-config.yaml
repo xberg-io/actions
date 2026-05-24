@@ -24,6 +24,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
       - id: detect-private-key
+        exclude: ^(CHANGELOG\.md|publish-maven/action\.yml)$
       - id: check-yaml
         args:
           - --allow-multiple-documents
@@ -38,7 +39,7 @@ repos:
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/kreuzberg-dev/pre-commit-hooks
-    rev: v1.1.13
+    rev: v1.1.18
     hooks:
       - id: shfmt
         args:
@@ -59,7 +60,7 @@ repos:
     hooks:
       - id: gh-actions-updater
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.13
+    rev: v0.15.14
     hooks:
       - id: ruff
         args:

@@ -49,6 +49,7 @@ def gh_release_view(tag: str) -> dict[str, Any] | None:
     Handles race where the release was just created and the API hasn't caught up.
     """
     import time
+
     max_attempts = 6
     for attempt in range(1, max_attempts + 1):
         result = subprocess.run(
