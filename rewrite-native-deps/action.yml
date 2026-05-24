@@ -1,0 +1,56 @@
+name: Rewrite Native Deps
+description: >
+  Rewrite a source-build language package's workspace path-dependencies to
+  registry version-dependencies via `alef publish prepare`. Source-build
+  packages (Ruby gem, Python sdist, Elixir NIF, PHP extension, Swift) ship a
+  Cargo.toml whose core-crate deps point at workspace paths that do not exist
+  once the package is unpacked on a consumer machine; this action strips those
+  paths and pins the published version so the shipped manifest resolves. Run it
+  before the native Rust build/package step.
+
+inputs:
+  lang:
+    description: "Language(s) to prepare, comma-separated (e.g. ruby, python, php, elixir, swift)"
+    required: true
+  alef-version:
+    description: "Alef version to install (passed to install-alef@v1). 'latest' reads the pin from alef.toml."
+    required: false
+    default: "latest"
+  require-registry:
+    description: >
+      Regenerate Cargo.lock and fail hard if a referenced workspace-member version
+      is not yet published to the registry. Use in release pipelines (after the core
+      crates are published); set "false" for local/pre-release dev.
+    required: false
+    default: "true"
+  working-directory:
+    description: "Directory to run alef from (the repo root containing alef.toml)"
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Install alef CLI
+      uses: kreuzberg-dev/actions/install-alef@v1
+      with:
+        version: ${{ inputs.alef-version }}
+
+    - name: Rewrite native dependencies to registry versions
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        INPUT_LANG: ${{ inputs.lang }}
+        INPUT_REQUIRE_REGISTRY: ${{ inputs.require-registry }}
+      run: |
+        set -euo pipefail
+        if ! [[ "${INPUT_LANG}" =~ ^[a-z]+(,[a-z]+)*$ ]]; then
+          echo "Error: invalid lang '${INPUT_LANG}' (expected comma-separated lowercase language names)" >&2
+          exit 1
+        fi
+        args=(publish prepare --lang "${INPUT_LANG}")
+        if [ "${INPUT_REQUIRE_REGISTRY}" = "true" ]; then
+          args+=(--require-registry)
+        fi
+        echo "Running: alef ${args[*]}"
+        alef "${args[@]}"

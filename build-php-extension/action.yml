@@ -16,6 +16,17 @@ inputs:
     description: Thread safety mode - ts or nts (Windows only)
     required: false
     default: ""
+  rewrite-native-deps:
+    description: >
+      Rewrite workspace path-deps to registry version-deps via alef before
+      building, so a source-distributed extension resolves on a consumer machine.
+      Disable for non-release CI that builds against the local workspace.
+    required: false
+    default: "true"
+  alef-version:
+    description: "Alef version for the dependency rewrite (passed to install-alef@v1)"
+    required: false
+    default: "latest"
 
 outputs:
   extension-path:
@@ -25,6 +36,14 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Rewrite native dependencies to registry versions
+      if: inputs.rewrite-native-deps == 'true'
+      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      with:
+        lang: php
+        alef-version: ${{ inputs.alef-version }}
+        require-registry: "true"
+
     # --- Linux/macOS ---
     - name: Build PHP extension (Linux/macOS)
       if: runner.os != 'Windows'

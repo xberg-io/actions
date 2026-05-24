@@ -6,10 +6,29 @@ inputs:
     description: Path to the Ruby package directory (relative to repo root)
     required: false
     default: "packages/ruby"
+  rewrite-native-deps:
+    description: >
+      Rewrite workspace path-deps to registry version-deps via alef before
+      building, so the shipped gem resolves on a consumer machine. Disable for
+      non-release CI that builds against the local workspace.
+    required: false
+    default: "true"
+  alef-version:
+    description: "Alef version for the dependency rewrite (passed to install-alef@v1)"
+    required: false
+    default: "latest"
 
 runs:
   using: composite
   steps:
+    - name: Rewrite native dependencies to registry versions
+      if: inputs.rewrite-native-deps == 'true'
+      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      with:
+        lang: ruby
+        alef-version: ${{ inputs.alef-version }}
+        require-registry: "true"
+
     # --- Unix (Linux/macOS) ---
     - name: Set LD_LIBRARY_PATH (Linux)
       if: runner.os == 'Linux'
