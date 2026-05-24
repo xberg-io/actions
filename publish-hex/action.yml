@@ -1,6 +1,9 @@
 name: Publish to Hex.pm
 description: >
-  Publish Elixir packages to Hex.pm using mix hex.publish.
+  Publish Elixir packages to Hex.pm using mix hex.publish. Optionally accepts
+  a pre-built Hex source tarball (.tar) from build-elixir-hex@v1 to avoid
+  double-building; when tarball-path is set, publishes that artifact instead
+  of rebuilding from source.
 
 inputs:
   package-dir:
@@ -19,6 +22,10 @@ inputs:
     description: "Perform a dry run without actually publishing"
     required: false
     default: "false"
+  tarball-path:
+    description: "Optional path to a pre-built Hex source tarball (.tar). When set, publishes this tarball instead of rebuilding. Recommended pairing: output from build-elixir-hex@v1."
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -47,8 +54,45 @@ runs:
         cd "$PACKAGE_DIR"
         mix deps.get
 
-    - name: Publish to Hex.pm
-      if: inputs.dry-run != 'true'
+    - name: Publish to Hex.pm (pre-built tarball)
+      if: inputs.dry-run != 'true' && inputs.tarball-path != ''
+      shell: bash
+      env:
+        HEX_API_KEY: ${{ env.HEX_API_KEY }}
+        REPLACE: ${{ inputs.replace }}
+        TARBALL_PATH: ${{ inputs.tarball-path }}
+      run: |
+        if [[ ! -f "$TARBALL_PATH" ]]; then
+          echo "Error: tarball not found at $TARBALL_PATH" >&2
+          exit 1
+        fi
+        PUBLISH_FLAGS="package ${TARBALL_PATH} --yes"
+        if [[ "$REPLACE" == "true" ]]; then
+          PUBLISH_FLAGS="${PUBLISH_FLAGS} --replace"
+        fi
+        set +e
+        # shellcheck disable=SC2086
+        output=$(mix hex.publish $PUBLISH_FLAGS 2>&1)
+        exit_code=$?
+        set -e
+
+        echo "$output"
+
+        if [[ $exit_code -eq 0 ]]; then
+          echo "Published successfully"
+        elif echo "$output" | grep -qi "already published\|version already exists\|already been published\|can only modify a release"; then
+          # Hex returns "can only modify a release up to one hour after publication"
+          # when a re-publish lands >1h after the original push. The release is
+          # already live, so treat as success-equivalent skip.
+          echo "Package already published, skipping"
+        else
+          echo "Error publishing:" >&2
+          echo "$output" >&2
+          exit 1
+        fi
+
+    - name: Publish to Hex.pm (rebuild)
+      if: inputs.dry-run != 'true' && inputs.tarball-path == ''
       shell: bash
       env:
         HEX_API_KEY: ${{ env.HEX_API_KEY }}
