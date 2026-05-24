@@ -16,6 +16,21 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.5] - 2026-05-25
+
+### Added
+
+- `package-php-pie`: `dry-run` input that passes `--dry-run` through to `alef
+  publish package`. In dry-run mode alef short-circuits before the
+  `assert_no_member_path_deps` validation, so the binding crate's `Cargo.toml`
+  does not need to be rewritten to registry version-deps (which is impossible
+  before the core crate is on crates.io). The action gracefully exits without
+  producing an archive when `dry-run: true`; callers must gate their downstream
+  `upload-artifact` on the same dry-run flag. Closes the last chicken-and-egg
+  gap in the source-build publish path: previously a dry-run that left path
+  deps unrewritten (correct, since the version is not yet published) would
+  fail the path-dep assertion inside `alef publish package`.
+
 ## [1.6.4] - 2026-05-24
 
 ### Fixed

@@ -31,6 +31,14 @@ inputs:
     description: 'Version string (auto-detected from Cargo.toml if absent).'
     required: false
     default: ""
+  dry-run:
+    description: >
+      Run `alef publish package --dry-run`, which short-circuits before the
+      path-dep validation and produces no archive. Use in dry-run publish
+      workflows where the binding crate has not been prepared for Registry
+      vendor mode (because the core crate is not yet on crates.io).
+    required: false
+    default: "false"
 
 outputs:
   archive-path:
@@ -69,6 +77,7 @@ runs:
         PHP_LIBC: ${{ inputs.php-libc }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
         VERSION: ${{ inputs.version }}
+        DRY_RUN: ${{ inputs.dry-run }}
       run: |
         set -euo pipefail
 
@@ -92,8 +101,17 @@ runs:
           cmd+=(--version "${VERSION}")
         fi
 
+        if [[ "${DRY_RUN}" == "true" ]]; then
+          cmd+=(--dry-run)
+        fi
+
         echo "Running: ${cmd[*]}"
         "${cmd[@]}"
+
+        if [[ "${DRY_RUN}" == "true" ]]; then
+          echo "[dry-run] alef publish package short-circuited; no archive produced."
+          exit 0
+        fi
 
         # Locate the produced archive — alef writes exactly one php_*.tgz or php_*.zip
         shopt -s nullglob
