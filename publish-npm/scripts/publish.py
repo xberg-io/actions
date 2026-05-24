@@ -76,27 +76,48 @@ def _strip_empty_npm_auth_token() -> None:
     """
     token = os.environ.get("NODE_AUTH_TOKEN", "")
     if token.strip():
+        print(f"NODE_AUTH_TOKEN is set ({len(token)} chars); skipping OIDC fallback strip")
         return
 
     os.environ.pop("NODE_AUTH_TOKEN", None)
 
-    npmrc_path = Path(os.environ.get("NPM_CONFIG_USERCONFIG") or Path.home() / ".npmrc")
-    if not npmrc_path.is_file():
-        return
+    # Walk candidate .npmrc paths: NPM_CONFIG_USERCONFIG (set by setup-node),
+    # $HOME/.npmrc, and the project-local .npmrc (cwd or near package.json).
+    candidates: list[Path] = []
+    if cfg := os.environ.get("NPM_CONFIG_USERCONFIG"):
+        candidates.append(Path(cfg))
+    candidates.extend([Path.home() / ".npmrc", Path.cwd() / ".npmrc"])
 
-    # Strip lines where _authToken is either: empty (`=` then whitespace) or
-    # references the now-unset NODE_AUTH_TOKEN placeholder. We keep any line
-    # whose token value is a real secret (no ${...} reference and non-empty).
-    strip_pattern = re.compile(
-        r"^\s*//[^:]+:_authToken\s*=\s*(?:\$\{NODE_AUTH_TOKEN\}\s*)?$",
-    )
-    original = npmrc_path.read_text()
-    cleaned = "".join(
-        line for line in original.splitlines(keepends=True) if not strip_pattern.match(line)
-    )
-    if cleaned != original:
-        npmrc_path.write_text(cleaned)
-        print(f"Stripped empty _authToken from {npmrc_path}; npm will use OIDC trusted publishing")
+    # Strip every line declaring an _authToken when NODE_AUTH_TOKEN is empty.
+    # Either the value is literally empty (`=` then EOL), references the now-
+    # unset NODE_AUTH_TOKEN placeholder (`=${NODE_AUTH_TOKEN}`), or any other
+    # value — we're committing to OIDC trusted publishing in this script when
+    # the env var is unset, so any leftover _authToken line would shadow OIDC.
+    strip_pattern = re.compile(r"^\s*//[^:]+:_authToken\s*=")
+
+    seen: set[Path] = set()
+    for raw in candidates:
+        try:
+            npmrc_path = raw.resolve()
+        except OSError:
+            continue
+        if npmrc_path in seen:
+            continue
+        seen.add(npmrc_path)
+        if not npmrc_path.is_file():
+            continue
+
+        original = npmrc_path.read_text()
+        cleaned = "".join(
+            line for line in original.splitlines(keepends=True) if not strip_pattern.match(line)
+        )
+        if cleaned != original:
+            npmrc_path.write_text(cleaned)
+            print(f"Stripped _authToken lines from {npmrc_path}; npm will use OIDC trusted publishing")
+        else:
+            # Helps diagnose silent failures — log what we saw so future logs show
+            # whether the .npmrc layout drifted vs whether the file was already clean.
+            print(f"No _authToken line found in {npmrc_path} (file present, no strip needed)")
 
 
 def main() -> None:

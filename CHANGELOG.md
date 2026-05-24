@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.7] - 2026-05-24
+
+### Fixed
+
+- `publish-npm`: Strip `_authToken=` lines from EVERY candidate `.npmrc` (`$NPM_CONFIG_USERCONFIG`, `$HOME/.npmrc`, and `$PWD/.npmrc`) regardless of the value's form when `NODE_AUTH_TOKEN` is unset. The v1.0.6 fix targeted the wrong file — `actions/setup-node@v6` writes the placeholder line to `$NPM_CONFIG_USERCONFIG=/home/runner/work/_temp/.npmrc`, not `$HOME/.npmrc`. Because `Path.home() / ".npmrc"` was the only path probed when `NPM_CONFIG_USERCONFIG` happened to be unset on that environment fork, the strip silently no-op'd and the `_authToken=${NODE_AUTH_TOKEN}` placeholder line stayed in the actual `.npmrc` that `npm publish` read. The script now walks all three locations, prints which one it acted on, and additionally relaxes the matcher to strip ANY `_authToken=...` line on the empty-token path — we're committing to OIDC trusted publishing in that branch, so any leftover `_authToken` line would shadow OIDC. Adds diagnostic logging so future regressions surface without needing log forensics.
+
 ## [1.0.6] - 2026-05-24
 
 ### Fixed
