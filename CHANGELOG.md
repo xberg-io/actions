@@ -16,6 +16,17 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.4] - 2026-05-24
+
+### Fixed
+
+- `lint-docs`: fix prek binary extraction from tarball. The `Install prek` step
+  downloaded the tarball correctly but extracted it to the wrong path: the prek
+  release tarball has structure `prek-<target>/prek`, but the extraction command
+  was unpacking directly to `$HOME/.local/bin`, resulting in `$HOME/.local/bin/prek-<target>/prek`.
+  Added `--strip-components=1` to tar so the binary lands at `$HOME/.local/bin/prek`
+  as expected. Fixes CI docs runs failing with `chmod: cannot access /home/runner/.local/bin/prek`.
+
 ## [1.6.3] - 2026-05-24
 
 ### Fixed
