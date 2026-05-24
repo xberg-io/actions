@@ -139,8 +139,12 @@ runs:
         TARBALL_NAME: ${{ inputs.pack-target-tarball }}
       run: |
         set -euo pipefail
-        # --force-local: on Windows, $GITHUB_WORKSPACE is `D:\a\...` and GNU
-        # tar interprets the `:` as a remote-host separator unless we pin it
-        # to the local filesystem.
-        tar --force-local -czf "${GITHUB_WORKSPACE}/${TARBALL_NAME}" -C "${CRATE_DIR}" "${NPM_DIR}"
+        # cd into the workspace so the tarball destination is a relative
+        # path. On Windows, $GITHUB_WORKSPACE is `D:\a\...` and GNU tar
+        # interprets the leading `D:` as a remote-host separator
+        # (`tar: Cannot connect to D: resolve failed`). BSD tar on macOS
+        # has no `--force-local` flag, so dodging the colon is the only
+        # portable option.
+        cd "${GITHUB_WORKSPACE}"
+        tar -czf "${TARBALL_NAME}" -C "${CRATE_DIR}" "${NPM_DIR}"
         echo "target-tarball=${GITHUB_WORKSPACE}/${TARBALL_NAME}" >> "${GITHUB_OUTPUT}"
