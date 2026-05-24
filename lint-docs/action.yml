@@ -27,6 +27,39 @@ runs:
     - name: Install Task
       uses: kreuzberg-dev/actions/install-task@v1
 
+    - name: Install prek
+      shell: bash
+      run: |
+        set -euo pipefail
+        OS=$(uname -s)
+        ARCH=$(uname -m)
+        case "$OS" in
+          Darwin)
+            TARGET="aarch64-apple-darwin"
+            if [ "$ARCH" = "x86_64" ]; then
+              TARGET="x86_64-apple-darwin"
+            fi
+            ;;
+          Linux)
+            TARGET="x86_64-unknown-linux-gnu"
+            if [ "$ARCH" = "aarch64" ]; then
+              TARGET="aarch64-unknown-linux-gnu"
+            fi
+            ;;
+          *)
+            echo "Unsupported OS: $OS" >&2
+            exit 1
+            ;;
+        esac
+        VERSION="latest"
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(curl -s https://api.github.com/repos/j178/prek/releases/latest | grep tag_name | cut -d'"' -f4)
+        fi
+        mkdir -p "$HOME/.local/bin"
+        curl -L "https://github.com/j178/prek/releases/download/${VERSION}/prek-${TARGET}.tar.gz" | tar xz -C "$HOME/.local/bin"
+        chmod +x "$HOME/.local/bin/prek"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
     - name: Install lychee
       uses: taiki-e/install-action@v2
       with:

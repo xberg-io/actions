@@ -16,6 +16,15 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.3] - 2026-05-24
+
+### Fixed
+
+- `lint-docs`: install `prek` (pre-commit wrapper) before running `task docs:lint:prose`, which
+  internally invokes `prek run textlint`. The action previously installed Task, lychee, and
+  textlint, but omitted prek, causing exit code 127 (command not found) when docs:lint:prose
+  ran prek hooks on the prose linter.
+
 ## [1.6.2] - 2026-05-24
 
 ### Fixed
