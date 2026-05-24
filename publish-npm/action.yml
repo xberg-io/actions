@@ -40,6 +40,22 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Ensure npm supports OIDC trusted publishing
+      shell: bash
+      run: |
+        # OIDC trusted publishing requires npm CLI v11.5.1+. Node 22 ships
+        # npm 10.x, which falls through to classic-token auth and yields
+        # `ENEEDAUTH` when no static token is provided. Upgrade in place.
+        # See https://docs.npmjs.com/trusted-publishers for the exact CLI
+        # version cutoff.
+        npm_major=$(npm --version | cut -d. -f1)
+        if [[ "${npm_major}" -lt 11 ]]; then
+          echo "npm $(npm --version) does not support OIDC trusted publishing; upgrading to latest"
+          npm install -g npm@latest
+        else
+          echo "npm $(npm --version) already supports OIDC trusted publishing"
+        fi
+
     - name: Publish npm packages
       shell: bash
       env:

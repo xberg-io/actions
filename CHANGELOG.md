@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.9] - 2026-05-24
+
+### Fixed
+
+- `publish-npm`: Auto-upgrade npm CLI to v11+ before publish when the host npm is older. OIDC trusted publishing requires npm v11.5.1+; Node 22 (currently the LTS default in `actions/setup-node@v6`) ships npm 10.9.x, which falls through to classic-token auth and surfaces as `ENEEDAUTH … This command requires you to be logged in` when no static `NODE_AUTH_TOKEN` is configured. The action now runs `npm install -g npm@latest` before invoking the publish script when `npm --version | cut -d. -f1 < 11`. No-op on hosts that already ship npm 11+. Surfaced in liter-llm v1.4.0-rc.30 publish runs (`Publish Node packages`, `Publish WASM package`) — the v1.0.8 placeholder-strip got us past the setup-node sentinel, only for npm 10 to refuse OIDC.
+
 ## [1.0.8] - 2026-05-24
 
 ### Fixed
