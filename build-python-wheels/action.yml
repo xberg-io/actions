@@ -91,7 +91,11 @@ runs:
       id: linker-config
       shell: bash
       run: |
-        if [[ "${{ runner.arch }}" == "arm64" && "${{ runner.os }}" == "Linux" ]]; then
+        # `runner.arch` returns ARM64/X64 (uppercase) per GitHub Actions docs,
+        # so the previous lowercase comparison silently fell through and never
+        # exported the linker override. Use a case-insensitive shell compare.
+        arch_lower="$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')"
+        if [[ "$arch_lower" == "arm64" && "${{ runner.os }}" == "Linux" ]]; then
           echo "linker-env=CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=gcc" >> "$GITHUB_OUTPUT"
         else
           echo "linker-env=" >> "$GITHUB_OUTPUT"

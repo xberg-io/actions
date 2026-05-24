@@ -16,6 +16,21 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.2] - 2026-05-24
+
+### Fixed
+
+- `build-python-wheels`: case-insensitively compare `runner.arch` when
+  deciding whether to set `CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER`.
+  `runner.arch` resolves to `ARM64` (uppercase) on GitHub-hosted arm64
+  runners, so the previous lowercase compare always missed and the
+  linker override was never emitted into `CIBW_ENVIRONMENT`. Python
+  wheel builds on `ubuntu-24.04-arm` failed inside the manylinux
+  container with `error: linker \`aarch64-linux-gnu-gcc\` not found`
+  because cargo defaulted to the cross-compiler binary name even on
+  native arm64. The compare now lowercases the value first so the
+  override fires on every arm64-on-Linux runner.
+
 ## [1.6.1] - 2026-05-24
 
 ### Fixed
