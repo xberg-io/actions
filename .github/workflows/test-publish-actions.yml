@@ -212,11 +212,6 @@ jobs:
           package-dir: pkg
           dry-run: "true"
 
-  # publish-homebrew is intentionally skipped: even in dry-run it requires
-  # real .bottle.tar.gz artifacts, a real tap repository to clone, and
-  # downloads the source tarball from GitHub. Manufacturing those stubs in
-  # CI would essentially re-implement the action; smoke value is low.
-
   test-publish-maven-dry-run:
     runs-on: ubuntu-latest
     steps:

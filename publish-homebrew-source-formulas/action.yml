@@ -2,17 +2,16 @@ name: Publish Homebrew source formulas
 description: >
   Render one or more Homebrew formulas from per-formula templates with
   release-asset SHA256s + version + tag substituted in, and write them into a
-  checked-out tap repository. Distinct from publish-homebrew (which is the
-  single-formula bottle-only updater): this action handles repos that ship
-  multiple formulas whose source URLs point at pre-built tarballs (e.g.
-  html-to-markdown ships a CLI formula + a libffi formula, both downloading
-  release tarballs at install time, with the bottle DSL merged in later by
-  homebrew-merge-bottles). Tolerant of dry-run releases: when --dry-run is set
+  checked-out tap repository. This action handles repos that ship one or more
+  formulas whose source URLs point at pre-built tarballs (e.g. html-to-markdown
+  ships a CLI formula + a libffi formula, both downloading release tarballs at
+  install time, with the bottle DSL merged later). Tolerant of dry-run releases:
+  when --dry-run is set
   and a release/asset is missing, it substitutes a zero-SHA placeholder and
   emits a warning so the rendered shape can still be diffed.
 
   Replaces the per-repo `scripts/publish/update-homebrew-formula.sh` boilerplate
-  with a single shared invocation + a YAML config + .rb.tmpl templates. The
+  with a single shared invocation + a JSON config + .rb.tmpl templates. The
   calling workflow is responsible for committing/pushing the resulting tap
   changes — bot identity is repo-specific.
 

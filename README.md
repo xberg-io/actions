@@ -47,7 +47,6 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `build-dart-package` | flutter_rust_bridge codegen + cargo build for the Dart package's Rust crate |
 | `build-swift-package` | cargo build + sync swift-bridge generated headers/sources into the Swift package |
 | `build-zig-package` | cargo build the FFI crate + `zig build` smoke check |
-| `build-homebrew-bottle` | Synthetic bottle tarballs from a single CLI binary (homemade — does not invoke `brew bottle`) |
 | `homebrew-build-bottles` | Real Homebrew bottles for one or more formulas via `brew install --build-bottle` + `brew bottle --json`; uploads tarballs to the GH release and saves bottle JSONs for the merge step |
 | `homebrew-merge-bottles` | Aggregates per-platform bottle JSON manifests into formula `bottle do ... end` blocks (jq-driven, no brew needed on the runner); emits cellar values as Ruby symbols |
 | `package-php-pie` | PIE-conventional binary archive from a built PHP extension |
@@ -82,7 +81,7 @@ to print the command without executing.
 | `publish-pub` | pub.dev | OIDC trusted publisher | Dart packages; requires a one-time pub.dev claim of the package |
 | `publish-swift` | Swift Package Index | none | Validates `Package.swift` + tag, pings SPI to expedite re-index |
 | `publish-zig` | Git tag | none | Validates `build.zig.zon` + tag; emits the tarball SHA-256 downstream consumers need for `build.zig.zon`'s `hash` field; can append a fetch snippet to the GH release notes |
-| `publish-homebrew` | Homebrew tap | `HOMEBREW_TOKEN` | Formula updates with bottle hashes |
+| `publish-homebrew-source-formulas` | Homebrew tap | `HOMEBREW_TOKEN` | Render source formulas from release assets |
 | `publish-github-release` | GitHub Releases | `GITHUB_TOKEN` | Release-asset uploads |
 | `publish-helm-chart` | OCI registry (GHCR, GAR, ECR, …) | username + password / token | Stamps `version`/`appVersion`, runs `helm dependency build` + `package` + `push`; idempotent on re-publish |
 
