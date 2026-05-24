@@ -3,6 +3,9 @@
 
 Stages at: {output-dir}/native/{classifier}/{lib-prefix}{lib-name}.{ext}
 
+For musl targets (e.g., *-linux-musl), builds inside an Alpine container to avoid
+host linker incompatibilities. For other targets, builds natively on the host.
+
 Inputs (env vars):
     INPUT_TARGET: Rust target triple (required)
     INPUT_CRATE_NAME: cargo package name (default kreuzberg-ffi)
@@ -16,9 +19,10 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+from musl_builder import build_or_fallback
 
 
 def library_filename(lib_name: str, target: str) -> str:
@@ -34,9 +38,8 @@ def cargo_release_dir(target: str) -> Path:
 
 
 def run_cargo_build(crate_name: str, target: str) -> None:
-    cmd = ["cargo", "build", "-p", crate_name, "--release", "--target", target]
-    print(f"[build-java-natives] Running: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    """Build using musl Docker builder for musl targets, native build otherwise."""
+    build_or_fallback(crate_name, target)
 
 
 def write_github_output(name: str, value: str) -> None:
