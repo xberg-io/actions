@@ -87,6 +87,16 @@ runs:
       shell: bash
       run: python -m pip install cibuildwheel==3.2.0
 
+    - name: Resolve linker for native arm64 builds
+      id: linker-config
+      shell: bash
+      run: |
+        if [[ "${{ runner.arch }}" == "arm64" && "${{ runner.os }}" == "Linux" ]]; then
+          echo "linker-env=CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=gcc" >> "$GITHUB_OUTPUT"
+        else
+          echo "linker-env=" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Build wheels
       shell: bash
       run: python -m cibuildwheel --output-dir wheelhouse "${{ inputs.package-dir }}"
@@ -101,7 +111,7 @@ runs:
         CIBW_BEFORE_BUILD_MACOS: ${{ inputs.cibw-before-build-macos }}
         CIBW_BEFORE_BUILD_WINDOWS: ${{ inputs.cibw-before-build-windows }}
         CIBW_BUILD_FRONTEND: build
-        CIBW_ENVIRONMENT: ${{ inputs.cibw-environment }}
+        CIBW_ENVIRONMENT: ${{ inputs.cibw-environment }} ${{ steps.linker-config.outputs.linker-env }}
         CIBW_ENVIRONMENT_WINDOWS: ${{ inputs.cibw-environment-windows }}
         CIBW_ENVIRONMENT_MACOS: ${{ inputs.cibw-environment-macos }}
         CIBW_SKIP: ${{ inputs.cibw-skip }}
