@@ -58,7 +58,7 @@ read_pinned_version() {
       echo "$pinned"
       return 0
     fi
-    pinned="$(sed -n 's/^alef_version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' alef.toml | head -1)"
+    pinned="$(sed -n '/^\[workspace\]/,/^\[/ { s/^alef_version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p; }' alef.toml | head -1)"
     if [[ -n "$pinned" ]]; then
       echo "$pinned"
       return 0
