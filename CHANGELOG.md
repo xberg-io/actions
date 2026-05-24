@@ -16,6 +16,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.0.8] - 2026-05-24
+
+### Fixed
+
+- `publish-npm`: Treat `NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'` as unset for OIDC purposes. `actions/setup-node@v6` exports the literal 23-char placeholder string `XXXXX-XXXXX-XXXXX-XXXXX` as `NODE_AUTH_TOKEN` (see `authutil.ts`'s `core.exportVariable('NODE_AUTH_TOKEN', process.env.NODE_AUTH_TOKEN || 'XXXXX-XXXXX-XXXXX-XXXXX')`) whenever the caller hasn't already set the env var. The placeholder is intended as a sentinel that lets `.npmrc`'s `_authToken=${NODE_AUTH_TOKEN}` resolve to something non-empty so npm doesn't complain about a missing token at config-read time — but at publish time, npm sends that literal placeholder string to the registry as the real auth credential and the registry returns `404 Not Found` (shadowing OIDC trusted publishing). The script now treats the placeholder the same as "unset": it pops the env var, strips `_authToken=` lines from `.npmrc`, and lets npm CLI v11+ exchange the GHA OIDC token automatically. Surfaced in liter-llm v1.4.0-rc.30 publish runs (`Publish Node packages`, `Publish WASM package`) which kept 404'ing after `NODE_AUTH_TOKEN` was removed from the workflow's `env:` blocks — setup-node was still injecting the placeholder.
+
 ## [1.0.7] - 2026-05-24
 
 ### Fixed

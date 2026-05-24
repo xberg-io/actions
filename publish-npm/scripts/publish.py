@@ -75,10 +75,20 @@ def _strip_empty_npm_auth_token() -> None:
     post-expansion `_authToken=` form.
     """
     token = os.environ.get("NODE_AUTH_TOKEN", "")
-    if token.strip():
+    # `actions/setup-node@v6` exports NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'
+    # (the 23-char placeholder string, hardcoded in setup-node's authutil.ts)
+    # when the caller hasn't provided a real token, so that npm CLI doesn't
+    # complain about a missing token at .npmrc read time. But the placeholder
+    # gets sent to the registry as the actual auth credential — yielding
+    # `404 Not Found` and shadowing OIDC trusted publishing. Treat the
+    # placeholder the same as empty so OIDC can take over.
+    SETUP_NODE_PLACEHOLDER = "XXXXX-XXXXX-XXXXX-XXXXX"
+    if token.strip() and token.strip() != SETUP_NODE_PLACEHOLDER:
         print(f"NODE_AUTH_TOKEN is set ({len(token)} chars); skipping OIDC fallback strip")
         return
 
+    if token.strip() == SETUP_NODE_PLACEHOLDER:
+        print("NODE_AUTH_TOKEN is set to setup-node@v6's placeholder; treating as unset for OIDC")
     os.environ.pop("NODE_AUTH_TOKEN", None)
 
     # Walk candidate .npmrc paths: NPM_CONFIG_USERCONFIG (set by setup-node),
