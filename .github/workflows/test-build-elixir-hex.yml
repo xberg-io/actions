@@ -1,0 +1,104 @@
+name: Test build-elixir-hex
+on:
+  push:
+    paths:
+      - "build-elixir-hex/**"
+      - ".github/workflows/test-build-elixir-hex.yml"
+  pull_request:
+    paths:
+      - "build-elixir-hex/**"
+      - ".github/workflows/test-build-elixir-hex.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: erlef/setup-beam@v1.24
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      - name: Stage a tiny Rustler NIF + mix package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p packages/elixir/native/fixture_nif/src packages/elixir/lib
+          cat >packages/elixir/native/fixture_nif/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture_nif"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+
+          [workspace]
+
+          [lib]
+          name = "fixture_nif"
+          crate-type = ["cdylib"]
+
+          [dependencies]
+          rustler = "0.37"
+          TOML
+          cat >packages/elixir/native/fixture_nif/src/lib.rs <<'RS'
+          #[rustler::nif]
+          fn add(a: i64, b: i64) -> i64 { a + b }
+
+          rustler::init!("Elixir.FixtureNif");
+          RS
+          cat >packages/elixir/mix.exs <<'EX'
+          defmodule FixtureNif.MixProject do
+            use Mix.Project
+
+            def project do
+              [
+                app: :fixture_nif,
+                version: "0.0.1",
+                elixir: "~> 1.14",
+                description: "Fixture",
+                package: package(),
+                deps: deps()
+              ]
+            end
+
+            defp package do
+              [
+                licenses: ["MIT"],
+                links: %{"GitHub" => "https://example.invalid"},
+                files: ~w(mix.exs native/fixture_nif/Cargo.toml native/fixture_nif/Cargo.lock native/fixture_nif/src)
+              ]
+            end
+
+            defp deps do
+              [{:rustler, "~> 0.37.0", runtime: false}]
+            end
+          end
+          EX
+
+      # rewrite-native-deps is disabled: the fixture is a standalone crate with
+      # no workspace/alef.toml, so there is nothing to rewrite. The rewrite
+      # path is covered by tests/test_rewrite_native_deps.py + alef's own
+      # tests; here we validate the action's mix hex.build invocation, the
+      # dry-run cargo generate-lockfile fallback, and the archive-path output.
+      - name: Build Hex tarball via the action (dry-run, lockfile fallback)
+        id: build
+        uses: ./build-elixir-hex
+        with:
+          package-dir: packages/elixir
+          nif-crate-path: packages/elixir/native/fixture_nif
+          rewrite-native-deps: "false"
+          dry-run: "true"
+
+      - name: Verify tarball produced and lockfile generated
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la packages/elixir/
+          test -f packages/elixir/native/fixture_nif/Cargo.lock
+          test -n "$(ls packages/elixir/*.tar 2>/dev/null)"
+          test -n "${{ steps.build.outputs.archive-path }}"

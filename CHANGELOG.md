@@ -16,6 +16,27 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.3.0] - 2026-05-24
+
+### Added
+
+- `build-elixir-hex`: New composite action — the Hex source-package analog of
+  `build-python-sdist` / `build-ruby-gem`. It rewrites the Rustler NIF crate's
+  workspace path-dependencies to registry version-dependencies (via
+  `rewrite-native-deps`, default-on) and then runs `mix hex.build`, so the
+  published tarball compiles standalone on a consumer machine instead of failing
+  on missing workspace paths. On `dry-run: true` it skips the rewrite (the rc
+  version is not yet on crates.io) and falls back to `cargo generate-lockfile`
+  in the NIF crate directory so the `mix.exs` `files` list still finds the
+  required `<nif-crate-path>/Cargo.lock`. Replaces the hand-rolled inline
+  `mix deps.get` + `mix hex.build` step across the polyglot repos and bakes in
+  the dependency rewrite so it cannot be omitted. Ships with a
+  `test-build-elixir-hex` integration workflow that exercises the dry-run
+  lockfile fallback path end-to-end against a Rustler fixture. Surfaced by
+  html-to-markdown 3.5.0-rc.2 publish dry-run, which failed in `mix hex.build`
+  with `Missing files: native/html_to_markdown_nif/Cargo.lock` because the
+  ungenerated lockfile (gitignored) was never produced by an inline step.
+
 ## [1.2.1] - 2026-05-24
 
 ### Fixed

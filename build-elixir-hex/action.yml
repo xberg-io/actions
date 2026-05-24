@@ -1,0 +1,108 @@
+name: Build Elixir Hex source package
+description: >
+  Build the Elixir Hex source tarball (`mix hex.build`) for a Rustler NIF
+  package, after rewriting the NIF crate's workspace path-dependencies to
+  registry version-dependencies so the published tarball compiles standalone on
+  a consumer machine. The Hex analog of build-python-sdist / build-ruby-gem: it
+  bakes in the dependency rewrite so it can't be forgotten, and on dry-run
+  publishes (when the core crate is not yet on crates.io) it falls back to
+  `cargo generate-lockfile` to satisfy the `mix.exs` files-list requirement for
+  `<nif-crate-path>/Cargo.lock` without consulting the registry. The caller must
+  have set up Erlang/Elixir (e.g. via `setup-elixir@v1` or `erlef/setup-beam`)
+  and the Rust toolchain (e.g. via `setup-rust@v1`) before invoking this action.
+
+inputs:
+  package-dir:
+    description: "Elixir package directory containing mix.exs."
+    required: false
+    default: "packages/elixir"
+  nif-crate-path:
+    description: >
+      Path to the NIF crate's manifest directory (the crate referenced from
+      mix.exs's files list). Used for the dry-run Cargo.lock fallback.
+    required: false
+    default: "packages/elixir/native/html_to_markdown_nif"
+  rewrite-native-deps:
+    description: >
+      Rewrite workspace path-deps to registry version-deps before building, so
+      the tarball resolves on a consumer machine. Disable for non-release CI
+      that builds against the local workspace.
+    required: false
+    default: "true"
+  alef-version:
+    description: "Alef version for the dependency rewrite (passed to install-alef@v1)."
+    required: false
+    default: "latest"
+  dry-run:
+    description: >
+      Skip the rewrite-native-deps step when true. Dry-run publish workflows
+      run before the core crate is on crates.io, so requiring the registry
+      would hard-fail on a chicken-and-egg version lookup. The action still
+      generates a Cargo.lock via `cargo generate-lockfile` (resolved through
+      the workspace path-dep) so `mix hex.build` finds the file its
+      `mix.exs` files list requires.
+    required: false
+    default: "false"
+
+outputs:
+  archive-path:
+    description: "Absolute path to the produced .tar (Hex source tarball)."
+    value: ${{ steps.build.outputs.archive-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Rewrite native dependencies to registry versions
+      if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
+      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      with:
+        lang: elixir
+        alef-version: ${{ inputs.alef-version }}
+        require-registry: "true"
+
+    - name: Generate Cargo.lock for dry-run (path-resolved)
+      if: inputs.dry-run == 'true'
+      shell: bash
+      env:
+        INPUT_NIF_CRATE_PATH: ${{ inputs.nif-crate-path }}
+      run: |
+        set -euo pipefail
+        echo "Dry-run: generating ${INPUT_NIF_CRATE_PATH}/Cargo.lock via cargo generate-lockfile"
+        cd "${GITHUB_WORKSPACE}/${INPUT_NIF_CRATE_PATH}"
+        cargo generate-lockfile
+
+    - name: Install Hex and Rebar
+      shell: bash
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+
+    - name: Fetch mix dependencies
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        cd "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"
+        mix deps.get
+
+    - name: Build Hex tarball
+      id: build
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        # hex.build will not stay under the 128 MiB Hex upload limit if cargo
+        # target/ directories from local NIF compiles leak into the package
+        # tree; prune them before packaging.
+        find "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}/native" -type d -name target -prune -exec rm -rf {} + 2>/dev/null || true
+        cd "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"
+        mix hex.build
+        archive="$(ls -1 "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"/*.tar | head -n 1)"
+        if [ -z "${archive}" ]; then
+          echo "::error::mix hex.build did not produce a .tar archive in ${INPUT_PACKAGE_DIR}"
+          exit 1
+        fi
+        echo "archive-path=${archive}" >>"${GITHUB_OUTPUT}"
+        echo "Produced Hex tarball: ${archive}"
