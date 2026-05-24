@@ -76,7 +76,13 @@ def test_source_build_action_embeds_rewrite(action_dir: str, lang: str):
 
 @pytest.mark.parametrize(
     "action_dir",
-    ["build-elixir-natives", "build-php-extension", "build-python-sdist"],
+    [
+        "build-elixir-natives",
+        "build-elixir-hex",
+        "build-php-extension",
+        "build-python-sdist",
+        "build-ruby-gem",
+    ],
 )
 def test_source_build_action_skips_rewrite_on_dry_run(action_dir: str):
     content = _read(action_dir)

@@ -16,6 +16,19 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.3.1] - 2026-05-24
+
+### Fixed
+
+- `build-ruby-gem`: Added a `dry-run` input that, when `true`, skips the embedded
+  `rewrite-native-deps` step — closing the last gap in the source-build action
+  family (now consistent with `build-elixir-natives`, `build-elixir-hex`,
+  `build-php-extension`, `build-python-sdist`). Source-build Ruby gem builds in
+  publish dry-run mode now succeed without requiring the rc version to be on
+  crates.io. Surfaced during the v1.4.0-rc.31 publish dry-run audit, which
+  showed three call sites (Ruby native-gem, Elixir NIF, Ruby source-gem) using
+  the un-gated `rewrite-native-deps` directly in liter-llm's `publish.yaml`.
+
 ## [1.3.0] - 2026-05-24
 
 ### Added
