@@ -3,6 +3,9 @@
 
 Output filename: lib{nif-crate-name}-v{version}-nif-{api-version}-{target}.{so|dylib|dll}.tar.gz
 
+For musl targets (e.g., *-linux-musl), builds inside an Alpine container to avoid
+host linker incompatibilities. For other targets, builds natively on the host.
+
 Inputs (env vars):
     INPUT_TARGET: Rust target triple (required)
     INPUT_NIF_CRATE_NAME: cargo package name of NIF crate (default kreuzberg_nif)
@@ -23,6 +26,8 @@ import subprocess
 import sys
 import tarfile
 from pathlib import Path
+
+from musl_builder import build_or_fallback
 
 CHUNK_SIZE = 1 << 20
 
@@ -56,17 +61,8 @@ def detect_nif_api_version() -> str:
 
 
 def run_cargo_build(crate_path: Path, target: str) -> None:
-    cmd = [
-        "cargo",
-        "build",
-        "--manifest-path",
-        str(crate_path / "Cargo.toml"),
-        "--release",
-        "--target",
-        target,
-    ]
-    print(f"[build-elixir-natives] Running: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    """Build using musl Docker builder for musl targets, native build otherwise."""
+    build_or_fallback("kreuzberg_nif", target, manifest_path=crate_path / "Cargo.toml")
 
 
 def compute_sha256(path: Path) -> str:
