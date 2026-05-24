@@ -60,9 +60,9 @@ def detect_nif_api_version() -> str:
     return result.stdout.strip()
 
 
-def run_cargo_build(crate_path: Path, target: str) -> None:
+def run_cargo_build(crate_name: str, crate_path: Path, target: str) -> None:
     """Build using musl Docker builder for musl targets, native build otherwise."""
-    build_or_fallback("kreuzberg_nif", target, manifest_path=crate_path / "Cargo.toml")
+    build_or_fallback(crate_name, target, manifest_path=crate_path / "Cargo.toml")
 
 
 def compute_sha256(path: Path) -> str:
@@ -120,10 +120,10 @@ def main() -> None:
         write_github_output("archive-name", archive_name)
         return
 
-    run_cargo_build(nif_crate_path, target)
+    run_cargo_build(nif_crate_name, nif_crate_path, target)
 
     # The Rust crate produces the lib with platform-conventional name.
-    # Cargo cdylib for `kreuzberg_nif` produces `libkreuzberg_nif.{ext}` on unix, `kreuzberg_nif.dll` on windows.
+    # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.
     release_dir = cargo_release_dir(target)
     source_lib = release_dir / (f"{nif_crate_name}.dll" if ext == "dll" else f"lib{nif_crate_name}.{ext}")
     if not source_lib.is_file():

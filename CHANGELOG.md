@@ -16,6 +16,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.5.1] - 2026-05-24
+
+### Fixed
+
+- `build-elixir-natives`: build the NIF crate named by `nif-crate-name` instead
+  of the hardcoded `kreuzberg_nif`. The musl/alpine build rewrite left a literal
+  `cargo build -p kreuzberg_nif` in `scripts/build.py`, so every consumer whose
+  crate is not named `kreuzberg_nif` (e.g. `spikard_nif`) failed with cargo exit
+  101. Added a unit test asserting the configured crate name is threaded through.
+
 ## [1.5.0] - 2026-05-24
 
 ### Removed
