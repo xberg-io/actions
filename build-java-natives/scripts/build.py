@@ -78,8 +78,10 @@ def main() -> None:
         print(f"  lib:         {lib_filename}")
         print(f"  staging-dir: {staging_dir}")
         print(f"  library:     {staged_lib}")
-        write_github_output("library-path", str(staged_lib.resolve() if staged_lib.exists() else staged_lib))
-        write_github_output("staging-dir", str(staging_dir.resolve() if staging_dir.exists() else staging_dir))
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        staged_lib.write_bytes(b"")
+        write_github_output("library-path", str(staged_lib.resolve()))
+        write_github_output("staging-dir", str(staging_dir.resolve()))
         return
 
     run_cargo_build(crate_name, target)
