@@ -109,7 +109,17 @@ runs:
         "${cmd[@]}"
 
         if [[ "${DRY_RUN}" == "true" ]]; then
-          echo "[dry-run] alef publish package short-circuited; no archive produced."
+          echo "[dry-run] alef publish package short-circuited; creating placeholder outputs"
+          mkdir -p "${OUTPUT_DIR}"
+          # Create a dummy archive so downstream steps can locate a file
+          dummy_archive="${OUTPUT_DIR}/php_dryrun_${PHP_VERSION}_${TARGET}.tgz"
+          touch "${dummy_archive}"
+          dummy_sha="0000000000000000000000000000000000000000000000000000000000000000"
+          echo "${dummy_sha}" > "${dummy_archive}.sha256"
+
+          echo "archive-path=${dummy_archive}" >> "${GITHUB_OUTPUT}"
+          echo "archive-name=$(basename "${dummy_archive}")" >> "${GITHUB_OUTPUT}"
+          echo "sha256=${dummy_sha}" >> "${GITHUB_OUTPUT}"
           exit 0
         fi
 
