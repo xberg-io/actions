@@ -110,6 +110,14 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
 | `finalize-release` | Edit GH Release from draft → published, set/clear prerelease, optionally create Go module tag |
 | `announce-release-discord` | Post a release announcement to Discord (skips RC tags, dedup via release-asset marker) |
 
+### Test
+
+| Action | Description |
+|--------|-------------|
+| `run-test-apps` | Generate and run e2e fixture suite via `alef test-apps` for a published binding version. Used post-publish to validate bindings against their registry-installed versions. Handles alef-cli install, language toolchain setup, version pin override in `alef.toml`, and captures logs. |
+| `test-java-ffi` | Java Panama FFI test setup |
+| `run-api-contract-tests` | Run schemathesis property-based contract tests against a containerised API |
+
 ### Utility
 
 | Action | Description |
@@ -118,9 +126,7 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
 | `cache-binding-artifact` | Generic artifact caching for compiled bindings |
 | `cleanup-rust-cache` | Clean Rust build artifacts |
 | `restore-cargo-cache` | Restore Cargo cache |
-| `test-java-ffi` | Java Panama FFI test setup |
 | `check-docker-image-size` | Inspect a locally-loaded image, warn or fail on size threshold, write step summary |
-| `run-api-contract-tests` | Run schemathesis property-based contract tests against a containerised API |
 | `pack-source-bundle` | Tar+zstd a set of paths into a release-ready bundle with sha256 sidecar |
 
 ## Reusable Workflows
@@ -168,6 +174,36 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
   with:
     packages-dir: dist
     dry-run: "false"
+
+- uses: kreuzberg-dev/actions/run-test-apps@v1
+  with:
+    language: python
+    version: 0.3.0
+    alef-version: latest
+```
+
+Matrix usage for post-publish e2e validation:
+
+```yaml
+jobs:
+  test-bindings:
+    strategy:
+      matrix:
+        language: [python, node, ruby, php, go, java, csharp, dart, swift]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kreuzberg-dev/actions/run-test-apps@v1
+        with:
+          language: ${{ matrix.language }}
+          version: ${{ github.ref_name }}
+          alef-version: latest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs-${{ matrix.language }}
+          path: /tmp/test-apps-*.log
 ```
 
 ### Reusable workflows

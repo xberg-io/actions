@@ -6,6 +6,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
+- `run-test-apps`: composite action to verify a published binding by running its e2e fixture suite against the registry-installed version. Installs alef-cli, the target language toolchain, overrides the version pin in alef.toml, and invokes `alef test-apps generate` + `alef test-apps run`.
+
 ### Changed
 
 ### Fixed

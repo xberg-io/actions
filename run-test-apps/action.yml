@@ -1,0 +1,148 @@
+name: Run Test Apps
+description: >
+  Install alef-cli, setup language toolchain, override the test-app
+  version pin in alef.toml to a published version, and run the e2e
+  fixture suite via `alef test-apps generate` + `alef test-apps run`.
+  Used post-publish to validate a just-released binding version.
+
+inputs:
+  language:
+    description: >
+      Test-app language. One of: python, node, ruby, php, go, java,
+      csharp, elixir, dart, swift, wasm, zig, c, brew, r.
+    required: true
+  version:
+    description: >
+      Published version to test (e.g. 0.3.0-rc.28). Overrides
+      [crates.<crate>.e2e.registry.packages.<language>].version
+      before run.
+    required: true
+  working-directory:
+    description: >
+      Path to the repo root with alef.toml + test_apps/. Defaults
+      to current directory.
+    required: false
+    default: "."
+  alef-version:
+    description: >
+      alef-cli version: 'latest' (GitHub release), 'main' (source),
+      or semver tag.
+    required: false
+    default: "latest"
+  pre-run-command:
+    description: >
+      Optional shell command to run before the test-app suite (e.g.
+      to start a mock server). Runs in working-directory.
+    required: false
+    default: ""
+  setup-toolchain:
+    description: >
+      Install the language toolchain (true) or assume caller set it
+      up (false).
+    required: false
+    default: "true"
+
+outputs:
+  passed:
+    description: "true if the test-app suite passed, false otherwise"
+    value: ${{ steps.run.outputs.passed }}
+  exit-code:
+    description: "Exit code from alef test-apps run"
+    value: ${{ steps.run.outputs.exit-code }}
+  log-path:
+    description: >
+      Path to captured stdout/stderr from alef test-apps run.
+      Uploaded as an artifact in the caller's job.
+    value: ${{ steps.run.outputs.log-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install alef
+      uses: kreuzberg-dev/actions/install-alef@v1
+      with:
+        version: ${{ inputs.alef-version }}
+
+    - name: Setup Python
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'python' }}
+      uses: kreuzberg-dev/actions/setup-python-env@v1
+
+    - name: Setup Node.js
+      if: ${{ inputs.setup-toolchain == 'true' && (inputs.language == 'node' || inputs.language == 'wasm') }}
+      uses: kreuzberg-dev/actions/setup-node-workspace@v1
+
+    - name: Setup Ruby
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'ruby' }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "3.2"
+
+    - name: Setup PHP
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'php' }}
+      uses: kreuzberg-dev/actions/setup-php@v1
+
+    - name: Setup Go + CGo
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'go' }}
+      uses: kreuzberg-dev/actions/setup-go-cgo-env@v1
+
+    - name: Setup Java
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'java' }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: "temurin"
+        java-version: "17"
+
+    - name: Setup .NET
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "8"
+
+    - name: Setup Elixir
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'elixir' }}
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: "1.16"
+        otp-version: "27"
+
+    - name: Setup Dart
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'dart' }}
+      uses: dart-lang/setup-dart@v1
+
+    - name: Setup Swift
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'swift' }}
+      uses: swift-actions/setup-swift@v2
+
+    - name: Setup Zig
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'zig' }}
+      uses: mlugg/setup-zig@v1
+
+    - name: Setup R
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'r' }}
+      uses: r-lib/actions/setup-r@v2
+
+    - name: Setup Homebrew (Linux)
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'brew' && runner.os == 'Linux' }}
+      uses: kreuzberg-dev/actions/install-homebrew-linux@v1
+
+    - name: Override test-app version pin
+      shell: bash
+      env:
+        INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: python3 "${{ github.action_path }}/scripts/override_version.py"
+
+    - name: Pre-run hook
+      if: ${{ inputs.pre-run-command != '' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.pre-run-command }}
+
+    - name: Generate and run test-apps
+      id: run
+      shell: bash
+      env:
+        INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: bash "${{ github.action_path }}/scripts/run.sh"
