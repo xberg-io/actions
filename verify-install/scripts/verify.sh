@@ -131,12 +131,23 @@ csharp)
   ;;
 
 php)
-  if [[ "$INPUT_ARTIFACT_SOURCE" != "registry" && -n "$INPUT_LOCAL_PATH" ]]; then
-    echo "::group::Configure composer for local repository"
-    composer config repositories.local '{"type":"path","url":"'"$INPUT_LOCAL_PATH"'"}'
-    echo "::endgroup::"
+  # Step 1: install the extension via PIE. alef-generated test_apps emit an
+  # install.sh next to composer.json that calls `pie install` for the
+  # current platform; we just run it. PIE >= 1.3.7 (preferably 1.4.x)
+  # is required for array-form `php-ext.download-url-method` parsing.
+  if [[ -x "install.sh" || -f "install.sh" ]]; then
+    bash install.sh "$INPUT_VERSION"
+  else
+    echo "::warning::install.sh not found in $app_dir; assuming the extension is preinstalled"
   fi
+
+  # Step 2: composer install for the dev deps (phpunit, guzzle). Local
+  # composer.json should require `ext-liter_llm: "*"` (platform req) — not
+  # the actual package. Composer's platform resolver satisfies it from
+  # `php -m` once PIE has installed the .so.
   composer install --no-interaction --prefer-dist
+
+  # Step 3: smoke or full suite.
   if [[ "$INPUT_SMOKE_ONLY" == "true" ]]; then
     vendor/bin/phpunit tests/SmokeTest.php
   else
