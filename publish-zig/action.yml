@@ -17,6 +17,10 @@ inputs:
     description: "Directory containing build.zig.zon"
     required: false
     default: "."
+  package-name:
+    description: "Package name for the tarball. Defaults to .name from build.zig.zon."
+    required: false
+    default: ""
   tag:
     description: "Git tag to validate (defaults to GITHUB_REF_NAME on a tag push)"
     required: false
@@ -30,21 +34,31 @@ inputs:
     required: false
     default: "true"
   update-release-notes:
-    description: "Append the resolved tarball URL + SHA to the GitHub release notes"
+    description: "Append the resolved tarball URL + Zig hash to the GitHub release notes"
+    required: false
+    default: "false"
+  update-existing:
+    description: "Pass --clobber to gh release upload (overwrite existing asset)"
     required: false
     default: "false"
   dry-run:
-    description: "Skip release-notes update; only validate"
+    description: "Skip release asset upload and notes update; only validate"
     required: false
     default: "false"
 
 outputs:
   tarball-url:
-    description: "Resolved tarball URL for downstream `zig fetch --save`"
+    description: "Resolved release-asset tarball URL for downstream `zig fetch --save`"
     value: ${{ steps.resolve.outputs.tarball-url }}
+  zig-hash:
+    description: "Zig content multihash (from `zig fetch`) for build.zig.zon .hash field"
+    value: ${{ steps.resolve.outputs.zig-hash }}
   tarball-sha256:
-    description: "SHA-256 of the tarball (downstream consumers need this for build.zig.zon)"
+    description: "SHA-256 of the tarball (secondary reference)"
     value: ${{ steps.resolve.outputs.tarball-sha256 }}
+  package-name:
+    description: "Resolved package name used for the tarball"
+    value: ${{ steps.resolve.outputs.package-name }}
 
 runs:
   using: composite
@@ -88,6 +102,23 @@ runs:
           echo "Zig CLI not present; skipping --fetch validation"
         fi
 
+    - name: Resolve package name
+      id: pkg
+      shell: bash
+      env:
+        INPUT_PKG: ${{ inputs.package-name }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: |
+        if [[ -n "$INPUT_PKG" ]]; then
+          pkg="$INPUT_PKG"
+        else
+          # Parse .name from build.zig.zon
+          pkg=$(awk '/^\s*\.name\s*=\s*"/ {match($0, /"([^"]+)"/, arr); print arr[1]; exit}' "$WORKING_DIR/build.zig.zon")
+          [[ -n "$pkg" ]] || { echo "Error: unable to parse .name from build.zig.zon" >&2; exit 1; }
+        fi
+        echo "package-name=$pkg" >> "$GITHUB_OUTPUT"
+        echo "Resolved package name: $pkg"
+
     - name: Verify tag is fetchable
       if: inputs.dry-run != 'true'
       shell: bash
@@ -101,27 +132,90 @@ runs:
           exit 1
         fi
 
-    - name: Resolve tarball URL + SHA-256
+    - name: Package Zig
+      id: package
+      shell: bash
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
+        PKG_NAME: ${{ steps.pkg.outputs.package-name }}
+        TAG: ${{ steps.tag.outputs.tag }}
+      run: |
+        # Extract version from tag (strip 'v' prefix if present)
+        version="${TAG#v}"
+        tarball_name="${PKG_NAME}-v${version}.tar.gz"
+        tarball_path="$RUNNER_TEMP/$tarball_name"
+
+        echo "Packaging $PKG_NAME as $tarball_name..."
+
+        # Create a deterministic tarball: gzip -n for reproducibility,
+        # sorted file list, exclude build artifacts and .git
+        cd "$WORKING_DIR"
+        find . -type f \
+          ! -path './.zig-cache/*' \
+          ! -path './zig-out/*' \
+          ! -path './.git/*' \
+          | sort | tar -czn -T - -f "$tarball_path"
+
+        echo "Tarball created: $tarball_path ($(stat -f%z "$tarball_path" 2>/dev/null || stat -c%s "$tarball_path") bytes)"
+        echo "tarball-path=$tarball_path" >> "$GITHUB_OUTPUT"
+        echo "tarball-name=$tarball_name" >> "$GITHUB_OUTPUT"
+
+    - name: Upload release asset
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        TAG: ${{ steps.tag.outputs.tag }}
+        TARBALL_PATH: ${{ steps.package.outputs.tarball-path }}
+        TARBALL_NAME: ${{ steps.package.outputs.tarball-name }}
+        UPDATE_EXISTING: ${{ inputs.update-existing }}
+      run: |
+        echo "Uploading release asset: $TARBALL_NAME"
+        if [[ "$UPDATE_EXISTING" == "true" ]]; then
+          gh release upload "$TAG" "$TARBALL_PATH" --clobber
+        else
+          gh release upload "$TAG" "$TARBALL_PATH"
+        fi
+        echo "Asset uploaded successfully"
+
+    - name: Resolve Zig hash + URLs
       id: resolve
       shell: bash
       env:
         TAG: ${{ steps.tag.outputs.tag }}
+        PKG_NAME: ${{ steps.pkg.outputs.package-name }}
+        TARBALL_NAME: ${{ steps.package.outputs.tarball-name }}
         DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
-        echo "Tarball URL: $url"
+        # Extract version from tag
+        version="${TAG#v}"
+
+        # Construct the release-asset tarball URL
+        asset_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}/${TARBALL_NAME}"
+        echo "Tarball URL: $asset_url"
 
         if [[ "$DRY_RUN" == "true" ]]; then
-          # In dry-run the tag does not exist on the remote, so the tarball
-          # download will 404. Skip the SHA computation entirely.
-          sha="(dry-run: tarball SHA not computed)"
+          # In dry-run, skip actual zig fetch (asset doesn't exist yet)
+          hash="(dry-run: zig hash not computed)"
+          sha256="(dry-run: tarball SHA not computed)"
         else
-          sha=$(curl -sSL -m 60 "$url" | sha256sum | awk '{print $1}')
-        fi
-        echo "Tarball SHA-256: $sha"
+          # Compute Zig content multihash from the release-asset URL
+          # using a fresh temp directory (not the working-directory)
+          scratch=$(mktemp -d)
+          trap "rm -rf $scratch" EXIT
 
-        echo "tarball-url=$url" >> "$GITHUB_OUTPUT"
-        echo "tarball-sha256=$sha" >> "$GITHUB_OUTPUT"
+          hash=$(cd "$scratch" && zig fetch "$asset_url" 2>/dev/null | head -1)
+          [[ -n "$hash" ]] || { echo "Error: zig fetch did not produce a hash" >&2; exit 1; }
+          echo "Zig content hash: $hash"
+
+          # Also compute the gzipped tarball SHA-256 as a secondary output
+          sha256=$(curl -sSL -m 60 "$asset_url" | sha256sum | awk '{print $1}')
+          echo "Tarball SHA-256: $sha256"
+        fi
+
+        echo "tarball-url=$asset_url" >> "$GITHUB_OUTPUT"
+        echo "zig-hash=$hash" >> "$GITHUB_OUTPUT"
+        echo "tarball-sha256=$sha256" >> "$GITHUB_OUTPUT"
+        echo "package-name=$PKG_NAME" >> "$GITHUB_OUTPUT"
 
     - name: Append to release notes
       if: inputs.update-release-notes == 'true' && inputs.dry-run != 'true'
@@ -129,8 +223,9 @@ runs:
       env:
         GH_TOKEN: ${{ env.GH_TOKEN }}
         TAG: ${{ steps.tag.outputs.tag }}
+        PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}
-        SHA: ${{ steps.resolve.outputs.tarball-sha256 }}
+        HASH: ${{ steps.resolve.outputs.zig-hash }}
       run: |
         if [[ -z "${GH_TOKEN:-}" ]]; then
           echo "GH_TOKEN not set; skipping release-notes update"
@@ -139,7 +234,7 @@ runs:
         body=$(gh release view "$TAG" --json body -q .body 2>/dev/null || echo "")
         # Append a Zig fetch block (idempotent: only append once).
         if ! echo "$body" | grep -q "<!-- zig-fetch -->"; then
-          new_body="$body"$'\n\n<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .'"$(jq -r '.repository' < /dev/null 2>/dev/null || echo "spikard")"' = .{\n        .url = \"'"$URL"'\",\n        .hash = \"'"$SHA"'\",\n    },\n},\n```\n'
+          new_body="$body"$'\n\n<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .'"$PKG_NAME"' = .{\n        .url = \"'"$URL"'\",\n        .hash = \"'"$HASH"'\",\n    },\n},\n```\n'
           gh release edit "$TAG" --notes "$new_body"
           echo "Release notes updated with Zig fetch block"
         else
@@ -151,9 +246,11 @@ runs:
       shell: bash
       env:
         TAG: ${{ steps.tag.outputs.tag }}
+        PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}
-        SHA: ${{ steps.resolve.outputs.tarball-sha256 }}
+        HASH: ${{ steps.resolve.outputs.zig-hash }}
       run: |
         echo "[dry-run] Resolved Zig package metadata for $TAG:"
-        echo "  url:  $URL"
-        echo "  sha256: $SHA"
+        echo "  package:  $PKG_NAME"
+        echo "  url:      $URL"
+        echo "  zig-hash: $HASH"
