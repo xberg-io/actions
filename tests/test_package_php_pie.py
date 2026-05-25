@@ -38,6 +38,8 @@ def test_action_appends_alef_dry_run_flag_when_input_is_true():
 
 def test_action_skips_archive_check_in_dry_run():
     content = _read()
-    # In dry-run alef produces no archive, so the archive-finding logic must
-    # short-circuit cleanly instead of failing on the missing tgz/zip.
-    assert "alef publish package short-circuited; no archive produced" in content
+    # In dry-run alef produces no archive, so the action stages a placeholder
+    # tgz + sha256 sidecar so downstream steps that locate a file by path
+    # still resolve, then short-circuits before the real archive-finding logic.
+    assert "alef publish package short-circuited; creating placeholder outputs" in content
+    assert 'touch "${dummy_archive}"' in content
