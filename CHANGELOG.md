@@ -10,6 +10,14 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `build-csharp-natives`, `build-java-natives`, `build-elixir-natives`: fix
+  musl linker detection in Alpine container. The `rust:1-alpine3.21` image is
+  itself musl-based, so plain `gcc` produces musl-linked binaries. However,
+  `rustc` was defaulting to the linker binary `musl-gcc`, which does not exist
+  in the container, causing builds to fail with `error: linker \`musl-gcc\` not
+  found`. Set `CARGO_TARGET_<TARGET>_LINKER=gcc` as a target-specific env var
+  in the inline docker build command so rustc routes to the available linker.
+
 ### Deprecated
 
 ### Removed

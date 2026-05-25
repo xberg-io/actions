@@ -70,6 +70,9 @@ def build_in_docker(
             env_flags.extend(["-e", f"{key}={val}"])
 
     # Docker command: mount repo, install toolchain, build
+    # rust:1-alpine3.21 is itself musl-based, so plain gcc produces musl binaries.
+    # Set target-specific linker env var to point rustc at gcc instead of musl-gcc.
+    linker_env_var = f"CARGO_TARGET_{target.upper().replace('-', '_')}_LINKER=gcc"
     docker_cmd = [
         "docker",
         "run",
@@ -87,7 +90,7 @@ set -e
 apk add --no-cache \\
   curl gcc musl-dev openssl-dev perl linux-headers
 rustup target add {target}
-{" ".join(build_cmd)}
+{linker_env_var} {" ".join(build_cmd)}
 """,
     ]
 
