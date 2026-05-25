@@ -23,8 +23,12 @@ trap 'rm -rf "$work_dir"' EXIT
 cd "$work_dir"
 
 echo "::group::brew env"
+# Temporarily disable pipefail for diagnostic commands that may produce broken pipes
+# on some runners (especially arm64 Linux) due to output buffering issues
+set +o pipefail
 brew --version
 brew config | head -20 || true
+set -o pipefail
 echo "::endgroup::"
 
 echo "::group::Tap ${tap}"
