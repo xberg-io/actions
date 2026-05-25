@@ -16,7 +16,7 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
-## [1.6.9] - 2026-05-25
+## [1.6.10] - 2026-05-25
 
 ### Fixed
 
