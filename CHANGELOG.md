@@ -6,8 +6,6 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
-- `run-test-apps`: composite action to verify a published binding by running its e2e fixture suite against the registry-installed version. Installs alef-cli, the target language toolchain, overrides the version pin in alef.toml, and invokes `alef test-apps generate` + `alef test-apps run`.
-
 ### Changed
 
 ### Fixed
@@ -17,6 +15,17 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 ### Removed
 
 ### Security
+
+## [1.7.1] - 2026-05-25
+
+### Added
+
+- `run-test-apps`: composite action to verify a published binding by running its e2e fixture suite against the registry-installed version. Installs alef-cli, the target language toolchain, overrides the version pin in alef.toml, and invokes `alef test-apps generate` + `alef test-apps run`. Reports per-language pass/fail and uploads test-run logs as artifacts on failure.
+
+### Fixed
+
+- `run-test-apps`: preserve the `alef test-apps run` exit code through the `| tee` log redirect via `set -o pipefail` + `${PIPESTATUS[0]}`. Previously `tee`'s exit code (always 0) masked failing suites as passes. Also fail loudly on tomlkit install errors instead of silently degrading to an `ImportError`.
+- `publish-zig`: accept enum-literal `.name` in `build.zig.zon` for Zig 0.14+ compatibility (Zig 0.14 changed the manifest schema so `.name = .foo` replaces the old `.name = "foo"` syntax).
 
 ## [1.6.12] - 2026-05-25
 
