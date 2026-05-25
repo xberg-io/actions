@@ -10,6 +10,13 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `build-elixir-natives`: fix release directory lookup for NIF crates with
+  workspace Cargo.toml. When the NIF crate declares its own `[workspace]`
+  section, cargo writes the compiled library to `<crate-path>/target/<triple>/release/`
+  instead of the repository root `target/<triple>/release/`. The script now
+  resolves the release directory relative to `nif_crate_path` rather than the
+  repository root, fixing failures on Windows (and potentially other platforms)
+  when the NIF crate has its own workspace configuration.
 - `build-csharp-natives`, `build-java-natives`, `build-elixir-natives`: fix
   musl linker detection in Alpine container. The `rust:1-alpine3.21` image is
   itself musl-based, so plain `gcc` produces musl-linked binaries. However,

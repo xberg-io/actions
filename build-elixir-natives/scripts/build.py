@@ -40,8 +40,8 @@ def lib_extension(target: str) -> str:
     return "so"
 
 
-def cargo_release_dir(target: str) -> Path:
-    return Path("target") / target / "release"
+def cargo_release_dir(crate_path: Path, target: str) -> Path:
+    return crate_path / "target" / target / "release"
 
 
 def detect_nif_api_version() -> str:
@@ -124,7 +124,7 @@ def main() -> None:
 
     # The Rust crate produces the lib with platform-conventional name.
     # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.
-    release_dir = cargo_release_dir(target)
+    release_dir = cargo_release_dir(nif_crate_path, target)
     source_lib = release_dir / (f"{nif_crate_name}.dll" if ext == "dll" else f"lib{nif_crate_name}.{ext}")
     if not source_lib.is_file():
         print(f"Error: built NIF library not found at {source_lib}", file=sys.stderr)
