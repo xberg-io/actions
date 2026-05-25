@@ -204,11 +204,15 @@ runs:
           hash="(dry-run: zig hash not computed)"
           sha256="(dry-run: tarball SHA not computed)"
         else
-          # Compute Zig content multihash from the release-asset URL
-          # using a fresh temp directory (not the working-directory)
+          # Compute Zig content multihash from the release-asset URL using
+          # a fresh, initialized Zig project (not the working-directory).
+          # `zig fetch` walks up the directory tree looking for a build.zig
+          # and exits with an error if none is found, so the scratch dir
+          # must be bootstrapped via `zig init` before the fetch call.
           scratch=$(mktemp -d)
           trap "rm -rf $scratch" EXIT
 
+          (cd "$scratch" && zig init >/dev/null 2>&1)
           hash=$(cd "$scratch" && zig fetch "$asset_url" 2>/dev/null | head -1)
           [[ -n "$hash" ]] || { echo "Error: zig fetch did not produce a hash" >&2; exit 1; }
           echo "Zig content hash: $hash"
