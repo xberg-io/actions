@@ -33,7 +33,7 @@ runs:
   steps:
     - name: Set up Dart SDK
       if: inputs.setup-dart == 'true'
-      uses: dart-lang/setup-dart@v1.7.2
+      uses: dart-lang/setup-dart@v1
       with:
         sdk: ${{ inputs.dart-version }}
 

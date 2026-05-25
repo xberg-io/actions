@@ -53,6 +53,6 @@ runs:
 
     - name: Setup Chrome (non-arm64)
       if: steps.detect.outputs.linux_arm64 != 'true'
-      uses: browser-actions/setup-chrome@v1.7.3
+      uses: browser-actions/setup-chrome@v1
       with:
         chrome-version: ${{ inputs.chrome-version }}

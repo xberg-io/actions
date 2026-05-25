@@ -10,6 +10,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+### Deprecated
+
+### Removed
+
+### Security
+
+## [1.6.12] - 2026-05-25
+
+### Fixed
+
 - `build-csharp-natives`, `build-java-natives`, `build-elixir-natives`: inject
   `RUSTFLAGS="-C target-feature=-crt-static"` into the Alpine Docker build for
   `*-linux-musl` targets. The default musl rust toolchain enables `+crt-static`,
@@ -19,15 +29,11 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
   cdylib output while keeping the bin/staticlib crate types working. The merged
   `env_vars` dict still wins, so callers can override.
 
-### Deprecated
-
 ### Removed
 
 - `publish-swift`: remove the metadata-only Swift Package Index ping action.
   Swift packages are distributed directly from Git tags, so downstream release
   workflows should keep package build/smoke checks and drop SPI ping jobs.
-
-### Security
 
 ## [1.6.11] - 2026-05-25
 

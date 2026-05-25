@@ -41,7 +41,7 @@ runs:
   steps:
     - name: Set up BEAM (Erlang/OTP + Gleam)
       if: inputs.setup-beam == 'true'
-      uses: erlef/setup-beam@v1.24
+      uses: erlef/setup-beam@v1
       with:
         otp-version: ${{ inputs.otp-version }}
         gleam-version: ${{ inputs.gleam-version }}
