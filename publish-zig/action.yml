@@ -112,8 +112,14 @@ runs:
         if [[ -n "$INPUT_PKG" ]]; then
           pkg="$INPUT_PKG"
         else
-          # Parse .name from build.zig.zon
+          # Parse .name from build.zig.zon. Zig 0.14+ accepts enum-literal
+          # names (`.name = .foo`) alongside the legacy quoted form
+          # (`.name = "foo"`). Try the quoted form first; fall back to the
+          # enum-literal form so both layouts resolve.
           pkg=$(awk '/^\s*\.name\s*=\s*"/ {match($0, /"([^"]+)"/, arr); print arr[1]; exit}' "$WORKING_DIR/build.zig.zon")
+          if [[ -z "$pkg" ]]; then
+            pkg=$(awk '/^\s*\.name\s*=\s*\./ {match($0, /\.name\s*=\s*\.([A-Za-z_][A-Za-z0-9_]*)/, arr); print arr[1]; exit}' "$WORKING_DIR/build.zig.zon")
+          fi
           [[ -n "$pkg" ]] || { echo "Error: unable to parse .name from build.zig.zon" >&2; exit 1; }
         fi
         echo "package-name=$pkg" >> "$GITHUB_OUTPUT"
