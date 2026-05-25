@@ -10,6 +10,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`homebrew-merge-bottles`: strip ALL existing bottle blocks (any scope) before inserting fresh one.** Old GoReleaser-bootstrapped formulas (e.g. `kreuzberg-dev/tap/alef`) accreted `bottle do … end` blocks at file-level scope — outside the `class < Formula … end` body. `brew bottle` then failed with `undefined method 'bottle' for module Formulary::FormulaNamespace…` because the DSL call lives where no Formula receiver is bound. The merge script previously replaced only the *first* matched block (`count=1`) and required a trailing `\n` after the closing `end` (so trailing-without-newline blocks were missed). Now: regex matches `end(?:\n|\Z)` (covers trailing block without newline), and the replace step strips *every* bottle block in the file before inserting one fresh block immediately after the `license` line — guaranteed inside the class. Triple+ blank lines from the strip are collapsed. (`homebrew-merge-bottles/scripts/merge-bottles.sh`)
+
 ### Deprecated
 
 ### Removed

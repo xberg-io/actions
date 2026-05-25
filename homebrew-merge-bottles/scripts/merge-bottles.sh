@@ -85,18 +85,29 @@ path, block = sys.argv[1], sys.argv[2]
 with open(path) as fh:
     content = fh.read()
 
-bottle_re = re.compile(r"^[ \t]*bottle do\b.*?^[ \t]*end\n", re.MULTILINE | re.DOTALL)
+# Strip EVERY existing `bottle do ... end` block from the file. Older
+# formulas (especially ones bootstrapped by GoReleaser) sometimes accreted
+# multiple bottle blocks at file-level scope — *outside* the `class … end`
+# — which causes `brew bottle` to fail with
+# `undefined method 'bottle' for module Formulary::FormulaNamespace…`.
+# Removing all matches and re-inserting one fresh block inside the class
+# fixes both the duplicate-block and the wrong-scope cases.
+bottle_re = re.compile(r"^[ \t]*bottle do\b.*?^[ \t]*end(?:\n|\Z)", re.MULTILINE | re.DOTALL)
+stripped = bottle_re.sub("", content)
 
-if bottle_re.search(content):
-    new_content = bottle_re.sub(block + "\n", content, count=1)
-else:
-    license_re = re.compile(r"^([ \t]*license [^\n]*\n)", re.MULTILINE)
-    m = license_re.search(content)
-    if not m:
-        sys.stderr.write(f"ERROR: cannot find license line in {path}\n")
-        sys.exit(1)
-    insert_at = m.end()
-    new_content = content[:insert_at] + "\n" + block + "\n" + content[insert_at:]
+# Insert the fresh block immediately after the `license` line so it lands
+# inside the `class < Formula` body (license is a Formula DSL call, so it
+# must be inside the class).
+license_re = re.compile(r"^([ \t]*license [^\n]*\n)", re.MULTILINE)
+m = license_re.search(stripped)
+if not m:
+    sys.stderr.write(f"ERROR: cannot find license line in {path}\n")
+    sys.exit(1)
+insert_at = m.end()
+new_content = stripped[:insert_at] + "\n" + block + "\n" + stripped[insert_at:]
+
+# Collapse any triple+ blank lines created by stripping outside-class blocks.
+new_content = re.sub(r"\n{3,}", "\n\n", new_content)
 
 with open(path, "w") as fh:
     fh.write(new_content)
