@@ -6,9 +6,7 @@ description: >
   under `target/<profile>/build/<crate>-*/out/`, and syncs them into the
   Swift package's `Sources/RustBridgeC/` (combined C header) and
   `Sources/RustBridge/` (Swift bridge files, with `import RustBridgeC`
-  prepended). After this action runs the package is ready for tagging and
-  Swift Package Index notification (e.g. via
-  `kreuzberg-dev/actions/publish-swift@v1`).
+  prepended). After this action runs the package is ready for tagging.
 
   Assumes the calling workflow has already checked out the repo and set up
   Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`).

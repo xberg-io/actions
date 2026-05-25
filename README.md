@@ -79,7 +79,6 @@ to print the command without executing.
 | `publish-hex` | Hex.pm | `HEX_API_KEY` | Elixir packages via `mix hex.publish` |
 | `publish-gleam` | Hex.pm | `HEX_API_KEY` | Gleam packages via `gleam publish`; reuses the same `HEX_API_KEY` as `publish-hex` |
 | `publish-pub` | pub.dev | OIDC trusted publisher | Dart packages; requires a one-time pub.dev claim of the package |
-| `publish-swift` | Swift Package Index | none | Validates `Package.swift` + tag, pings SPI to expedite re-index |
 | `publish-zig` | Git tag | none | Validates `build.zig.zon` + tag; emits the tarball SHA-256 downstream consumers need for `build.zig.zon`'s `hash` field; can append a fetch snippet to the GH release notes |
 | `publish-homebrew-source-formulas` | Homebrew tap | `HOMEBREW_TOKEN` | Render source formulas from release assets |
 | `publish-github-release` | GitHub Releases | `GITHUB_TOKEN` | Release-asset uploads |
@@ -88,14 +87,13 @@ to print the command without executing.
 **Idempotency contract.** Each `publish-*` action either:
 
 1. Detects "already published" output from the underlying tool (case-insensitive grep) and exits 0 with `skipped=true`, **or**
-2. Has no side effect to be idempotent about — `publish-swift` and `publish-zig` are Git-tag-only and re-running them is naturally a no-op.
+2. Has no registry side effect to be idempotent about — `publish-zig` is Git-tag-only and re-running it is naturally a no-op.
 
 Pair with `check-registry` to skip the publish step entirely when the version
 is already live (pre-flight gate; faster than relying on publish-time
 idempotency, since the build/auth steps are skipped too). `check-registry`
 covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
-`packagist`, `homebrew`, and `github-release` (the last for `swift`/`zig`
-tag-based publishes).
+`packagist`, `homebrew`, and `github-release`.
 
 ### Release Infrastructure
 

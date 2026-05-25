@@ -23,6 +23,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Removed
 
+- `publish-swift`: remove the metadata-only Swift Package Index ping action.
+  Swift packages are distributed directly from Git tags, so downstream release
+  workflows should keep package build/smoke checks and drop SPI ping jobs.
+
 ### Security
 
 ## [1.6.11] - 2026-05-25

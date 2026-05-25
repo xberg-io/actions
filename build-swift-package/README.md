@@ -7,8 +7,7 @@ generated headers and Swift sources under
 `target/<profile>/build/<crate>-*/out/`, and syncs them into the Swift
 package's `Sources/RustBridgeC/` (combined C header) and `Sources/RustBridge/`
 (Swift wrappers with `import RustBridgeC` prepended). After this action
-runs, the package is ready for `git tag` plus a Swift Package Index ping
-(see `kreuzberg-dev/actions/publish-swift`).
+runs, the package is ready for a Git tag.
 
 ## Usage
 

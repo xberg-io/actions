@@ -280,31 +280,6 @@ jobs:
           setup-dart: "false"
           dry-run: "true"
 
-  test-publish-swift-dry-run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Stage a minimal Package.swift
-        run: |
-          mkdir -p pkg
-          cat >pkg/Package.swift <<'SWIFT'
-          // swift-tools-version:5.10
-          import PackageDescription
-          let package = Package(name: "DryRun")
-          SWIFT
-
-      - name: Test publish-swift (dry-run)
-        uses: ./publish-swift
-        with:
-          working-directory: pkg
-          tag: v1.0.0
-          setup-swift: "false"
-          ping-spi: "false"
-          dry-run: "true"
-
   test-publish-zig-dry-run:
     runs-on: ubuntu-latest
     steps:
