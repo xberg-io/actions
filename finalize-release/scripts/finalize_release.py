@@ -123,6 +123,13 @@ def gh_create_tag(repo: str, tag: str, sha: str) -> bool:
         return True
     if "Reference already exists" in result.stderr or "422" in result.stderr:
         return False
+    # Check for permission errors (403 Forbidden)
+    if "403" in result.stderr or "Resource not accessible" in result.stderr:
+        raise RuntimeError(
+            f"failed to create tag {tag}: insufficient permissions. "
+            f"The release-finalize job requires `permissions: contents: write`. "
+            f"Error: {result.stderr}"
+        )
     raise RuntimeError(f"failed to create tag {tag}: {result.stderr}")
 
 
@@ -199,8 +206,9 @@ def main() -> None:
             else:
                 summary.append(f"- Go module tag already exists: `{module_tag}`")
         except RuntimeError as exc:
-            print(f"Warning: Go module tag creation failed: {exc}", file=sys.stderr)
-            summary.append(f"- ⚠ Go module tag creation failed: {exc}")
+            print(f"Error: Go module tag creation failed: {exc}", file=sys.stderr)
+            write_summary(summary)
+            sys.exit(1)
 
     write_summary(summary)
     write_output("finalized", finalized_status)
