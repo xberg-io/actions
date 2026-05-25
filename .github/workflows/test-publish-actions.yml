@@ -15,9 +15,9 @@ jobs:
   test-publish-npm-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6.4.0
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
 
@@ -38,7 +38,7 @@ jobs:
   test-publish-pypi-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Create dummy dist directory
         run: |
@@ -54,7 +54,7 @@ jobs:
   test-publish-rubygems-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Create dummy gem
         run: |
@@ -78,7 +78,7 @@ jobs:
   test-publish-github-release-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Test publish-github-release (dry-run)
         uses: ./publish-github-release
@@ -90,7 +90,7 @@ jobs:
   test-publish-nuget-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Create dummy nupkg
         run: |
@@ -106,7 +106,7 @@ jobs:
   test-publish-packagist-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Test publish-packagist (dry-run)
         uses: ./publish-packagist
@@ -120,9 +120,9 @@ jobs:
   test-publish-crates-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1.16.1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache: false
 
@@ -143,9 +143,9 @@ jobs:
   test-wait-for-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6.4.0
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
 
@@ -176,9 +176,9 @@ jobs:
   test-publish-gleam-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: erlef/setup-beam@v1.24
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: "27"
           gleam-version: "1.6"
@@ -196,9 +196,9 @@ jobs:
   test-publish-hex-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: erlef/setup-beam@v1.24
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: "27"
           elixir-version: "1.17"
@@ -215,9 +215,9 @@ jobs:
   test-publish-maven-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v5.2.0
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -246,7 +246,7 @@ jobs:
   test-publish-maven-gradle-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Stage a minimal Gradle project dir
         run: |
@@ -264,9 +264,9 @@ jobs:
   test-publish-pub-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: dart-lang/setup-dart@v1.7.2
+      - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
 
@@ -283,7 +283,7 @@ jobs:
   test-publish-swift-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -308,7 +308,7 @@ jobs:
   test-publish-zig-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -335,7 +335,7 @@ jobs:
   test-publish-helm-chart-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Stage a minimal helm chart
         run: |

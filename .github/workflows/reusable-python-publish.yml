@@ -22,9 +22,9 @@ jobs:
       name: pypi
       url: https://pypi.org/p/${{ inputs.package-name }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v7.6
+      - uses: astral-sh/setup-uv@v7
 
       - name: Build package
         run: uv build

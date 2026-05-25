@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       # Stage a Cargo.lock so the action's hash step has something to hash.
       # Without one it falls back to the literal "no-lock" key — also valid

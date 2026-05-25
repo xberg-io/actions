@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       # Use a known-good public release in the kreuzberg-dev org that has
       # stable named assets. v0.15.10 of alef ships at least one

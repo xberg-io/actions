@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       # Petstore v3 is a known-good OpenAPI 3.0 demo image that serves
       # /openapi.json on its bound port (default 8080). We bind to 8000 to
