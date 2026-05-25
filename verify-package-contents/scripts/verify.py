@@ -157,11 +157,7 @@ def list_archive(path: Path) -> list[str]:
 
 def find_archives_in_directory(directory: Path) -> list[Path]:
     """Find all archive files matching supported extensions in directory (recursive)."""
-    supported_extensions = (
-        ".whl", ".jar", ".nupkg", ".zip",
-        ".tar.gz", ".tgz", ".crate",
-        ".gem", ".tar"
-    )
+    supported_extensions = (".whl", ".jar", ".nupkg", ".zip", ".tar.gz", ".tgz", ".crate", ".gem", ".tar")
     archives = []
     for archive in directory.rglob("*"):
         if archive.is_file() and archive.name.lower().endswith(supported_extensions):
@@ -179,6 +175,37 @@ def match_patterns(files: list[str], patterns: list[str]) -> tuple[list[str], li
         else:
             missing.append(pat)
     return matched, missing
+
+
+def verify_archive(
+    archive: Path,
+    patterns: list[str],
+    artifact_root: Path,
+    strict: bool,
+) -> tuple[int, int, set[str], bool]:
+    """Verify one archive against the pattern allowlist.
+
+    Returns (files_count, matched_count, missing_patterns, had_error).
+    Hoisting per-archive logic out of the caller's loop lets the broad
+    Exception handler live at function-call scope (PERF203 fix).
+    """
+    try:
+        files = list_archive(archive)
+        matched, missing = match_patterns(files, patterns)
+
+        label = archive.relative_to(artifact_root) if artifact_root.is_dir() else archive.name
+        print(f"::group::Archive: {label}")
+        print(f"Files: {len(files)}, Matched: {len(matched)}, Missing: {len(missing)}")
+        if missing:
+            for m in missing:
+                print(f"  - {m}")
+        print("::endgroup::")
+
+        had_error = bool(missing and strict)
+    except Exception as e:
+        print(f"::error::Failed to verify {archive}: {e}")
+        return 0, 0, set(), True
+    return len(files), len(matched), set(missing), had_error
 
 
 def main() -> int:
@@ -220,25 +247,11 @@ def main() -> int:
     had_error = False
 
     for archive in archives:
-        try:
-            files = list_archive(archive)
-            matched, missing = match_patterns(files, patterns)
-            total_files += len(files)
-            total_matched += len(matched)
-            all_missing.update(missing)
-
-            print(f"::group::Archive: {archive.relative_to(artifact.parent) if artifact.is_dir() else archive.name}")
-            print(f"Files: {len(files)}, Matched: {len(matched)}, Missing: {len(missing)}")
-            if missing:
-                for m in missing:
-                    print(f"  - {m}")
-            print("::endgroup::")
-
-            if missing and strict:
-                had_error = True
-        except Exception as e:
-            print(f"::error::Failed to verify {archive}: {e}")
-            had_error = True
+        files_count, matched_count, missing, archive_error = verify_archive(archive, patterns, artifact, strict)
+        total_files += files_count
+        total_matched += matched_count
+        all_missing.update(missing)
+        had_error = had_error or archive_error
 
     # Aggregate output
     print(f"::group::Verification summary — {language}")
