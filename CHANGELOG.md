@@ -16,6 +16,20 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.6.11] - 2026-05-25
+
+### Fixed
+
+- `build-elixir-natives`: resolve the built NIF library's release directory from
+  `cargo metadata`'s `target_directory` instead of assuming `<crate>/target`. The
+  NIF crate builds into its own `target/` only when its `Cargo.toml` is a
+  standalone workspace; when its path-deps (or the `rewrite-native-deps`
+  prepublish step) make it a member of the parent workspace — or when
+  `CARGO_TARGET_DIR`/`.cargo/config.toml` redirect it — the lib lands in the
+  parent's `target/`, so the crate-relative assumption (v1.6.x) failed with
+  `built NIF library not found`. Now queried from cargo, with a crate-local
+  fallback when `cargo metadata` is unavailable.
+
 ## [1.6.10] - 2026-05-25
 
 ### Fixed

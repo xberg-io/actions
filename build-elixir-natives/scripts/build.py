@@ -20,6 +20,7 @@ Inputs (env vars):
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -40,8 +41,32 @@ def lib_extension(target: str) -> str:
     return "so"
 
 
+def cargo_target_dir(manifest_path: Path) -> Path:
+    """Resolve the manifest's actual cargo target directory.
+
+    The NIF crate builds into its own `target/` when its Cargo.toml is a
+    standalone workspace, but into the *parent* workspace's `target/` when its
+    path-deps (or the `rewrite-native-deps` prepublish step) make it a member of
+    the parent workspace; `CARGO_TARGET_DIR` / `.cargo/config.toml` can redirect
+    it too. Rather than assume a layout, ask cargo so the built lib is found
+    wherever cargo actually wrote it.
+    """
+    result = subprocess.run(
+        ["cargo", "metadata", "--no-deps", "--format-version", "1", "--manifest-path", str(manifest_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return Path(json.loads(result.stdout)["target_directory"])
+
+
 def cargo_release_dir(crate_path: Path, target: str) -> Path:
-    return crate_path / "target" / target / "release"
+    try:
+        base = cargo_target_dir(crate_path / "Cargo.toml")
+    except (FileNotFoundError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        # Fall back to the crate-local target dir if `cargo metadata` is unavailable.
+        base = crate_path / "target"
+    return base / target / "release"
 
 
 def detect_nif_api_version() -> str:
