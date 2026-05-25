@@ -45,6 +45,10 @@ inputs:
     description: "Skip release asset upload and notes update; only validate"
     required: false
     default: "false"
+  token:
+    description: "GitHub token for `gh release upload` and release-notes updates. Defaults to the job's GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   tarball-url:
@@ -170,6 +174,7 @@ runs:
       if: inputs.dry-run != 'true'
       shell: bash
       env:
+        GH_TOKEN: ${{ inputs.token }}
         TAG: ${{ steps.tag.outputs.tag }}
         TARBALL_PATH: ${{ steps.package.outputs.tarball-path }}
         TARBALL_NAME: ${{ steps.package.outputs.tarball-name }}
@@ -231,7 +236,7 @@ runs:
       if: inputs.update-release-notes == 'true' && inputs.dry-run != 'true'
       shell: bash
       env:
-        GH_TOKEN: ${{ env.GH_TOKEN }}
+        GH_TOKEN: ${{ inputs.token }}
         TAG: ${{ steps.tag.outputs.tag }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}

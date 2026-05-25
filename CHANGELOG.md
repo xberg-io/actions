@@ -10,6 +10,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `publish-zig`: the `Upload release asset` step ran `gh release upload` with no `GH_TOKEN`, so the upload failed ("set the GH_TOKEN environment variable") whenever the caller didn't set it on the step. Added a `token` input (default `${{ github.token }}`) wired into the upload and release-notes steps, so the action is self-sufficient like the sibling `upload-release-assets`/`publish-github-release` actions.
+
 ### Deprecated
 
 ### Removed
