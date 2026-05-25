@@ -159,7 +159,9 @@ def main() -> None:
     if dry_run:
         print(f"[dry-run] Would edit release {tag} → draft=false, prerelease={prerelease}")
         if go_module_path:
-            print(f"[dry-run] Would create Go module tag: {go_module_path}/{tag}")
+            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path)
+            module_tag = f"{module_subdir}/{tag}"
+            print(f"[dry-run] Would create Go module tag: {module_tag}")
         write_output("finalized", "false")
         write_output("prerelease-flag", "true" if prerelease else "false")
         return
@@ -185,7 +187,12 @@ def main() -> None:
     if go_module_path and repo:
         try:
             sha = gh_get_tag_sha(tag)
-            module_tag = f"{go_module_path}/{tag}"
+            # Go module tag convention: strip trailing /vN (where N >= 2) from the module path.
+            # Example: "packages/go/v3" → "packages/go", then tag becomes "packages/go/v3.5.0".
+            # The go.mod lives at "packages/go/go.mod" with module path ending in "/v3",
+            # and Go module resolution expects tags at the directory level, not nested under vN.
+            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path)
+            module_tag = f"{module_subdir}/{tag}"
             created = gh_create_tag(repo, module_tag, sha)
             if created:
                 summary.append(f"- Created Go module tag: `{module_tag}` → `{sha[:8]}`")
