@@ -19,7 +19,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - uses: erlef/setup-beam@v1.24
+      - uses: erlef/setup-beam@v1.24.0
         with:
           elixir-version: "1.19"
           otp-version: "28"

@@ -54,6 +54,23 @@ runs:
         cd "$PACKAGE_DIR"
         mix deps.get
 
+    - name: Generate Cargo.lock for native dependencies
+      if: inputs.dry-run != 'true' && inputs.tarball-path == ''
+      shell: bash
+      env:
+        PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        cd "$PACKAGE_DIR"
+        # Find and generate Cargo.lock for any native Rust dependencies
+        for cargo_toml in $(find native -name "Cargo.toml" 2>/dev/null || true); do
+          cargo_dir=$(dirname "$cargo_toml")
+          echo "Generating ${cargo_dir}/Cargo.lock via cargo generate-lockfile"
+          cd "${GITHUB_WORKSPACE}/${PACKAGE_DIR}/${cargo_dir}"
+          cargo generate-lockfile
+          cd "${GITHUB_WORKSPACE}/${PACKAGE_DIR}"
+        done
+
     - name: Publish to Hex.pm (pre-built tarball)
       if: inputs.dry-run != 'true' && inputs.tarball-path != ''
       shell: bash
