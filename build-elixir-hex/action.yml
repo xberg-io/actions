@@ -60,14 +60,13 @@ runs:
         alef-version: ${{ inputs.alef-version }}
         require-registry: "true"
 
-    - name: Generate Cargo.lock for dry-run (path-resolved)
-      if: inputs.dry-run == 'true'
+    - name: Generate Cargo.lock
       shell: bash
       env:
         INPUT_NIF_CRATE_PATH: ${{ inputs.nif-crate-path }}
       run: |
         set -euo pipefail
-        echo "Dry-run: generating ${INPUT_NIF_CRATE_PATH}/Cargo.lock via cargo generate-lockfile"
+        echo "Generating ${INPUT_NIF_CRATE_PATH}/Cargo.lock via cargo generate-lockfile"
         cd "${GITHUB_WORKSPACE}/${INPUT_NIF_CRATE_PATH}"
         cargo generate-lockfile
 
