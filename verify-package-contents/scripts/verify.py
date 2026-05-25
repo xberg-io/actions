@@ -6,7 +6,12 @@ glob applied to the archive's file listing. A pattern matches if at least
 one file in the artifact matches it; missing patterns are reported.
 
 Usage (GitHub Actions composite, env vars set by action.yml):
-    INPUT_LANGUAGE=python INPUT_ARTIFACT_PATH=dist/liter_llm-1.4.0rc27-...whl python3 verify.py
+    Single file: INPUT_LANGUAGE=python INPUT_ARTIFACT_PATH=dist/liter_llm-1.4.0rc27-...whl python3 verify.py
+    Directory:   INPUT_LANGUAGE=python INPUT_ARTIFACT_PATH=dist python3 verify.py
+
+When artifact-path is a directory, the script finds all archive files
+matching supported extensions (.whl, .jar, .nupkg, .zip, .tar.gz, .tgz, .crate, .gem, .tar)
+and verifies each one using recursive glob.
 """
 
 from __future__ import annotations
@@ -150,6 +155,20 @@ def list_archive(path: Path) -> list[str]:
     raise SystemExit(msg)
 
 
+def find_archives_in_directory(directory: Path) -> list[Path]:
+    """Find all archive files matching supported extensions in directory (recursive)."""
+    supported_extensions = (
+        ".whl", ".jar", ".nupkg", ".zip",
+        ".tar.gz", ".tgz", ".crate",
+        ".gem", ".tar"
+    )
+    archives = []
+    for archive in directory.rglob("*"):
+        if archive.is_file() and archive.name.lower().endswith(supported_extensions):
+            archives.append(archive)
+    return sorted(archives)
+
+
 def match_patterns(files: list[str], patterns: list[str]) -> tuple[list[str], list[str]]:
     """Return (matched_patterns, missing_patterns)."""
     matched: list[str] = []
@@ -179,36 +198,71 @@ def main() -> int:
         print(f"::error::Artifact not found: {artifact}")
         return 2
 
-    files = list_archive(artifact)
+    # Determine if artifact is a file or directory
+    if artifact.is_file():
+        # Single file mode: verify the single archive
+        archives = [artifact]
+    elif artifact.is_dir():
+        # Directory mode: find all supported archive files inside (recursive)
+        archives = find_archives_in_directory(artifact)
+        if not archives:
+            print(f"::error::No archive files found in {artifact}")
+            return 2
+    else:
+        print(f"::error::Artifact is neither a file nor a directory: {artifact}")
+        return 2
+
+    # Verify each archive
     patterns = [*ALLOWLISTS[language], *extras]
-    matched, missing = match_patterns(files, patterns)
+    total_files = 0
+    total_matched = 0
+    all_missing: set[str] = set()
+    had_error = False
 
-    print(f"::group::Artifact contents ({len(files)} files)")
-    for f in sorted(files):
-        print(f)
-    print("::endgroup::")
+    for archive in archives:
+        try:
+            files = list_archive(archive)
+            matched, missing = match_patterns(files, patterns)
+            total_files += len(files)
+            total_matched += len(matched)
+            all_missing.update(missing)
 
-    print(f"::group::Verification — {language}")
-    print(f"Artifact:  {artifact}")
-    print(f"Patterns:  {len(patterns)} (built-in {len(ALLOWLISTS[language])} + extras {len(extras)})")
-    print(f"Matched:   {len(matched)}")
-    print(f"Missing:   {len(missing)}")
-    for m in missing:
-        print(f"  - {m}")
+            print(f"::group::Archive: {archive.relative_to(artifact.parent) if artifact.is_dir() else archive.name}")
+            print(f"Files: {len(files)}, Matched: {len(matched)}, Missing: {len(missing)}")
+            if missing:
+                for m in missing:
+                    print(f"  - {m}")
+            print("::endgroup::")
+
+            if missing and strict:
+                had_error = True
+        except Exception as e:
+            print(f"::error::Failed to verify {archive}: {e}")
+            had_error = True
+
+    # Aggregate output
+    print(f"::group::Verification summary — {language}")
+    print(f"Archives verified: {len(archives)}")
+    print(f"Total files: {total_files}")
+    print(f"Patterns checked: {len(patterns)}")
+    print(f"Unique missing patterns: {len(all_missing)}")
+    if all_missing:
+        for m in sorted(all_missing):
+            print(f"  - {m}")
     print("::endgroup::")
 
     out = os.environ.get("GITHUB_OUTPUT")
     if out:
         with Path(out).open("a", encoding="utf-8") as fh:
-            fh.write(f"matched={len(matched)}\n")
-            fh.write(f"file-count={len(files)}\n")
+            fh.write(f"matched={total_matched}\n")
+            fh.write(f"file-count={total_files}\n")
             fh.write("missing<<EOF\n")
-            for m in missing:
+            for m in sorted(all_missing):
                 fh.write(f"{m}\n")
             fh.write("EOF\n")
 
-    if missing and strict:
-        print(f"::error::Package is missing {len(missing)} required pattern(s); see log.")
+    if had_error and strict:
+        print(f"::error::Package verification failed; {len(all_missing)} unique missing pattern(s); see log.")
         return 1
     return 0
 

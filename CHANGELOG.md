@@ -10,6 +10,15 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `verify-package-contents`: accept a directory as `artifact-path` and iterate
+  over all supported archive types inside it. Previously the script only accepted
+  a single archive file; kreuzberg's publish workflow passes `dist/` directories
+  containing multiple `.whl` and `.tar.gz` files, causing the script to fail with
+  `Unsupported artifact extension: dist`. The script now detects whether `artifact-path`
+  is a file or directory, finds all archives matching supported extensions (`.whl`,
+  `.jar`, `.nupkg`, `.zip`, `.tar.gz`, `.tgz`, `.crate`, `.gem`, `.tar`) via recursive
+  glob, verifies each archive, and aggregates results. Single-file callers remain
+  backward compatible. Fixes v5.0.0-rc.1 publish-pypi verification blocking.
 - `build-elixir-natives`: fix release directory lookup for NIF crates with
   workspace Cargo.toml. When the NIF crate declares its own `[workspace]`
   section, cargo writes the compiled library to `<crate-path>/target/<triple>/release/`
