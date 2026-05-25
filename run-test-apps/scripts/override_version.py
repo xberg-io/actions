@@ -10,15 +10,14 @@ from pathlib import Path
 
 
 def main() -> None:
-    # Install tomlkit if not present
-    # On GitHub Actions, pip will work normally. On local dev systems with
-    # externally-managed-environment, allow override as this is intended for CI.
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "--quiet", "--break-system-packages", "tomlkit"],
-        check=False,  # Don't fail if install fails (may not have write permission)
-    )
-
-    import tomlkit  # type: ignore[import-not-found]
+    try:
+        import tomlkit
+    except ImportError:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "--break-system-packages", "tomlkit"],
+            check=True,
+        )
+        import tomlkit
 
     language = os.environ.get("INPUT_LANGUAGE", "").strip()
     version = os.environ.get("INPUT_VERSION", "").strip()

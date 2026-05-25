@@ -1,5 +1,8 @@
 #!/bin/bash
 set -euo pipefail
+# pipefail ensures the alef-side exit code survives the `| tee` redirect;
+# without it $? captures tee's exit status (always 0) and we'd report
+# false-positive passes.
 
 LANGUAGE="${INPUT_LANGUAGE}"
 WORKING_DIRECTORY="${INPUT_WORKING_DIRECTORY:-.}"
@@ -13,11 +16,11 @@ alef test-apps generate --lang "${LANGUAGE}" --clean
 echo "Running test-apps for ${LANGUAGE}..."
 set +e
 alef test-apps run --lang "${LANGUAGE}" 2>&1 | tee "${LOG_PATH}"
-exit_code=$?
+exit_code=${PIPESTATUS[0]}
 set -e
 
 # Determine pass/fail
-if [ $exit_code -eq 0 ]; then
+if [ "$exit_code" -eq 0 ]; then
   passed="true"
 else
   passed="false"
@@ -31,4 +34,4 @@ fi
 } >>"$GITHUB_OUTPUT"
 
 echo "Test-apps for ${LANGUAGE}: exit_code=${exit_code}, log=${LOG_PATH}"
-exit $exit_code
+exit "$exit_code"
