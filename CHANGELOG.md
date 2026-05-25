@@ -10,6 +10,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+### Deprecated
+
+### Removed
+
+### Security
+
+## [1.6.9] - 2026-05-25
+
+### Fixed
+
 - `verify-package-contents`: accept a directory as `artifact-path` and iterate
   over all supported archive types inside it. Previously the script only accepted
   a single archive file; kreuzberg's publish workflow passes `dist/` directories
@@ -33,12 +43,6 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
   in the container, causing builds to fail with `error: linker \`musl-gcc\` not
   found`. Set `CARGO_TARGET_<TARGET>_LINKER=gcc` as a target-specific env var
   in the inline docker build command so rustc routes to the available linker.
-
-### Deprecated
-
-### Removed
-
-### Security
 
 ## [1.6.5] - 2026-05-25
 
