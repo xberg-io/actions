@@ -63,11 +63,17 @@ def build_in_docker(
         target,
     ]
 
-    # Add environment variables to build command if provided
-    env_flags = []
+    # Merge caller-supplied env vars with the cdylib-on-musl default. musl rust
+    # toolchains ship with `+crt-static` enabled by default, which silently drops
+    # the `cdylib` crate type ("dropping unsupported crate type cdylib for target
+    # *-linux-musl") and leaves no `.so` for the staging step to find. Disabling
+    # crt-static restores cdylib output while keeping bin/staticlib builds working.
+    merged_env: dict[str, str] = {"RUSTFLAGS": "-C target-feature=-crt-static"}
     if env_vars:
-        for key, val in env_vars.items():
-            env_flags.extend(["-e", f"{key}={val}"])
+        merged_env.update(env_vars)
+    env_flags: list[str] = []
+    for key, val in merged_env.items():
+        env_flags.extend(["-e", f"{key}={val}"])
 
     # Docker command: mount repo, install toolchain, build
     # rust:1-alpine3.21 is itself musl-based, so plain gcc produces musl binaries.

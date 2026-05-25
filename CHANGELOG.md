@@ -10,6 +10,15 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- `build-csharp-natives`, `build-java-natives`, `build-elixir-natives`: inject
+  `RUSTFLAGS="-C target-feature=-crt-static"` into the Alpine Docker build for
+  `*-linux-musl` targets. The default musl rust toolchain enables `+crt-static`,
+  which silently drops the `cdylib` crate type with
+  `warning: dropping unsupported crate type cdylib for target *-linux-musl`,
+  leaving no `.so` for the staging step to find. Disabling `crt-static` restores
+  cdylib output while keeping the bin/staticlib crate types working. The merged
+  `env_vars` dict still wins, so callers can override.
+
 ### Deprecated
 
 ### Removed
