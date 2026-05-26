@@ -10,6 +10,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`setup-rust`: fix "rustc is not installed for toolchain" on macOS-arm64.** When a bare toolchain channel (e.g., `1.95`) without an architecture triple is passed, the action now expands it to the runner's actual architecture-OS triple (e.g., `1.95-aarch64-apple-darwin` on macOS-arm64) before passing to `actions-rust-lang/setup-rust-toolchain@v1`. Previously, bare channels were passed as-is, which defaulted to x86_64 even on arm64 runners, causing "not installed for" failures when maturin or cargo tried to use the toolchain. (`setup-rust/action.yml`)
+
 - `publish-zig`: the `Upload release asset` step ran `gh release upload` with no `GH_TOKEN`, so the upload failed ("set the GH_TOKEN environment variable") whenever the caller didn't set it on the step. Added a `token` input (default `${{ github.token }}`) wired into the upload and release-notes steps, so the action is self-sufficient like the sibling `upload-release-assets`/`publish-github-release` actions.
 
 ### Deprecated

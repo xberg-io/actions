@@ -50,9 +50,42 @@ runs:
   using: composite
   steps:
     - name: Setup Rust
+      shell: bash
+      run: |
+        # When a bare toolchain channel (e.g., 1.95) is provided without
+        # architecture, append the runner's arch to ensure macOS-arm64
+        # installs the correct triple. actions-rust-lang doesn't do this
+        # automatically, leading to "not installed for" errors.
+        toolchain="${{ inputs.toolchain }}"
+        if [[ -n "$toolchain" ]] && [[ "$toolchain" != *"-"* ]]; then
+          arch="${{ runner.arch }}"
+          if [[ "$arch" == "ARM64" ]]; then
+            arch="aarch64"
+          elif [[ "$arch" == "X64" ]]; then
+            arch="x86_64"
+          fi
+          # Map runner.arch to rustup-compatible triplet component.
+          # Leave as-is if already contains a triple (e.g., stable-aarch64-apple-darwin).
+          if [[ "$arch" != "$toolchain" ]]; then
+            case "$(uname -s)" in
+              Darwin)
+                toolchain="${toolchain}-${arch}-apple-darwin"
+                ;;
+              Linux)
+                toolchain="${toolchain}-${arch}-unknown-linux-gnu"
+                ;;
+              MINGW*|MSYS*|CYGWIN*)
+                toolchain="${toolchain}-${arch}-pc-windows-msvc"
+                ;;
+            esac
+          fi
+        fi
+        echo "expanded_toolchain=${toolchain}" >> "$GITHUB_ENV"
+
+    - name: Install Rust with expanded toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: ${{ inputs.toolchain }}
+        toolchain: ${{ env.expanded_toolchain || inputs.toolchain }}
         components: ${{ inputs.components }}
         target: ${{ inputs.target }}
         cache: false
