@@ -67,6 +67,9 @@ outputs:
   checksum:
     description: "SHA256 checksum of the artifact bundle zip"
     value: ${{ steps.build.outputs.checksum }}
+  checksum-file:
+    description: "Path to checksum artifact file (used by upload-artifact step)"
+    value: ${{ steps.upload-checksum.outputs.checksum-file }}
 
 runs:
   using: composite
@@ -86,3 +89,24 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
         bash "${{ github.action_path }}/scripts/build.sh"
+
+    - name: Save checksum as artifact
+      id: upload-checksum
+      shell: bash
+      env:
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+        ARTIFACT_NAME: ${{ steps.build.outputs.bundle-path }}
+        CHECKSUM: ${{ steps.build.outputs.checksum }}
+      run: |
+        # Extract the artifact name from the bundle-path (e.g., /path/to/FooBar.artifactbundle → FooBar)
+        artifact_name=$(basename "$ARTIFACT_NAME" .artifactbundle)
+
+        # Create a checksums directory
+        mkdir -p "$OUTPUT_DIR/swift-checksums"
+        checksum_file="$OUTPUT_DIR/swift-checksums/${artifact_name}.artifactbundle.zip.checksum"
+
+        # Write the checksum to the file
+        echo "$CHECKSUM" > "$checksum_file"
+
+        echo "checksum-file=$checksum_file" >> "$GITHUB_OUTPUT"
+        echo "Saved checksum to: $checksum_file"
