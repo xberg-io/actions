@@ -60,7 +60,8 @@ runs:
         alef-version: ${{ inputs.alef-version }}
         require-registry: "true"
 
-    - name: Generate Cargo.lock
+    - name: Generate Cargo.lock for dry-run
+      if: inputs.dry-run == 'true'
       shell: bash
       env:
         INPUT_NIF_CRATE_PATH: ${{ inputs.nif-crate-path }}

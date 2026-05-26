@@ -10,6 +10,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`build-elixir-hex`: gate Cargo.lock generation on dry-run.** The "Generate Cargo.lock" step now only runs when `inputs.dry-run == 'true'`, which is the intended behavior when a dry-run publish bypasses the rewrite step (before the core crate is on crates.io). Previously the step always ran unconditionally, which was inconsistent with the documented workflow and failed the test assertion.
+
 ### Deprecated
 
 ### Removed
