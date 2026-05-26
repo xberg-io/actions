@@ -17,6 +17,10 @@ inputs:
       newer Node ABIs.
     required: false
     default: "false"
+  registry-url:
+    description: npm registry URL for authentication (e.g., https://registry.npmjs.org/)
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -28,6 +32,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
+        registry-url: ${{ inputs.registry-url != '' && inputs.registry-url || null }}
 
     - name: Install dependencies
       shell: bash

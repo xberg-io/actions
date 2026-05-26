@@ -6,6 +6,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
+- **`setup-node-workspace`: add optional `registry-url` input** to support npm registry authentication. When set (e.g., `https://registry.npmjs.org/`), the input is passed through to `actions/setup-node@v6`, which configures `.npmrc` with the registry and allows OIDC or static token auth. Default is empty (no registry override). (`setup-node-workspace/action.yml`)
+
 ### Changed
 
 ### Fixed
