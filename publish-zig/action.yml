@@ -49,6 +49,26 @@ inputs:
     description: "GitHub token for `gh release upload` and release-notes updates. Defaults to the job's GITHUB_TOKEN."
     required: false
     default: ${{ github.token }}
+  use-alef-package:
+    description: "Use alef publish package_zig to bundle FFI artifacts. Set to 'true' to enable, provide ffi-library-path and ffi-header-path."
+    required: false
+    default: "false"
+  target:
+    description: "Rust target triple (e.g., aarch64-apple-darwin). Required when use-alef-package is 'true'."
+    required: false
+    default: ""
+  ffi-library-path:
+    description: "Absolute path to the built FFI static library (libts_pack_core_ffi.a). Required when use-alef-package is 'true'."
+    required: false
+    default: ""
+  ffi-header-path:
+    description: "Absolute path to the FFI header file (ts_pack.h). Required when use-alef-package is 'true'."
+    required: false
+    default: ""
+  alef-version:
+    description: "Alef version to install for package_zig. Defaults to stable."
+    required: false
+    default: ""
 
 outputs:
   tarball-url:
@@ -142,7 +162,71 @@ runs:
           exit 1
         fi
 
-    - name: Package Zig
+    - name: Install alef (when using alef package_zig)
+      if: inputs.use-alef-package == 'true'
+      uses: kreuzberg-dev/actions/install-alef@v1
+      with:
+        version: ${{ inputs.alef-version }}
+
+    - name: Package Zig with alef
+      if: inputs.use-alef-package == 'true'
+      id: package-alef
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+        FFI_LIB_PATH: ${{ inputs.ffi-library-path }}
+        FFI_HEADER_PATH: ${{ inputs.ffi-header-path }}
+        TAG: ${{ steps.tag.outputs.tag }}
+      run: |
+        set -euo pipefail
+
+        # Validate required inputs
+        if [[ -z "$TARGET" ]]; then
+          echo "Error: target input is required when use-alef-package is 'true'" >&2
+          exit 1
+        fi
+        if [[ -z "$FFI_LIB_PATH" || ! -f "$FFI_LIB_PATH" ]]; then
+          echo "Error: ffi-library-path must be an existing file" >&2
+          exit 1
+        fi
+        if [[ -z "$FFI_HEADER_PATH" || ! -f "$FFI_HEADER_PATH" ]]; then
+          echo "Error: ffi-header-path must be an existing file" >&2
+          exit 1
+        fi
+
+        # Extract version from tag (strip 'v' prefix if present)
+        version="${TAG#v}"
+
+        # Stage FFI artifact at workspace target/<target>/release/ where alef expects it
+        target_dir="target/$TARGET/release"
+        mkdir -p "$target_dir"
+
+        # Copy FFI library and header to staging location
+        ffi_lib_name=$(basename "$FFI_LIB_PATH")
+        cp "$FFI_LIB_PATH" "$target_dir/$ffi_lib_name"
+        cp "$FFI_HEADER_PATH" "$target_dir/$(basename "$FFI_HEADER_PATH")"
+
+        # Run alef publish package_zig to assemble the distribution tarball
+        output_dir="$RUNNER_TEMP/zig-package"
+        mkdir -p "$output_dir"
+
+        echo "Running: alef publish package --lang zig --target $TARGET -o $output_dir"
+        alef publish package --lang zig --target "$TARGET" -o "$output_dir"
+
+        # Find the generated tarball (should be {name}-v{version}.tar.gz)
+        tarball_path=$(find "$output_dir" -maxdepth 1 -name "*.tar.gz" -type f | head -1)
+        if [[ -z "$tarball_path" ]]; then
+          echo "Error: alef publish package did not generate a tarball" >&2
+          exit 1
+        fi
+
+        tarball_name=$(basename "$tarball_path")
+        echo "Tarball created: $tarball_path ($(stat -f%z "$tarball_path" 2>/dev/null || stat -c%s "$tarball_path") bytes)"
+        echo "tarball-path=$tarball_path" >> "$GITHUB_OUTPUT"
+        echo "tarball-name=$tarball_name" >> "$GITHUB_OUTPUT"
+
+    - name: Package Zig (fallback tar method)
+      if: inputs.use-alef-package != 'true'
       id: package
       shell: bash
       env:
@@ -176,15 +260,27 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token }}
         TAG: ${{ steps.tag.outputs.tag }}
-        TARBALL_PATH: ${{ steps.package.outputs.tarball-path }}
-        TARBALL_NAME: ${{ steps.package.outputs.tarball-name }}
+        TARBALL_PATH_ALEF: ${{ steps.package-alef.outputs.tarball-path }}
+        TARBALL_PATH_FALLBACK: ${{ steps.package.outputs.tarball-path }}
+        TARBALL_NAME_ALEF: ${{ steps.package-alef.outputs.tarball-name }}
+        TARBALL_NAME_FALLBACK: ${{ steps.package.outputs.tarball-name }}
         UPDATE_EXISTING: ${{ inputs.update-existing }}
+        USE_ALEF: ${{ inputs.use-alef-package }}
       run: |
-        echo "Uploading release asset: $TARBALL_NAME"
-        if [[ "$UPDATE_EXISTING" == "true" ]]; then
-          gh release upload "$TAG" "$TARBALL_PATH" --clobber
+        # Select tarball path based on which packaging method was used
+        if [[ "$USE_ALEF" == "true" ]]; then
+          tarball_path="$TARBALL_PATH_ALEF"
+          tarball_name="$TARBALL_NAME_ALEF"
         else
-          gh release upload "$TAG" "$TARBALL_PATH"
+          tarball_path="$TARBALL_PATH_FALLBACK"
+          tarball_name="$TARBALL_NAME_FALLBACK"
+        fi
+
+        echo "Uploading release asset: $tarball_name"
+        if [[ "$UPDATE_EXISTING" == "true" ]]; then
+          gh release upload "$TAG" "$tarball_path" --clobber
+        else
+          gh release upload "$TAG" "$tarball_path"
         fi
         echo "Asset uploaded successfully"
 
@@ -194,14 +290,23 @@ runs:
       env:
         TAG: ${{ steps.tag.outputs.tag }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
-        TARBALL_NAME: ${{ steps.package.outputs.tarball-name }}
+        TARBALL_NAME_ALEF: ${{ steps.package-alef.outputs.tarball-name }}
+        TARBALL_NAME_FALLBACK: ${{ steps.package.outputs.tarball-name }}
         DRY_RUN: ${{ inputs.dry-run }}
+        USE_ALEF: ${{ inputs.use-alef-package }}
       run: |
         # Extract version from tag
         version="${TAG#v}"
 
+        # Select tarball name based on which packaging method was used
+        if [[ "$USE_ALEF" == "true" ]]; then
+          tarball_name="$TARBALL_NAME_ALEF"
+        else
+          tarball_name="$TARBALL_NAME_FALLBACK"
+        fi
+
         # Construct the release-asset tarball URL
-        asset_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}/${TARBALL_NAME}"
+        asset_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}/${tarball_name}"
         echo "Tarball URL: $asset_url"
 
         if [[ "$DRY_RUN" == "true" ]]; then
