@@ -10,6 +10,7 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`install-alef`: pass `--force` to the `cargo install` source-build fallback.** When the release binary is missing (the tag-vs-binary-upload race) and the fallback runs on a runner that already has `alef` installed (cached image or a prior step), `cargo install` aborted with "binary `alef` already exists in destination". The unix and Windows fallbacks now use `--force` to overwrite, making installation idempotent. Surfaced via `check-registry` failing in consumer publish workflows.
 - **`build-elixir-hex`: gate Cargo.lock generation on dry-run.** The "Generate Cargo.lock" step now only runs when `inputs.dry-run == 'true'`, which is the intended behavior when a dry-run publish bypasses the rewrite step (before the core crate is on crates.io). Previously the step always ran unconditionally, which was inconsistent with the documented workflow and failed the test assertion.
 
 ### Deprecated

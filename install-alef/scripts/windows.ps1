@@ -28,15 +28,17 @@ function Build-FromSource {
   param([string] $ref)
   Ensure-Cargo
   $env:CARGO_INSTALL_ROOT = $alefBinDir
+  # --force so the source build overwrites any alef already present on the
+  # runner; without it cargo aborts with "binary `alef` already exists".
   if ($ref -eq "main") {
     Write-Output "Building alef from main branch via cargo install..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef
+    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked --force alef
   } else {
     Write-Output "Building alef v$ref from source via cargo install --tag..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked alef
+    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked --force alef
     if ($LASTEXITCODE -ne 0) {
       Write-Output "Tag build failed; falling back to main branch..."
-      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked alef
+      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked --force alef
     }
   }
   # cargo installs into $alefBinDir\bin; move the binary so it lives directly

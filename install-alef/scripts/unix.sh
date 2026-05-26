@@ -103,6 +103,11 @@ ensure_cargo() {
 build_from_source() {
   local ref="$1"
   ensure_cargo
+  # --force so the source build overwrites any alef already present on the
+  # runner (cached image, prior step). Without it, cargo aborts with "binary
+  # `alef` already exists in destination", which surfaced when the release
+  # binary was missing (tag-vs-binary-upload race) and the fallback ran on a
+  # runner that already had alef installed.
   if [[ "$ref" == "main" ]]; then
     echo "Building alef from main branch via cargo install..."
     CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
@@ -110,6 +115,7 @@ build_from_source() {
       --git https://github.com/kreuzberg-dev/alef \
       --branch main \
       --locked \
+      --force \
       alef
   else
     echo "Building alef v${ref} from source via cargo install --tag..."
@@ -118,6 +124,7 @@ build_from_source() {
       --git https://github.com/kreuzberg-dev/alef \
       --tag "v${ref}" \
       --locked \
+      --force \
       alef; then
       echo "Tag build failed; falling back to main branch..." >&2
       CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
@@ -125,6 +132,7 @@ build_from_source() {
         --git https://github.com/kreuzberg-dev/alef \
         --branch main \
         --locked \
+        --force \
         alef
     fi
   fi
