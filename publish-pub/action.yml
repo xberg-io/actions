@@ -18,6 +18,10 @@ inputs:
     description: "Whether to run dart-lang/setup-dart. Set to 'false' if Dart is already installed."
     required: false
     default: "true"
+  natives-dir:
+    description: "Optional directory containing per-RID native libraries to bundle into packages/dart/lib/src/native/<rid>/"
+    required: false
+    default: ""
   dry-run:
     description: "Perform a dry run without actually publishing"
     required: false
@@ -36,6 +40,21 @@ runs:
       uses: dart-lang/setup-dart@v1
       with:
         sdk: ${{ inputs.dart-version }}
+
+    - name: Bundle native libraries
+      shell: bash
+      env:
+        NATIVES_DIR: ${{ inputs.natives-dir }}
+        PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        if [[ -n "$NATIVES_DIR" && -d "$NATIVES_DIR" ]]; then
+          echo "Bundling native libraries from $NATIVES_DIR into package..."
+          mkdir -p "$PACKAGE_DIR/lib/src/native"
+          cp -r "$NATIVES_DIR"/* "$PACKAGE_DIR/lib/src/native/"
+          echo "Native libraries bundled successfully"
+        else
+          echo "No natives-dir provided or directory does not exist; skipping native bundling"
+        fi
 
     - name: Resolve dependencies
       shell: bash
