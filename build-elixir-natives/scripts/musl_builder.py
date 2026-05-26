@@ -37,7 +37,10 @@ def build_in_docker(
     Args:
         crate_name: Cargo package name (e.g., "kreuzberg-ffi")
         target: Rust target triple (e.g., "aarch64-unknown-linux-musl")
-        manifest_path: Optional path to Cargo.toml (remapped to in-container path when provided)
+        manifest_path: Optional path to Cargo.toml. When provided, remapped to
+                       in-container path (/src/<relative-path>) for the container's
+                       cargo invocation. The host path is relative to repo root,
+                       which mounts to /src inside the container.
         env_vars: Optional dict of environment variables to pass to cargo
 
     Raises:
@@ -66,9 +69,11 @@ def build_in_docker(
     ]
 
     # If a manifest_path is provided, convert it to an in-container path.
-    # The host path is relative to the repo root (which mounts to /src).
+    # Host path → repo root relative → /src/<relative-path> inside container.
     if manifest_path:
-        # Compute the path relative to repo root so it resolves inside /src
+        # Compute the path relative to repo root so it resolves inside /src.
+        # This translation is necessary because the host path is not valid
+        # inside the container; only the mounted /src prefix is accessible.
         relative_manifest = manifest_path.resolve().relative_to(Path.cwd().resolve())
         build_cmd.extend(["--manifest-path", f"/src/{relative_manifest}"])
 
