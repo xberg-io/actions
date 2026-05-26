@@ -36,11 +36,49 @@ brew tap "$tap"
 brew update --quiet || true
 echo "::endgroup::"
 
+# Strip every `bottle do … end` block from the freshly tapped formula before
+# building. A pre-existing formula can carry stale bottle blocks left OUTSIDE
+# its `class … end` body (historical GoReleaser output, or older merges that
+# appended at end-of-file); Homebrew then fails to even load the formula with
+# `undefined method 'bottle' for module Formulary::FormulaNamespace`, which
+# deadlocks `brew install --build-bottle` before a fresh bottle can be built.
+# Building a bottle needs no bottle block, so drop them all here — this edits
+# only the local tap clone; homebrew-merge-bottles re-adds one block inside the
+# class afterwards. No-op when the formula has no bottle blocks.
+normalize_tapped_formula() {
+  local formula="$1"
+  local repo formula_file
+  repo="$(brew --repository "$tap" 2>/dev/null)" || return 0
+  for formula_file in "${repo}/Formula/${formula}.rb" "${repo}/${formula}.rb"; do
+    [[ -f "$formula_file" ]] || continue
+    python3 - "$formula_file" <<'PYEOF'
+import re
+import sys
+
+path = sys.argv[1]
+with open(path) as fh:
+    content = fh.read()
+
+bottle_re = re.compile(r"^[ \t]*bottle do\b.*?^[ \t]*end(?:\n|\Z)", re.MULTILINE | re.DOTALL)
+stripped = bottle_re.sub("", content)
+stripped = re.sub(r"\n{3,}", "\n\n", stripped)
+
+if stripped != content:
+    with open(path, "w") as fh:
+        fh.write(stripped)
+    sys.stderr.write(f"normalize_tapped_formula: stripped stale bottle block(s) from {path}\n")
+PYEOF
+    return 0
+  done
+}
+
 build_one_bottle() {
   local formula="$1"
   echo "::group::Building bottle for ${formula}"
 
   brew uninstall --force "${tap}/${formula}" 2>/dev/null || true
+
+  normalize_tapped_formula "$formula"
 
   brew install --build-bottle --verbose "${tap}/${formula}"
 

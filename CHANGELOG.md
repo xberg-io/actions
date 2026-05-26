@@ -6,21 +6,33 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Added
 
-- **`setup-node-workspace`: add optional `registry-url` input** to support npm registry authentication. When set (e.g., `https://registry.npmjs.org/`), the input is passed through to `actions/setup-node@v6`, which configures `.npmrc` with the registry and allows OIDC or static token auth. Default is empty (no registry override). (`setup-node-workspace/action.yml`)
-
 ### Changed
 
 ### Fixed
-
-- **`setup-rust`: fix "rustc is not installed for toolchain" on macOS-arm64.** When a bare toolchain channel (e.g., `1.95`) without an architecture triple is passed, the action now expands it to the runner's actual architecture-OS triple (e.g., `1.95-aarch64-apple-darwin` on macOS-arm64) before passing to `actions-rust-lang/setup-rust-toolchain@v1`. Previously, bare channels were passed as-is, which defaulted to x86_64 even on arm64 runners, causing "not installed for" failures when maturin or cargo tried to use the toolchain. (`setup-rust/action.yml`)
-
-- `publish-zig`: the `Upload release asset` step ran `gh release upload` with no `GH_TOKEN`, so the upload failed ("set the GH_TOKEN environment variable") whenever the caller didn't set it on the step. Added a `token` input (default `${{ github.token }}`) wired into the upload and release-notes steps, so the action is self-sufficient like the sibling `upload-release-assets`/`publish-github-release` actions.
 
 ### Deprecated
 
 ### Removed
 
 ### Security
+
+## [1.8.1] - 2026-05-26
+
+### Fixed
+
+- **`homebrew-build-bottles`: strip stale bottle blocks before `brew install --build-bottle`.** A pre-existing formula can carry `bottle do … end` blocks left OUTSIDE its `class … end` body (historical GoReleaser output, or older merges that appended at end-of-file). Homebrew then fails to even load the formula with `undefined method 'bottle' for module Formulary::FormulaNamespace…`, so `brew install --build-bottle` dies before a fresh bottle can be built — and because the bottle merge step is gated on a successful build, the companion fix in `homebrew-merge-bottles` (1.7.2) could never run, leaving the malformed formula deadlocked across releases. The build action now drops every bottle block from the freshly tapped formula clone before building (building a bottle needs none); `homebrew-merge-bottles` re-adds one block inside the class afterwards. No-op for formulas with no bottle blocks. (`homebrew-build-bottles/scripts/build-bottles.sh`)
+
+## [1.8.0] - 2026-05-25
+
+### Added
+
+- **`setup-node-workspace`: add optional `registry-url` input** to support npm registry authentication. When set (e.g., `https://registry.npmjs.org/`), the input is passed through to `actions/setup-node@v6`, which configures `.npmrc` with the registry and allows OIDC or static token auth. Default is empty (no registry override). (`setup-node-workspace/action.yml`)
+
+### Fixed
+
+- **`setup-rust`: fix "rustc is not installed for toolchain" on macOS-arm64.** When a bare toolchain channel (e.g., `1.95`) without an architecture triple is passed, the action now expands it to the runner's actual architecture-OS triple (e.g., `1.95-aarch64-apple-darwin` on macOS-arm64) before passing to `actions-rust-lang/setup-rust-toolchain@v1`. Previously, bare channels were passed as-is, which defaulted to x86_64 even on arm64 runners, causing "not installed for" failures when maturin or cargo tried to use the toolchain. (`setup-rust/action.yml`)
+
+- `publish-zig`: the `Upload release asset` step ran `gh release upload` with no `GH_TOKEN`, so the upload failed ("set the GH_TOKEN environment variable") whenever the caller didn't set it on the step. Added a `token` input (default `${{ github.token }}`) wired into the upload and release-notes steps, so the action is self-sufficient like the sibling `upload-release-assets`/`publish-github-release` actions.
 
 ## [1.7.2] - 2026-05-25
 
