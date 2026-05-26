@@ -322,9 +322,37 @@ runs:
           scratch=$(mktemp -d)
           trap "rm -rf $scratch" EXIT
 
-          (cd "$scratch" && zig init >/dev/null 2>&1)
-          hash=$(cd "$scratch" && zig fetch "$asset_url" 2>/dev/null | head -1)
-          [[ -n "$hash" ]] || { echo "Error: zig fetch did not produce a hash" >&2; exit 1; }
+          # Run zig init, capturing both stdout and stderr. If it fails, print
+          # the captured output to diagnose the root cause.
+          zig_init_output=$(cd "$scratch" && zig init 2>&1)
+          zig_init_exit=$?
+          if [[ $zig_init_exit -ne 0 ]]; then
+            echo "Error: zig init failed" >&2
+            echo "$zig_init_output" >&2
+            exit 1
+          fi
+
+          # Run zig fetch, capturing stdout and stderr separately from exit code.
+          # Print captured output to diagnose failures that would otherwise be invisible.
+          set +e
+          zig_fetch_output=$(cd "$scratch" && zig fetch "$asset_url" 2>&1)
+          zig_fetch_exit=$?
+          set -e
+
+          if [[ $zig_fetch_exit -ne 0 ]]; then
+            echo "Error: zig fetch failed with exit code $zig_fetch_exit" >&2
+            echo "$zig_fetch_output" >&2
+            exit 1
+          fi
+
+          # Extract the hash (first line of output) from the captured output.
+          hash=$(echo "$zig_fetch_output" | head -1)
+          if [[ -z "$hash" ]]; then
+            echo "Error: zig fetch did not produce a hash" >&2
+            echo "Full zig fetch output:" >&2
+            echo "$zig_fetch_output" >&2
+            exit 1
+          fi
           echo "Zig content hash: $hash"
 
           # Also compute the gzipped tarball SHA-256 as a secondary output

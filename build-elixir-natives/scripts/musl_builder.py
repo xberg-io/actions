@@ -29,6 +29,7 @@ def get_alpine_arch(target: str) -> str:
 def build_in_docker(
     crate_name: str,
     target: str,
+    manifest_path: Path | None = None,
     env_vars: dict[str, str] | None = None,
 ) -> None:
     """Build a Rust cdylib crate inside Alpine container for musl target.
@@ -36,6 +37,7 @@ def build_in_docker(
     Args:
         crate_name: Cargo package name (e.g., "kreuzberg-ffi")
         target: Rust target triple (e.g., "aarch64-unknown-linux-musl")
+        manifest_path: Optional path to Cargo.toml (remapped to in-container path when provided)
         env_vars: Optional dict of environment variables to pass to cargo
 
     Raises:
@@ -62,6 +64,13 @@ def build_in_docker(
         "--target",
         target,
     ]
+
+    # If a manifest_path is provided, convert it to an in-container path.
+    # The host path is relative to the repo root (which mounts to /src).
+    if manifest_path:
+        # Compute the path relative to repo root so it resolves inside /src
+        relative_manifest = manifest_path.resolve().relative_to(Path.cwd().resolve())
+        build_cmd.extend(["--manifest-path", f"/src/{relative_manifest}"])
 
     # Merge caller-supplied env vars with the cdylib-on-musl default. musl rust
     # toolchains ship with `+crt-static` enabled by default, which silently drops
@@ -119,11 +128,11 @@ def build_or_fallback(
     Args:
         crate_name: Cargo package name
         target: Rust target triple
-        manifest_path: Optional path to Cargo.toml (used for native builds only)
+        manifest_path: Optional path to Cargo.toml (used for both Docker and native builds)
         env_vars: Optional dict of environment variables to pass to cargo
     """
     if is_musl_target(target):
-        build_in_docker(crate_name, target, env_vars)
+        build_in_docker(crate_name, target, manifest_path, env_vars)
     else:
         # Native build
         build_cmd = ["cargo", "build", "-p", crate_name, "--release", "--target", target]

@@ -16,6 +16,14 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Security
 
+## [1.7.3] - 2026-05-26
+
+### Fixed
+
+- `publish-zig`: surface zig fetch + zig init stderr on failure. The "Resolve Zig hash + URLs" step captured both zig init and zig fetch output but suppressed stderr via `2>/dev/null` redirection, and the output capture itself was hidden in a subshell `$(...)` that exited silently on non-zero return when `set -e -o pipefail` was in effect. This left no diagnostic when zig commands failed — operators saw only the trailing "did not produce a hash" error with no root cause. The step now captures both stdout and stderr, runs each zig command with `set +e` to preserve the exit code, and prints the full captured output when failures occur, surfacing network timeouts, invalid URLs, corrupted tarballs, or zig toolchain errors.
+
+- `build-elixir-natives`: pass `--manifest-path` through to musl docker `cargo build`. Elixir NIF crates often declare their own `[workspace]` block to escape the parent workspace, so `cargo -p <crate>` from the workspace root cannot find them. The non-musl native build path already passes `--manifest-path`; the musl docker path was missing it, causing aarch64-linux-musl builds to fail with `error: package ID specification 'kreuzberg_nif' did not match any packages`. The container mount at `/src` maps the host repo root, so the host path is converted to an in-container path before passing to cargo — preserving the path-translation contract expected by the build isolation.
+
 ## [1.8.1] - 2026-05-26
 
 ### Fixed
