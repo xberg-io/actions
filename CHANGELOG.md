@@ -4,11 +4,15 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.5] - 2026-05-27
+
 ### Added
 
 ### Changed
 
 ### Fixed
+
+- **`setup-node-workspace`: honor `frozen-lockfile: false` by passing `--no-frozen-lockfile`.** pnpm defaults `frozen-lockfile=true` in CI, so the action's prior logic — which only *added* `--frozen-lockfile` when the input was `"true"` and otherwise passed no flag — still ran a frozen install in CI, silently ignoring `frozen-lockfile: false`. napi-rs workspaces whose main package pins platform `optionalDependencies` at a not-yet-published version (the release under test) cannot record those specifiers in the lockfile, so a frozen install fails with `ERR_PNPM_OUTDATED_LOCKFILE`. The action now passes `--no-frozen-lockfile` when the input is not `"true"`. Surfaced by spikard v0.15.6-rc.8 CI Rust/Validate (Setup Node). (`setup-node-workspace/action.yml`)
 
 - **`build-ruby-gem`: switch the Windows linker to `lld` to handle rustc's brace-expanded archive args.** Recent mingw-w64-ucrt toolchain bumps (gcc 16.x) ship an `ld.exe` that does not brace-expand the `{libfoo,libbar,...}.rlib` shorthand rustc emits for cdylib link lines. The result is `ld.exe: cannot find  ■: No such file or directory` (mojibake of the literal `{`) and a failed Ruby gem build on x64-mingw-ucrt. The Windows install step now also installs `mingw-w64-ucrt-x86_64-lld`, and the compile step exports `CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS='-C link-arg=-fuse-ld=lld'`. (The target-prefixed env var is required because rb-sys's cargo invocation does not propagate plain `RUSTFLAGS` to rustc — verified in kreuzcrawl rc.32 Publish Release job 77937367149, where the original `RUSTFLAGS` export was set but never reached the gcc command line.) Surfaced by kreuzcrawl v0.3.0-rc.31 Publish Release job 77914103699.
 - **`install-alef`: pass `--force` to the `cargo install` source-build fallback.** When the release binary is missing (the tag-vs-binary-upload race) and the fallback runs on a runner that already has `alef` installed (cached image or a prior step), `cargo install` aborted with "binary `alef` already exists in destination". The unix and Windows fallbacks now use `--force` to overwrite, making installation idempotent. Surfaced via `check-registry` failing in consumer publish workflows.

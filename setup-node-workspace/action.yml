@@ -40,6 +40,12 @@ runs:
         args=()
         if [ "${{ inputs.frozen-lockfile }}" = "true" ]; then
           args+=(--frozen-lockfile)
+        else
+          # pnpm defaults frozen-lockfile=true in CI; pass the explicit negation
+          # so `frozen-lockfile: false` is honored (e.g. napi workspaces whose
+          # platform optionalDependencies pin a not-yet-published version that
+          # cannot be recorded in the lockfile).
+          args+=(--no-frozen-lockfile)
         fi
         if [ "${{ inputs.ignore-scripts }}" = "true" ]; then
           args+=(--ignore-scripts)
