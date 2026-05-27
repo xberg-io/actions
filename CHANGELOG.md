@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.6] - 2026-05-27
+
+### Fixed
+
+- **`publish-zig`: retry `zig fetch` through the release-asset propagation race.** The "Resolve Zig hash + URLs" step ran `zig fetch` against `releases/download/<tag>/<name>` immediately after the "Upload release asset" step returned. A freshly uploaded GitHub release asset can briefly answer `404 Not Found` from the asset CDN (the redirect target) until propagation completes, so the fetch failed non-deterministically — passing when propagation happened to be fast, failing when it lagged. The fetch now retries up to 8 times with a 5s backoff (≈40s ceiling), and the secondary SHA-256 `curl` gained `--retry 3 --retry-delay 2 --retry-all-errors` for the same reason. Surfaced by spikard v0.15.6-rc.9 Publish Release "Publish Zig metadata" (`zig fetch failed ... bad HTTP response code: '404 Not Found'` ~140ms after `Asset uploaded successfully`). (`publish-zig/action.yml`)
+
 ## [1.8.5] - 2026-05-27
 
 ### Added
