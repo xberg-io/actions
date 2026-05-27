@@ -13,7 +13,7 @@ repos:
     stages:
     - commit-msg
 - repo: https://github.com/kreuzberg-dev/pre-commit-hooks
-  rev: v1.2.1
+  rev: v1.2.3
   hooks:
   - id: ai-rulez-generate
   - id: trailing-whitespace
@@ -44,5 +44,9 @@ repos:
   - id: rumdl-fmt
   - id: actionlint
   - id: gh-actions-updater
+  - id: typos
+    exclude: ^publish-maven(-gradle)?/action\.yml$
+    args:
+    - --force-exclude
   - id: ruff
   - id: ruff-format
