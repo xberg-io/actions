@@ -22,12 +22,17 @@ from pathlib import Path
 def build_nif_artifact_name(lib_name: str, version: str, nif_version: str, target: str) -> str:
     """Return the NIF artifact filename for a given target triple.
 
-    Matches `rustler_precompiled` (<= 0.9) `lib_name_with_ext/2`, which uses
-    `.dll` on windows and `.so` everywhere else (including macOS). The release
-    upload step in `publish.yaml` normalises darwin artifacts to `.so` for the
-    same reason. Any drift here triggers a 404 on consumer downloads.
+    Use the platform-native shared-object extension: `.dll` on windows,
+    `.dylib` on macOS / darwin / apple targets, `.so` elsewhere. This matches
+    what alef v0.20.2+ uploads via `publish.yaml`. Any drift here triggers a
+    404 on consumer downloads.
     """
-    ext = "dll.tar.gz" if "windows" in target else "so.tar.gz"
+    if "windows" in target:
+        ext = "dll.tar.gz"
+    elif "darwin" in target or "apple" in target:
+        ext = "dylib.tar.gz"
+    else:
+        ext = "so.tar.gz"
 
     return f"lib{lib_name}-v{version}-nif-{nif_version}-{target}.{ext}"
 
