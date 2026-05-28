@@ -79,6 +79,21 @@ runs:
       shell: bash
       run: echo "BINDGEN_EXTRA_CLANG_ARGS=--target=x86_64-pc-windows-gnu --sysroot=${RI_DEVKIT//\\/\/}$MSYSTEM_PREFIX" >> "$GITHUB_ENV"
 
+    - name: Pin GNU toolchain via local rust-toolchain.toml (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        @"
+        [toolchain]
+        channel = "1.95-x86_64-pc-windows-gnu"
+        "@ | Out-File -FilePath rust-toolchain.toml -Encoding utf8
+
+    - name: Verify active toolchain (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: rustup show active-toolchain
+
     - name: Install Ruby gems (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
@@ -87,7 +102,7 @@ runs:
         PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         $unixPath = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE/$env:PACKAGE_DIR'"
-        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu CARGO_BUILD_TARGET=x86_64-pc-windows-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle install"
+        ridk exec bash -lc "cd '$unixPath' && export CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle install"
 
     - name: Compile Ruby extension (Windows)
       if: runner.os == 'Windows'
@@ -98,4 +113,4 @@ runs:
         PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         $unixPath = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE/$env:PACKAGE_DIR'"
-        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu CARGO_BUILD_TARGET=x86_64-pc-windows-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
+        ridk exec bash -lc "cd '$unixPath' && export CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
