@@ -68,6 +68,14 @@ runs:
       run: |
         python3 "$GITHUB_ACTION_PATH/scripts/build.py"
 
+    - name: Fix macOS dylib install_name
+      shell: bash
+      env:
+        LIBRARY_PATH: ${{ steps.build.outputs.library-path }}
+        CRATE_NAME: ${{ inputs.crate-name }}
+      run: |
+        python3 "$GITHUB_ACTION_PATH/scripts/fix_dylib_install_name.py"
+
     - name: Verify build artifacts
       shell: bash
       env:

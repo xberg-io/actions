@@ -11,7 +11,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v6
 
@@ -51,3 +54,17 @@ jobs:
           [ -n "${{ steps.build.outputs.library-path }}" ]
           test -f "${{ steps.build.outputs.library-path }}"
           file "${{ steps.build.outputs.library-path }}" | grep -Ei 'shared object|dynamic library|dll'
+
+      - name: Verify macOS dylib install_name uses @rpath
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          lib_path="${{ steps.build.outputs.library-path }}"
+          install_name=$(otool -D "$lib_path" | tail -1)
+          echo "Dylib install_name: $install_name"
+          if [[ "$install_name" == @rpath/* ]]; then
+            echo "✓ install_name correctly uses @rpath"
+          else
+            echo "✗ install_name does not use @rpath: $install_name"
+            exit 1
+          fi
