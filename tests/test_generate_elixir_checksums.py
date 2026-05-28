@@ -20,8 +20,9 @@ def test_build_nif_artifact_name_linux():
 
 
 def test_build_nif_artifact_name_darwin():
+    # rustler_precompiled (<= 0.9) uses `.so` for darwin too — only windows is `.dll`.
     result = mod.build_nif_artifact_name("kreuzberg", "1.2.3", "2.16", "aarch64-apple-darwin")
-    assert result == "libkreuzberg-v1.2.3-nif-2.16-aarch64-apple-darwin.dylib.tar.gz"
+    assert result == "libkreuzberg-v1.2.3-nif-2.16-aarch64-apple-darwin.so.tar.gz"
 
 
 def test_build_nif_artifact_name_windows():
@@ -58,7 +59,7 @@ def test_format_checksum_file_single():
 def test_format_checksum_file_multiple():
     checksums = {
         "libfoo-v1.0.0-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz": "a" * 64,
-        "libfoo-v1.0.0-nif-2.16-aarch64-apple-darwin.dylib.tar.gz": "b" * 64,
+        "libfoo-v1.0.0-nif-2.16-aarch64-apple-darwin.so.tar.gz": "b" * 64,
     }
     result = mod.format_checksum_file(checksums)
 
