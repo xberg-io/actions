@@ -20,10 +20,11 @@ def test_build_nif_artifact_name_linux():
 
 
 def test_build_nif_artifact_name_darwin():
-    # Darwin/apple targets ship as .dylib (matches alef v0.20.2+ upload naming
-    # and the platform-native shared-object extension on macOS).
+    # Darwin/apple targets ship as .so (not .dylib) because rustler_precompiled
+    # 0.9.0 (the latest on Hex; no .dylib support exists) hardcodes .so for
+    # every non-Windows consumer download URL in lib_name_with_ext/2.
     result = mod.build_nif_artifact_name("kreuzberg", "1.2.3", "2.16", "aarch64-apple-darwin")
-    assert result == "libkreuzberg-v1.2.3-nif-2.16-aarch64-apple-darwin.dylib.tar.gz"
+    assert result == "libkreuzberg-v1.2.3-nif-2.16-aarch64-apple-darwin.so.tar.gz"
 
 
 def test_build_nif_artifact_name_windows():

@@ -22,18 +22,14 @@ from pathlib import Path
 def build_nif_artifact_name(lib_name: str, version: str, nif_version: str, target: str) -> str:
     """Return the NIF artifact filename for a given target triple.
 
-    Use the platform-native shared-object extension: `.dll` on windows,
-    `.dylib` on macOS / darwin / apple targets, `.so` elsewhere. This matches
-    what alef v0.20.2+ uploads via `publish.yaml`. Any drift here triggers a
-    404 on consumer downloads.
+    Use `.dll` on windows and `.so` everywhere else (including macOS).
+    `rustler_precompiled 0.9.0`'s `lib_name_with_ext/2` (the latest version on
+    Hex; no `.dylib` support exists) hardcodes `.so` for every non-Windows
+    consumer download URL and cannot be overridden. Publishing `.dylib` for
+    darwin causes Hex publish to fail on checksum vs. asset mismatch and
+    404s every downstream `mix deps.get` on macOS.
     """
-    if "windows" in target:
-        ext = "dll.tar.gz"
-    elif "darwin" in target or "apple" in target:
-        ext = "dylib.tar.gz"
-    else:
-        ext = "so.tar.gz"
-
+    ext = "dll.tar.gz" if "windows" in target else "so.tar.gz"
     return f"lib{lib_name}-v{version}-nif-{nif_version}-{target}.{ext}"
 
 
