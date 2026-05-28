@@ -72,7 +72,7 @@ runs:
     - name: Install Rust GNU toolchain (Windows)
       if: runner.os == 'Windows'
       shell: bash
-      run: rustup toolchain install stable-gnu --profile minimal --no-self-update
+      run: rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal --no-self-update
 
     - name: Configure bindgen sysroot (Windows)
       if: runner.os == 'Windows'
@@ -87,7 +87,7 @@ runs:
         PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         $unixPath = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE/$env:PACKAGE_DIR'"
-        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle install"
+        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu CARGO_BUILD_TARGET=x86_64-pc-windows-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle install"
 
     - name: Compile Ruby extension (Windows)
       if: runner.os == 'Windows'
@@ -98,4 +98,4 @@ runs:
         PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         $unixPath = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE/$env:PACKAGE_DIR'"
-        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
+        ridk exec bash -lc "cd '$unixPath' && export RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu CARGO_BUILD_TARGET=x86_64-pc-windows-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
