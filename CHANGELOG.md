@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`setup-chrome`: warm snapd + retry `snap install chromium` on linux-arm64.** Snapd on GitHub-hosted `ubuntu-*-arm` runners is frequently not fully seeded when the first `snap install` runs, which makes the install fail with the generic `error: cannot perform the following tasks:` and aborts the workflow. The action now starts `snapd.service`/`snapd.socket`, waits for `snap wait system seed.loaded`, and retries `snap install chromium --classic` up to 5 times with linear backoff (5/10/15/20s), re-warming snapd between attempts. Surfaced by kreuzcrawl `9be6b203b` CI E2E (python) on linux-arm64. (`setup-chrome/action.yml`)
+
 ## [1.8.6] - 2026-05-27
 
 ### Fixed

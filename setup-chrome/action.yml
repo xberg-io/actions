@@ -37,7 +37,29 @@ runs:
         # Install the official chromium snap with --classic confinement to get a real binary that
         # properly handles command-line arguments like --disable-hang-monitor.
 
-        sudo snap install chromium --classic
+        # Snapd on GitHub-hosted ubuntu-*-arm runners is frequently not fully seeded when this
+        # step first runs, which makes `snap install` fail with "error: cannot perform the
+        # following tasks:" (snapd's generic refusal when its task graph is not ready or the
+        # snap-store backend has not finished startup). Warm snapd up, wait for it to finish
+        # seeding, then retry the install with backoff.
+        sudo systemctl start snapd.service snapd.socket || true
+        sudo snap wait system seed.loaded || true
+
+        attempts=0
+        max_attempts=5
+        until sudo snap install chromium --classic; do
+          attempts=$((attempts + 1))
+          if [ "$attempts" -ge "$max_attempts" ]; then
+            echo "::error::snap install chromium failed after ${max_attempts} attempts on linux-arm64"
+            exit 1
+          fi
+          echo "snap install attempt ${attempts} failed; sleeping $((attempts * 5))s before retry"
+          sleep $((attempts * 5))
+          # Re-warm snapd in case the previous failure left it in a bad state.
+          sudo systemctl restart snapd.service || true
+          sudo snap wait system seed.loaded || true
+        done
+
         binary="/snap/chromium/current/usr/bin/chromium"
 
         # Create symlinks for common binary names
