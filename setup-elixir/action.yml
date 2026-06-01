@@ -12,6 +12,17 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Normalize ImageOS for arm64 runners
+      shell: bash
+      run: |
+        # erlef/setup-beam@v1 cannot map "ubuntu24-arm64" yet; fall back to ubuntu24
+        # so the action can resolve a matching OTP/Elixir build.
+        if [ "${ImageOS:-}" = "ubuntu24-arm64" ]; then
+          echo "ImageOS=ubuntu24" >> "$GITHUB_ENV"
+        elif [ "${ImageOS:-}" = "ubuntu22-arm64" ]; then
+          echo "ImageOS=ubuntu22" >> "$GITHUB_ENV"
+        fi
+
     - name: Setup Beam
       uses: erlef/setup-beam@v1
       with:

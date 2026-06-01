@@ -4,6 +4,18 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.18] - 2026-06-01
+
+### Fixed
+
+- **`setup-elixir`: normalize `ImageOS` on arm64 runners so `erlef/setup-beam@v1` resolves.** On
+  `ubuntu-24.04-arm` GitHub-hosted runners the runtime `ImageOS=ubuntu24-arm64` is not in the
+  set the action recognises (`ubuntu22`, `ubuntu24`, `win*`, `macos*`), so it fails with
+  `Tried to map a target OS from env. variable 'ImageOS' (got ubuntu24-arm64), but failed`.
+  The composite now rewrites `ImageOS` to the non-suffixed form (`ubuntu24`/`ubuntu22`) before
+  invoking `setup-beam`, restoring CI Lint on h2m's arm64 validator job.
+  (`setup-elixir/action.yml`)
+
 ## [1.8.17] - 2026-06-01
 
 ### Fixed
