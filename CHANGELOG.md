@@ -4,6 +4,20 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.17] - 2026-06-01
+
+### Fixed
+
+- **`rewrite-native-deps`: strip workspace `[patch.*]` sections so consumer sdist builds resolve registry deps.**
+  `alef publish prepare --lang …` correctly rewrites the binding crate's path-dep on the core crate to a registry
+  version-dep, but it leaves any workspace-root `[patch.crates-io] core = { path = "..." }` (or other `[patch.*]`)
+  untouched. When a consumer unpacks the sdist on a fresh machine the path no longer exists, but the patch override
+  still wins over the registry dep — Cargo bails with `failed to read crates/<core>/Cargo.toml: No such file or
+  directory`. The action now strips the entire `[patch.*]` block from the workspace `Cargo.toml` as a post-step;
+  `[patch]` sections are workspace/dev affordances with no meaning in a published source distribution. Resolves
+  kreuzberg-dev/html-to-markdown#390 (Alpine/musl `pip install` failure on every release since 3.5.1).
+  (`rewrite-native-deps/action.yml`)
+
 ## [1.8.16] - 2026-05-29
 
 ### Fixed

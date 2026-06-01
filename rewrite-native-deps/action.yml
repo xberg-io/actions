@@ -54,3 +54,30 @@ runs:
         fi
         echo "Running: alef ${args[*]}"
         alef "${args[@]}"
+
+    - name: Strip workspace [patch.*] sections so sdist consumers resolve registry deps
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        # `alef publish prepare` rewrites the binding crate's path-dep on the core
+        # crate to a registry version-dep, but leaves any workspace-root
+        # `[patch.crates-io] core = { path = "..." }` (or similar `[patch.*]`)
+        # untouched. When the sdist is unpacked on a consumer machine the path
+        # no longer exists, but the [patch] override still wins over the
+        # registry dep → cargo bails with `failed to read .../Cargo.toml`.
+        # Strip the [patch.*] sections entirely; they are dev/workspace
+        # affordances that have no meaning in a published source distribution.
+        # Resolves kreuzberg-dev/html-to-markdown#390 (Alpine/musl sdist install).
+        if [ -f Cargo.toml ] && grep -q '^\[patch\.' Cargo.toml; then
+          awk '
+            BEGIN { in_patch = 0 }
+            /^\[patch\./ { in_patch = 1; next }
+            in_patch && /^\[/ { in_patch = 0 }
+            !in_patch { print }
+          ' Cargo.toml > Cargo.toml.tmp
+          mv Cargo.toml.tmp Cargo.toml
+          echo "Stripped [patch.*] sections from workspace Cargo.toml for sdist build."
+        else
+          echo "No [patch.*] sections in workspace Cargo.toml; nothing to strip."
+        fi
