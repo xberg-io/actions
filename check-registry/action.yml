@@ -94,6 +94,7 @@ runs:
         SOURCE: ${{ inputs.source }}
         ASSET_PREFIX: ${{ inputs.asset-prefix }}
         REQUIRED_ASSETS: ${{ inputs.assets }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
 
