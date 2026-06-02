@@ -8,15 +8,18 @@ inputs:
     default: "packages/ruby"
   platform:
     description: >
-      Ruby platform to build (e.g. x86_64-linux, aarch64-linux, arm64-darwin,
-      x86_64-darwin, x64-mingw-ucrt). When specified, builds a platform-specific
-      gem via rake. When empty (default), runs `rake compile` for host compile only.
+      Ruby platform tag for validation (e.g. x86_64-linux, aarch64-linux, arm64-darwin,
+      x86_64-darwin, x64-mingw-ucrt). When non-empty, the compiled gem's platform is
+      checked against this value. rake-compiler detects the native platform automatically
+      and tags the gem accordingly; this input is primarily for documentation and optional
+      validation. When empty (default), native build on the runner without validation.
     required: false
     default: ""
   dock-platform:
     description: >
       Platform identifier for rb-sys-dock when cross-compiling to Windows
-      (e.g. x64-mingw-ucrt). Only used when platform is x64-mingw-ucrt.
+      (e.g. x64-mingw-ucrt). When non-empty, uses rb-sys-dock Docker to cross-compile
+      the gem for the specified platform.
     required: false
     default: ""
   rewrite-native-deps:
@@ -70,10 +73,10 @@ runs:
       run: bundle exec rake compile
 
     - name: Build platform gem (Unix)
-      if: runner.os != 'Windows' && inputs.platform != ''
+      if: runner.os != 'Windows'
       shell: bash
       working-directory: ${{ inputs.package-dir }}
-      run: bundle exec rake "native:${{ inputs.platform }}" gem
+      run: bundle exec rake build
 
     # --- Windows ---
     - name: Install MSYS2 toolchain
@@ -154,12 +157,23 @@ runs:
         ridk exec bash -lc "cd '$unixPath' && export CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CARGO_BUILD_TARGET=x86_64-pc-windows-gnu RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
 
     - name: Build platform gem (Windows)
-      if: runner.os == 'Windows' && inputs.platform != '' && inputs.dock-platform != ''
+      if: runner.os == 'Windows'
       shell: bash
       working-directory: ${{ inputs.package-dir }}
       run: |
-        gem install rb_sys
-        rb-sys-dock --platform "${{ inputs.dock-platform }}" -- bash -c "bundle install --jobs=4 --retry=3 && bundle exec rake \"native:${{ inputs.platform }}\" gem"
+        if [ -n "${{ inputs.dock-platform }}" ]; then
+          # Cross-compile for Windows via Docker using rb-sys-dock.
+          # The rb-sys-dock container ships its own Ruby toolchain; bundler
+          # must `install` inside the container before `exec rake` so the
+          # lockfile materializes against the container's Ruby version
+          # rather than the host's.
+          gem install rb_sys
+          rb-sys-dock --platform "${{ inputs.dock-platform }}" -- bash -c "bundle install --jobs=4 --retry=3 && bundle exec rake compile && bundle exec rake build"
+        else
+          # Native build via MSYS2/mingw (fallback if dock-platform not specified)
+          bundle exec rake compile
+          bundle exec rake build
+        fi
 
     - name: Restore consumer rust-toolchain.toml (Windows)
       if: always() && runner.os == 'Windows'
