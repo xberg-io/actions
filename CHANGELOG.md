@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.22] - 2026-06-04
+
 ### Added
 
 - **`publish-zig`: multi-platform packaging mode (`multi-platform-ffi-dir`).** When a consumer
