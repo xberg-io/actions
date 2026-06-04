@@ -4,6 +4,16 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`build-rust-ffi`: verify macOS dylib install_name was actually rewritten.** The "Fix macOS dylib install_name" step
+  calls `install_name_tool -id @rpath/<name>.dylib <path>` to replace the absolute build-path `LC_ID_DYLIB` with an
+  `@rpath`-relative one for portability. However, `install_name_tool` can silently fail in edge cases (read-only
+  filesystem, permission issues, corrupted binary) without returning a non-zero exit code, resulting in dylibs being
+  distributed to consumers with the broken absolute path still embedded. The script now verifies the fix by running
+  `otool -D` after the rewrite and confirming the new `@rpath` install_name is present; if not, it exits with an
+  error and logs the actual install_name for debugging. (`build-rust-ffi/scripts/fix_dylib_install_name.py`)
+
 ## [1.8.18] - 2026-06-01
 
 ### Fixed
