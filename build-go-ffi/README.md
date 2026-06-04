@@ -8,6 +8,20 @@ The action expects the caller to have already checked out the repository and
 run `kreuzberg-dev/actions/setup-rust@v1` (with the right target installed).
 It does not install any toolchains itself.
 
+## Contract for Go `go generate` consumers
+
+Archives produced by this action have a standardized layout for consumption by
+`go generate` scripts:
+
+1. Archive filename: `{lib-name}-{rust-target}.tar.gz` (e.g., `html_to_markdown_ffi-aarch64-apple-darwin.tar.gz`)
+2. Archive expands to: `{lib-name}-{rust-target}/` containing:
+   - `lib{lib-name}.{ext}` (Unix: `.dylib`/`.so`, Windows: `.dll`)
+   - `{lib-name}.h` (C header)
+3. Go `go generate` scripts should:
+   - Download the archive from a GitHub Release for the current `GOOS`/`GOARCH`
+   - Unpack into `.lib/{rid}/` (e.g., `.lib/macos-arm64/`)
+   - Ensure headers and binaries are present before cgo compilation
+
 ## Inputs
 
 | Name | Required | Default | Description |
@@ -28,6 +42,8 @@ It does not install any toolchains itself.
 | `archive-sha256` | Hex-encoded SHA256 digest of the archive. |
 
 ## Usage
+
+### Generic template
 
 ```yaml
 jobs:
@@ -54,6 +70,22 @@ jobs:
           name: go-ffi-${{ matrix.target }}
           path: ${{ steps.ffi.outputs.archive-path }}
 ```
+
+### html-to-markdown example
+
+```yaml
+- id: ffi
+  uses: kreuzberg-dev/actions/build-go-ffi@v1
+  with:
+    target: ${{ matrix.target }}
+    crate-name: html-to-markdown-ffi
+    lib-name: html_to_markdown_ffi
+    header-path: crates/html-to-markdown-ffi/include/html_to_markdown.h
+    output-dir: dist/go-ffi
+```
+
+The resulting archive `html_to_markdown_ffi-{target}.tar.gz` should be uploaded to
+a GitHub Release for the alef Go backend to download during `go generate`.
 
 ## Notes
 
