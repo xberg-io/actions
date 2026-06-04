@@ -109,6 +109,23 @@ def _fix_install_name(library_path: Path, dylib_name: str) -> None:
 
     print("Install_name successfully rewritten")
 
+    # Verify the fix was actually applied (catch cases where install_name_tool silently fails).
+    verify_result = subprocess.run(
+        ["otool", "-D", str(library_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if verify_result.returncode == 0:
+        output = verify_result.stdout.strip()
+        if new_install_name not in output:
+            print(
+                f"Warning: Verification failed — expected '{new_install_name}' in install_name",
+                file=sys.stderr,
+            )
+            print(f"otool -D output:\n{output}", file=sys.stderr)
+            raise SystemExit(1)
+
 
 def main() -> None:
     """Main entry point: fix dylib install_name on macOS."""
