@@ -74,14 +74,23 @@ runs:
       shell: bash
       if: ${{ inputs.dry-run != 'true' }}
       env:
-        TAP_DIR: ${{ inputs.tap-dir }}
         VERSION: ${{ inputs.version }}
+        FORMULAS_CHANGED: ${{ steps.render.outputs.formulas-changed }}
       run: |
         set -euo pipefail
         echo "Validating rendered formulas contain version ${VERSION}..."
-        for formula_file in "$TAP_DIR"/Formula/*.rb; do
+        # Iterate only the formulas this action rendered — the tap may
+        # contain formulas owned by other repos (e.g. alef, h2m) whose
+        # versions are independent and must not be checked here.
+        if [[ -z "${FORMULAS_CHANGED}" ]]; then
+          echo "No formulas rendered; skipping validation."
+          exit 0
+        fi
+        while IFS= read -r formula_file; do
+          [[ -z "$formula_file" ]] && continue
           if [[ ! -f "$formula_file" ]]; then
-            continue
+            echo "::error::Rendered formula missing: $formula_file"
+            exit 1
           fi
           formula_name=$(basename "$formula_file" .rb)
           if ! grep -q "version \"${VERSION}\"" "$formula_file"; then
@@ -90,4 +99,4 @@ runs:
             exit 1
           fi
           echo "✓ $formula_name contains version ${VERSION}"
-        done
+        done <<< "${FORMULAS_CHANGED}"
