@@ -1,0 +1,121 @@
+name: Publish R Package
+description: >
+  Build and upload R package with native extension to GitHub Release.
+
+  Builds the R package source distribution (`R CMD build`) and uploads it to
+  a GitHub Release artifact, named with the version tag. Consumers can install
+  with `install.packages(url, repos = NULL, type = "source")`.
+
+inputs:
+  package-dir:
+    description: "Path to the R package directory (relative to repo root)"
+    required: false
+    default: "packages/r"
+  version:
+    description: "Package version (used in artifact naming)"
+    required: true
+  tag:
+    description: "Git tag for the release"
+    required: true
+  github-token:
+    description: "GitHub token for authentication"
+    required: false
+    default: ${{ github.token }}
+  rewrite-native-deps:
+    description: >
+      Rewrite workspace path-deps to registry version-deps via alef before
+      building, so the shipped tarball resolves on a consumer machine. Disable
+      for non-release CI that builds against the local workspace.
+    required: false
+    default: "true"
+  alef-version:
+    description: "Alef version for the dependency rewrite (passed to install-alef@v1)"
+    required: false
+    default: "latest"
+  dry-run:
+    description: >
+      Skip the rewrite-native-deps step when true. Dry-run workflows run
+      before the core crate is on crates.io. The action still builds the
+      tarball against the local workspace.
+    required: false
+    default: "false"
+
+outputs:
+  artifact-url:
+    description: "URL to the uploaded release artifact"
+    value: ${{ steps.upload.outputs.artifact-url }}
+  archive-path:
+    description: "Absolute path to the built .tar.gz archive"
+    value: ${{ steps.build.outputs.archive-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup R
+      uses: kreuzberg-dev/actions/setup-r@v1
+      with:
+        r-version: "4.4"
+        install-deps: "true"
+        description-file: ${{ inputs.package-dir }}/DESCRIPTION
+
+    - name: Rewrite native dependencies to registry versions
+      if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
+      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      with:
+        lang: r
+        alef-version: ${{ inputs.alef-version }}
+        require-registry: "true"
+
+    - name: Install R package dependencies
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        # Install package dependencies from DESCRIPTION
+        Rscript -e "devtools::install_dev_deps()" || \
+        Rscript -e "install.packages(c('devtools', 'roxygen2'), repos='https://cloud.r-project.org')"
+
+    - name: Build R package tarball
+      id: build
+      shell: bash
+      env:
+        INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        cd "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"
+        # Build source distribution (.tar.gz)
+        R CMD build .
+        # Find the generated .tar.gz
+        archive=$(ls -1 *.tar.gz 2>/dev/null | head -n 1)
+        if [ -z "${archive}" ]; then
+          echo "::error::R CMD build did not produce a .tar.gz in ${INPUT_PACKAGE_DIR}"
+          exit 1
+        fi
+        full_path="${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}/${archive}"
+        echo "archive-path=${full_path}" >>"${GITHUB_OUTPUT}"
+        echo "Built R package: ${archive}"
+
+    - name: Upload to GitHub Release
+      id: upload
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.tag }}
+        VERSION: ${{ inputs.version }}
+        ARCHIVE_PATH: ${{ steps.build.outputs.archive-path }}
+      run: |
+        set -euo pipefail
+        archive_name=$(basename "${ARCHIVE_PATH}")
+        # Use gh to upload the artifact
+        gh release upload "${TAG}" "${ARCHIVE_PATH}" --clobber 2>/dev/null || \
+        gh release create "${TAG}" "${ARCHIVE_PATH}" --generate-notes 2>/dev/null
+
+        artifact_url="$(gh release view "${TAG}" --json assets --jq ".assets[] | select(.name == \"${archive_name}\") | .url" 2>/dev/null || echo "")"
+        if [ -z "${artifact_url}" ]; then
+          # Fallback: construct the URL manually
+          repo=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "unknown/repo")
+          artifact_url="https://github.com/${repo}/releases/download/${TAG}/${archive_name}"
+        fi
+        echo "artifact-url=${artifact_url}" >>"${GITHUB_OUTPUT}"
+        echo "Uploaded R package to: ${artifact_url}"

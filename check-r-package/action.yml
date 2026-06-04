@@ -1,0 +1,56 @@
+name: Check R Package
+description: >
+  Validate R package structure and run R CMD check.
+
+  Verifies the package can be built and passes `R CMD check --as-cran`,
+  ensuring it meets CRAN compliance standards for distribution.
+
+inputs:
+  package-dir:
+    description: "Path to the R package directory (relative to repo root)"
+    required: false
+    default: "packages/r"
+  r-version:
+    description: "R version to use for checks"
+    required: false
+    default: "4.4"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup R
+      uses: kreuzberg-dev/actions/setup-r@v1
+      with:
+        r-version: ${{ inputs.r-version }}
+        install-deps: "true"
+        description-file: ${{ inputs.package-dir }}/DESCRIPTION
+
+    - name: Install R package dependencies
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        Rscript -e "devtools::install_dev_deps()" || \
+        Rscript -e "install.packages(c('devtools', 'roxygen2'), repos='https://cloud.r-project.org')"
+
+    - name: Run R CMD check
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        set -euo pipefail
+        R CMD check --as-cran . 2>&1 | tee check.log
+        # Exit with error if any ERRORRs found
+        if grep -q "^ERRORS$" check.log || grep -q "^ERROR$" check.log; then
+          echo "::error::R CMD check found errors"
+          exit 1
+        fi
+
+    - name: Report check summary
+      if: always()
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        if [ -f "*.Rcheck/00check.log" ]; then
+          echo "## R CMD check Summary"
+          tail -30 *.Rcheck/00check.log || true
+        fi

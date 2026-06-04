@@ -69,3 +69,25 @@ runs:
         INPUT_GITHUB_REPO: ${{ inputs.github-repo }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: python3 "${{ github.action_path }}/scripts/render.py"
+
+    - name: Validate rendered formulas contain version
+      shell: bash
+      if: ${{ inputs.dry-run != 'true' }}
+      env:
+        TAP_DIR: ${{ inputs.tap-dir }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        echo "Validating rendered formulas contain version ${VERSION}..."
+        for formula_file in "$TAP_DIR"/Formula/*.rb; do
+          if [[ ! -f "$formula_file" ]]; then
+            continue
+          fi
+          formula_name=$(basename "$formula_file" .rb)
+          if ! grep -q "version \"${VERSION}\"" "$formula_file"; then
+            echo "::error::Formula $formula_name does not contain version ${VERSION}"
+            cat "$formula_file"
+            exit 1
+          fi
+          echo "✓ $formula_name contains version ${VERSION}"
+        done
