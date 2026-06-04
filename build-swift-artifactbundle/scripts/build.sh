@@ -11,6 +11,7 @@
 #   INPUT_HEADER_PATH       - optional path to C headers directory
 #   INPUT_OUTPUT_DIR        - output directory (default: dist/swift-artifactbundle)
 #   INPUT_BUILD_PROFILE     - cargo profile (release, dev, ...)
+#   INPUT_PACKAGE_MANIFEST_PATH - optional path to Package.swift for substitution
 #   INPUT_DRY_RUN           - "true" to print the plan and exit
 set -euo pipefail
 
@@ -22,6 +23,8 @@ OUTPUT_DIR="${INPUT_OUTPUT_DIR:-dist/swift-artifactbundle}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 INCLUDE_MACOS_X86_64="${INPUT_INCLUDE_MACOS_X86_64:-true}"
 INCLUDE_IOS_X86_64="${INPUT_INCLUDE_IOS_X86_64:-true}"
+# shellcheck disable=SC2034
+PACKAGE_MANIFEST_PATH="${INPUT_PACKAGE_MANIFEST_PATH:-}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 
 # Set defaults for lib_name and artifact_name

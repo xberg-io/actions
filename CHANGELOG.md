@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`build-swift-artifactbundle`: substitute Package.swift checksum placeholders.** When building a Swift artifact bundle from a Rust FFI library, the wrapper Package.swift often needs the tarball checksum and/or URL to be filled in before distribution. Set the `package-manifest-path` input to the path of Package.swift relative to the action's working directory; the action will substitute all occurrences of `__ALEF_SWIFT_CHECKSUM__` and `__ALEF_SWIFT_BUNDLE_URL__` with the resolved checksum. The substituted manifest path is returned in the `package-manifest-updated` output for consumers to upload to GitHub Release or commit to version control. (`build-swift-artifactbundle/action.yml`, `build-swift-artifactbundle/scripts/build.sh`, `tests/test_build_swift_artifactbundle.sh`)
+
 ## [1.8.22] - 2026-06-04
 
 ### Added

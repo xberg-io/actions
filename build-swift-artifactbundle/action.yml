@@ -56,6 +56,10 @@ inputs:
     description: "Print the planned commands and exit without building"
     required: false
     default: "false"
+  package-manifest-path:
+    description: "Optional path to Package.swift to update with checksum"
+    required: false
+    default: ""
 
 outputs:
   bundle-path:
@@ -70,6 +74,9 @@ outputs:
   checksum-file:
     description: "Path to checksum artifact file (used by upload-artifact step)"
     value: ${{ steps.upload-checksum.outputs.checksum-file }}
+  package-manifest-updated:
+    description: "Path to the updated Package.swift (if package-manifest-path was provided)"
+    value: ${{ steps.substitute-manifest.outputs.package-manifest-path }}
 
 runs:
   using: composite
@@ -87,8 +94,27 @@ runs:
         INPUT_INCLUDE_MACOS_X86_64: ${{ inputs.include-macos-x86_64 }}
         INPUT_INCLUDE_IOS_X86_64: ${{ inputs.include-ios-x86_64 }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
       run: |
         bash "${{ github.action_path }}/scripts/build.sh"
+
+    - name: Substitute Package.swift placeholders
+      id: substitute-manifest
+      if: inputs.package-manifest-path != ''
+      shell: bash
+      env:
+        CHECKSUM: ${{ steps.build.outputs.checksum }}
+        PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
+      run: |
+        if [[ ! -f "$PACKAGE_MANIFEST_PATH" ]]; then
+          echo "Error: Package.swift not found at $PACKAGE_MANIFEST_PATH"
+          exit 1
+        fi
+        sed -i.bak "s/__ALEF_SWIFT_CHECKSUM__/$CHECKSUM/g" "$PACKAGE_MANIFEST_PATH"
+        sed -i "s|__ALEF_SWIFT_BUNDLE_URL__|$CHECKSUM|g" "$PACKAGE_MANIFEST_PATH"
+        rm -f "${PACKAGE_MANIFEST_PATH}.bak"
+        echo "package-manifest-path=$PACKAGE_MANIFEST_PATH" >> "$GITHUB_OUTPUT"
+        echo "Updated $PACKAGE_MANIFEST_PATH with checksum: $CHECKSUM"
 
     - name: Save checksum as artifact
       id: upload-checksum
