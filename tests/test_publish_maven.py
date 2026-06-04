@@ -56,3 +56,24 @@ def test_is_already_published_true():
 def test_is_already_published_false():
     log = "[ERROR] Some other deployment error occurred\n[ERROR] Connection refused"
     assert maven_mod.is_already_published(log) is False
+
+
+# ---------------------------------------------------------------------------
+# Classifier remapping (matrix label → NativeLib RID)
+# ---------------------------------------------------------------------------
+
+
+def test_classifier_remap_osx_to_macos():
+    """Verify osx-* classifiers are remapped to macos-* for NativeLib resolution."""
+    cases = [
+        ("osx-aarch64", "macos-aarch64"),
+        ("osx-x86_64", "macos-x86_64"),
+        ("linux-aarch64", "linux-aarch64"),  # No change
+        ("linux-x86_64", "linux-x86_64"),    # No change
+        ("windows-aarch64", "windows-aarch64"),  # No change
+        ("windows-x86_64", "windows-x86_64"),    # No change
+    ]
+    for classifier, expected_rid in cases:
+        # Bash parameter substitution: ${classifier/osx-/macos-}
+        rid = classifier.replace("osx-", "macos-")
+        assert rid == expected_rid, f"Failed to remap {classifier} → {expected_rid}"

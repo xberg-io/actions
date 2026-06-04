@@ -79,3 +79,18 @@ jobs:
         run: |
           ls -la packages/node/
           test -n "$(ls packages/node/*.node 2>/dev/null)"
+
+      - name: Build with cross-compile and verify platform subdirectory
+        uses: ./build-node-napi
+        with:
+          crate-dir: packages/node
+          target: x86_64-unknown-linux-gnu
+          use-napi-cross: "true"
+
+      - name: Verify platform subdirectory structure
+        shell: bash
+        run: |
+          # After the above build with target, npm/ should contain platform subdirs
+          # The verification step in build-node-napi should have validated the .node file
+          echo "npm/ directory structure:"
+          find packages/node/npm -type f 2>/dev/null | head -20 || echo "npm/ not present or empty"

@@ -117,6 +117,38 @@ runs:
           pnpm exec napi artifacts --output-dir . --npm-dir "${NPM_DIR}"
         fi
 
+    - name: Verify platform-specific .node file was staged
+      if: inputs.target != '' && inputs.collect-artifacts == 'true'
+      shell: bash
+      working-directory: ${{ inputs.crate-dir }}
+      env:
+        TARGET: ${{ inputs.target }}
+        NPM_DIR: ${{ inputs.npm-dir }}
+      run: |
+        set -euo pipefail
+        # Extract platform string from target triple (e.g., aarch64-apple-darwin -> darwin-arm64)
+        # Platform dirs follow the pattern: npm/{platform}/
+        platform_dirs=("${NPM_DIR}"/*/package.json)
+        if [ ${#platform_dirs[@]} -eq 0 ] || [ ! -e "${platform_dirs[0]}" ]; then
+          echo "::error::No platform subdirectory found in ${NPM_DIR}/"
+          ls -la "${NPM_DIR}" || true
+          exit 1
+        fi
+
+        # Get the first (and should be only) platform directory
+        platform_dir=$(dirname "${platform_dirs[0]}")
+        platform_name=$(basename "${platform_dir}")
+
+        # Verify .node file exists in the platform directory
+        node_file=$(find "${platform_dir}" -maxdepth 1 -name "*.node" -type f)
+        if [ -z "${node_file}" ]; then
+          echo "::error::No .node file found in ${platform_dir}/"
+          ls -la "${platform_dir}" || true
+          exit 1
+        fi
+
+        echo "Verified: ${platform_name} platform package contains $(basename "${node_file}")"
+
     - name: Pack Node tarball (legacy)
       if: inputs.pack-tarball == 'true'
       id: pack

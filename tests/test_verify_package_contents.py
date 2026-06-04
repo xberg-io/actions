@@ -150,3 +150,48 @@ def test_main_good_node_tgz(good_node_tgz: Path, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("INPUT_STRICT", "true")
     monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
     assert verify_mod.main() == 0
+
+
+@pytest.fixture
+def good_node_platform_tgz(tmp_path: Path) -> Path:
+    """Node platform-specific package with .node binary."""
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "package.json").write_text("{}")
+    (pkg / "index.darwin-arm64.node").write_bytes(b"\x00" * 100)
+    tgz = tmp_path / "kreuzberg-html-to-markdown-node-darwin-arm64-3.6.0-rc.12.tgz"
+    with tarfile.open(tgz, "w:gz") as tf:
+        for f in pkg.iterdir():
+            tf.add(f, arcname=f"package/{f.name}")
+    return tgz
+
+
+@pytest.fixture
+def bad_node_platform_tgz(tmp_path: Path) -> Path:
+    """Node platform-specific package missing .node binary."""
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "package.json").write_text("{}")
+    tgz = tmp_path / "bad-platform.tgz"
+    with tarfile.open(tgz, "w:gz") as tf:
+        for f in pkg.iterdir():
+            tf.add(f, arcname=f"package/{f.name}")
+    return tgz
+
+
+def test_main_good_node_platform_tgz(good_node_platform_tgz: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("INPUT_LANGUAGE", "node-platform")
+    monkeypatch.setenv("INPUT_ARTIFACT_PATH", str(good_node_platform_tgz))
+    monkeypatch.setenv("INPUT_REQUIRED_EXTRAS", "")
+    monkeypatch.setenv("INPUT_STRICT", "true")
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    assert verify_mod.main() == 0
+
+
+def test_main_bad_node_platform_tgz_strict_fails(bad_node_platform_tgz: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("INPUT_LANGUAGE", "node-platform")
+    monkeypatch.setenv("INPUT_ARTIFACT_PATH", str(bad_node_platform_tgz))
+    monkeypatch.setenv("INPUT_REQUIRED_EXTRAS", "")
+    monkeypatch.setenv("INPUT_STRICT", "true")
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    assert verify_mod.main() == 1
