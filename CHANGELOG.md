@@ -4,6 +4,24 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`publish-zig`: multi-platform packaging mode (`multi-platform-ffi-dir`).** When a consumer
+  has FFI libraries pre-built for several Rust target triples and wants a single Zig tarball
+  that `zig fetch --save` resolves on any supported host, set `multi-platform-ffi-dir` to a
+  dir laid out per Rust RID (`linux-x64/<libs>`, `osx-arm64/<libs>`, `win-x64/<libs>`, plus a
+  shared `include/<header>` dir). The action copies each RID's libraries into
+  `<working-directory>/lib/<canonical-target-triple>/`, patches `build.zig.zon` `.paths` to
+  allowlist `lib` and `include` (otherwise `zig fetch` consumers cannot see them), and
+  overwrites `build.zig` with a `ridDir(target)` switch that resolves the correct
+  `lib/<rid>` subdir from Zig's compile-time target. Two new required inputs
+  (`module-name`, `ffi-lib-name`) parameterise the rewritten module export and
+  `linkSystemLibrary` call. Mutually exclusive with `use-alef-package`. Closes the
+  regression where downstream `zig fetch` consumers compiled the in-tree `build.zig`
+  pointing at workspace-relative `../../target/release` and failed with
+  `unable to find dynamic system library` errors. (`publish-zig/action.yml`,
+  `publish-zig/README.md`, `.github/workflows/test-publish-actions.yml`)
+
 ### Fixed
 
 - **`build-rust-ffi`: verify macOS dylib install_name was actually rewritten.** The "Fix macOS dylib install_name" step

@@ -58,3 +58,47 @@ can copy-paste the URL + hash into their own `build.zig.zon`.
 | `update-release-notes` | no | `false` | Append fetch snippet to GH release body. Requires `GH_TOKEN`. |
 | `update-existing` | no | `false` | Pass `--clobber` to `gh release upload` (overwrite existing asset). |
 | `dry-run` | no | `false` | Skip asset upload and release-notes update. |
+| `use-alef-package` | no | `false` | Use `alef publish package_zig` for single-target packaging. Requires `target`, `ffi-library-path`, `ffi-header-path`. Mutually exclusive with `multi-platform-ffi-dir`. |
+| `multi-platform-ffi-dir` | no | `""` | Directory containing per-RID FFI artifacts (`{rid}/{libs}` + `include/*.h`). When set, the action bundles each platform's libs into `<working-directory>/lib/<canonical-target-triple>/`, patches `build.zig.zon` `.paths` to allowlist `lib`/`include`, and overwrites `build.zig` with a target-aware build script that selects the right `lib/<rid>` subdir from Zig's compile-time target. Single multi-platform tarball; consumer's `zig fetch --save` works on any supported target. |
+| `module-name` | no (yes when `multi-platform-ffi-dir` set) | `""` | Zig module name exported from the rewritten `build.zig` (e.g., `liter_llm`). |
+| `ffi-lib-name` | no (yes when `multi-platform-ffi-dir` set) | `""` | FFI shared-library basename without `lib` prefix or extension (e.g., `liter_llm_ffi`). Used both for `linkSystemLibrary` and to locate the file inside `multi-platform-ffi-dir`. |
+
+## Multi-platform packaging
+
+When you have FFI libraries pre-built for multiple Rust target triples and want a
+single Zig tarball that consumers can `zig fetch --save` on any supported host, set
+`multi-platform-ffi-dir` instead of `use-alef-package`. The dir must look like:
+
+```text
+ffi-artifacts/
+  linux-x64/        libfoo_ffi.so
+  linux-arm64/      libfoo_ffi.so
+  osx-arm64/        libfoo_ffi.dylib
+  win-x64/          foo_ffi.dll
+  include/          foo.h
+```
+
+The action maps each Rust RID into a canonical Zig target subdir (e.g., `linux-x64`
+→ `lib/x86_64-linux-gnu/`) and writes a `build.zig` whose `ridDir(target)` switch
+picks the right one based on the consumer's compile target. This avoids the
+publish-time mistake of shipping the in-tree `build.zig` whose `../../target/release`
+paths only exist in dev mode and fail with `unable to find dynamic system library
+'foo_ffi'` for any `zig fetch` consumer.
+
+Example:
+
+```yaml
+- uses: actions/download-artifact@v7
+  with:
+    pattern: ffi-*
+    path: ffi-artifacts
+    merge-multiple: true
+- uses: kreuzberg-dev/actions/publish-zig@v1
+  with:
+    working-directory: packages/zig
+    multi-platform-ffi-dir: ffi-artifacts
+    module-name: liter_llm
+    ffi-lib-name: liter_llm_ffi
+    package-name: liter-llm-zig
+    update-release-notes: 'true'
+```

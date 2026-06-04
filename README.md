@@ -79,7 +79,7 @@ to print the command without executing.
 | `publish-hex` | Hex.pm | `HEX_API_KEY` | Elixir packages via `mix hex.publish` |
 | `publish-gleam` | Hex.pm | `HEX_API_KEY` | Gleam packages via `gleam publish`; reuses the same `HEX_API_KEY` as `publish-hex` |
 | `publish-pub` | pub.dev | OIDC trusted publisher | Dart packages; requires a one-time pub.dev claim of the package |
-| `publish-zig` | Git tag | none | Validates `build.zig.zon` + tag; emits the tarball SHA-256 downstream consumers need for `build.zig.zon`'s `hash` field; can append a fetch snippet to the GH release notes |
+| `publish-zig` | Git tag | none | Validates `build.zig.zon` + tag; emits the tarball SHA-256 downstream consumers need for `build.zig.zon`'s `hash` field; can append a fetch snippet to the GH release notes. Optional `multi-platform-ffi-dir` bundles per-RID FFI libs + rewrites `build.zig` so a single tarball serves all supported targets |
 | `publish-homebrew-source-formulas` | Homebrew tap | `HOMEBREW_TOKEN` | Render source formulas from release assets |
 | `publish-github-release` | GitHub Releases | `GITHUB_TOKEN` | Release-asset uploads |
 | `publish-helm-chart` | OCI registry (GHCR, GAR, ECR, …) | username + password / token | Stamps `version`/`appVersion`, runs `helm dependency build` + `package` + `push`; idempotent on re-publish |

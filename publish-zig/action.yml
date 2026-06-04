@@ -69,6 +69,33 @@ inputs:
     description: "Alef version to install for package_zig. Defaults to stable."
     required: false
     default: ""
+  multi-platform-ffi-dir:
+    description: >
+      Path to a directory containing prebuilt FFI artifacts laid out per Rust target
+      RID, e.g. `ffi-artifacts/linux-x64/libfoo_ffi.so`, `ffi-artifacts/osx-arm64/libfoo_ffi.dylib`,
+      `ffi-artifacts/win-x64/foo_ffi.dll`, plus a shared `include/` subdir for the C header.
+      When set, the action bundles these libraries into `<working-directory>/lib/<zig-rid>/`,
+      copies the header into `<working-directory>/include/`, patches `build.zig.zon` `.paths`
+      to include `lib` and `include`, and overwrites `build.zig` with a target-aware build
+      script that picks the right `lib/<rid>/` subdir at compile time. The resulting tarball
+      is consumable as a single multi-platform Zig package via `zig fetch --save`.
+      Mutually exclusive with `use-alef-package: 'true'`.
+    required: false
+    default: ""
+  module-name:
+    description: >
+      Zig module name to export from the bundled build.zig (e.g., `liter_llm`). Required
+      when `multi-platform-ffi-dir` is set. Must match the `.name` enum literal in
+      `build.zig.zon` and the consumer's `b.dependency(...).module("<module-name>")` call.
+    required: false
+    default: ""
+  ffi-lib-name:
+    description: >
+      FFI shared library name without `lib` prefix or extension (e.g., `liter_llm_ffi`).
+      Required when `multi-platform-ffi-dir` is set. Used both for `linkSystemLibrary`
+      in the rewritten build.zig and to locate the file inside `multi-platform-ffi-dir`.
+    required: false
+    default: ""
 
 outputs:
   tarball-url:
@@ -225,8 +252,187 @@ runs:
         echo "tarball-path=$tarball_path" >> "$GITHUB_OUTPUT"
         echo "tarball-name=$tarball_name" >> "$GITHUB_OUTPUT"
 
+    - name: Package Zig (multi-platform method)
+      if: inputs.use-alef-package != 'true' && inputs.multi-platform-ffi-dir != ''
+      id: package-multi
+      shell: bash
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
+        PKG_NAME: ${{ steps.pkg.outputs.package-name }}
+        TAG: ${{ steps.tag.outputs.tag }}
+        FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
+        MODULE_NAME: ${{ inputs.module-name }}
+        FFI_LIB_NAME: ${{ inputs.ffi-lib-name }}
+      run: |
+        set -euo pipefail
+
+        # Validate required inputs
+        if [[ -z "$MODULE_NAME" ]]; then
+          echo "Error: module-name input is required when multi-platform-ffi-dir is set" >&2
+          exit 1
+        fi
+        if [[ -z "$FFI_LIB_NAME" ]]; then
+          echo "Error: ffi-lib-name input is required when multi-platform-ffi-dir is set" >&2
+          exit 1
+        fi
+        if [[ ! -d "$FFI_DIR" ]]; then
+          echo "Error: multi-platform-ffi-dir does not exist: $FFI_DIR" >&2
+          exit 1
+        fi
+
+        # Map Rust RID (build-ffi artifact layout) → Zig target subdir used by the
+        # rewritten build.zig at compile time. The downloaded build-ffi artifacts
+        # live under {linux-x64,linux-arm64,osx-arm64,osx-x64,win-x64}/{lib}; the
+        # bundled package re-keys them under canonical Rust target triples that
+        # Zig's compile-time target switch maps to (see the rewritten build.zig
+        # below).
+        declare -A rid_to_libdir=(
+          ["linux-x64"]="x86_64-linux-gnu"
+          ["linux-arm64"]="aarch64-linux-gnu"
+          ["osx-arm64"]="aarch64-darwin"
+          ["osx-x64"]="x86_64-darwin"
+          ["win-x64"]="x86_64-windows-msvc"
+        )
+
+        mkdir -p "$WORKING_DIR/lib" "$WORKING_DIR/include"
+
+        bundled_any=0
+        for rid in "${!rid_to_libdir[@]}"; do
+          libdir="${rid_to_libdir[$rid]}"
+          src_dir="$FFI_DIR/$rid"
+          if [[ -d "$src_dir" ]]; then
+            dst_dir="$WORKING_DIR/lib/$libdir"
+            mkdir -p "$dst_dir"
+            # Copy shared/static libraries only — headers go in include/ shared.
+            find "$src_dir" -maxdepth 1 -type f \
+              \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' -o -name '*.a' \) \
+              -exec cp {} "$dst_dir/" \;
+            if compgen -G "$dst_dir/*" > /dev/null; then
+              bundled_any=1
+              echo "Bundled $rid -> lib/$libdir:"
+              ls -lh "$dst_dir/" || true
+            fi
+          fi
+        done
+
+        if [[ $bundled_any -eq 0 ]]; then
+          echo "Error: no platform libraries found under $FFI_DIR (expected per-RID subdirs)" >&2
+          exit 1
+        fi
+
+        # Copy the C header(s) shared across platforms into include/.
+        if [[ -d "$FFI_DIR/include" ]]; then
+          find "$FFI_DIR/include" -maxdepth 1 -type f -name '*.h' -exec cp {} "$WORKING_DIR/include/" \;
+          echo "Bundled headers:"
+          ls -lh "$WORKING_DIR/include/" || true
+        fi
+
+        # Patch build.zig.zon .paths to expose lib/ and include/ to consumers.
+        # Zig's .paths is an allowlist: only listed entries are materialized for
+        # `zig fetch` consumers, so the bundled libs are invisible without this.
+        # Insert "lib" and "include" immediately after the `.paths = .{` opener.
+        zon="$WORKING_DIR/build.zig.zon"
+        if [[ ! -f "$zon" ]]; then
+          echo "Error: $zon not found" >&2
+          exit 1
+        fi
+        if ! grep -q '"lib"' "$zon"; then
+          if ! grep -q '\.paths *= *\.{' "$zon"; then
+            echo "Error: .paths block not found in $zon — cannot patch" >&2
+            exit 1
+          fi
+          # Use awk to insert two lines after the matching .paths line. Awk
+          # preserves the rest of the file byte-for-byte and avoids the
+          # heredoc-in-YAML indent trap.
+          tmp="$(mktemp)"
+          awk '{
+            print $0
+            if (!done && match($0, /\.paths[[:space:]]*=[[:space:]]*\.\{/)) {
+              print "        \"lib\","
+              print "        \"include\","
+              done = 1
+            }
+          }' "$zon" > "$tmp"
+          mv "$tmp" "$zon"
+          echo "Patched build.zig.zon .paths to include lib + include"
+        fi
+
+        # Overwrite build.zig with a target-aware version that picks the bundled
+        # lib/<rid>/ subdir at compile time. The in-tree build.zig points at the
+        # workspace target/ dir for local dev; the distributable form bundled here
+        # must resolve package-relative paths so it works under the global Zig
+        # cache after `zig fetch`. The template is emitted line-by-line with
+        # `printf` because heredoc bodies inside a YAML `run: |` block must be
+        # indented at least as much as the scalar — and if we indent the body,
+        # Zig sees the leading whitespace as part of the source.
+        zig_path="$WORKING_DIR/build.zig"
+        {
+          printf '%s\n' 'const std = @import("std");'
+          printf '\n'
+          printf '%s\n' '// alef-managed: this build.zig is overwritten at publish time by'
+          printf '%s\n' '// kreuzberg-dev/actions/publish-zig to point at the bundled'
+          printf '%s\n' '// lib/<rid>/ subdirectory selected from Zig'"'"'s compile-time target.'
+          printf '%s\n' 'pub fn build(b: *std.Build) void {'
+          printf '%s\n' '    const target = b.standardTargetOptions(.{});'
+          printf '%s\n' '    const optimize = b.standardOptimizeOption(.{});'
+          printf '\n'
+          printf '%s\n' '    const rid = ridDir(target);'
+          printf '%s\n' '    const lib_subdir = b.fmt("lib/{s}", .{rid});'
+          printf '\n'
+          printf '    const module = b.addModule("%s", .{\n' "$MODULE_NAME"
+          printf '        .root_source_file = b.path("src/%s.zig"),\n' "$MODULE_NAME"
+          printf '%s\n' '        .target = target,'
+          printf '%s\n' '        .optimize = optimize,'
+          printf '%s\n' '        .link_libc = true,'
+          printf '%s\n' '    });'
+          printf '%s\n' '    module.addLibraryPath(b.path(lib_subdir));'
+          printf '%s\n' '    module.addIncludePath(b.path("include"));'
+          printf '    module.linkSystemLibrary("%s", .{});\n' "$FFI_LIB_NAME"
+          printf '%s\n' '}'
+          printf '\n'
+          printf '%s\n' 'fn ridDir(target: std.Build.ResolvedTarget) []const u8 {'
+          printf '%s\n' '    return switch (target.result.os.tag) {'
+          printf '%s\n' '        .linux => switch (target.result.cpu.arch) {'
+          printf '%s\n' '            .x86_64 => "x86_64-linux-gnu",'
+          printf '%s\n' '            .aarch64 => "aarch64-linux-gnu",'
+          printf '%s\n' '            else => @panic("unsupported linux arch for this package"),'
+          printf '%s\n' '        },'
+          printf '%s\n' '        .macos => switch (target.result.cpu.arch) {'
+          printf '%s\n' '            .aarch64 => "aarch64-darwin",'
+          printf '%s\n' '            .x86_64 => "x86_64-darwin",'
+          printf '%s\n' '            else => @panic("unsupported macos arch for this package"),'
+          printf '%s\n' '        },'
+          printf '%s\n' '        .windows => switch (target.result.cpu.arch) {'
+          printf '%s\n' '            .x86_64 => "x86_64-windows-msvc",'
+          printf '%s\n' '            else => @panic("unsupported windows arch for this package"),'
+          printf '%s\n' '        },'
+          printf '%s\n' '        else => @panic("unsupported os for this package"),'
+          printf '%s\n' '    };'
+          printf '%s\n' '}'
+        } > "$zig_path"
+        echo "Rewrote $zig_path for multi-platform distribution"
+
+        # Extract version from tag and tarball it up. Reuse the same deterministic
+        # settings as the fallback path so identical inputs produce identical
+        # tarballs.
+        version="${TAG#v}"
+        tarball_name="${PKG_NAME}-v${version}.tar.gz"
+        tarball_path="$RUNNER_TEMP/$tarball_name"
+
+        echo "Packaging $PKG_NAME as $tarball_name (multi-platform)..."
+        cd "$WORKING_DIR"
+        find . -type f \
+          ! -path './.zig-cache/*' \
+          ! -path './zig-out/*' \
+          ! -path './.git/*' \
+          | sort | tar -czn -T - -f "$tarball_path"
+
+        echo "Tarball created: $tarball_path ($(stat -f%z "$tarball_path" 2>/dev/null || stat -c%s "$tarball_path") bytes)"
+        echo "tarball-path=$tarball_path" >> "$GITHUB_OUTPUT"
+        echo "tarball-name=$tarball_name" >> "$GITHUB_OUTPUT"
+
     - name: Package Zig (fallback tar method)
-      if: inputs.use-alef-package != 'true'
+      if: inputs.use-alef-package != 'true' && inputs.multi-platform-ffi-dir == ''
       id: package
       shell: bash
       env:
@@ -261,16 +467,22 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         TAG: ${{ steps.tag.outputs.tag }}
         TARBALL_PATH_ALEF: ${{ steps.package-alef.outputs.tarball-path }}
+        TARBALL_PATH_MULTI: ${{ steps.package-multi.outputs.tarball-path }}
         TARBALL_PATH_FALLBACK: ${{ steps.package.outputs.tarball-path }}
         TARBALL_NAME_ALEF: ${{ steps.package-alef.outputs.tarball-name }}
+        TARBALL_NAME_MULTI: ${{ steps.package-multi.outputs.tarball-name }}
         TARBALL_NAME_FALLBACK: ${{ steps.package.outputs.tarball-name }}
         UPDATE_EXISTING: ${{ inputs.update-existing }}
         USE_ALEF: ${{ inputs.use-alef-package }}
+        MULTI_FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
       run: |
         # Select tarball path based on which packaging method was used
         if [[ "$USE_ALEF" == "true" ]]; then
           tarball_path="$TARBALL_PATH_ALEF"
           tarball_name="$TARBALL_NAME_ALEF"
+        elif [[ -n "$MULTI_FFI_DIR" ]]; then
+          tarball_path="$TARBALL_PATH_MULTI"
+          tarball_name="$TARBALL_NAME_MULTI"
         else
           tarball_path="$TARBALL_PATH_FALLBACK"
           tarball_name="$TARBALL_NAME_FALLBACK"
@@ -291,9 +503,11 @@ runs:
         TAG: ${{ steps.tag.outputs.tag }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         TARBALL_NAME_ALEF: ${{ steps.package-alef.outputs.tarball-name }}
+        TARBALL_NAME_MULTI: ${{ steps.package-multi.outputs.tarball-name }}
         TARBALL_NAME_FALLBACK: ${{ steps.package.outputs.tarball-name }}
         DRY_RUN: ${{ inputs.dry-run }}
         USE_ALEF: ${{ inputs.use-alef-package }}
+        MULTI_FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
       run: |
         # Extract version from tag
         version="${TAG#v}"
@@ -301,6 +515,8 @@ runs:
         # Select tarball name based on which packaging method was used
         if [[ "$USE_ALEF" == "true" ]]; then
           tarball_name="$TARBALL_NAME_ALEF"
+        elif [[ -n "$MULTI_FFI_DIR" ]]; then
+          tarball_name="$TARBALL_NAME_MULTI"
         else
           tarball_name="$TARBALL_NAME_FALLBACK"
         fi

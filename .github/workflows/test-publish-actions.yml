@@ -307,6 +307,80 @@ jobs:
           update-release-notes: "false"
           dry-run: "true"
 
+  test-publish-zig-multi-platform-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Stage a minimal Zig package + multi-platform FFI fixtures
+        run: |
+          # Minimal zig package source
+          mkdir -p pkg/src
+          cat >pkg/build.zig <<'ZIG'
+          // In-tree build.zig — the action overwrites this for the distributed tarball.
+          const std = @import("std");
+          pub fn build(b: *std.Build) void {
+              _ = b;
+          }
+          ZIG
+          cat >pkg/build.zig.zon <<'ZON'
+          .{
+              .name = .dry_run,
+              .version = "0.0.1",
+              .fingerprint = 0x1234567890abcdef,
+              .minimum_zig_version = "0.16.0",
+              .dependencies = .{},
+              .paths = .{
+                  "build.zig",
+                  "build.zig.zon",
+                  "src",
+              },
+          }
+          ZON
+          cat >pkg/src/dry_run.zig <<'ZIG'
+          pub const placeholder: u32 = 0;
+          ZIG
+
+          # Fixture FFI dir with empty per-RID lib files and a header
+          mkdir -p ffi-artifacts/linux-x64 ffi-artifacts/osx-arm64 ffi-artifacts/win-x64 ffi-artifacts/include
+          : > ffi-artifacts/linux-x64/libdry_run_ffi.so
+          : > ffi-artifacts/osx-arm64/libdry_run_ffi.dylib
+          : > ffi-artifacts/win-x64/dry_run_ffi.dll
+          : > ffi-artifacts/include/dry_run.h
+
+      - name: Test publish-zig (multi-platform, dry-run)
+        uses: ./publish-zig
+        with:
+          working-directory: pkg
+          tag: v1.0.0
+          setup-zig: "false"
+          update-release-notes: "false"
+          dry-run: "true"
+          multi-platform-ffi-dir: ffi-artifacts
+          module-name: dry_run
+          ffi-lib-name: dry_run_ffi
+
+      - name: Verify rewritten build.zig + bundled libs
+        shell: bash
+        run: |
+          # build.zig must reference b.path("lib/<rid>") with the compile-time switch
+          grep -q 'fn ridDir' pkg/build.zig
+          grep -q 'lib/{s}' pkg/build.zig
+          grep -q '"x86_64-linux-gnu"' pkg/build.zig
+          grep -q '"aarch64-darwin"' pkg/build.zig
+          grep -q '"x86_64-windows-msvc"' pkg/build.zig
+          # build.zig.zon must allowlist lib + include
+          grep -q '"lib"' pkg/build.zig.zon
+          grep -q '"include"' pkg/build.zig.zon
+          # bundled libs land in canonical-target subdirs
+          test -f pkg/lib/x86_64-linux-gnu/libdry_run_ffi.so
+          test -f pkg/lib/aarch64-darwin/libdry_run_ffi.dylib
+          test -f pkg/lib/x86_64-windows-msvc/dry_run_ffi.dll
+          test -f pkg/include/dry_run.h
+          echo "multi-platform layout verified"
+
   test-publish-helm-chart-dry-run:
     runs-on: ubuntu-latest
     steps:
