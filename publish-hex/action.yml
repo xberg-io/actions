@@ -30,6 +30,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Setup Elixir and OTP
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: "1.19"
+        otp-version: "28"
+
     - name: Verify Hex.pm availability
       if: inputs.dry-run != 'true'
       shell: bash
