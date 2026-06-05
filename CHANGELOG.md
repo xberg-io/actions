@@ -6,6 +6,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+## [1.8.29] - 2026-06-05
+
+### Fixed
+
+- **`publish-crates`: line-buffer Python stdout in `publish.py`.** GitHub Actions captures the script's stdout block-buffered, so per-crate `Publishing …`, `Published …`, and index-poll progress lines are silently dropped when the job is cancelled by `timeout-minutes`. Adding `sys.stdout.reconfigure(line_buffering=True)` (and the same for stderr) at module top makes the captured log reflect what actually executed before a cancel, which is the only way to diagnose a 30-minute publish that returned no log output between two stderr-only `WARNING: … not visible in crates.io index after 600s` lines. No behavioural change to publishing itself.
+
 ## [1.8.28] - 2026-06-05
 
 ### Fixed

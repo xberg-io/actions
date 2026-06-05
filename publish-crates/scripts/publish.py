@@ -19,6 +19,12 @@ import time
 import urllib.error
 import urllib.request
 
+# GitHub Actions captures Python stdout; default block-buffering swallows
+# per-crate progress when the job is cancelled (e.g. on timeout-minutes).
+# Line-buffer both streams so the log reflects what actually ran.
+sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
+sys.stderr.reconfigure(line_buffering=True)  # type: ignore[union-attr]
+
 ALREADY_PUBLISHED_PATTERN = re.compile(
     r"already uploaded|already exists",
     re.IGNORECASE,
