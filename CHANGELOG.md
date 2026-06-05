@@ -6,6 +6,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+## [1.8.27] - 2026-06-05
+
+### Fixed
+
 - **`setup-node-workspace`: enable pnpm standalone install.** `pnpm/action-setup@v6` defaults to a `npm`-based self-installer that fails with `spawn npm ENOENT` on GitHub-hosted ARM Linux runners (Node/npm are not preinstalled). Setting `standalone: true` makes the action download the pnpm binary directly without requiring npm on PATH. Fixes Node bindings publish on `aarch64-unknown-linux-gnu`.
 
 ## [1.8.26] - 2026-06-05
