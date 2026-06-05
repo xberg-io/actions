@@ -165,9 +165,7 @@ def main() -> None:
     # The Rust crate produces the lib with platform-conventional name.
     # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.
     release_dir = cargo_release_dir(nif_crate_path, target)
-    source_lib = release_dir / (
-        f"{nif_crate_name}.dll" if cargo_ext == "dll" else f"lib{nif_crate_name}.{cargo_ext}"
-    )
+    source_lib = release_dir / (f"{nif_crate_name}.dll" if cargo_ext == "dll" else f"lib{nif_crate_name}.{cargo_ext}")
     if not source_lib.is_file():
         print(f"Error: built NIF library not found at {source_lib}", file=sys.stderr)
         sys.exit(1)

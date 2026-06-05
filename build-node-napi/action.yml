@@ -126,8 +126,13 @@ runs:
         NPM_DIR: ${{ inputs.npm-dir }}
       run: |
         set -euo pipefail
-        # Extract platform string from target triple (e.g., aarch64-apple-darwin -> darwin-arm64)
-        # Platform dirs follow the pattern: npm/{platform}/
+        # After `napi create-npm-dirs` + `napi build --target X`, every platform
+        # subdir has a package.json but only the target's dir gets a .node file.
+        # Verify by scanning all platform dirs for a .node — the build produces
+        # exactly one regardless of which subdir name maps to the target triple.
+        # (Older logic picked the alphabetically-first platform dir, which fired
+        # a false negative whenever the target wasn't the first one — e.g. any
+        # build target other than darwin-arm64.)
         platform_dirs=("${NPM_DIR}"/*/package.json)
         if [ ${#platform_dirs[@]} -eq 0 ] || [ ! -e "${platform_dirs[0]}" ]; then
           echo "::error::No platform subdirectory found in ${NPM_DIR}/"
@@ -135,18 +140,19 @@ runs:
           exit 1
         fi
 
-        # Get the first (and should be only) platform directory
-        platform_dir=$(dirname "${platform_dirs[0]}")
-        platform_name=$(basename "${platform_dir}")
-
-        # Verify .node file exists in the platform directory
-        node_file=$(find "${platform_dir}" -maxdepth 1 -name "*.node" -type f)
+        node_file=$(find "${NPM_DIR}" -maxdepth 2 -name "*.node" -type f | head -1)
         if [ -z "${node_file}" ]; then
-          echo "::error::No .node file found in ${platform_dir}/"
-          ls -la "${platform_dir}" || true
+          echo "::error::No .node file found in any ${NPM_DIR}/*/ subdir"
+          for p in "${platform_dirs[@]}"; do
+            d=$(dirname "$p")
+            echo "--- $(basename "$d") ---"
+            ls -la "$d" || true
+          done
           exit 1
         fi
 
+        platform_dir=$(dirname "${node_file}")
+        platform_name=$(basename "${platform_dir}")
         echo "Verified: ${platform_name} platform package contains $(basename "${node_file}")"
 
     - name: Pack Node tarball (legacy)
