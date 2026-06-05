@@ -1,0 +1,66 @@
+name: Setup Tesseract Cache
+description: Manages tesseract build cache per architecture with configurable paths
+
+inputs:
+  label:
+    description: Platform label (e.g. linux-x86_64, linux-aarch64)
+    required: true
+  cache-dir-prefix:
+    description: Prefix directory path for cache storage (e.g. .tesseract-cache)
+    required: true
+  tesseract-crate-toml:
+    description: Path to tesseract crate Cargo.toml for cache-key hashing
+    required: true
+  enable-cache:
+    description: Enable tesseract caching (disable for cross-arch builds)
+    required: false
+    default: "true"
+  rust-target:
+    description: Rust target triple for per-target cache cleanup
+    required: false
+    default: ""
+
+outputs:
+  cache-dir:
+    description: Tesseract cache directory path
+    value: ${{ steps.set-outputs.outputs.cache-dir }}
+  cache-enabled:
+    description: Whether caching is enabled (true/false)
+    value: ${{ steps.set-outputs.outputs.cache-enabled }}
+  docker-options:
+    description: Docker options for passing cache env vars
+    value: ${{ steps.set-outputs.outputs.docker-options }}
+
+runs:
+  using: composite
+  steps:
+    - name: Clean cache directories (cache disabled)
+      if: inputs.enable-cache != 'true'
+      shell: bash
+      run: scripts/ci/actions/setup-tesseract-cache/clean-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
+
+    - name: Setup cache directories
+      if: inputs.enable-cache == 'true'
+      shell: bash
+      run: scripts/ci/actions/setup-tesseract-cache/setup-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
+
+    - name: Cache tesseract build cache
+      if: inputs.enable-cache == 'true'
+      uses: actions/cache@v5
+      with:
+        path: |
+          ${{ inputs.cache-dir-prefix }}/${{ inputs.label }}
+          .xdg-cache/${{ inputs.label }}
+        key: kreuzberg-tesseract-cache-v2-${{ runner.os }}-${{ inputs.label }}-${{ hashFiles(inputs.tesseract-crate-toml, format('{0}/build.rs', dirname(inputs.tesseract-crate-toml))) }}
+        restore-keys: |
+          kreuzberg-tesseract-cache-v2-${{ runner.os }}-${{ inputs.label }}-
+
+    - name: Clean per-target Tesseract cache
+      if: inputs.rust-target != ''
+      shell: bash
+      run: scripts/ci/actions/setup-tesseract-cache/clean-target-cache.sh "${{ inputs.rust-target }}"
+
+    - name: Set outputs and environment
+      id: set-outputs
+      shell: bash
+      run: scripts/ci/actions/setup-tesseract-cache/set-outputs.sh "${{ inputs.label }}" "${{ inputs.enable-cache }}" "${{ inputs.cache-dir-prefix }}"

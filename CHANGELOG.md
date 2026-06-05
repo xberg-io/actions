@@ -4,6 +4,14 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.24] - 2026-06-05
+
+### Added
+
+- **`setup-onnx-runtime`: new composite action.** Upstream the kreuzberg-local action for downloading and staging ONNX Runtime libraries. Accepts parameterized `dest-dir` (required), `ort-version` (required), `arch-id` (optional), and `strategy` (optional). Provides Linux, macOS, and Windows platform-specific setup scripts. (`setup-onnx-runtime/action.yml`, `setup-onnx-runtime/scripts/{linux.sh,macos.sh,windows.ps1}`)
+
+- **`setup-tesseract-cache`: new composite action.** Upstream the kreuzberg-local action for managing tesseract build caches per architecture. Requires parameterized `label`, `cache-dir-prefix`, and `tesseract-crate-toml` inputs (no kreuzberg-specific defaults). Handles cache setup/cleanup, per-target cleanup, and Docker environment configuration. (`setup-tesseract-cache/action.yml`, `setup-tesseract-cache/scripts/{setup-dirs.sh,clean-dirs.sh,clean-target-cache.sh,set-outputs.sh}`)
+
 ## [1.8.23] - 2026-06-04
 
 ### Added
