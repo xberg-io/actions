@@ -11,12 +11,10 @@ inputs:
     default: "target/release"
   ffi-crate-dir:
     description: Path to FFI crate directory containing pkg-config and headers (relative to repo root)
-    required: false
-    default: "crates/kreuzberg-ffi"
+    required: true
   ffi-lib-name:
     description: Name of the FFI library (without lib prefix or extension)
-    required: false
-    default: "kreuzberg_ffi"
+    required: true
   ffi-header-path:
     description: Path to FFI header file for verification on Windows (relative to repo root)
     required: false

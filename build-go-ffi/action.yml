@@ -10,16 +10,14 @@ inputs:
     required: true
   crate-name:
     description: "Cargo package name to build"
-    required: false
-    default: "kreuzberg-ffi"
+    required: true
   lib-name:
     description: "Base name of the produced library (defaults to crate-name with hyphens converted to underscores)"
     required: false
     default: ""
   header-path:
     description: "Path to the C header that ships alongside the library"
-    required: false
-    default: "crates/kreuzberg-ffi/include/kreuzberg.h"
+    required: true
   output-dir:
     description: "Directory where the staging tree and tar.gz are written"
     required: false

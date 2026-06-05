@@ -4,6 +4,20 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.25] - 2026-06-05
+
+### Changed
+
+- **`build-go-ffi`: make `crate-name` and `header-path` required inputs.** Drops kreuzberg-specific defaults (`default: "kreuzberg-ffi"` and `default: "crates/kreuzberg-ffi/include/kreuzberg.h"`). Callers must now explicitly pass these inputs for all consumers.
+
+- **`setup-go-cgo-env`: make `ffi-crate-dir` and `ffi-lib-name` required inputs.** Drops kreuzberg defaults (`default: "crates/kreuzberg-ffi"` and `default: "kreuzberg_ffi"`). Callers must now explicitly specify FFI library paths.
+
+- **`build-elixir-natives`: make `nif-crate-name` and `nif-crate-path` required inputs.** Drops kreuzberg defaults (`default: "kreuzberg_nif"` and `default: "packages/elixir/native/kreuzberg_nif"`). Callers must now explicitly pass NIF crate metadata.
+
+- **`build-dart-package`: make `package-dir` and `crate-name` required inputs.** Drops kreuzberg defaults (`default: "packages/dart"` and `default: "kreuzberg-dart"`). Callers must now explicitly pass package directory and crate name.
+
+- **`build-java-natives`: make `crate-name` required input.** Drops kreuzberg default (`default: "kreuzberg-ffi"`). Callers must now explicitly specify the FFI crate to build.
+
 ## [1.8.24] - 2026-06-05
 
 ### Added

@@ -11,12 +11,10 @@ description: >
 inputs:
   package-dir:
     description: "Directory containing pubspec.yaml + flutter_rust_bridge config"
-    required: false
-    default: "packages/dart"
+    required: true
   crate-name:
     description: "Cargo package name of the Rust binding crate"
-    required: false
-    default: "kreuzberg-dart"
+    required: true
   build-profile:
     description: "Cargo build profile (release, dev, or a custom named profile)"
     required: false

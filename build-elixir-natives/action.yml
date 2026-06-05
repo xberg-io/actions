@@ -11,12 +11,10 @@ inputs:
     required: true
   nif-crate-name:
     description: "Cargo package name of the NIF crate"
-    required: false
-    default: "kreuzberg_nif"
+    required: true
   nif-crate-path:
     description: "Path to the NIF crate's manifest directory"
-    required: false
-    default: "packages/elixir/native/kreuzberg_nif"
+    required: true
   package-dir:
     description: "Path to the Elixir package (containing mix.exs)"
     required: false
