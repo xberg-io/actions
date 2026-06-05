@@ -6,6 +6,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+## [1.8.28] - 2026-06-05
+
+### Fixed
+
+- **`lint-docs`: harden `prek` installer against GitHub API rate-limit 403s.** The previous `Install prek` step in `lint-docs/action.yml` called `curl -s https://api.github.com/repos/j178/prek/releases/latest` unauthenticated with no retries. When the runner hit GitHub's anonymous rate limit (observed `curl: (22) The requested URL returned error: 403`), `set -euo pipefail` propagated the empty `VERSION` into the download URL and the step crashed. Switched to authenticated `gh api repos/j178/prek/releases/latest --jq '.tag_name'` (with `GH_TOKEN: ${{ github.token }}`), wrapped in a 3-attempt retry loop with a `PREK_FALLBACK_VERSION=v0.4.4` final fallback. Download is also retried 3× via `curl --retry 3 --retry-delay 2` plus an outer attempt loop. Eliminates the flaky 403 failure mode for `CI Docs` on busy runner shards.
+
 - **`build-ruby-gem`: replace `rustc --print host-triple` with `host-tuple` on Windows.** rustc 1.95 renamed `--print host-triple` to `--print host-tuple`; the diagnostic step on the Windows path used the old form and failed `Process completed with exit code 1`, taking down the Ruby gem publish for `windows-x64`.
 
 ## [1.8.27] - 2026-06-05

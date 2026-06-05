@@ -29,6 +29,9 @@ runs:
 
     - name: Install prek
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREK_FALLBACK_VERSION: v0.4.4
       run: |
         set -euo pipefail
         OS=$(uname -s)
@@ -51,12 +54,36 @@ runs:
             exit 1
             ;;
         esac
-        VERSION="latest"
-        if [ "$VERSION" = "latest" ]; then
-          VERSION=$(curl -s https://api.github.com/repos/j178/prek/releases/latest | grep tag_name | cut -d'"' -f4)
+        VERSION=""
+        for attempt in 1 2 3; do
+          if VERSION=$(gh api repos/j178/prek/releases/latest --jq '.tag_name' 2>/dev/null) && [ -n "$VERSION" ]; then
+            break
+          fi
+          echo "Attempt ${attempt}: failed to resolve latest prek version via gh api; retrying..." >&2
+          sleep $((attempt * 2))
+          VERSION=""
+        done
+        if [ -z "$VERSION" ]; then
+          echo "Falling back to pinned prek ${PREK_FALLBACK_VERSION}" >&2
+          VERSION="${PREK_FALLBACK_VERSION}"
         fi
+        echo "Installing prek ${VERSION} for ${TARGET}"
         mkdir -p "$HOME/.local/bin"
-        curl -L "https://github.com/j178/prek/releases/download/${VERSION}/prek-${TARGET}.tar.gz" | tar xz --strip-components=1 -C "$HOME/.local/bin"
+        URL="https://github.com/j178/prek/releases/download/${VERSION}/prek-${TARGET}.tar.gz"
+        ok=0
+        for attempt in 1 2 3; do
+          if curl --fail --silent --show-error --location --retry 3 --retry-delay 2 "$URL" \
+              | tar xz --strip-components=1 -C "$HOME/.local/bin"; then
+            ok=1
+            break
+          fi
+          echo "Attempt ${attempt}: prek download failed; retrying..." >&2
+          sleep $((attempt * 2))
+        done
+        if [ "$ok" -ne 1 ]; then
+          echo "Failed to download prek after 3 attempts" >&2
+          exit 1
+        fi
         chmod +x "$HOME/.local/bin/prek"
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
