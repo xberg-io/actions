@@ -143,7 +143,8 @@ runs:
       run: |
         rustup which rustc
         rustc --print sysroot
-        rustc --print host-triple
+        # rustc 1.95+ renamed `host-triple` to `host-tuple`.
+        rustc --print host-tuple
 
     - name: Compile Ruby extension (Windows)
       if: runner.os == 'Windows'

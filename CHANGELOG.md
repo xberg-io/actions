@@ -6,6 +6,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`build-ruby-gem`: replace `rustc --print host-triple` with `host-tuple` on Windows.** rustc 1.95 renamed `--print host-triple` to `--print host-tuple`; the diagnostic step on the Windows path used the old form and failed `Process completed with exit code 1`, taking down the Ruby gem publish for `windows-x64`.
+
 ## [1.8.27] - 2026-06-05
 
 ### Fixed
