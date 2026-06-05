@@ -26,6 +26,10 @@ runs:
   steps:
     - name: Install pnpm
       uses: pnpm/action-setup@v6
+      with:
+        # standalone install avoids the `npm` self-installer path; required on
+        # GitHub-hosted ARM Linux runners where Node/npm are not preinstalled.
+        standalone: true
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
