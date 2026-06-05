@@ -6,6 +6,24 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+## [1.8.32] - 2026-06-05
+
+### Fixed
+
+- **`setup-node-workspace`: install pnpm via `npm install -g pnpm@10` after Node setup.** Both `pnpm/action-setup@v6` paths (`standalone: true` and default) route through `@pnpm/exe`, whose SEA-built binary fails on Intel macOS (`@pnpm/exe does not ship a working binary for Intel macOS (darwin-x64) due to an upstream Node.js SEA bug`) and requires `npm` on PATH on ARM Linux (`spawn npm ENOENT` before `actions/setup-node` ever ran because pnpm setup was first). Pinning to v10 did not help — the SEA breakage affects `@pnpm/exe@10` and `@pnpm/exe@11` equally. Reorder steps so `actions/setup-node@v6` runs first (provides Node + npm on every platform, including ARM Linux), then install pnpm with `npm install --global pnpm@10` (the JS package — uses the system Node.js, no SEA). Drops the `cache: pnpm` setup-node hint since pnpm isn't yet installed at that point. Fixes Node bindings publish on `x86_64-apple-darwin` and `aarch64-unknown-linux-gnu`.
+
+## [1.8.31] - 2026-06-05
+
+### Fixed
+
+- **`setup-node-workspace`: suppress `packageManager` read when pinning pnpm version.** When `pnpm/action-setup@v6` sees both a `version` input and a `packageManager` field in `package.json`, it errors `ERR_PNPM_BAD_PM_VERSION: Multiple versions of pnpm specified` and aborts. Set `package_json_file: .pnpm-action-skip-packagemanager` (a non-existent path) so the action ignores the `packageManager` field and unconditionally honors the `version: "10"` input. Local dev keeps its `packageManager: pnpm@11.5.1` pin in `package.json`.
+
+## [1.8.30] - 2026-06-05
+
+### Fixed
+
+- **`setup-node-workspace`: pin pnpm to 10.x for Intel macOS SEA bug.** `@pnpm/exe` 11+ ships a broken SEA binary for Intel macOS (darwin-x64): the upstream Node.js SEA bug surfaces as `npm error @pnpm/exe does not ship a working binary for Intel macOS` during `pnpm/action-setup`, killing the install before any job code runs. Pinned `version: "10"` to dodge the SEA-broken 11.x binaries. Upstream: pnpm/pnpm#11423, nodejs/node#62893. Lockfile 9.0 is forward/backward compatible between pnpm 10 and 11, so CI on 10 stays compatible with local dev on 11.5.1. (Superseded by v1.8.32 — the SEA bug affects v10 too.)
+
 ## [1.8.29] - 2026-06-05
 
 ### Fixed

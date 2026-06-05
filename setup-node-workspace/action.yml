@@ -24,36 +24,23 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        # standalone install avoids the `npm` self-installer path; required on
-        # GitHub-hosted ARM Linux runners where Node/npm are not preinstalled.
-        standalone: true
-        # Pin to pnpm 10.x — `@pnpm/exe` 11+ ships a broken SEA binary for
-        # Intel macOS (darwin-x64): the upstream Node.js SEA bug surfaces as
-        # `npm error @pnpm/exe does not ship a working binary for Intel
-        # macOS` during pnpm/action-setup, killing the install before any
-        # job code runs. Upstream: https://github.com/pnpm/pnpm/issues/11423
-        # + https://github.com/nodejs/node/issues/62893. Lockfile 9.0 is
-        # forward/backward compatible between pnpm 10 and 11, so CI on 10
-        # stays compatible with local dev on 11.5.1.
-        version: "10"
-        # Suppress reading `packageManager` from package.json — when both
-        # `version` input and `packageManager` field are present, the action
-        # errors `ERR_PNPM_BAD_PM_VERSION: Multiple versions of pnpm
-        # specified`. We want the version input to win unconditionally
-        # while local dev keeps its `packageManager: pnpm@11.5.1` pin.
-        # A non-existent path makes the action skip the packageManager read
-        # but keep using `pnpm-lock.yaml` for the install.
-        package_json_file: ".pnpm-action-skip-packagemanager"
-
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
-        cache: pnpm
         registry-url: ${{ inputs.registry-url != '' && inputs.registry-url || null }}
+
+    - name: Install pnpm via npm
+      shell: bash
+      # Install pnpm as a JS package via the system Node.js — avoids
+      # `@pnpm/exe`, whose SEA-built standalone binary is broken on
+      # Intel macOS (darwin-x64) and requires npm-on-PATH on ARM Linux
+      # (not present before actions/setup-node runs).
+      # Upstream: https://github.com/pnpm/pnpm/issues/11423
+      # + https://github.com/nodejs/node/issues/62893.
+      # Lockfile 9.0 is forward/backward compatible between pnpm 10
+      # and 11, so CI on 10 stays compatible with local dev on 11.5.1.
+      run: npm install --global pnpm@10
 
     - name: Install dependencies
       shell: bash
