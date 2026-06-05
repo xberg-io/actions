@@ -33,12 +33,26 @@ from musl_builder import build_or_fallback
 CHUNK_SIZE = 1 << 20
 
 
-def lib_extension(target: str) -> str:
+def cargo_lib_extension(target: str) -> str:
+    """Filesystem extension Cargo writes the cdylib to in `target/<triple>/release/`."""
     if "windows" in target:
         return "dll"
     if "apple" in target or "darwin" in target:
         return "dylib"
     return "so"
+
+
+def asset_extension(target: str) -> str:
+    """Extension RustlerPrecompiled embeds in the download URL.
+
+    `rustler_precompiled 0.9.0`'s `lib_name_with_ext/2` hardcodes `.so` for
+    every non-Windows consumer download URL and has no `.dylib` branch.
+    Renaming the macOS `.dylib` to `.so` inside the tarball is the only way
+    to keep `lib_name-vN-nif-X.Y-<triple>.so.tar.gz` resolvable on macOS;
+    Erlang loads NIFs by file contents, not extension.
+    See: kreuzberg-dev/actions/generate-elixir-checksums/scripts/generate.py.
+    """
+    return "dll" if "windows" in target else "so"
 
 
 def cargo_target_dir(manifest_path: Path) -> Path:
@@ -129,8 +143,9 @@ def main() -> None:
     elif not nif_api_version:
         nif_api_version = "<auto>"
 
-    ext = lib_extension(target)
-    archive_name = f"lib{nif_crate_name}-v{nif_version}-nif-{nif_api_version}-{target}.{ext}.tar.gz"
+    cargo_ext = cargo_lib_extension(target)
+    asset_ext = asset_extension(target)
+    archive_name = f"lib{nif_crate_name}-v{nif_version}-nif-{nif_api_version}-{target}.{asset_ext}.tar.gz"
     archive_path = (output_dir / archive_name).resolve()
 
     if dry_run:
@@ -150,7 +165,9 @@ def main() -> None:
     # The Rust crate produces the lib with platform-conventional name.
     # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.
     release_dir = cargo_release_dir(nif_crate_path, target)
-    source_lib = release_dir / (f"{nif_crate_name}.dll" if ext == "dll" else f"lib{nif_crate_name}.{ext}")
+    source_lib = release_dir / (
+        f"{nif_crate_name}.dll" if cargo_ext == "dll" else f"lib{nif_crate_name}.{cargo_ext}"
+    )
     if not source_lib.is_file():
         print(f"Error: built NIF library not found at {source_lib}", file=sys.stderr)
         sys.exit(1)
@@ -159,7 +176,8 @@ def main() -> None:
 
     # The tar.gz contains the library file under its renamed RustlerPrecompiled name.
     # RustlerPrecompiled expects the archive's interior file to be the lib (not a subdir).
-    renamed_lib_name = f"lib{nif_crate_name}-v{nif_version}-nif-{nif_api_version}-{target}.{ext}"
+    # macOS `.dylib` is renamed to `.so` for rustler_precompiled URL compatibility.
+    renamed_lib_name = f"lib{nif_crate_name}-v{nif_version}-nif-{nif_api_version}-{target}.{asset_ext}"
     staging_lib = output_dir / renamed_lib_name
     shutil.copy2(source_lib, staging_lib)
 

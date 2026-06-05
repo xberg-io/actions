@@ -6,6 +6,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+## [1.8.33] - 2026-06-05
+
+### Fixed
+
+- **`build-elixir-natives`: rename macOS NIF `.dylib` to `.so` in upload archive.** `rustler_precompiled 0.9.0`'s `lib_name_with_ext/2` hardcodes `.so` for every non-Windows consumer-side download URL (no `.dylib` branch exists). Previously, macOS NIFs were uploaded as `libkreuzcrawl_nif-v...-aarch64-apple-darwin.dylib.tar.gz` but the Hex publish step's `mix rustler_precompiled.download` tried `…aarch64-apple-darwin.so.tar.gz` → 404 → exit 1. Split `lib_extension` into `cargo_lib_extension` (filesystem extension Cargo writes — keeps `.dylib` for finding the file in `target/<triple>/release/`) and `asset_extension` (extension RustlerPrecompiled expects in the download URL — always `.so` for non-Windows). Renames `libkreuzcrawl_nif.dylib` → `…aarch64-apple-darwin.so` inside the tarball; Erlang loads NIFs by contents, not filename. Fixes `Publish Elixir Hex package` on RC.41+.
+
 ## [1.8.32] - 2026-06-05
 
 ### Fixed
