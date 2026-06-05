@@ -39,6 +39,14 @@ runs:
         # forward/backward compatible between pnpm 10 and 11, so CI on 10
         # stays compatible with local dev on 11.5.1.
         version: "10"
+        # Suppress reading `packageManager` from package.json — when both
+        # `version` input and `packageManager` field are present, the action
+        # errors `ERR_PNPM_BAD_PM_VERSION: Multiple versions of pnpm
+        # specified`. We want the version input to win unconditionally
+        # while local dev keeps its `packageManager: pnpm@11.5.1` pin.
+        # A non-existent path makes the action skip the packageManager read
+        # but keep using `pnpm-lock.yaml` for the install.
+        package_json_file: ".pnpm-action-skip-packagemanager"
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
