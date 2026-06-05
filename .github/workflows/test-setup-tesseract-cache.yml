@@ -1,0 +1,53 @@
+name: Test setup-tesseract-cache
+on:
+  push:
+    paths:
+      - "setup-tesseract-cache/**"
+      - ".github/workflows/test-setup-tesseract-cache.yml"
+  pull_request:
+    paths:
+      - "setup-tesseract-cache/**"
+      - ".github/workflows/test-setup-tesseract-cache.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create test Cargo.toml fixture
+        shell: bash
+        run: |
+          mkdir -p .fixtures/tesseract-crate
+          cat > .fixtures/tesseract-crate/Cargo.toml <<'EOF'
+          [package]
+          name = "tesseract-test"
+          version = "0.1.0"
+          edition = "2021"
+          EOF
+
+      - name: Setup Tesseract Cache
+        id: cache
+        uses: ./setup-tesseract-cache
+        with:
+          label: test-label
+          cache-dir-prefix: ${{ runner.temp }}/tesseract-cache
+          tesseract-crate-toml: .fixtures/tesseract-crate/Cargo.toml
+
+      - name: Verify cache directory created
+        shell: bash
+        run: |
+          cache_dir="${{ steps.cache.outputs.cache-dir }}"
+          test -n "$cache_dir" || (echo "cache-dir output is empty" && exit 1)
+          test -d "$cache_dir" || (echo "cache-dir does not exist: $cache_dir" && exit 1)
+          echo "Cache directory verified: $cache_dir"
+
+      - name: Verify outputs
+        shell: bash
+        run: |
+          test -n "${{ steps.cache.outputs.cache-enabled }}" || (echo "cache-enabled output is empty" && exit 1)
+          echo "cache-enabled: ${{ steps.cache.outputs.cache-enabled }}"
+          echo "cache-dir: ${{ steps.cache.outputs.cache-dir }}"
+          echo "docker-options: ${{ steps.cache.outputs.docker-options }}"

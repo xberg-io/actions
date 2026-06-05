@@ -37,12 +37,12 @@ runs:
     - name: Clean cache directories (cache disabled)
       if: inputs.enable-cache != 'true'
       shell: bash
-      run: scripts/ci/actions/setup-tesseract-cache/clean-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
+      run: ${{ github.action_path }}/scripts/clean-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
 
     - name: Setup cache directories
       if: inputs.enable-cache == 'true'
       shell: bash
-      run: scripts/ci/actions/setup-tesseract-cache/setup-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
+      run: ${{ github.action_path }}/scripts/setup-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
 
     - name: Cache tesseract build cache
       if: inputs.enable-cache == 'true'
@@ -58,9 +58,9 @@ runs:
     - name: Clean per-target Tesseract cache
       if: inputs.rust-target != ''
       shell: bash
-      run: scripts/ci/actions/setup-tesseract-cache/clean-target-cache.sh "${{ inputs.rust-target }}"
+      run: ${{ github.action_path }}/scripts/clean-target-cache.sh "${{ inputs.rust-target }}"
 
     - name: Set outputs and environment
       id: set-outputs
       shell: bash
-      run: scripts/ci/actions/setup-tesseract-cache/set-outputs.sh "${{ inputs.label }}" "${{ inputs.enable-cache }}" "${{ inputs.cache-dir-prefix }}"
+      run: ${{ github.action_path }}/scripts/set-outputs.sh "${{ inputs.label }}" "${{ inputs.enable-cache }}" "${{ inputs.cache-dir-prefix }}"

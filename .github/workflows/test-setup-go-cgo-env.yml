@@ -25,6 +25,9 @@ jobs:
 
       - name: Setup Go cgo env
         uses: ./setup-go-cgo-env
+        with:
+          ffi-crate-dir: "crates/kreuzberg-ffi"
+          ffi-lib-name: "kreuzberg_ffi"
 
       - name: Verify cgo environment
         shell: bash

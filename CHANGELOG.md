@@ -4,6 +4,24 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.26] - 2026-06-05
+
+### Fixed
+
+- **`setup-onnx-runtime`: repair broken script paths.** v1.8.24 shipped the action referencing scripts at the kreuzberg-internal path layout `scripts/ci/actions/setup-onnx-runtime/<file>.sh`, but the actual scripts were copied into the action subdirectory at `setup-onnx-runtime/scripts/<file>.sh`. The action invocations now failed immediately. Fixed all 3 occurrences (linux.sh, macos.sh, windows.ps1) to use the GHA-canonical `${{ github.action_path }}/scripts/<file>.sh` expression, which correctly resolves to the action's directory regardless of the consumer's checkout layout.
+
+- **`setup-tesseract-cache`: repair broken script paths.** v1.8.24 shipped the action referencing scripts at the kreuzberg-internal path layout `scripts/ci/actions/setup-tesseract-cache/<file>.sh`, but the actual scripts were copied into the action subdirectory at `setup-tesseract-cache/scripts/<file>.sh`. The action invocations now failed immediately. Fixed all 4 occurrences (clean-dirs.sh, setup-dirs.sh, clean-target-cache.sh, set-outputs.sh) to use the GHA-canonical `${{ github.action_path }}/scripts/<file>.sh` expression, which correctly resolves to the action's directory regardless of the consumer's checkout layout.
+
+- **`setup-tesseract-cache/scripts/clean-dirs.sh`: harden against unset vars (SC2115).** The `rm -rf` commands did not guard against unset `cache_dir_prefix` or `label` vars, creating a risk of inadvertent root deletion if either var failed to resolve. Added `${var:?message}` guards to all `rm -rf` calls; script now fails fast with a clear error if required parameters are missing.
+
+- **`.github/workflows/test-setup-go-cgo-env.yml`: add required inputs.** v1.8.25 made `ffi-crate-dir` and `ffi-lib-name` required inputs to `setup-go-cgo-env`, but the test workflow was calling the action without passing them. Added `with: { ffi-crate-dir: "crates/kreuzberg-ffi", ffi-lib-name: "kreuzberg_ffi" }` to satisfy the action contract; the test now passes actionlint validation.
+
+### Added
+
+- **`test-setup-onnx-runtime.yml`: new test workflow.** Validates the `setup-onnx-runtime` action on Linux and macOS (workflow_dispatch + path trigger). Verifies that ONNX Runtime libraries are downloaded and staged to the requested `dest-dir` without errors.
+
+- **`test-setup-tesseract-cache.yml`: new test workflow.** Validates the `setup-tesseract-cache` action on Linux (workflow_dispatch + path trigger). Creates a fixture Cargo.toml, invokes the action, and verifies cache directory creation and outputs (cache-dir, cache-enabled, docker-options).
+
 ## [1.8.25] - 2026-06-05
 
 ### Changed

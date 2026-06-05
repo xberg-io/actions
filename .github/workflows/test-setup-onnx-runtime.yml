@@ -1,0 +1,35 @@
+name: Test setup-onnx-runtime
+on:
+  push:
+    paths:
+      - "setup-onnx-runtime/**"
+      - ".github/workflows/test-setup-onnx-runtime.yml"
+  pull_request:
+    paths:
+      - "setup-onnx-runtime/**"
+      - ".github/workflows/test-setup-onnx-runtime.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup ONNX Runtime
+        id: ort
+        uses: ./setup-onnx-runtime
+        with:
+          ort-version: "1.24.2"
+          dest-dir: ${{ runner.temp }}/ort-test
+
+      - name: Verify ONNX Runtime libraries
+        shell: bash
+        run: |
+          test -d "${{ runner.temp }}/ort-test" || (echo "ORT dest-dir does not exist" && exit 1)
+          ls -la "${{ runner.temp }}/ort-test/" || (echo "Failed to list ORT dest-dir" && exit 1)
