@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ACTION_PATH="$SCRIPT_DIR/build-swift-artifactbundle"
+export ACTION_PATH="$SCRIPT_DIR/build-swift-artifactbundle"
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Test 1: Substitute single __ALEF_SWIFT_CHECKSUM__ placeholder
 test_substitute_checksum() {
@@ -23,7 +23,8 @@ test_substitute_checksum() {
   rm -f "${pkg_path}.bak"
 
   # Read result
-  local result=$(cat "$pkg_path")
+  local result
+  result=$(cat "$pkg_path")
 
   if [[ "$result" == "$expected" ]]; then
     echo "✓ $test_name"
@@ -56,8 +57,9 @@ test_substitute_checksum_multi() {
   sed -i "s/__ALEF_SWIFT_BUNDLE_URL__/$checksum/g" "$pkg_path"
   rm -f "${pkg_path}.bak"
 
-  local result=$(cat "$pkg_path")
-  local count=$(echo "$result" | grep -c "$checksum" || true)
+  local result count
+  result=$(cat "$pkg_path")
+  count=$(echo "$result" | grep -c "$checksum" || true)
 
   if [[ "$count" -eq 2 ]]; then
     echo "✓ $test_name (found $count occurrences)"

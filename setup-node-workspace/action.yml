@@ -30,6 +30,15 @@ runs:
         # standalone install avoids the `npm` self-installer path; required on
         # GitHub-hosted ARM Linux runners where Node/npm are not preinstalled.
         standalone: true
+        # Pin to pnpm 10.x — `@pnpm/exe` 11+ ships a broken SEA binary for
+        # Intel macOS (darwin-x64): the upstream Node.js SEA bug surfaces as
+        # `npm error @pnpm/exe does not ship a working binary for Intel
+        # macOS` during pnpm/action-setup, killing the install before any
+        # job code runs. Upstream: https://github.com/pnpm/pnpm/issues/11423
+        # + https://github.com/nodejs/node/issues/62893. Lockfile 9.0 is
+        # forward/backward compatible between pnpm 10 and 11, so CI on 10
+        # stays compatible with local dev on 11.5.1.
+        version: "10"
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
