@@ -18,6 +18,7 @@ set -euo pipefail
 CRATE_NAME="${INPUT_CRATE_NAME:-kreuzberg-swift}"
 LIB_NAME="${INPUT_LIB_NAME:-}"
 ARTIFACT_NAME="${INPUT_ARTIFACT_NAME:-}"
+BINARY_TARGET_NAME="${INPUT_BINARY_TARGET_NAME:-}"
 HEADER_PATH="${INPUT_HEADER_PATH:-}"
 OUTPUT_DIR="${INPUT_OUTPUT_DIR:-dist/swift-artifactbundle}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
@@ -35,6 +36,12 @@ fi
 if [[ -z "$ARTIFACT_NAME" ]]; then
   # Convert snake_case to PascalCase
   ARTIFACT_NAME="$(echo "$LIB_NAME" | sed -E 's/(^|_)([a-z])/\U\2/g')"
+fi
+
+# Set default for binary_target_name (the Swift Package.swift target name)
+# Defaults to artifact_name if not explicitly provided
+if [[ -z "$BINARY_TARGET_NAME" ]]; then
+  BINARY_TARGET_NAME="$ARTIFACT_NAME"
 fi
 
 case "$BUILD_PROFILE" in
@@ -246,7 +253,7 @@ cat >"$bundle_dir/info.json" <<EOF
 {
   "schemaVersion": "1.0",
   "artifacts": {
-    "$ARTIFACT_NAME": {
+    "$BINARY_TARGET_NAME": {
       "type": "staticLibrary",
       "version": "1.0.0",
       "variants": [$variants_csv]

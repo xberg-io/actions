@@ -60,6 +60,10 @@ inputs:
     description: "Optional path to Package.swift to update with checksum"
     required: false
     default: ""
+  binary-target-name:
+    description: "Swift Package Manager binary target name (e.g., 'RustBridge'); defaults to artifact-name if not specified"
+    required: false
+    default: ""
 
 outputs:
   bundle-path:
@@ -88,6 +92,7 @@ runs:
         INPUT_CRATE_NAME: ${{ inputs.crate-name }}
         INPUT_LIB_NAME: ${{ inputs.lib-name }}
         INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUT_BINARY_TARGET_NAME: ${{ inputs.binary-target-name }}
         INPUT_HEADER_PATH: ${{ inputs.header-path }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
