@@ -89,9 +89,9 @@ fi
 
 echo "[build-ios-xcframework] Building for iOS targets..."
 
-# Add iOS targets
+# Add iOS targets (x86_64-apple-ios dropped: pyke ORT has no prebuilt for that triple)
 echo "[build-ios-xcframework] Installing iOS targets..."
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 
 # Build for device arm64
 echo "[build-ios-xcframework] Building for aarch64-apple-ios..."
@@ -101,26 +101,17 @@ cargo build -p "$CRATE_NAME" $PROFILE_FLAG --target aarch64-apple-ios
 echo "[build-ios-xcframework] Building for aarch64-apple-ios-sim..."
 cargo build -p "$CRATE_NAME" $PROFILE_FLAG --target aarch64-apple-ios-sim
 
-# Build for simulator x86_64
-echo "[build-ios-xcframework] Building for x86_64-apple-ios..."
-cargo build -p "$CRATE_NAME" $PROFILE_FLAG --target x86_64-apple-ios
-
-# Create fat simulator library with lipo
-echo "[build-ios-xcframework] Creating fat simulator library..."
+# Create simulator library (arm64 only; x86_64-apple-ios deprecated Intel simulator not supported)
+echo "[build-ios-xcframework] Preparing simulator library..."
 DEVICE_LIB="target/aarch64-apple-ios/$TARGET_SUBDIR/lib${LIB_NAME}.a"
 SIM_ARM64_LIB="target/aarch64-apple-ios-sim/$TARGET_SUBDIR/lib${LIB_NAME}.a"
-SIM_X86_LIB="target/x86_64-apple-ios/$TARGET_SUBDIR/lib${LIB_NAME}.a"
 
-for lib in "$DEVICE_LIB" "$SIM_ARM64_LIB" "$SIM_X86_LIB"; do
+for lib in "$DEVICE_LIB" "$SIM_ARM64_LIB"; do
   if [[ ! -f "$lib" ]]; then
     echo "Error: built library not found at $lib" >&2
     exit 1
   fi
 done
-
-SIM_FAT_LIB="/tmp/${LIB_NAME}-sim-fat.a"
-lipo -create "$SIM_ARM64_LIB" "$SIM_X86_LIB" -output "$SIM_FAT_LIB"
-echo "[build-ios-xcframework] Created fat simulator lib: $SIM_FAT_LIB"
 
 # Create XCFramework
 echo "[build-ios-xcframework] Building XCFramework..."
@@ -136,7 +127,7 @@ fi
 xcodebuild -create-xcframework \
   -library "$DEVICE_LIB" \
   $HEADER_ARGS \
-  -library "$SIM_FAT_LIB" \
+  -library "$SIM_ARM64_LIB" \
   $HEADER_ARGS \
   -output "$XCFW"
 
