@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish-rubygems`: use `--file` flag for `gem spec` verification.** Per commit: `gem spec` requires `--file <path>` to inspect a local .gem file; without it, the path is parsed as a gem name with version constraint, causing false-positive "invalid gem structure" errors during RC publish verification.
+
 ## [1.8.36] - 2026-06-07
 
 ### Fixed

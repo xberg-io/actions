@@ -33,10 +33,10 @@ def validate_gem_structure(path: Path) -> bool:
     if not path.is_file() or not os.access(path, os.R_OK) or path.stat().st_size == 0:
         print(f"  Diagnostic: {path.name} is missing/unreadable/empty", file=sys.stderr)
         return False
-    result = subprocess.run(["gem", "spec", str(path)], capture_output=True, text=True, check=False)
+    result = subprocess.run(["gem", "spec", "--file", str(path)], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         print(
-            f"  Diagnostic: `gem spec {path.name}` exited with code {result.returncode}",
+            f"  Diagnostic: `gem spec --file {path.name}` exited with code {result.returncode}",
             file=sys.stderr,
         )
         if result.stderr.strip():
