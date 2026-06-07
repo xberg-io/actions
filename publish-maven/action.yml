@@ -107,5 +107,6 @@ runs:
         INPUT_MAVEN_PROFILE: ${{ inputs.maven-profile }}
         INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_SERVER_ID: ${{ inputs.server-id }}
       run: |
         python3 "${{ github.action_path }}/scripts/deploy.py"
