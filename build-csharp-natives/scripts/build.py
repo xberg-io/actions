@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -59,6 +60,59 @@ def ensure_input(name: str, value: str) -> str:
     return value
 
 
+def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
+    """Copy runtime dependencies of a macOS dylib into the staging directory.
+
+    Uses otool -L to extract dependencies with @rpath/ prefix and copies them
+    from the build output directory to the staging directory so they can be
+    bundled in the NuGet package alongside the main dylib.
+
+    Args:
+        dylib_path: Path to the built .dylib file
+        staging_dir: Destination directory for dependencies
+    """
+    if dylib_path.suffix != ".dylib":
+        return
+
+    try:
+        result = subprocess.run(
+            ["otool", "-L", str(dylib_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # otool not available or dylib inspection failed; silently skip
+        return
+
+    for line in result.stdout.split("\n"):
+        line = line.strip()
+        # Extract dependencies with @rpath/ prefix (e.g., @rpath/libonnxruntime.1.24.2.dylib)
+        if not line.startswith("@rpath/"):
+            continue
+
+        dep_filename = line.split("@rpath/")[1].split()[0]  # Extract just the filename
+        # Search for the dependency in the cargo target directory
+        target_dir = dylib_path.parent.parent
+        search_patterns = [
+            target_dir / dep_filename,  # Same directory as dylib
+            target_dir / "deps" / dep_filename,  # Common deps subdirectory
+            (target_dir.parent / "release" / dep_filename),  # Release root
+        ]
+
+        found = False
+        for candidate in search_patterns:
+            if candidate.is_file():
+                dest = staging_dir / dep_filename
+                shutil.copy2(candidate, dest)
+                print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
+                found = True
+                break
+
+        if not found:
+            print(f"[build-csharp-natives] warning: runtime dep not found: {dep_filename}", file=sys.stderr)
+
+
 def main() -> None:
     target = ensure_input("INPUT_TARGET", os.environ.get("INPUT_TARGET", ""))
     rid = ensure_input("INPUT_RID", os.environ.get("INPUT_RID", ""))
@@ -94,6 +148,10 @@ def main() -> None:
     shutil.copy2(source_lib, staged_lib)
 
     print(f"[build-csharp-natives] staged: {staged_lib.resolve()}")
+
+    # On macOS, copy runtime dependencies (@rpath/ references) into staging dir
+    if "darwin" in target or "apple" in target:
+        copy_macos_runtime_deps(source_lib, staging_dir)
 
     write_github_output("library-path", str(staged_lib.resolve()))
     write_github_output("staging-dir", str(staging_dir.resolve()))
