@@ -54,6 +54,7 @@
     ".cursor/rules/branch-hygiene.mdc",
     ".cursor/rules/cicd-pipeline-standards.mdc",
     ".cursor/rules/commit-messages.mdc",
+    ".cursor/rules/commit-procedure.mdc",
     ".cursor/rules/communication-style.mdc",
     ".cursor/rules/complexity-limits.mdc",
     ".cursor/rules/context-kreuzberg-brand-and-docs.mdc",
