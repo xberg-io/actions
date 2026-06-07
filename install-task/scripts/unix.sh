@@ -62,9 +62,9 @@ install_task() {
       --show-error \
       --location \
       --connect-timeout 10 \
-      --max-time 30 \
+      --max-time 60 \
       --retry 2 \
-      --retry-delay 1 \
+      --retry-delay 3 \
       https://taskfile.dev/install.sh \
       --output "$installer"; then
 
@@ -84,7 +84,10 @@ install_task() {
         fi
       fi
     else
-      echo "Download/installation failed"
+      echo "Download/installation failed; trying GitHub release fallback..."
+      if install_from_github_release "$resolved_version"; then
+        return 0
+      fi
     fi
 
     attempt=$((attempt + 1))
@@ -97,6 +100,87 @@ install_task() {
 
   echo "Error: Failed to install Task after ${max_attempts} attempts" >&2
   return 1
+}
+
+install_from_github_release() {
+  local version="${1:-latest}"
+  echo "Attempting direct download from GitHub releases..."
+
+  # Detect OS and architecture
+  local os
+  local arch
+  case "$(uname -s)" in
+    Linux)
+      os="linux"
+      ;;
+    Darwin)
+      os="darwin"
+      ;;
+    *)
+      echo "Unsupported OS" >&2
+      return 1
+      ;;
+  esac
+
+  case "$(uname -m)" in
+    x86_64)
+      arch="amd64"
+      ;;
+    aarch64 | arm64)
+      arch="arm64"
+      ;;
+    *)
+      echo "Unsupported architecture" >&2
+      return 1
+      ;;
+  esac
+
+  # Resolve version if needed
+  local resolved_version="$version"
+  if [[ "$resolved_version" == "latest" ]]; then
+    if resolved_version=$(resolve_latest_version) && [[ -n "$resolved_version" ]]; then
+      echo "Resolved 'latest' to ${resolved_version}"
+    else
+      echo "Failed to resolve 'latest' version" >&2
+      return 1
+    fi
+  fi
+
+  # Download from GitHub release
+  local download_url="https://github.com/go-task/task/releases/download/${resolved_version}/task_${os}_${arch}.tar.gz"
+  local auth_args=()
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    auth_args=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+
+  local temp_tar="${RUNNER_TEMP:-$(mktemp -d)}/task.tar.gz"
+  if curl --proto '=https' \
+    --tlsv1.2 \
+    --fail \
+    --silent \
+    --show-error \
+    --location \
+    --connect-timeout 10 \
+    --max-time 60 \
+    --retry 2 \
+    --retry-delay 3 \
+    "${auth_args[@]}" \
+    "$download_url" \
+    --output "$temp_tar"; then
+
+    if mkdir -p "$task_bin_dir" && tar -xzf "$temp_tar" -C "$task_bin_dir" task && [[ -x "$task_bin_dir/task" ]]; then
+      echo "GitHub release download successful"
+      rm -f "$temp_tar"
+      return 0
+    else
+      echo "Failed to extract or verify Task binary" >&2
+      rm -f "$temp_tar"
+      return 1
+    fi
+  else
+    echo "Failed to download from GitHub release" >&2
+    return 1
+  fi
 }
 
 install_task
