@@ -4,7 +4,32 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.36] - 2026-06-07
+
 ### Fixed
+
+- **`publish-maven`: write settings.xml with literal credentials to bypass env-resolution 403.** Per commit `74299ae`: `deploy.py` now writes a temp `settings.xml` with the literal username/password (XML-escaped, chmod 0600, `-s <file>` passed to mvn). Fixes Sonatype Central HTTP 403 on RC.46/RC.47 where `${env.MAVEN_USERNAME}` / `${env.MAVEN_PASSWORD}` placeholders silently resolved to empty strings.
+
+### Changed
+
+- `prek autoupdate` + `uv sync --upgrade`: bump `kreuzberg-dev/pre-commit-hooks` rev pin to `v2.1.6`; refresh dev dependencies.
+
+## [1.8.35] - 2026-06-07
+
+### Added
+
+- **`check-registry`: retry alef CLI with exponential backoff (5 attempts, 2s/4s/8s/16s).** Per commit `089bdc4`. Absorbs transient registry-existence-check 5xx responses during the prepare stage.
+
+### Fixed
+
+- `swift-artifactbundle`: parameterize `binary-target-name` (commit `8e36532`).
+- `ai-rulez`: regenerate manifest to include `commit-procedure.mdc` (commit `0246c3b`).
+
+## [1.8.34] - 2026-06-06
+
+### Fixed
+
+- Drop `x86_64-apple-ios` from Dart iOS XCFramework matrix (commit `cd60600`); pyke ORT has no prebuilt artifact for that triple.
 
 ## [1.8.33] - 2026-06-05
 
