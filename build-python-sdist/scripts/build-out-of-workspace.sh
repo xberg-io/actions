@@ -51,27 +51,16 @@ else
       echo "Error: $FULL_PACKAGE_DIR has neither Cargo.toml nor pyproject.toml" >&2
       exit 1
     fi
-    manifest_rel=$(awk '
-      /^\[tool\.maturin\]/ { in_section=1; next }
-      /^\[/ { in_section=0 }
-      in_section && /^manifest-path[[:space:]]*=/ {
-        sub(/^manifest-path[[:space:]]*=[[:space:]]*"/, "")
-        sub(/".*$/, "")
-        print
-        exit
-      }
-    ' "$FULL_PACKAGE_DIR/pyproject.toml")
-    if [ -z "$manifest_rel" ]; then
-      echo "Error: no Cargo.toml in $FULL_PACKAGE_DIR and no [tool.maturin] manifest-path in pyproject.toml" >&2
-      exit 1
-    fi
-    resolved_manifest="$(cd "$FULL_PACKAGE_DIR" && cd "$(dirname "$manifest_rel")" && pwd)/$(basename "$manifest_rel")"
-    # cd INTO the package dir so maturin reads its pyproject.toml (not the
-    # workspace-root pyproject if one exists with a different build-backend),
-    # while -m points at the crate elsewhere in the workspace.
-    echo "Split layout detected; building sdist from $FULL_PACKAGE_DIR via -m $resolved_manifest"
+    # Don't pass -m to maturin: it forces the sdist filename to derive from the
+    # Rust crate name (e.g. kreuzcrawl_py-*.tar.gz) instead of pyproject.toml's
+    # [project] name (e.g. kreuzcrawl-*.tar.gz), which then mismatches the PyPI
+    # Trusted Publisher's project name and trips 400 "Non-user identities cannot
+    # create new projects". cd into the package dir and let maturin resolve the
+    # manifest-path from pyproject's [tool.maturin] section itself — same as
+    # pre-1.8.39 behavior.
+    echo "Split layout detected; building sdist from $FULL_PACKAGE_DIR (maturin resolves manifest-path from pyproject)"
     cd "$FULL_PACKAGE_DIR"
-    maturin sdist -m "$resolved_manifest" --out "$OUTPUT_DIR"
+    maturin sdist --out "$OUTPUT_DIR"
     exit 0
   fi
 
