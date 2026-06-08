@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.44] - 2026-06-08
+
 ### Fixed
 
 - **`build-python-sdist`: drop `-m` from the split-layout `maturin sdist` invocation.** 1.8.42 + 1.8.43 passed `-m <crate>/Cargo.toml` to `maturin sdist`. With `-m`, maturin derives the sdist filename from the Rust crate's `[package].name` (e.g. `kreuzcrawl_py-0.3.0rc50.tar.gz` for crate `kreuzcrawl-py`) instead of pyproject's `[project].name` (`kreuzcrawl`). That tar then uploads to PyPI under the wrong project name and the OIDC publish fails with `400 Non-user identities cannot create new projects` because the Trusted Publisher is registered for `kreuzcrawl`, not `kreuzcrawl_py`. Now matches pre-1.8.39 behavior: `cd <package-dir> && maturin sdist --out <out>`. Maturin resolves `[tool.maturin].manifest-path` from the pyproject relative to `cwd`, so the split layout still works without `-m`. Fixes Publish to PyPI in kreuzcrawl v0.3.0-rc.50 publish run 27119781847 attempt 2.
