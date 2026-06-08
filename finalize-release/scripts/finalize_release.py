@@ -153,6 +153,7 @@ def main() -> None:
     tag = env_str("INPUT_TAG")
     is_prerelease_raw = env_str("INPUT_IS_PRERELEASE", "auto") or "auto"
     go_module_path = env_str("INPUT_GO_MODULE_PATH")
+    go_strip_major = env_bool("INPUT_GO_STRIP_MAJOR_VERSION", default=True)
     dry_run = env_bool("INPUT_DRY_RUN", default=False)
     repo = env_str("INPUT_REPO") or env_str("GITHUB_REPOSITORY")
 
@@ -166,7 +167,7 @@ def main() -> None:
     if dry_run:
         print(f"[dry-run] Would edit release {tag} → draft=false, prerelease={prerelease}")
         if go_module_path:
-            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path)
+            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path) if go_strip_major else go_module_path
             module_tag = f"{module_subdir}/{tag}"
             print(f"[dry-run] Would create Go module tag: {module_tag}")
         write_output("finalized", "false")
@@ -194,11 +195,16 @@ def main() -> None:
     if go_module_path and repo:
         try:
             sha = gh_get_tag_sha(tag)
-            # Go module tag convention: strip trailing /vN (where N >= 2) from the module path.
-            # Example: "packages/go/v3" → "packages/go", then tag becomes "packages/go/v3.5.0".
-            # The go.mod lives at "packages/go/go.mod" with module path ending in "/v3",
-            # and Go module resolution expects tags at the directory level, not nested under vN.
-            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path)
+            # Go module tag convention depends on where go.mod actually lives.
+            # Default (go_strip_major=True): strip trailing /vN (N>=2) from the path —
+            # for layouts where go.mod is at the stripped parent (e.g. `packages/go/go.mod`
+            # with module path ending in `/v3`), tagging at the parent yields the form
+            # Go's module proxy expects (`packages/go/v3.5.0`).
+            # Opt-out (go_strip_major=False): tag at the verbatim path — required when
+            # go.mod sits inside the major-version subdirectory itself
+            # (e.g. `packages/go/v5/go.mod`), in which case the tag is
+            # `packages/go/v5/v5.0.0` and the proxy resolves go.mod from that subtree.
+            module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path) if go_strip_major else go_module_path
             module_tag = f"{module_subdir}/{tag}"
             created = gh_create_tag(repo, module_tag, sha)
             if created:

@@ -17,10 +17,24 @@ inputs:
     default: "auto"
   go-module-path:
     description: >
-      If non-empty, additionally create the tag `{go-module-path}/{tag}` so
-      Go module consumers can resolve the version. Example: `packages/go/v5`.
+      If non-empty, additionally create a Go module subdir tag so consumers
+      can resolve the version. Default behavior: strip a trailing `/vN`
+      (N>=2) segment from the path before composing the tag (e.g.
+      `packages/go/v5` → tag `packages/go/{tag}`); this matches the canonical
+      Go layout where `go.mod` lives at the stripped path. Set
+      `go-strip-major-version: false` when `go.mod` actually lives at the
+      subdirectory path (e.g. `packages/go/v5/go.mod`), in which case the tag
+      becomes `packages/go/v5/{tag}`.
     required: false
     default: ""
+  go-strip-major-version:
+    description: >
+      "true" (default) strips a trailing `/vN` (N>=2) from `go-module-path`
+      before tagging. "false" uses the path verbatim — required when
+      `go.mod` is at `{go-module-path}/go.mod` rather than at the stripped
+      parent.
+    required: false
+    default: "true"
   dry-run:
     description: "Print intended actions without modifying the release"
     required: false
@@ -53,6 +67,7 @@ runs:
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_IS_PRERELEASE: ${{ inputs.is-prerelease }}
         INPUT_GO_MODULE_PATH: ${{ inputs.go-module-path }}
+        INPUT_GO_STRIP_MAJOR_VERSION: ${{ inputs.go-strip-major-version }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_REPO: ${{ github.repository }}
       run: |

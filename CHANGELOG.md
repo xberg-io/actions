@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`finalize-release`: `go-strip-major-version` input.** Default `true` preserves the existing behavior of stripping a trailing `/vN` (N>=2) segment from `go-module-path` before composing the Go module subdir tag. Set to `false` when `go.mod` lives inside the major-version subdirectory itself (e.g. `packages/go/v5/go.mod`); the tag then becomes `packages/go/v5/{tag}` so Go's module proxy resolves `go.mod` from that subtree. Required by kreuzberg v5 layout, where the Go module sits at `packages/go/v5/go.mod` rather than at the stripped parent. Fixes `missing go.mod at revision v5.0.0-rc.7` resolution failures.
+
 ## [1.8.44] - 2026-06-08
 
 ### Fixed
