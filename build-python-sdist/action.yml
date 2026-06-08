@@ -75,17 +75,12 @@ runs:
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
         set -euo pipefail
-        # Resolve output-dir under the workspace unless an absolute path was given.
         case "${INPUT_OUTPUT_DIR}" in
           /*) out="${INPUT_OUTPUT_DIR}" ;;
           *) out="${GITHUB_WORKSPACE}/${INPUT_OUTPUT_DIR}" ;;
         esac
         mkdir -p "$out"
-        if [ -n "${INPUT_MANIFEST_PATH}" ]; then
-          echo "Building sdist: maturin sdist -m '${INPUT_MANIFEST_PATH}' -o '${out}'"
-          maturin sdist -m "${INPUT_MANIFEST_PATH}" -o "$out"
-        else
-          echo "Building sdist: (cd '${INPUT_PACKAGE_DIR}') maturin sdist --out '${out}'"
-          cd "${GITHUB_WORKSPACE}/${INPUT_PACKAGE_DIR}"
-          maturin sdist --out "$out"
-        fi
+
+        input_path="${INPUT_MANIFEST_PATH:-${INPUT_PACKAGE_DIR}}"
+        bash "${{ github.action_path }}/scripts/build-out-of-workspace.sh" \
+          "$input_path" "$out" "$GITHUB_WORKSPACE"

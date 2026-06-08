@@ -56,106 +56,16 @@ runs:
       if: runner.os != 'Windows'
       id: build-unix
       shell: bash
+      env:
+        CRATE_NAME: ${{ inputs.crate-name }}
+        LIB_NAME: ${{ inputs.lib-name }}
       run: |
         set -euo pipefail
-
-        # Build out-of-workspace to avoid Cargo `links` conflicts when the workspace
-        # contains other path-deps that reference the same native libs.
-
-        CRATE_NAME="${{ inputs.crate-name }}"
-        LIB_NAME="${{ inputs.lib-name }}"
-        WORKSPACE_ROOT="${GITHUB_WORKSPACE}"
-        CRATE_DIR="${WORKSPACE_ROOT}/crates/${CRATE_NAME}"
-
-        # If crate is in packages/ instead, adjust path.
-        if [ ! -d "$CRATE_DIR" ]; then
-          CRATE_DIR="${WORKSPACE_ROOT}/packages/${CRATE_NAME}"
-        fi
-
-        if [ ! -d "$CRATE_DIR" ]; then
-          echo "Error: crate directory not found at $CRATE_DIR" >&2
-          exit 1
-        fi
-
-        # Create temp directory for out-of-workspace build.
-        BUILD_TEMP=$(mktemp -d)
-        trap "rm -rf '$BUILD_TEMP'" EXIT
-
-        # Copy crate to temp dir.
-        cp -r "$CRATE_DIR" "$BUILD_TEMP/crate"
-        cd "$BUILD_TEMP/crate"
-
-        # Strip workspace inheritance to avoid cross-workspace dep conflicts.
-        if grep -q 'workspace = true' Cargo.toml 2>/dev/null; then
-          python3 << 'PYTHON_SCRIPT'
-import re
-
-# Read root Cargo.toml to extract [workspace.package] values.
-root_toml_path = "$WORKSPACE_ROOT/Cargo.toml"
-ws_values = {}
-try:
-    with open(root_toml_path, 'r') as f:
-        content = f.read()
-        # Extract [workspace.package] section.
-        match = re.search(r'\[workspace\.package\](.*?)(?=\[|$)', content, re.DOTALL)
-        if match:
-            for line in match.group(1).split('\n'):
-                line = line.strip()
-                if '=' in line and not line.startswith('#'):
-                    key, val = line.split('=', 1)
-                    ws_values[key.strip()] = val.strip()
-except Exception as e:
-    print(f"Warning: could not parse workspace Cargo.toml: {e}", flush=True)
-
-# Read binding crate's Cargo.toml and replace workspace = true directives.
-with open('Cargo.toml', 'r') as f:
-    content = f.read()
-
-# Replace [package].workspace = true with explicit values.
-if 'workspace = true' in content:
-    lines = content.split('\n')
-    in_package = False
-    result = []
-    for line in lines:
-        if line.strip().startswith('[package]'):
-            in_package = True
-            result.append(line)
-        elif in_package and line.strip().startswith('['):
-            in_package = False
-            result.append(line)
-        elif in_package and 'workspace = true' in line:
-            # Replace with extracted workspace values.
-            indent = len(line) - len(line.lstrip())
-            for key, val in sorted(ws_values.items()):
-                result.append(' ' * indent + f'{key} = {val}')
-            continue
-        elif 'workspace = true' in line and not in_package:
-            # Skip non-package workspace = true lines.
-            continue
-        result.append(line)
-    content = '\n'.join(result)
-
-with open('Cargo.toml', 'w') as f:
-    f.write(content)
-print("Stripped workspace inheritance from binding crate Cargo.toml", flush=True)
-PYTHON_SCRIPT
-        fi
-
-        # Generate fresh lockfile for out-of-workspace build.
-        cargo generate-lockfile
-
-        # Build the crate.
-        cargo build --release
-
-        # Copy built artifact back to workspace target dir.
-        mkdir -p "$WORKSPACE_ROOT/target/release"
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
-          cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.dylib" "$WORKSPACE_ROOT/target/release/"
-          echo "extension-path=$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.dylib" >> "$GITHUB_OUTPUT"
-        else
-          cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.so" "$WORKSPACE_ROOT/target/release/"
-          echo "extension-path=$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.so" >> "$GITHUB_OUTPUT"
-        fi
+        extension_path=$( \
+          bash "${{ github.action_path }}/scripts/build-out-of-workspace.sh" \
+          "$CRATE_NAME" "$LIB_NAME" "$GITHUB_WORKSPACE"
+        )
+        echo "extension-path=$extension_path" >> "$GITHUB_OUTPUT"
 
     # --- Windows ---
     - name: Install LLVM for libclang (Windows)
@@ -175,68 +85,44 @@ PYTHON_SCRIPT
       id: build-windows
       shell: pwsh
       env:
-        # ext-php-rs uses #![cfg_attr(windows, feature(abi_vectorcall))] in its
-        # lib.rs — the abi_vectorcall feature is unstable, so on stable Rust
-        # we need RUSTC_BOOTSTRAP=1 to allow it. This is the upstream-recommended
-        # workaround; the alternative is using the nightly toolchain.
         RUSTC_BOOTSTRAP: "1"
+        CRATE_NAME: ${{ inputs.crate-name }}
+        LIB_NAME: ${{ inputs.lib-name }}
       run: |
         $ErrorActionPreference = "Stop"
-
-        # Build out-of-workspace to avoid Cargo `links` conflicts.
-
-        $crateName = "${{ inputs.crate-name }}"
-        $libName = "${{ inputs.lib-name }}"
         $workspaceRoot = $env:GITHUB_WORKSPACE
-        $crateDir = Join-Path $workspaceRoot "crates" $crateName
+        $crateDir = Join-Path $workspaceRoot "crates" $env:CRATE_NAME
 
-        # If crate is in packages/ instead, adjust path.
         if (-not (Test-Path $crateDir)) {
-          $crateDir = Join-Path $workspaceRoot "packages" $crateName
+          $crateDir = Join-Path $workspaceRoot "packages" $env:CRATE_NAME
         }
 
         if (-not (Test-Path $crateDir)) {
-          throw "Crate directory not found at $crateDir"
+          throw "Crate directory not found"
         }
 
-        # Create temp directory for out-of-workspace build.
         $buildTemp = New-TemporaryDirectory
+        Copy-Item -Path $crateDir -Destination (Join-Path $buildTemp "crate") -Recurse
+        Set-Location (Join-Path $buildTemp "crate")
 
-        try {
-          # Copy crate to temp dir.
-          Copy-Item -Path $crateDir -Destination (Join-Path $buildTemp "crate") -Recurse
-          Set-Location (Join-Path $buildTemp "crate")
-
-          # Strip workspace inheritance (simplified for Windows).
-          $cargoToml = Join-Path (Get-Location) "Cargo.toml"
-          if (Test-Path $cargoToml) {
-            $content = Get-Content $cargoToml -Raw
-            if ($content -match 'workspace = true') {
-              # Remove workspace = true lines.
-              $content = $content -replace '^\s*workspace = true\s*$', ''
-              Set-Content -Path $cargoToml -Value $content
-              Write-Host "Stripped workspace inheritance from Cargo.toml"
-            }
+        # Strip workspace = true from Cargo.toml
+        $cargoToml = Join-Path (Get-Location) "Cargo.toml"
+        if (Test-Path $cargoToml) {
+          $content = Get-Content $cargoToml -Raw
+          if ($content -match 'workspace = true') {
+            $content = $content -replace '^\s*workspace = true\s*$', ''
+            Set-Content -Path $cargoToml -Value $content
           }
-
-          # Generate fresh lockfile for out-of-workspace build.
-          cargo generate-lockfile
-
-          # Build the crate.
-          cargo build --release
-
-          # Copy built artifact back to workspace target dir.
-          $dllPath = Join-Path $workspaceRoot "target\release\${libName}.dll"
-          $sourceDir = Join-Path (Get-Location) "target\release"
-          $targetDir = Join-Path $workspaceRoot "target\release"
-          New-Item -ItemType Directory -Force -Path $targetDir > $null
-          Copy-Item -Path (Join-Path $sourceDir "${libName}.dll") -Destination $dllPath
-          if (-not (Test-Path $dllPath)) {
-            throw "Built DLL not found at $dllPath"
-          }
-          Write-Host "Built DLL at: $dllPath"
-          "dll=$dllPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        } finally {
-          Set-Location $workspaceRoot
-          Remove-Item -Path $buildTemp -Recurse -Force
         }
+
+        cargo generate-lockfile
+        cargo build --release
+
+        $dllPath = Join-Path $workspaceRoot "target\release\$($env:LIB_NAME).dll"
+        New-Item -ItemType Directory -Force -Path (Split-Path $dllPath) > $null
+        Copy-Item -Path (Join-Path (Get-Location) "target\release\$($env:LIB_NAME).dll") -Destination $dllPath
+
+        Set-Location $workspaceRoot
+        Remove-Item -Path $buildTemp -Recurse -Force
+
+        "dll=$dllPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
