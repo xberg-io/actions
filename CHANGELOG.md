@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.41] - 2026-06-08
+
 ### Fixed
 
 - **`build-php-extension` (Windows): replace bogus `New-TemporaryDirectory` cmdlet with `New-Item -ItemType Directory`.** The 1.8.39 out-of-workspace PowerShell branch called `New-TemporaryDirectory`, which is not a built-in PowerShell cmdlet (.NET only exposes `New-TemporaryFile`). Every Windows PHP extension job in kreuzberg rc.7 failed with `The term 'New-TemporaryDirectory' is not recognized`. Replaced with `New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP "build-$([Guid]::NewGuid())")`.
