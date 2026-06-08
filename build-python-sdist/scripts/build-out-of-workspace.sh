@@ -66,8 +66,11 @@ else
       exit 1
     fi
     resolved_manifest="$(cd "$FULL_PACKAGE_DIR" && cd "$(dirname "$manifest_rel")" && pwd)/$(basename "$manifest_rel")"
-    echo "Split layout detected; building sdist in-workspace via -m $resolved_manifest"
-    cd "$WORKSPACE_ROOT"
+    # cd INTO the package dir so maturin reads its pyproject.toml (not the
+    # workspace-root pyproject if one exists with a different build-backend),
+    # while -m points at the crate elsewhere in the workspace.
+    echo "Split layout detected; building sdist from $FULL_PACKAGE_DIR via -m $resolved_manifest"
+    cd "$FULL_PACKAGE_DIR"
     maturin sdist -m "$resolved_manifest" --out "$OUTPUT_DIR"
     exit 0
   fi

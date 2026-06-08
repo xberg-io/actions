@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.43] - 2026-06-08
+
+### Fixed
+
+- **`build-python-sdist`: cd into `package-dir` (not workspace root) when invoking maturin for split layouts.** 1.8.42 ran `maturin sdist -m <crate>/Cargo.toml --out <dir>` from `$GITHUB_WORKSPACE`. That picks up the workspace-root `pyproject.toml` when one exists with a different build-backend (e.g. tslp's root pyproject uses `hatchling.build` for tooling). The generated sdist then declared `build-backend = "hatchling.build"`, so the publish smoke step failed `BackendUnavailable: Cannot import 'hatchling.build'`. The script now `cd`s into `package-dir` first so maturin reads its `pyproject.toml` (with `build-backend = "maturin"`), and passes `-m` for the out-of-tree crate path.
+
 ## [1.8.42] - 2026-06-08
 
 ### Fixed
