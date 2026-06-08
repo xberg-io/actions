@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.42] - 2026-06-08
+
+### Fixed
+
+- **`build-python-sdist`: handle split package layouts (pyproject in `packages/python/`, crate at `crates/<name>/Cargo.toml`).** The 1.8.39 out-of-workspace path assumed `package-dir` always contains a `Cargo.toml`; in monorepos like tslp the Python package lives next to its pyproject only, with the actual Rust crate referenced via `[tool.maturin] manifest-path`. The script now detects the split layout, resolves `manifest-path` from pyproject, and runs `maturin sdist -m <resolved> --out <dir>` directly from the workspace root (skipping the temp-dir copy + workspace-strip + `cargo generate-lockfile`, which can't work when the dir has no Cargo.toml). Fixes Python sdist publish-blocker on tslp rc.26.
+
 ## [1.8.41] - 2026-06-08
 
 ### Fixed

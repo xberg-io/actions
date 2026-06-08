@@ -39,6 +39,39 @@ else
     exit 1
   fi
 
+  # Split layout: package dir holds pyproject.toml + py source but the Rust crate
+  # lives elsewhere (typical for monorepos: packages/python -> crates/<name>/Cargo.toml
+  # via pyproject's [tool.maturin] manifest-path). Out-of-workspace isolation can't
+  # work — maturin needs both the python sources and the crate, and they're in
+  # different roots. Fall back to in-workspace build from workspace root with the
+  # resolved -m manifest-path. rewrite-native-deps already ran in the workspace,
+  # so the crate's path-deps are registry deps.
+  if [ ! -f "$FULL_PACKAGE_DIR/Cargo.toml" ]; then
+    if [ ! -f "$FULL_PACKAGE_DIR/pyproject.toml" ]; then
+      echo "Error: $FULL_PACKAGE_DIR has neither Cargo.toml nor pyproject.toml" >&2
+      exit 1
+    fi
+    manifest_rel=$(awk '
+      /^\[tool\.maturin\]/ { in_section=1; next }
+      /^\[/ { in_section=0 }
+      in_section && /^manifest-path[[:space:]]*=/ {
+        sub(/^manifest-path[[:space:]]*=[[:space:]]*"/, "")
+        sub(/".*$/, "")
+        print
+        exit
+      }
+    ' "$FULL_PACKAGE_DIR/pyproject.toml")
+    if [ -z "$manifest_rel" ]; then
+      echo "Error: no Cargo.toml in $FULL_PACKAGE_DIR and no [tool.maturin] manifest-path in pyproject.toml" >&2
+      exit 1
+    fi
+    resolved_manifest="$(cd "$FULL_PACKAGE_DIR" && cd "$(dirname "$manifest_rel")" && pwd)/$(basename "$manifest_rel")"
+    echo "Split layout detected; building sdist in-workspace via -m $resolved_manifest"
+    cd "$WORKSPACE_ROOT"
+    maturin sdist -m "$resolved_manifest" --out "$OUTPUT_DIR"
+    exit 0
+  fi
+
   cp -r "$FULL_PACKAGE_DIR" "$BUILD_TEMP/package"
   cd "$BUILD_TEMP/package"
 
