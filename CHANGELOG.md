@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.40] - 2026-06-08
+
+### Fixed
+
+- **`install-task`: extend retry budget to ride out GitHub release CDN incidents.** Per commit `a9470f4`. Bumps `max_attempts` from 3 to 6 and initial backoff from 2s to 5s, growing the total retry window from ~14s to ~155s (5+10+20+40+80). The prior budget was too short to outlast typical multi-minute GH releases CDN 504 incidents, which just took out CI Rust, CI Validate, CI Dart, CI Zig, and Publish Rust crates jobs across tslp rc.26. Mirrors the matching tslp `build.rs` `fetch_bytes` retry hardening committed in `tree-sitter-language-pack@3e6de6646`.
+
 ## [1.8.39] - 2026-06-08
 
 ### Fixed
