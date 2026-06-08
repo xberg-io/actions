@@ -4,9 +4,13 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.39] - 2026-06-08
+
 ### Fixed
 
-- **`publish-rubygems`: use `--file` flag for `gem spec` verification.** Per commit: `gem spec` requires `--file <path>` to inspect a local .gem file; without it, the path is parsed as a gem name with version constraint, causing false-positive "invalid gem structure" errors during RC publish verification.
+- **`build-php-extension` + `build-python-sdist`: build out-of-workspace to avoid Cargo `links` conflicts.** Per commit `6c5aed0`. After `rewrite-native-deps` converts path-deps to registry version-deps, Cargo still resolves the workspace dep graph and sees BOTH the registry `kreuzberg-tesseract@<rc>` (via the binding crate) AND the local path `kreuzberg-tesseract` (via `tools/benchmark-harness → kreuzberg → kreuzberg-tesseract`). Both declare `links = "kreuzberg_tesseract"`, violating Cargo's one-package-per-links-key invariant — resolver bails with `failed to select a version for kreuzberg-tesseract`. Each action now copies the binding crate to a tempdir, strips `workspace = true` directives, runs `cargo generate-lockfile` from a clean slate, builds in isolation, then copies artifacts back to `$GITHUB_WORKSPACE/target/release/`. Fixes 13 publish-blocker jobs across kreuzberg rc.4 + rc.5 (Python sdist + all 12 PHP × {8.2, 8.3, 8.4} × {linux-x86_64, linux-arm64, macos-arm64, windows-x86_64}).
+- **`publish-npm`: pass `--force` to `npm publish` to allow first-publish of new scoped subpackages.** Per commit `9dbae75`. npm CLI v11+ validates scoped package names before publishing; a brand-new platform subpackage (e.g. `@kreuzberg/node-linux-arm64-musl@<rc>`) trips a 404 on the pre-publish metadata lookup because the registry has no prior version. `--force` bypasses that check while leaving server-side integrity and version-conflict enforcement intact.
+- **`publish-rubygems`: use positional gemfile arg for `gem spec` (RubyGems 3.3+ dropped `--file`).** Per commit `901855b`. The prior fix added `--file <path>`, but RubyGems 3.3 removed the flag — newer toolchains failed with `invalid option: --file`. Reverted to `gem spec <gemfile>` positional form, which works across RubyGems 3.x.
 
 ## [1.8.36] - 2026-06-07
 
