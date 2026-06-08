@@ -101,7 +101,7 @@ runs:
           throw "Crate directory not found"
         }
 
-        $buildTemp = New-TemporaryDirectory
+        $buildTemp = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP "build-$([Guid]::NewGuid())")
         Copy-Item -Path $crateDir -Destination (Join-Path $buildTemp "crate") -Recurse
         Set-Location (Join-Path $buildTemp "crate")
 
