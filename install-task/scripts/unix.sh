@@ -35,9 +35,9 @@ resolve_latest_version() {
 }
 
 install_task() {
-  local max_attempts=3
+  local max_attempts=6
   local attempt=1
-  local wait_time=2
+  local wait_time=5
 
   local resolved_version="$version"
   if [[ "$resolved_version" == "latest" || -z "$resolved_version" ]]; then
@@ -110,29 +110,29 @@ install_from_github_release() {
   local os
   local arch
   case "$(uname -s)" in
-    Linux)
-      os="linux"
-      ;;
-    Darwin)
-      os="darwin"
-      ;;
-    *)
-      echo "Unsupported OS" >&2
-      return 1
-      ;;
+  Linux)
+    os="linux"
+    ;;
+  Darwin)
+    os="darwin"
+    ;;
+  *)
+    echo "Unsupported OS" >&2
+    return 1
+    ;;
   esac
 
   case "$(uname -m)" in
-    x86_64)
-      arch="amd64"
-      ;;
-    aarch64 | arm64)
-      arch="arm64"
-      ;;
-    *)
-      echo "Unsupported architecture" >&2
-      return 1
-      ;;
+  x86_64)
+    arch="amd64"
+    ;;
+  aarch64 | arm64)
+    arch="arm64"
+    ;;
+  *)
+    echo "Unsupported architecture" >&2
+    return 1
+    ;;
   esac
 
   # Resolve version if needed
