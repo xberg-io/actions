@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.46] - 2026-06-08
+
+### Added
+
+- **`prepare-release-metadata`: declare `release_kotlin_android` output.** alef >= 0.23.43 emits a `release_kotlin_android` field in `release-metadata --json` so consuming workflows can gate their kotlin-android publish jobs (Maven Central via Gradle) the same way `release_kotlin` gates the JVM-only Kotlin package. Without this declaration the value reached `$GITHUB_OUTPUT` but `needs.prepare.outputs.release_kotlin_android` returned empty and the `if:` gate evaluated false, causing every kotlin-android job in kreuzcrawl v0.3.0-rc.50/v0.3.0-rc.51 to skip silently. Companion to the alef 0.23.43 `ALL_RELEASE_TARGETS` addition.
+
 ## [1.8.45] - 2026-06-08
 
 ### Added

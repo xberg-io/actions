@@ -112,6 +112,9 @@ outputs:
   release_kotlin:
     value: ${{ steps.prepare.outputs.release_kotlin }}
     description: "Whether the kotlin target is enabled (requires alef >= 0.15.8)"
+  release_kotlin_android:
+    value: ${{ steps.prepare.outputs.release_kotlin_android }}
+    description: "Whether the kotlin-android target is enabled (requires alef >= 0.23.43)"
 runs:
   using: composite
   steps:
