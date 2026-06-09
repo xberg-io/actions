@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.49] - 2026-06-09
+
+### Fixed
+
+- **`publish-github-release/scripts/upload_artifacts.py`: retry transient SSL/network errors with exponential backoff.** The script uploaded each asset with a single `urllib.request.urlopen` call and exited on any exception. Large assets (~30 MB+) occasionally trigger `ssl.SSLEOFError: EOF occurred in violation of protocol` mid-upload from the GitHub uploads endpoint, which is transient. Now retries 5× with exponential backoff (2s, 4s, 8s, 16s) on `URLError`, `ssl.SSLError`, `ConnectionError`, `TimeoutError`, and HTTP 5xx. Fixes tslp v1.9.0-rc.29 publish run 27192809836 `Build parser-sources bundle` failure.
+
 ## [1.8.48] - 2026-06-09
 
 ### Fixed
@@ -11,6 +17,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 - **`build-python-wheels`: wipe `~/.cargo` and `~/.rustup` before installing rustup on macOS.** macOS-latest runner images preinstall a Rust toolchain. When maturin then triggers `rustup install 1.95` via `rust-toolchain.toml`, rustup finds the partially installed 1.95 toolchain (`bin/cargo-clippy` already present) and rolls the install back with `failed to install component 'clippy-preview-aarch64-apple-darwin', detected conflict: 'bin/cargo-clippy'`. The 1.8.47 fix removed the action's own `dtolnay/rust-toolchain` step, but the runner-image preinstall stayed and reproduced the same conflict in kreuzberg rc.10 Publish run 27193384688 macOS wheel job 80282051523. Now `CIBW_BEFORE_ALL_MACOS` wipes both dirs before sourcing rustup-init, so the in-cibw rustup owns the entire toolchain state.
 - **`publish-zig`: extend release-asset CDN propagation retry budget.** Bumped `zig fetch` retries from 8×5s (40s budget) to 20×10s (200s budget). Release dispatches under load have shown the GitHub release-asset CDN (`releases/download/<tag>/<name>` redirect target) answer 404 for >90s after `gh release upload` returns, exceeding the prior budget and failing the action with a misleading "failed after N attempts" error. The new budget absorbs the propagation race without flaking. Fixes kreuzcrawl v0.3.0-rc.52 publish run 27188386957 Zig metadata failure.
 - **`build-swift-artifactbundle`: substitute `v__ALEF_SWIFT_VERSION__` placeholder in Package.swift.** Alef's canonical `Package.swift` seed uses two placeholders in the `.binaryTarget` block: `checksum: "__ALEF_SWIFT_CHECKSUM__"` and `url: ".../releases/download/v__ALEF_SWIFT_VERSION__/..."`. The action substituted only the checksum (plus a bogus `__ALEF_SWIFT_BUNDLE_URL__` line that never matched), so the published manifest shipped a literal `v__ALEF_SWIFT_VERSION__` in the URL and SwiftPM downloads 404'd. Added a `package-version` input; when set, the action also runs `sed -i.bak 's|v__ALEF_SWIFT_VERSION__|v${PACKAGE_VERSION}|g'` against the manifest. The second sed now uses `-i.bak` so it works on both macOS BSD sed and GNU sed. Removed the bogus URL-placeholder line. Fixes kreuzcrawl v0.3.0-rc.52 Swift artifactbundle failure.
+- **`generate-elixir-checksums`: retry NIF download on 404 to absorb release-asset CDN propagation.** The script downloaded each `libfoo-vX.Y.Z-nif-2.*.so.tar.gz` once and exited on failure. Right after `gh release upload` returns, the `releases/download/<tag>/...` CDN may still 404 for 60–200s, so the Hex publish job failed even though the assets had been uploaded successfully. Now retries 20×10s on HTTP 404 (other HTTP errors and non-HTTP exceptions fail immediately). Fixes kreuzcrawl v0.3.0-rc.52 Publish Elixir Hex failure.
+- **`verify-release-assets`: retry `gh release view` on transient failure.** A freshly created release can briefly answer 404 from `gh release view` when the GitHub API hits a stale read replica right after `gh release create` returns — the write has acked but the read replica has not converged. Now retries 20×10s. Same root cause as the publish-zig propagation race. Fixes kreuzcrawl v0.3.0-rc.52 Verify release assets failure (`gh release view failed for tag v0.3.0-rc.52: release not found` despite the release existing).
 
 ## [1.8.47] - 2026-06-09
 

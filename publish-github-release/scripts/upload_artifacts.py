@@ -8,12 +8,17 @@ Usage (GitHub Actions via env vars):
 import json
 import mimetypes
 import os
+import ssl
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+UPLOAD_MAX_ATTEMPTS = 5
+UPLOAD_BACKOFF_BASE_SECONDS = 2.0
 
 
 def get_github_api_headers(token: str) -> dict[str, str]:
@@ -108,19 +113,48 @@ def upload_asset(upload_url: str, filename: str, file_path: Path, token: str) ->
     headers = get_github_api_headers(token)
     headers["Content-Type"] = mime_type
 
-    req = urllib.request.Request(url, data=file_data, headers=headers, method="POST")  # noqa: S310
+    last_error: Exception | None = None
+    for attempt in range(1, UPLOAD_MAX_ATTEMPTS + 1):
+        req = urllib.request.Request(url, data=file_data, headers=headers, method="POST")  # noqa: S310
+        try:
+            with urllib.request.urlopen(req):  # noqa: S310
+                return  # 201 Created on success
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8")
+            if 500 <= e.code < 600 and attempt < UPLOAD_MAX_ATTEMPTS:
+                backoff = UPLOAD_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+                print(
+                    f"  Transient HTTP {e.code} {e.reason} on attempt {attempt}/{UPLOAD_MAX_ATTEMPTS}; "
+                    f"retrying in {backoff:.1f}s",
+                    file=sys.stderr,
+                )
+                time.sleep(backoff)
+                last_error = e
+                continue
+            print(
+                f"Error: HTTP {e.code} {e.reason} uploading {filename}",
+                file=sys.stderr,
+            )
+            print(error_body, file=sys.stderr)
+            sys.exit(1)
+        except (urllib.error.URLError, ssl.SSLError, ConnectionError, TimeoutError) as e:
+            last_error = e
+            if attempt < UPLOAD_MAX_ATTEMPTS:
+                backoff = UPLOAD_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+                print(
+                    f"  Transient network error on attempt {attempt}/{UPLOAD_MAX_ATTEMPTS}: {e}; "
+                    f"retrying in {backoff:.1f}s",
+                    file=sys.stderr,
+                )
+                time.sleep(backoff)
+                continue
+            break
 
-    try:
-        with urllib.request.urlopen(req):  # noqa: S310
-            pass  # 201 Created on success
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        print(
-            f"Error: HTTP {e.code} {e.reason} uploading {filename}",
-            file=sys.stderr,
-        )
-        print(error_body, file=sys.stderr)
-        sys.exit(1)
+    print(
+        f"Error: failed to upload {filename} after {UPLOAD_MAX_ATTEMPTS} attempts: {last_error}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def main() -> None:
