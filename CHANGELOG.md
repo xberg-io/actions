@@ -4,6 +4,14 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.47] - 2026-06-09
+
+### Fixed
+
+- **`publish-pub`: wire GitHub OIDC token to pub.dev trusted publishing.** `dart pub publish --force` requires OAuth2 credentials when publishing to pub.dev. Added a step to exchange the GitHub OIDC token for pub.dev credentials and write them to `~/.config/dart/pub-credentials.json` before the publish step. Fixes `Authentication failed!` errors in Dart package publish workflows.
+- **`build-python-wheels`: remove conflicting macOS Rust toolchain pre-installation.** The action pre-installed Rust via `dtolnay/rust-toolchain@stable`, which conflicted with cibuildwheel's own `CIBW_BEFORE_ALL_MACOS` rustup installation. When both ran, the second rustup would fail with "detected conflict: bin/cargo-clippy" because clippy was already installed by the first. Removed the dtolnay step on macOS; cibuildwheel now handles the full Rust setup. Fixes macOS wheel build failures in rc.8+.
+- **`build-python-sdist`: ensure absolute output path for split-layout maturin sdist.** When building split-layout Python packages (pyproject.toml in packages/python/, crate at crates/<name>/Cargo.toml), the script changes directory into the package dir before invoking maturin. If `OUTPUT_DIR` is passed as a relative path, it becomes invalid after the cd. Now converts OUTPUT_DIR to an absolute path before cd. Fixes "Failed to build source distribution, pyproject.toml not found" errors in split-layout sdist builds.
+
 ## [1.8.46] - 2026-06-08
 
 ### Added
