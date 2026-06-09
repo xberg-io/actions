@@ -52,31 +52,104 @@ def parse_expected(raw: str) -> list[str]:
     return patterns
 
 
+def _run_gh(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(argv, capture_output=True, text=True, check=False)
+
+
 def fetch_release_assets(tag: str) -> list[dict[str, Any]]:
-    # Pass -R explicitly: this action does not check out the repo, so `gh`
-    # cannot infer the remote from the working directory. GITHUB_REPOSITORY
-    # is always set in GitHub Actions; falling back to GH_REPO covers the
-    # rare local-test path where someone exports it manually.
+    """Return the asset list for the release matching `tag`.
+
+    Resolves draft releases first via the GitHub API
+    `/repos/{owner}/{repo}/releases?per_page=100` (paginated), filtered by
+    `tag_name`. Drafts have no published Git tag, so the conventional
+    `GET /releases/tags/<tag>` lookup that `gh release view <tag>` performs
+    always returns 404 for them. Listing all releases (which the same
+    endpoint surfaces when the token grants `contents:read` plus draft
+    visibility, e.g. the GitHub App tokens used in the kreuzberg-dev
+    publish workflows) reaches draft and published releases uniformly.
+
+    Falls back to `gh release view <tag>` if the API listing returns no
+    matching release (covers the case where only the published-tag lookup
+    works for the calling token). Both paths retry on transient API
+    failures with backoff: the GitHub release replica can briefly answer
+    404/502 right after `gh release create` returns.
+    """
+    import time
+
     repo = os.environ.get("GITHUB_REPOSITORY") or os.environ.get("GH_REPO")
-    argv = ["gh", "release", "view", tag, "--json", "assets"]
-    if repo:
-        argv.extend(["-R", repo])
-    result = subprocess.run(
-        argv,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        print(f"Error: gh release view failed for tag {tag}: {result.stderr}", file=sys.stderr)
+    if not repo:
+        print("Error: GITHUB_REPOSITORY (or GH_REPO) must be set", file=sys.stderr)
         sys.exit(1)
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        print(f"Error: gh returned non-JSON: {exc}", file=sys.stderr)
-        sys.exit(1)
-    assets = payload.get("assets") or []
-    return [a for a in assets if isinstance(a, dict)]
+
+    max_attempts = 20
+    sleep_seconds = 10
+    last_err = ""
+
+    for attempt in range(1, max_attempts + 1):
+        list_result = _run_gh(
+            [
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{repo}/releases?per_page=100",
+            ]
+        )
+        if list_result.returncode == 0:
+            try:
+                payload_raw = list_result.stdout.strip()
+                if payload_raw.startswith("["):
+                    releases = json.loads(payload_raw)
+                else:
+                    releases = []
+                    for line in payload_raw.splitlines():
+                        chunk = line.strip()
+                        if chunk.startswith("["):
+                            releases.extend(json.loads(chunk))
+                for release in releases:
+                    if not isinstance(release, dict):
+                        continue
+                    if release.get("tag_name") == tag:
+                        assets = release.get("assets") or []
+                        return [a for a in assets if isinstance(a, dict)]
+            except json.JSONDecodeError as exc:
+                last_err = f"non-JSON release list: {exc}"
+        else:
+            last_err = list_result.stderr.strip() or list_result.stdout.strip()
+
+        view_result = _run_gh(
+            [
+                "gh",
+                "release",
+                "view",
+                tag,
+                "--json",
+                "assets",
+                "-R",
+                repo,
+            ]
+        )
+        if view_result.returncode == 0:
+            try:
+                payload = json.loads(view_result.stdout)
+                assets = payload.get("assets") or []
+                return [a for a in assets if isinstance(a, dict)]
+            except json.JSONDecodeError as exc:
+                last_err = f"gh release view returned non-JSON: {exc}"
+        else:
+            last_err = view_result.stderr.strip() or last_err
+
+        if attempt < max_attempts:
+            print(
+                f"release lookup attempt {attempt}/{max_attempts} did not find {tag}; "
+                f"release may not be propagated yet, retrying in {sleep_seconds}s...",
+                file=sys.stderr,
+            )
+            if last_err:
+                print(last_err, file=sys.stderr)
+            time.sleep(sleep_seconds)
+
+    print(f"Error: release {tag} not found after {max_attempts} attempts: {last_err}", file=sys.stderr)
+    sys.exit(1)
 
 
 def write_output(name: str, value: str) -> None:

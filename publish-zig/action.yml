@@ -489,11 +489,11 @@ runs:
         fi
 
         echo "Uploading release asset: $tarball_name"
-        if [[ "$UPDATE_EXISTING" == "true" ]]; then
-          gh release upload "$TAG" "$tarball_path" --clobber
-        else
-          gh release upload "$TAG" "$tarball_path"
-        fi
+        # Always --clobber so reruns of a partially-failed upstream (e.g. a
+        # later `zig fetch` CDN race timed out, leaving the asset uploaded
+        # but the job marked failed) are idempotent. Without --clobber,
+        # `gh run rerun --failed` aborts with "asset already exists".
+        gh release upload "$TAG" "$tarball_path" --clobber
         echo "Asset uploaded successfully"
 
     - name: Resolve Zig hash + URLs

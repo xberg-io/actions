@@ -26,6 +26,14 @@ inputs:
   output-path:
     description: "Path where the checksum file will be written"
     required: true
+  token:
+    description: >
+      GitHub token used to authenticate `gh release download`. Required to
+      reach assets on a draft release; the default GITHUB_TOKEN works when
+      contents:write is granted to the calling job. Defaults to the job's
+      GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   checksum-file:
@@ -46,5 +54,6 @@ runs:
         INPUT_NIF_VERSIONS: ${{ inputs.nif-versions }}
         INPUT_TARGETS: ${{ inputs.targets }}
         INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+        GH_TOKEN: ${{ inputs.token }}
       run: >-
         python3 "${{ github.action_path }}/scripts/generate.py"

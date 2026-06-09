@@ -9,13 +9,16 @@ Usage (GitHub Actions via env vars):
     INPUT_NIF_VERSIONS=2.16,2.17 \
     INPUT_TARGETS=x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu \
     INPUT_OUTPUT_PATH=checksum-mylib.exs \
+    GH_TOKEN=ghs_... \
     python3 generate.py
 """
 
 import hashlib
 import os
+import subprocess
 import sys
-import urllib.request
+import tempfile
+import time
 from pathlib import Path
 
 
@@ -33,14 +36,65 @@ def build_nif_artifact_name(lib_name: str, version: str, nif_version: str, targe
     return f"lib{lib_name}-v{version}-nif-{nif_version}-{target}.{ext}"
 
 
-def build_download_url(github_repo: str, tag: str, filename: str) -> str:
-    """Return the GitHub release asset download URL."""
-    return f"https://github.com/{github_repo}/releases/download/{tag}/{filename}"
-
-
 def compute_sha256_hex(data: bytes) -> str:
     """Return the SHA256 hex digest of data."""
     return hashlib.sha256(data).hexdigest()
+
+
+def download_asset_via_gh(github_repo: str, tag: str, filename: str, dest_dir: Path) -> Path:
+    """Download a release asset via authenticated `gh release download`.
+
+    Using `gh release download` instead of the public
+    `releases/download/<tag>/<name>` CDN URL means this works against draft
+    releases (where the public CDN returns 404 because the tag is not yet
+    published). The publish workflow keeps the release in draft until the
+    final `release-finalize` step, so every prior consumer (this action,
+    publish-hex, etc.) sees a draft release.
+
+    Retries on transient failures with exponential-ish backoff: the gh API
+    can briefly 502 during release fan-out, and a freshly uploaded asset
+    can momentarily 404 even via the authenticated API.
+    """
+    dest = dest_dir / filename
+    max_attempts = 20
+    sleep_seconds = 10
+    last_stderr = ""
+    for attempt in range(1, max_attempts + 1):
+        result = subprocess.run(
+            [
+                "gh",
+                "release",
+                "download",
+                tag,
+                "--repo",
+                github_repo,
+                "--pattern",
+                filename,
+                "--dir",
+                str(dest_dir),
+                "--clobber",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and dest.is_file():
+            return dest
+        last_stderr = result.stderr.strip() or result.stdout.strip()
+        if attempt < max_attempts:
+            print(
+                f"gh release download attempt {attempt}/{max_attempts} failed; "
+                f"asset may not be propagated yet, retrying in {sleep_seconds}s...",
+                file=sys.stderr,
+            )
+            if last_stderr:
+                print(last_stderr, file=sys.stderr)
+            time.sleep(sleep_seconds)
+    print(
+        f"Error downloading {filename} from {github_repo}@{tag} via gh: {last_stderr}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def format_checksum_file(checksums: dict[str, str]) -> str:
@@ -85,22 +139,17 @@ def main() -> None:
 
     checksums: dict[str, str] = {}
 
-    for nif_version in nif_versions:
-        for target in targets:
-            filename = build_nif_artifact_name(lib_name, version, nif_version, target)
-            url = build_download_url(github_repo, tag, filename)
-
-            print(f"Downloading {filename}...")
-            try:
-                with urllib.request.urlopen(url) as response:  # noqa: S310
-                    data = response.read()
-            except Exception as exc:
-                print(f"Error downloading {url}: {exc}", file=sys.stderr)
-                sys.exit(1)
-
-            digest = compute_sha256_hex(data)
-            checksums[filename] = digest
-            print(f"  sha256: {digest}")
+    with tempfile.TemporaryDirectory(prefix="elixir-nif-checksum-") as tmpdir_str:
+        tmpdir = Path(tmpdir_str)
+        for nif_version in nif_versions:
+            for target in targets:
+                filename = build_nif_artifact_name(lib_name, version, nif_version, target)
+                print(f"Downloading {filename}...")
+                asset_path = download_asset_via_gh(github_repo, tag, filename, tmpdir)
+                data = asset_path.read_bytes()
+                digest = compute_sha256_hex(data)
+                checksums[filename] = digest
+                print(f"  sha256: {digest}")
 
     content = format_checksum_file(checksums)
     output_path.write_text(content, encoding="utf-8")
