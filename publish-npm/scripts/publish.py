@@ -10,12 +10,26 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ALREADY_PUBLISHED_PATTERN = re.compile(
     r"previously published|cannot publish over|already exists",
     re.IGNORECASE,
 )
+
+# npm publish --provenance produces a Sigstore transparency-log entry by
+# calling https://rekor.sigstore.dev which is occasionally unavailable. The
+# error surface from npm is `TLOG_CREATE_ENTRY_ERROR` / `error creating tlog
+# entry`. We also retry on plain network noise to absorb other transient
+# failures from the registry endpoint.
+TRANSIENT_PUBLISH_PATTERN = re.compile(
+    r"TLOG_CREATE_ENTRY_ERROR|error creating tlog entry|ETIMEDOUT|ECONNRESET|"
+    r"ECONNREFUSED|EAI_AGAIN|socket hang up|aborted|fetch failed|5\d\d ",
+    re.IGNORECASE,
+)
+MAX_PUBLISH_RETRIES = 4
+PUBLISH_RETRY_BACKOFF_SECONDS = 5
 
 # `actions/setup-node@v6` exports NODE_AUTH_TOKEN as this 23-char placeholder
 # (hardcoded in setup-node's authutil.ts) when no real token is provided.
@@ -64,6 +78,33 @@ def find_tgz_files(directory: Path) -> list[Path]:
 def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, check=False)
     return result.returncode, result.stdout + result.stderr
+
+
+def _run_publish_with_retry(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
+    """Run an `npm publish` command, retrying on Sigstore Rekor / transient network errors.
+
+    Returns the final `(exit_code, output)` of the last attempt.
+    Non-transient failures (auth, schema, already-published, etc.) return immediately.
+    """
+    last_output = ""
+    for attempt in range(1, MAX_PUBLISH_RETRIES + 1):
+        exit_code, output = _run(cmd, cwd=cwd)
+        last_output = output
+        if exit_code == 0:
+            return exit_code, output
+        if is_already_published(output):
+            return exit_code, output
+        if not TRANSIENT_PUBLISH_PATTERN.search(output):
+            return exit_code, output
+        if attempt == MAX_PUBLISH_RETRIES:
+            break
+        delay = PUBLISH_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
+        print(
+            f"  Transient npm publish error (attempt {attempt}/{MAX_PUBLISH_RETRIES}); retrying in {delay}s",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+    return 1, last_output
 
 
 def _strip_empty_npm_auth_token() -> None:
@@ -156,7 +197,7 @@ def main() -> None:
             sys.exit(1)
 
         print(f"Publishing from directory: {package_dir}")
-        exit_code, output = _run(["npm", "publish", ".", *flags], cwd=pkg_path)
+        exit_code, output = _run_publish_with_retry(["npm", "publish", ".", *flags], cwd=pkg_path)
 
         if exit_code == 0:
             print("Published successfully")
@@ -186,7 +227,7 @@ def main() -> None:
     for tgz in tgz_files:
         name = tgz.name
         print(f"Publishing {name}...")
-        exit_code, output = _run(["npm", "publish", str(tgz.resolve()), *flags])
+        exit_code, output = _run_publish_with_retry(["npm", "publish", str(tgz.resolve()), *flags])
 
         if exit_code == 0:
             print(f"  Published {name}")

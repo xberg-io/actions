@@ -6,6 +6,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`publish-npm`: retry `npm publish` on Sigstore Rekor / transient network errors.** `npm publish --provenance` makes an HTTP call to `https://rekor.sigstore.dev/api/v1/log/entries` to create a transparency-log entry. When Rekor times out or aborts the response mid-fetch, npm returns `TLOG_CREATE_ENTRY_ERROR` and the publish step fails. The previous loop ran a single `npm publish` per tarball with no retry, so one transient Rekor blip failed an entire multi-platform publish (7 of 8 tarballs published, the 8th tripped the publish job). Wrapped the per-tgz publish call with 4× exponential backoff (5s, 10s, 20s, 40s) on `TLOG_CREATE_ENTRY_ERROR`, `error creating tlog entry`, `ETIMEDOUT`, `ECONNRESET`, `ECONNREFUSED`, `EAI_AGAIN`, `socket hang up`, `aborted`, `fetch failed`, and HTTP 5xx. Non-transient failures (auth, schema, already-published) fail immediately. Fixes kreuzberg rc.10 Publish run 27193384688 `kreuzberg-node-linux-arm64-musl-5.0.0-rc.10.tgz` failure.
+
+## [1.8.50] - 2026-06-09
+
+### Fixed
+
 - **`build-csharp-natives`: extend `copy_macos_runtime_deps` search paths to find pyke-ORT prebuilt dylib.** The previous search resolved `dylib_path.parent.parent` (`target/<triple>/`, not the release dir) plus `target/release/` (wrong dir for cross-target builds), so `libonnxruntime.1.24.2.dylib` was never staged into the NuGet `runtimes/osx-arm64/native/` directory. Consumers then failed to load `libkreuzberg_ffi.dylib` with `Library not loaded: @rpath/libonnxruntime.1.24.2.dylib`. Now searches `dylib_path.parent` (release dir + `deps/`), recursively under `release/build/` (where `ort-sys` drops the prebuilt), and the pyke ORT cache (`$XDG_CACHE_HOME/ort.pyke.io/dfbin/`, `~/.cache/ort.pyke.io/dfbin/`, `~/Library/Caches/ort.pyke.io/dfbin/`). Reproduced by kreuzberg rc.10 test_apps smoke C# 8/8 fail.
 
 ## [1.8.49] - 2026-06-09
