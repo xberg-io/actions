@@ -59,8 +59,14 @@ else
     # manifest-path from pyproject's [tool.maturin] section itself — same as
     # pre-1.8.39 behavior.
     echo "Split layout detected; building sdist from $FULL_PACKAGE_DIR (maturin resolves manifest-path from pyproject)"
+    # Convert OUTPUT_DIR to absolute path to ensure it's valid after cd
+    if [[ ! "$OUTPUT_DIR" =~ ^/ ]]; then
+      abs_output_dir="$WORKSPACE_ROOT/$OUTPUT_DIR"
+    else
+      abs_output_dir="$OUTPUT_DIR"
+    fi
     cd "$FULL_PACKAGE_DIR"
-    maturin sdist --out "$OUTPUT_DIR"
+    maturin sdist --out "$abs_output_dir"
     exit 0
   fi
 
