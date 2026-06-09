@@ -97,7 +97,15 @@ runs:
       env:
         CIBW_BUILD: ${{ inputs.cibw-build }}
         CIBW_BEFORE_ALL_LINUX: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
-        CIBW_BEFORE_ALL_MACOS: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
+        # macOS-latest runner images pre-install a Rust toolchain into
+        # ~/.cargo and ~/.rustup. When maturin then triggers
+        # `rustup install <toolchain>` (via rust-toolchain.toml), rustup
+        # finds a partially installed 1.95 toolchain — bin/cargo-clippy
+        # already exists — and the install rolls back with
+        # `failed to install component 'clippy-preview-aarch64-apple-darwin',
+        # detected conflict: 'bin/cargo-clippy'`. Wipe both dirs first so
+        # the in-cibw rustup owns the entire toolchain state.
+        CIBW_BEFORE_ALL_MACOS: rm -rf ~/.cargo ~/.rustup && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
         CIBW_BEFORE_ALL_WINDOWS: >
           curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
           refreshenv

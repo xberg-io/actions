@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`build-python-wheels`: wipe `~/.cargo` and `~/.rustup` before installing rustup on macOS.** macOS-latest runner images preinstall a Rust toolchain. When maturin then triggers `rustup install 1.95` via `rust-toolchain.toml`, rustup finds the partially installed 1.95 toolchain (`bin/cargo-clippy` already present) and rolls the install back with `failed to install component 'clippy-preview-aarch64-apple-darwin', detected conflict: 'bin/cargo-clippy'`. The 1.8.47 fix removed the action's own `dtolnay/rust-toolchain` step, but the runner-image preinstall stayed and reproduced the same conflict in kreuzberg rc.10 Publish run 27193384688 macOS wheel job 80282051523. Now `CIBW_BEFORE_ALL_MACOS` wipes both dirs before sourcing rustup-init, so the in-cibw rustup owns the entire toolchain state.
+
 ## [1.8.47] - 2026-06-09
 
 ### Fixed
