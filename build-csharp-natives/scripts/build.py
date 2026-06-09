@@ -92,13 +92,43 @@ def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
             continue
 
         dep_filename = line.split("@rpath/")[1].split()[0]  # Extract just the filename
-        # Search for the dependency in the cargo target directory
-        target_dir = dylib_path.parent.parent
-        search_patterns = [
-            target_dir / dep_filename,  # Same directory as dylib
-            target_dir / "deps" / dep_filename,  # Common deps subdirectory
-            (target_dir.parent / "release" / dep_filename),  # Release root
+        # `dylib_path.parent` is the release dir for the resolved cargo target,
+        # e.g. `target/aarch64-apple-darwin/release/`. The previous variant used
+        # `dylib_path.parent.parent` (`target/<triple>/`) and `target/release/`,
+        # neither of which is where build-script-emitted runtime deps land for
+        # cross-target builds.
+        release_dir = dylib_path.parent
+        search_patterns: list[Path] = [
+            release_dir / dep_filename,  # cargo stages runtime deps alongside the cdylib
+            release_dir / "deps" / dep_filename,  # cdylib `deps/` subdir
         ]
+        # Build scripts (e.g. `ort-sys`) drop the prebuilt dylib under
+        # `release/build/<crate>-<hash>/out/{lib,}` — recursively glob the
+        # build tree for the exact filename. Limit depth via specific suffixes
+        # so we don't walk the entire workspace.
+        for build_root in (release_dir / "build",):
+            if build_root.is_dir():
+                search_patterns.extend(build_root.rglob(dep_filename))
+
+        # `ort` (pyke prebuilt) caches the downloaded ORT bundle at
+        # `<XDG_CACHE_HOME>/ort.pyke.io/dfbin/<target>/<sha>/lib/`. cargo's
+        # build-script link search may not copy the dylib into `out/`, so
+        # search the cache as a last resort. `XDG_CACHE_HOME` defaults to
+        # `~/.cache` on Linux and `~/Library/Caches` on macOS.
+        cache_roots: list[Path] = []
+        xdg_cache = os.environ.get("XDG_CACHE_HOME")
+        if xdg_cache:
+            cache_roots.append(Path(xdg_cache) / "ort.pyke.io" / "dfbin")
+        home = Path.home()
+        cache_roots.extend(
+            [
+                home / ".cache" / "ort.pyke.io" / "dfbin",
+                home / "Library" / "Caches" / "ort.pyke.io" / "dfbin",
+            ]
+        )
+        for cache_root in cache_roots:
+            if cache_root.is_dir():
+                search_patterns.extend(cache_root.rglob(dep_filename))
 
         found = False
         for candidate in search_patterns:

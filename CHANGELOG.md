@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`build-csharp-natives`: extend `copy_macos_runtime_deps` search paths to find pyke-ORT prebuilt dylib.** The previous search resolved `dylib_path.parent.parent` (`target/<triple>/`, not the release dir) plus `target/release/` (wrong dir for cross-target builds), so `libonnxruntime.1.24.2.dylib` was never staged into the NuGet `runtimes/osx-arm64/native/` directory. Consumers then failed to load `libkreuzberg_ffi.dylib` with `Library not loaded: @rpath/libonnxruntime.1.24.2.dylib`. Now searches `dylib_path.parent` (release dir + `deps/`), recursively under `release/build/` (where `ort-sys` drops the prebuilt), and the pyke ORT cache (`$XDG_CACHE_HOME/ort.pyke.io/dfbin/`, `~/.cache/ort.pyke.io/dfbin/`, `~/Library/Caches/ort.pyke.io/dfbin/`). Reproduced by kreuzberg rc.10 test_apps smoke C# 8/8 fail.
+
 ## [1.8.49] - 2026-06-09
 
 ### Fixed
