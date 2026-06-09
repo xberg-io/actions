@@ -4,9 +4,13 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.48] - 2026-06-09
+
 ### Fixed
 
 - **`build-python-wheels`: wipe `~/.cargo` and `~/.rustup` before installing rustup on macOS.** macOS-latest runner images preinstall a Rust toolchain. When maturin then triggers `rustup install 1.95` via `rust-toolchain.toml`, rustup finds the partially installed 1.95 toolchain (`bin/cargo-clippy` already present) and rolls the install back with `failed to install component 'clippy-preview-aarch64-apple-darwin', detected conflict: 'bin/cargo-clippy'`. The 1.8.47 fix removed the action's own `dtolnay/rust-toolchain` step, but the runner-image preinstall stayed and reproduced the same conflict in kreuzberg rc.10 Publish run 27193384688 macOS wheel job 80282051523. Now `CIBW_BEFORE_ALL_MACOS` wipes both dirs before sourcing rustup-init, so the in-cibw rustup owns the entire toolchain state.
+- **`publish-zig`: extend release-asset CDN propagation retry budget.** Bumped `zig fetch` retries from 8×5s (40s budget) to 20×10s (200s budget). Release dispatches under load have shown the GitHub release-asset CDN (`releases/download/<tag>/<name>` redirect target) answer 404 for >90s after `gh release upload` returns, exceeding the prior budget and failing the action with a misleading "failed after N attempts" error. The new budget absorbs the propagation race without flaking. Fixes kreuzcrawl v0.3.0-rc.52 publish run 27188386957 Zig metadata failure.
+- **`build-swift-artifactbundle`: substitute `v__ALEF_SWIFT_VERSION__` placeholder in Package.swift.** Alef's canonical `Package.swift` seed uses two placeholders in the `.binaryTarget` block: `checksum: "__ALEF_SWIFT_CHECKSUM__"` and `url: ".../releases/download/v__ALEF_SWIFT_VERSION__/..."`. The action substituted only the checksum (plus a bogus `__ALEF_SWIFT_BUNDLE_URL__` line that never matched), so the published manifest shipped a literal `v__ALEF_SWIFT_VERSION__` in the URL and SwiftPM downloads 404'd. Added a `package-version` input; when set, the action also runs `sed -i.bak 's|v__ALEF_SWIFT_VERSION__|v${PACKAGE_VERSION}|g'` against the manifest. The second sed now uses `-i.bak` so it works on both macOS BSD sed and GNU sed. Removed the bogus URL-placeholder line. Fixes kreuzcrawl v0.3.0-rc.52 Swift artifactbundle failure.
 
 ## [1.8.47] - 2026-06-09
 

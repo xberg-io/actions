@@ -555,8 +555,11 @@ runs:
           # returning: the asset CDN (the redirect target of
           # releases/download/<tag>/<name>) may briefly answer 404 until
           # propagation completes. Retry with backoff so the fetch does not
-          # fail on that upload-vs-availability race.
-          max_attempts=8
+          # fail on that upload-vs-availability race. Observed propagation
+          # delays exceed 90s during release dispatches, so budget 200s
+          # (20 attempts × 10s) so the action absorbs CDN propagation
+          # without flaking on the publish workflow.
+          max_attempts=20
           attempt=1
           zig_fetch_exit=1
           zig_fetch_output=""
@@ -568,9 +571,9 @@ runs:
             if [[ $zig_fetch_exit -eq 0 ]]; then
               break
             fi
-            echo "zig fetch attempt $attempt/$max_attempts failed (exit $zig_fetch_exit); release asset may not be propagated yet, retrying in 5s..." >&2
+            echo "zig fetch attempt $attempt/$max_attempts failed (exit $zig_fetch_exit); release asset may not be propagated yet, retrying in 10s..." >&2
             echo "$zig_fetch_output" >&2
-            sleep 5
+            sleep 10
             attempt=$((attempt + 1))
           done
 

@@ -60,6 +60,16 @@ inputs:
     description: "Optional path to Package.swift to update with checksum"
     required: false
     default: ""
+  package-version:
+    description: >
+      Release version (without leading 'v') used to substitute the
+      `v__ALEF_SWIFT_VERSION__` placeholder in Package.swift. Required when
+      `package-manifest-path` is provided and the manifest's
+      `.binaryTarget` URL contains `v__ALEF_SWIFT_VERSION__`. Pass the bare
+      version such as `0.3.0-rc.52`; the action prepends `v` to match the
+      typical GitHub release tag pattern.
+    required: false
+    default: ""
   binary-target-name:
     description: "Swift Package Manager binary target name (e.g., 'RustBridge'); defaults to artifact-name if not specified"
     required: false
@@ -110,16 +120,25 @@ runs:
       env:
         CHECKSUM: ${{ steps.build.outputs.checksum }}
         PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
+        PACKAGE_VERSION: ${{ inputs.package-version }}
       run: |
         if [[ ! -f "$PACKAGE_MANIFEST_PATH" ]]; then
           echo "Error: Package.swift not found at $PACKAGE_MANIFEST_PATH"
           exit 1
         fi
+        # BSD sed (macOS) requires a backup-extension argument with -i; GNU sed
+        # accepts an empty extension. Using `-i.bak` + `rm -f *.bak` keeps both
+        # platforms happy.
         sed -i.bak "s/__ALEF_SWIFT_CHECKSUM__/$CHECKSUM/g" "$PACKAGE_MANIFEST_PATH"
-        sed -i "s|__ALEF_SWIFT_BUNDLE_URL__|$CHECKSUM|g" "$PACKAGE_MANIFEST_PATH"
+        if [[ -n "$PACKAGE_VERSION" ]]; then
+          # Substitute the release-version placeholder used by the canonical
+          # alef Package.swift seed (`…/releases/download/v__ALEF_SWIFT_VERSION__/…`).
+          # Without this, downstream `swift build` resolves to a 404 URL.
+          sed -i.bak "s|v__ALEF_SWIFT_VERSION__|v${PACKAGE_VERSION}|g" "$PACKAGE_MANIFEST_PATH"
+        fi
         rm -f "${PACKAGE_MANIFEST_PATH}.bak"
         echo "package-manifest-path=$PACKAGE_MANIFEST_PATH" >> "$GITHUB_OUTPUT"
-        echo "Updated $PACKAGE_MANIFEST_PATH with checksum: $CHECKSUM"
+        echo "Updated $PACKAGE_MANIFEST_PATH with checksum: $CHECKSUM${PACKAGE_VERSION:+ and version: $PACKAGE_VERSION}"
 
     - name: Save checksum as artifact
       id: upload-checksum

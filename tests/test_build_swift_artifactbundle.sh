@@ -43,38 +43,41 @@ test_substitute_checksum \
   'let package = Package(targets: [.binaryTarget(name: "Html2Md", url: "https://example.com/bundle.zip", checksum: "__ALEF_SWIFT_CHECKSUM__")])' \
   'let package = Package(targets: [.binaryTarget(name: "Html2Md", url: "https://example.com/bundle.zip", checksum: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6")])'
 
-# Test 3: Multiple occurrences of same placeholder
-test_substitute_checksum_multi() {
+# Test 3: Substitute checksum + version placeholders together
+test_substitute_checksum_and_version() {
   local test_name="$1"
   local input="$2"
+  local expected="$3"
 
   local pkg_path="$TEMP_DIR/Package.swift.multi"
   echo "$input" >"$pkg_path"
 
   local checksum="checksumvalue123456789"
-  # Simulate what the action does with two separate seds
+  local version="0.3.0-rc.52"
+  # Match the action's two sed invocations: checksum first, then version
+  # (with the `v` prefix baked in to match `v__ALEF_SWIFT_VERSION__`).
   sed -i.bak "s/__ALEF_SWIFT_CHECKSUM__/$checksum/g" "$pkg_path"
-  sed -i "s/__ALEF_SWIFT_BUNDLE_URL__/$checksum/g" "$pkg_path"
+  sed -i.bak "s|v__ALEF_SWIFT_VERSION__|v${version}|g" "$pkg_path"
   rm -f "${pkg_path}.bak"
 
-  local result count
+  local result
   result=$(cat "$pkg_path")
-  count=$(echo "$result" | grep -c "$checksum" || true)
 
-  if [[ "$count" -eq 2 ]]; then
-    echo "✓ $test_name (found $count occurrences)"
+  if [[ "$result" == "$expected" ]]; then
+    echo "✓ $test_name"
     return 0
   else
-    echo "✗ $test_name (expected 2 occurrences, got $count)"
-    echo "  Input was: $input"
-    echo "  Result: $result"
+    echo "✗ $test_name"
+    echo "  Expected: $expected"
+    echo "  Got: $result"
     return 1
   fi
 }
 
-test_substitute_checksum_multi \
-  "multiple placeholder substitutions" \
-  'checksum: "__ALEF_SWIFT_CHECKSUM__", url: "https://example.com/__ALEF_SWIFT_BUNDLE_URL__"'
+test_substitute_checksum_and_version \
+  "checksum + version placeholders" \
+  'checksum: "__ALEF_SWIFT_CHECKSUM__", url: "https://example.com/releases/v__ALEF_SWIFT_VERSION__/bundle.zip"' \
+  'checksum: "checksumvalue123456789", url: "https://example.com/releases/v0.3.0-rc.52/bundle.zip"'
 
 # Test 4: File not found error
 test_file_not_found() {
