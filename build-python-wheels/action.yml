@@ -72,16 +72,6 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    # cibuildwheel's CIBW_BEFORE_ALL_MACOS sources cargo/env in its own shell
-    # but the subsequent build command runs in a separate shell — cargo falls
-    # off PATH and maturin can't find it. Pre-install the Rust toolchain on the
-    # host runner via dtolnay/rust-toolchain (stable, with cargo) so cargo is
-    # globally available before cibuildwheel starts.
-    - name: Set up Rust toolchain on macOS host
-      if: runner.os == 'macOS'
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
 
     - name: Install cibuildwheel
       shell: bash
