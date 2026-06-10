@@ -4,6 +4,11 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish-npm`: skip stub packages without `.node` native bindings.** Platform-specific npm package placeholders (e.g., `@kreuzberg/node-linux-arm64-musl` bootstrap stubs created in rc.8) contain only `README.md` and `package.json` with no prebuilt `.node` binary. When npm attempted to publish these empty payloads with `--provenance`, Sigstore transparency-log creation failed with `TLOG_CREATE_ENTRY_ERROR` during the signature generation phase. The script now inspects each `.tgz` tarball, skips any without a `.node` file, and logs the count of skipped stubs. Genuine build failures (missing binaries due to CI issues) are still published so the registry entry exists for diagnostics. Fixes kreuzberg rc.10 Publish run 27193384688 `@kreuzberg/node-linux-arm64-musl` failure.
+- **`build-elixir-natives` and `build-php-extension`: force `/MD` CRT for cc-rs MSVC on Windows.** Linking `kreuzberg_nif.dll` and `kreuzberg_php.dll` on `x86_64-pc-windows-msvc` failed with `LNK1319: mismatch detected for 'RuntimeLibrary': MT_StaticRelease vs MD_DynamicRelease`. Root cause: `libkreuzberg_tesseract.rlib` is built by cmake-rs (defaults to `/MD`); `libesaxx_rs.rlib` (transitively via `gliner` → `tokenizers`) is built by cc-rs (defaults to `/MT`). When both rlibs are linked into the same cdylib, the mismatch trips the linker error. Both composites now set `CFLAGS_x86_64_pc_windows_msvc`, `CXXFLAGS_x86_64_pc_windows_msvc`, `CFLAGS_i686_pc_windows_msvc`, and `CXXFLAGS_i686_pc_windows_msvc` to `/MD` in the Windows build steps' `env:` blocks. cc-rs honors target-suffixed env vars only when actually compiling for that target, so non-Windows builds are unaffected. Fixes the recurring rc.7→rc.10 "Build Elixir NIF (windows-x86_64)" and "Build PHP extension (windows-x86_64)" failures.
+
 ## [1.8.52] - 2026-06-09
 
 ### Fixed

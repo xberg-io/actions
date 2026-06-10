@@ -75,6 +75,25 @@ def find_tgz_files(directory: Path) -> list[Path]:
     return sorted(directory.glob("**/*.tgz"))
 
 
+def has_native_binding(tgz_path: Path) -> bool:
+    """Check if a .tgz tarball contains a .node native binding file.
+
+    Returns False for stub packages (placeholders without prebuilt binaries),
+    which should be skipped during publishing to avoid npm Sigstore validation
+    failures on empty payloads.
+    """
+    import tarfile
+
+    try:
+        with tarfile.open(tgz_path, "r:gz") as tar:
+            for member in tar.getmembers():
+                if member.name.endswith(".node"):
+                    return True
+    except Exception:
+        pass
+    return False
+
+
 def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, check=False)
     return result.returncode, result.stdout + result.stderr
@@ -223,9 +242,19 @@ def main() -> None:
 
     failed = 0
     published = 0
+    skipped = 0
 
     for tgz in tgz_files:
         name = tgz.name
+
+        # Skip stub packages (platform-specific bindings without prebuilt .node files).
+        # These are placeholders created during bootstrap for musl variants and similar.
+        # Publishing them triggers npm Sigstore validation failures on empty payloads.
+        if not has_native_binding(tgz):
+            print(f"  Skipping {name} (stub package with no .node binding)")
+            skipped += 1
+            continue
+
         print(f"Publishing {name}...")
         exit_code, output = _run_publish_with_retry(["npm", "publish", str(tgz.resolve()), *flags])
 
@@ -240,7 +269,7 @@ def main() -> None:
             print(output, file=sys.stderr)
             failed += 1
 
-    print(f"Published: {published}, Failed: {failed}")
+    print(f"Published: {published}, Failed: {failed}, Skipped: {skipped}")
 
     if failed > 0:
         sys.exit(1)
