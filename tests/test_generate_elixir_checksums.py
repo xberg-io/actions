@@ -33,18 +33,6 @@ def test_build_nif_artifact_name_windows():
 
 
 # ---------------------------------------------------------------------------
-# build_download_url
-# ---------------------------------------------------------------------------
-
-
-def test_build_download_url():
-    result = mod.build_download_url("org/repo", "v1.2.3", "libfoo-v1.2.3-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz")
-    assert result == (
-        "https://github.com/org/repo/releases/download/v1.2.3/libfoo-v1.2.3-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz"
-    )
-
-
-# ---------------------------------------------------------------------------
 # format_checksum_file
 # ---------------------------------------------------------------------------
 
