@@ -34,9 +34,18 @@ echo "::endgroup::"
 echo "::group::Tap ${tap}"
 brew tap "$tap"
 # Recent Homebrew refuses to load formulae from non-core taps unless the tap is
-# explicitly trusted ("Refusing to load formula <…> from untrusted tap"). `brew
-# tap` itself does not establish trust, so trust it explicitly here.
-brew trust "$tap"
+# explicitly trusted ("Refusing to load formula <…> from untrusted tap"). The
+# `brew trust` command suggested by the error message does not exist on every
+# Homebrew version, so the portable workaround is to force git-tap installs
+# (HOMEBREW_NO_INSTALL_FROM_API=1) — which bypasses the JSON-API trust check
+# entirely since we read formulae from the just-tapped clone instead.
+export HOMEBREW_NO_INSTALL_FROM_API=1
+# GitHub-hosted Linux runners block unprivileged user namespaces, so even
+# though bubblewrap is installed it cannot create a rootless sandbox
+# ("Bubblewrap is installed but cannot create a rootless sandbox"). The
+# documented workaround in that error is to disable Homebrew's Linux sandbox
+# entirely. Set on every shell — no-op on macOS.
+export HOMEBREW_NO_SANDBOX_LINUX=1
 brew update --quiet || true
 echo "::endgroup::"
 
