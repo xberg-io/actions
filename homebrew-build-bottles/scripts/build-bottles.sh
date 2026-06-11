@@ -33,6 +33,10 @@ echo "::endgroup::"
 
 echo "::group::Tap ${tap}"
 brew tap "$tap"
+# Recent Homebrew refuses to load formulae from non-core taps unless the tap is
+# explicitly trusted ("Refusing to load formula <…> from untrusted tap"). `brew
+# tap` itself does not establish trust, so trust it explicitly here.
+brew trust "$tap"
 brew update --quiet || true
 echo "::endgroup::"
 
