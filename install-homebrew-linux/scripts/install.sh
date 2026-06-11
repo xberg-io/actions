@@ -9,6 +9,15 @@ if command -v brew >/dev/null 2>&1; then
   exit 0
 fi
 
+# Recent Homebrew requires bubblewrap (bwrap) on PATH for the Linux build
+# sandbox. ubuntu-latest runners don't ship it, and brew cannot install it
+# from formula because the sandbox must exist before any `brew install` runs.
+if ! command -v bwrap >/dev/null 2>&1; then
+  echo "Installing bubblewrap for Homebrew Linux sandbox..."
+  sudo apt-get update -y
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bubblewrap
+fi
+
 echo "Installing Homebrew..."
 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
