@@ -556,10 +556,11 @@ runs:
           # releases/download/<tag>/<name>) may briefly answer 404 until
           # propagation completes. Retry with backoff so the fetch does not
           # fail on that upload-vs-availability race. Observed propagation
-          # delays exceed 90s during release dispatches, so budget 200s
-          # (20 attempts × 10s) so the action absorbs CDN propagation
-          # without flaking on the publish workflow.
-          max_attempts=20
+          # has exceeded 200s during release dispatches (kreuzcrawl rc.55
+          # failed at exactly that bound), so budget 360s (36 attempts × 10s)
+          # so the action absorbs CDN propagation without flaking on the
+          # publish workflow.
+          max_attempts=36
           attempt=1
           zig_fetch_exit=1
           zig_fetch_output=""
