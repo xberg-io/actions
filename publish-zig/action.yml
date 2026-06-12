@@ -460,12 +460,60 @@ runs:
         echo "tarball-path=$tarball_path" >> "$GITHUB_OUTPUT"
         echo "tarball-name=$tarball_name" >> "$GITHUB_OUTPUT"
 
-    - name: Upload release asset
+    - name: Resolve release id (draft-aware)
+      id: release
       if: inputs.dry-run != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
         TAG: ${{ steps.tag.outputs.tag }}
+      run: |
+        set -euo pipefail
+        # Resolve the GitHub Release that matches $TAG via the paginated
+        # /releases endpoint — that listing surfaces drafts when the calling
+        # token has `contents:write`, whereas `gh release view <tag>` and
+        # `/repos/.../releases/tags/<tag>` only resolve *published* tags and
+        # 404 on drafts regardless of token scope. The publish workflows in
+        # kreuzberg-dev/* keep the release in draft until the terminal
+        # `release-finalize` step, so every prior consumer (this action,
+        # publish-hex, publish-homebrew-source-formulas, …) must address
+        # the release by id, not by tag.
+        max_attempts=20
+        sleep_seconds=10
+        release_id=""
+        for attempt in $(seq 1 $max_attempts); do
+          release_id=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\") | .id" \
+            | head -1 || true)
+          if [[ -n "$release_id" ]]; then
+            break
+          fi
+          # Fallback for tokens without draft visibility: published-tags endpoint.
+          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+            --jq '.id // empty' 2>/dev/null || true)
+          if [[ -n "$release_id" ]]; then
+            break
+          fi
+          if [[ $attempt -lt $max_attempts ]]; then
+            echo "release lookup attempt $attempt/$max_attempts: tag $TAG not found yet, retrying in ${sleep_seconds}s..." >&2
+            sleep $sleep_seconds
+          fi
+        done
+        if [[ -z "$release_id" ]]; then
+          echo "Error: release for tag $TAG not found after $max_attempts attempts" >&2
+          echo "(requires contents:write to see drafts; pass an App token via inputs.token)" >&2
+          exit 1
+        fi
+        echo "Resolved release id: $release_id (tag=$TAG)"
+        echo "release-id=$release_id" >> "$GITHUB_OUTPUT"
+
+    - name: Upload release asset
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        RELEASE_ID: ${{ steps.release.outputs.release-id }}
         TARBALL_PATH_ALEF: ${{ steps.package-alef.outputs.tarball-path }}
         TARBALL_PATH_MULTI: ${{ steps.package-multi.outputs.tarball-path }}
         TARBALL_PATH_FALLBACK: ${{ steps.package.outputs.tarball-path }}
@@ -476,6 +524,7 @@ runs:
         USE_ALEF: ${{ inputs.use-alef-package }}
         MULTI_FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
       run: |
+        set -euo pipefail
         # Select tarball path based on which packaging method was used
         if [[ "$USE_ALEF" == "true" ]]; then
           tarball_path="$TARBALL_PATH_ALEF"
@@ -488,12 +537,35 @@ runs:
           tarball_name="$TARBALL_NAME_FALLBACK"
         fi
 
-        echo "Uploading release asset: $tarball_name"
-        # Always --clobber so reruns of a partially-failed upstream (e.g. a
-        # later `zig fetch` CDN race timed out, leaving the asset uploaded
-        # but the job marked failed) are idempotent. Without --clobber,
-        # `gh run rerun --failed` aborts with "asset already exists".
-        gh release upload "$TAG" "$tarball_path" --clobber
+        # Clobber: delete any existing asset with the same name before uploading.
+        # The previous `gh release upload --clobber` flag won't help here because
+        # we upload via the raw /releases/{id}/assets endpoint, which 422s with
+        # "already_exists" on name collisions. Without this, `gh run rerun
+        # --failed` aborts when a prior attempt already uploaded the asset.
+        existing_id=$(gh api --paginate \
+          "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?per_page=100" \
+          --jq ".[] | select(.name == \"$tarball_name\") | .id" \
+          | head -1 || true)
+        if [[ -n "$existing_id" ]]; then
+          echo "Deleting existing asset id=$existing_id ($tarball_name) to allow re-upload"
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$existing_id"
+        fi
+
+        echo "Uploading release asset: $tarball_name (release_id=$RELEASE_ID)"
+        # Upload via the raw /uploads endpoint — works for drafts (where
+        # `gh release upload <tag>` 404s because it resolves tag→id via the
+        # published-tags endpoint). `--retry 3 --retry-delay 2` handles
+        # transient 5xx from the uploads CDN; --fail-with-body surfaces the
+        # actual error body on non-2xx instead of silently swallowing it.
+        curl -fsSL --fail-with-body --retry 3 --retry-delay 2 \
+          -X POST \
+          -H "Authorization: Bearer $GH_TOKEN" \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Content-Type: application/gzip" \
+          --data-binary "@$tarball_path" \
+          "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$tarball_name" \
+          > /dev/null
         echo "Asset uploaded successfully"
 
     - name: Resolve Zig hash + URLs
@@ -502,6 +574,9 @@ runs:
       env:
         TAG: ${{ steps.tag.outputs.tag }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
+        TARBALL_PATH_ALEF: ${{ steps.package-alef.outputs.tarball-path }}
+        TARBALL_PATH_MULTI: ${{ steps.package-multi.outputs.tarball-path }}
+        TARBALL_PATH_FALLBACK: ${{ steps.package.outputs.tarball-path }}
         TARBALL_NAME_ALEF: ${{ steps.package-alef.outputs.tarball-name }}
         TARBALL_NAME_MULTI: ${{ steps.package-multi.outputs.tarball-name }}
         TARBALL_NAME_FALLBACK: ${{ steps.package.outputs.tarball-name }}
@@ -509,37 +584,56 @@ runs:
         USE_ALEF: ${{ inputs.use-alef-package }}
         MULTI_FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
       run: |
+        set -euo pipefail
         # Extract version from tag
         version="${TAG#v}"
 
-        # Select tarball name based on which packaging method was used
+        # Select tarball name + path based on which packaging method was used
         if [[ "$USE_ALEF" == "true" ]]; then
           tarball_name="$TARBALL_NAME_ALEF"
+          tarball_path="$TARBALL_PATH_ALEF"
         elif [[ -n "$MULTI_FFI_DIR" ]]; then
           tarball_name="$TARBALL_NAME_MULTI"
+          tarball_path="$TARBALL_PATH_MULTI"
         else
           tarball_name="$TARBALL_NAME_FALLBACK"
+          tarball_path="$TARBALL_PATH_FALLBACK"
         fi
 
-        # Construct the release-asset tarball URL
+        # Construct the release-asset tarball URL — what downstream consumers
+        # paste into their build.zig.zon `.url`. This is *not* fetched here:
+        # for draft releases the URL 404s, and the zig content multihash is
+        # content-addressed (deterministic from tarball bytes), so the same
+        # hash is produced whether `zig fetch` reads from a local path or
+        # from the eventual public download URL.
         asset_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}/${tarball_name}"
-        echo "Tarball URL: $asset_url"
+        echo "Tarball URL (for consumer build.zig.zon): $asset_url"
 
         if [[ "$DRY_RUN" == "true" ]]; then
           # In dry-run, skip actual zig fetch (asset doesn't exist yet)
           hash="(dry-run: zig hash not computed)"
           sha256="(dry-run: tarball SHA not computed)"
         else
-          # Compute Zig content multihash from the release-asset URL using
-          # a fresh, initialized Zig project (not the working-directory).
+          if [[ -z "$tarball_path" || ! -f "$tarball_path" ]]; then
+            echo "Error: local tarball not found at '$tarball_path'" >&2
+            exit 1
+          fi
+
+          # Compute Zig content multihash from the LOCAL tarball. Earlier
+          # versions of this action fetched the public release-asset URL,
+          # but draft releases have no publicly resolvable CDN URL (the
+          # GitHub workflow holds the release in draft until
+          # `release-finalize`), so the URL-based fetch 404'd indefinitely.
+          # The hash is content-addressed: identical bytes produce an
+          # identical hash whether reached by URL or by file path, so
+          # computing locally is both correct and immune to CDN propagation.
+          #
           # `zig fetch` walks up the directory tree looking for a build.zig
           # and exits with an error if none is found, so the scratch dir
           # must be bootstrapped via `zig init` before the fetch call.
           scratch=$(mktemp -d)
           trap "rm -rf $scratch" EXIT
 
-          # Run zig init, capturing both stdout and stderr. If it fails, print
-          # the captured output to diagnose the root cause.
           zig_init_output=$(cd "$scratch" && zig init 2>&1)
           zig_init_exit=$?
           if [[ $zig_init_exit -ne 0 ]]; then
@@ -548,38 +642,12 @@ runs:
             exit 1
           fi
 
-          # Run zig fetch, capturing stdout and stderr separately from exit code.
-          # Print captured output to diagnose failures that would otherwise be invisible.
-          #
-          # A freshly uploaded release asset can lag behind `gh release upload`
-          # returning: the asset CDN (the redirect target of
-          # releases/download/<tag>/<name>) may briefly answer 404 until
-          # propagation completes. Retry with backoff so the fetch does not
-          # fail on that upload-vs-availability race. Observed propagation
-          # has exceeded 200s during release dispatches (kreuzcrawl rc.55
-          # failed at exactly that bound), so budget 360s (36 attempts × 10s)
-          # so the action absorbs CDN propagation without flaking on the
-          # publish workflow.
-          max_attempts=36
-          attempt=1
-          zig_fetch_exit=1
-          zig_fetch_output=""
-          while [[ $attempt -le $max_attempts ]]; do
-            set +e
-            zig_fetch_output=$(cd "$scratch" && zig fetch "$asset_url" 2>&1)
-            zig_fetch_exit=$?
-            set -e
-            if [[ $zig_fetch_exit -eq 0 ]]; then
-              break
-            fi
-            echo "zig fetch attempt $attempt/$max_attempts failed (exit $zig_fetch_exit); release asset may not be propagated yet, retrying in 10s..." >&2
-            echo "$zig_fetch_output" >&2
-            sleep 10
-            attempt=$((attempt + 1))
-          done
-
+          set +e
+          zig_fetch_output=$(cd "$scratch" && zig fetch "$tarball_path" 2>&1)
+          zig_fetch_exit=$?
+          set -e
           if [[ $zig_fetch_exit -ne 0 ]]; then
-            echo "Error: zig fetch failed after $max_attempts attempts with exit code $zig_fetch_exit" >&2
+            echo "Error: zig fetch <local-tarball> failed with exit code $zig_fetch_exit" >&2
             echo "$zig_fetch_output" >&2
             exit 1
           fi
@@ -594,9 +662,9 @@ runs:
           fi
           echo "Zig content hash: $hash"
 
-          # Also compute the gzipped tarball SHA-256 as a secondary output.
-          # Retry on transient errors for the same asset-propagation reason.
-          sha256=$(curl -sSL -m 60 --retry 3 --retry-delay 2 --retry-all-errors "$asset_url" | sha256sum | awk '{print $1}')
+          # Also compute the gzipped tarball SHA-256 from the same local
+          # tarball, as a secondary output.
+          sha256=$(sha256sum "$tarball_path" | awk '{print $1}')
           echo "Tarball SHA-256: $sha256"
         fi
 
@@ -610,20 +678,27 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
-        TAG: ${{ steps.tag.outputs.tag }}
+        RELEASE_ID: ${{ steps.release.outputs.release-id }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}
         HASH: ${{ steps.resolve.outputs.zig-hash }}
       run: |
+        set -euo pipefail
         if [[ -z "${GH_TOKEN:-}" ]]; then
           echo "GH_TOKEN not set; skipping release-notes update"
           exit 0
         fi
-        body=$(gh release view "$TAG" --json body -q .body 2>/dev/null || echo "")
+        # Address the release by id, not tag — `gh release view <tag>` and
+        # `gh release edit <tag>` resolve via /releases/tags/<tag>, which
+        # 404s on drafts. The Resolve-release-id step ran first and gave us
+        # an id that works for both draft and published releases.
+        body=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+          --jq '.body // ""' 2>/dev/null || echo "")
         # Append a Zig fetch block (idempotent: only append once).
         if ! echo "$body" | grep -q "<!-- zig-fetch -->"; then
           new_body="$body"$'\n\n<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .'"$PKG_NAME"' = .{\n        .url = \"'"$URL"'\",\n        .hash = \"'"$HASH"'\",\n    },\n},\n```\n'
-          gh release edit "$TAG" --notes "$new_body"
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -f body="$new_body" > /dev/null
           echo "Release notes updated with Zig fetch block"
         else
           echo "Zig fetch block already present in release notes"
