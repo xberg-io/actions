@@ -32,22 +32,21 @@ set -o pipefail
 echo "::endgroup::"
 
 echo "::group::Tap ${tap}"
-# Recent Homebrew refuses to load formulae from non-core taps when
-# HOMEBREW_REQUIRE_TAP_TRUST is set ("Refusing to load formula <…> from
-# untrusted tap"). GitHub-hosted runners set HOMEBREW_REQUIRE_TAP_TRUST in
-# the default environment, so the check fires at `brew install` time even
-# when HOMEBREW_NO_INSTALL_FROM_API=1 forces the git-clone source. There
-# is no portable `brew trust` command, and the trust check evaluates the
-# env var directly (Homebrew::EnvConfig.require_tap_trust? — see
-# Library/Homebrew/formulary.rb), so unsetting the variable is the
-# in-script equivalent of trusting the tap. Must precede `brew tap` so
-# the trust evaluation never fires for any tap operation in this shell.
-unset HOMEBREW_REQUIRE_TAP_TRUST
 # Force git-tap installs so the formula is read from the just-tapped
 # clone instead of the JSON API (avoids stale API metadata on first
 # bottle build).
 export HOMEBREW_NO_INSTALL_FROM_API=1
 brew tap "$tap"
+# Recent Homebrew refuses to load formulae from non-core taps when
+# HOMEBREW_REQUIRE_TAP_TRUST is set ("Refusing to load formula <…> from
+# untrusted tap"). GitHub-hosted runners export the var in /etc/environment
+# and Homebrew's EnvConfigBool treats *any* value (including empty) as
+# "set", so unsetting or overriding to "" in this shell does not silence
+# the check inside the brew Ruby process. Use the explicit `brew trust`
+# command (available since Homebrew 4.5+); the warning message itself
+# instructs callers to use it. This persists the trust marker in the
+# tap clone so subsequent `brew install` calls bypass the check.
+brew trust "$tap"
 # GitHub-hosted Linux runners block unprivileged user namespaces, so even
 # though bubblewrap is installed it cannot create a rootless sandbox
 # ("Bubblewrap is installed but cannot create a rootless sandbox"). The
