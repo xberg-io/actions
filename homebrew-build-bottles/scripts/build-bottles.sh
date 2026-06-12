@@ -32,14 +32,22 @@ set -o pipefail
 echo "::endgroup::"
 
 echo "::group::Tap ${tap}"
-brew tap "$tap"
-# Recent Homebrew refuses to load formulae from non-core taps unless the tap is
-# explicitly trusted ("Refusing to load formula <…> from untrusted tap"). The
-# `brew trust` command suggested by the error message does not exist on every
-# Homebrew version, so the portable workaround is to force git-tap installs
-# (HOMEBREW_NO_INSTALL_FROM_API=1) — which bypasses the JSON-API trust check
-# entirely since we read formulae from the just-tapped clone instead.
+# Recent Homebrew refuses to load formulae from non-core taps when
+# HOMEBREW_REQUIRE_TAP_TRUST is set ("Refusing to load formula <…> from
+# untrusted tap"). GitHub-hosted runners set HOMEBREW_REQUIRE_TAP_TRUST in
+# the default environment, so the check fires at `brew install` time even
+# when HOMEBREW_NO_INSTALL_FROM_API=1 forces the git-clone source. There
+# is no portable `brew trust` command, and the trust check evaluates the
+# env var directly (Homebrew::EnvConfig.require_tap_trust? — see
+# Library/Homebrew/formulary.rb), so unsetting the variable is the
+# in-script equivalent of trusting the tap. Must precede `brew tap` so
+# the trust evaluation never fires for any tap operation in this shell.
+unset HOMEBREW_REQUIRE_TAP_TRUST
+# Force git-tap installs so the formula is read from the just-tapped
+# clone instead of the JSON API (avoids stale API metadata on first
+# bottle build).
 export HOMEBREW_NO_INSTALL_FROM_API=1
+brew tap "$tap"
 # GitHub-hosted Linux runners block unprivileged user namespaces, so even
 # though bubblewrap is installed it cannot create a rootless sandbox
 # ("Bubblewrap is installed but cannot create a rootless sandbox"). The
