@@ -47,4 +47,17 @@ runs:
         FORMULAS: ${{ inputs.formulas }}
         OUT_DIR: ${{ inputs.out-dir }}
         GITHUB_REPO: ${{ inputs.github-repo }}
+        # GitHub-hosted runner images export HOMEBREW_REQUIRE_TAP_TRUST=1
+        # in /etc/environment, so child processes (brew → Ruby) inherit it
+        # even after an in-script `unset`. Setting it to empty at the step
+        # env: level overrides the inherited value for every process spawned
+        # by this shell, including brew's Ruby interpreter. EnvConfigBool's
+        # `truthy?` check treats "" as falsy, so the tap-trust check passes.
+        HOMEBREW_REQUIRE_TAP_TRUST: ""
+        # Also force git-tap installs so the formula is read from the
+        # just-tapped clone instead of the JSON API.
+        HOMEBREW_NO_INSTALL_FROM_API: "1"
+        # Disable Homebrew's Linux sandbox (bubblewrap cannot create a
+        # rootless sandbox on GitHub-hosted Linux runners).
+        HOMEBREW_NO_SANDBOX_LINUX: "1"
       run: "${{ github.action_path }}/scripts/build-bottles.sh"
