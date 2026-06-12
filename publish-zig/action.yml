@@ -557,7 +557,12 @@ runs:
         # published-tags endpoint). `--retry 3 --retry-delay 2` handles
         # transient 5xx from the uploads CDN; --fail-with-body surfaces the
         # actual error body on non-2xx instead of silently swallowing it.
-        curl -fsSL --fail-with-body --retry 3 --retry-delay 2 \
+        # `-f`/`--fail` is mutually exclusive with `--fail-with-body` on
+        # curl 7.76+; passing both makes curl reject the invocation with
+        # "option --fail-with-body: is badly used here". Use `-sS` (silent +
+        # show-errors) instead of `-fsS` — `--fail-with-body` already supplies
+        # the non-2xx failure semantics.
+        curl -sSL --fail-with-body --retry 3 --retry-delay 2 \
           -X POST \
           -H "Authorization: Bearer $GH_TOKEN" \
           -H "Accept: application/vnd.github+json" \
