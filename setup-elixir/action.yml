@@ -12,16 +12,18 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Normalize ImageOS for arm64 runners
+    - name: Normalize ImageOS for unsupported runner labels
       shell: bash
       run: |
-        # erlef/setup-beam@v1 cannot map "ubuntu24-arm64" yet; fall back to ubuntu24
+        # erlef/setup-beam@v1 ships a finite list of recognized ImageOS values
+        # and aborts when GitHub introduces a new label before the action does.
+        # Rewrite the unknown labels we have seen to the closest accepted value
         # so the action can resolve a matching OTP/Elixir build.
-        if [ "${ImageOS:-}" = "ubuntu24-arm64" ]; then
-          echo "ImageOS=ubuntu24" >> "$GITHUB_ENV"
-        elif [ "${ImageOS:-}" = "ubuntu22-arm64" ]; then
-          echo "ImageOS=ubuntu22" >> "$GITHUB_ENV"
-        fi
+        case "${ImageOS:-}" in
+          ubuntu24-arm64) echo "ImageOS=ubuntu24" >> "$GITHUB_ENV" ;;
+          ubuntu22-arm64) echo "ImageOS=ubuntu22" >> "$GITHUB_ENV" ;;
+          win25-vs2026)   echo "ImageOS=win25"    >> "$GITHUB_ENV" ;;
+        esac
 
     - name: Setup Beam
       uses: erlef/setup-beam@v1

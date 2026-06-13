@@ -2,6 +2,12 @@
 
 All notable changes to kreuzberg-dev/actions are documented in this file.
 
+## [1.8.63] - 2026-06-13
+
+### Fixed
+
+- **`setup-elixir`: normalize `win25-vs2026` ImageOS to `win25` for `erlef/setup-beam@v1`.** GitHub-hosted `windows-latest` runners now report `ImageOS=win25-vs2026` (windows-2025 + Visual Studio 2026), but `erlef/setup-beam@v1` only recognizes the bare label `win25` and aborts with `Tried to map a target OS from env. variable 'ImageOS' (got win25-vs2026), but failed`. The action already rewrote `ubuntu24-arm64` and `ubuntu22-arm64` to their bare counterparts; this extends the rewrite to cover `win25-vs2026 → win25`. Restructured the rewrite as a `case` statement so future runner labels can be added with a single line. Fixes spikard v0.15.6-rc.22 Publish run 27373551984 `Build Elixir NIF (windows-x86_64)` failure → unblocks Hex publish (previously skipped because all Elixir NIF builds had to succeed).
+
 ## [1.8.62] - 2026-06-12
 
 ### Fixed
