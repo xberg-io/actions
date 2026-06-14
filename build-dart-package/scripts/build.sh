@@ -47,7 +47,7 @@ library_path="$target_dir/$target_subdir/$lib_filename"
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[dry-run] cd $PACKAGE_DIR && flutter_rust_bridge_codegen generate"
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag"
+  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag"
   echo "[dry-run] expected library: $library_path"
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "library-path=$library_path" >>"$GITHUB_OUTPUT"
@@ -68,7 +68,7 @@ echo "=== Running flutter_rust_bridge codegen in $PACKAGE_DIR ==="
 
 echo "=== Building cargo crate $CRATE_NAME (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag
+cargo build --locked -p "$CRATE_NAME" $profile_flag
 
 if [[ ! -f "$library_path" ]]; then
   echo "Warning: expected library not found at $library_path" >&2

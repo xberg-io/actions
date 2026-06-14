@@ -113,7 +113,18 @@ if [ -f Cargo.toml ] && grep -q 'workspace = true' Cargo.toml 2>/dev/null; then
   echo "Stripped workspace inheritance from binding crate Cargo.toml"
 fi
 
-# Generate fresh lockfile.
+# Seed lockfile from workspace so transitive deps stay pinned at the versions
+# the workspace lock froze. Without this seed, the lockfile that ships inside
+# the sdist would resolve every dep to the latest semver-compatible version on
+# a consumer's `pip install` (e.g. broken `brotli-decompressor 5.0.1` over the
+# pinned `5.0.0`).
+if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
+  cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
+fi
+
+# Generate fresh lockfile. With the seed above present, cargo's
+# `resolve_with_previous` reuses every entry that still satisfies the
+# (workspace-stripped) manifest.
 cargo generate-lockfile
 
 # Run maturin.

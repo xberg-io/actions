@@ -95,11 +95,11 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 
 # Build for device arm64
 echo "[build-ios-xcframework] Building for aarch64-apple-ios..."
-cargo build -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios
+cargo build --locked -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios
 
 # Build for simulator arm64
 echo "[build-ios-xcframework] Building for aarch64-apple-ios-sim..."
-cargo build -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios-sim
+cargo build --locked -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios-sim
 
 # Create simulator library (arm64 only; x86_64-apple-ios deprecated Intel simulator not supported)
 echo "[build-ios-xcframework] Preparing simulator library..."

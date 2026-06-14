@@ -33,15 +33,19 @@ inputs:
   cibw-environment:
     description: CIBW_ENVIRONMENT (Linux default)
     required: false
-    default: 'MATURIN_BUILD_ARGS="--compatibility linux"'
+    # CARGO_BUILD_LOCKED=true forces the nested `cargo build` (invoked by maturin
+    # inside the manylinux container) to honour the committed Cargo.lock, so
+    # broken upstream releases (e.g. `brotli-decompressor 5.0.1`/`5.0.2`) cannot
+    # quietly substitute themselves for the pinned `5.0.0`.
+    default: 'MATURIN_BUILD_ARGS="--compatibility linux" CARGO_BUILD_LOCKED=true'
   cibw-environment-windows:
     description: CIBW_ENVIRONMENT_WINDOWS
     required: false
-    default: 'MATURIN_BUILD_ARGS=""'
+    default: 'MATURIN_BUILD_ARGS="" CARGO_BUILD_LOCKED=true'
   cibw-environment-macos:
     description: CIBW_ENVIRONMENT_MACOS
     required: false
-    default: 'MATURIN_BUILD_ARGS=""'
+    default: 'MATURIN_BUILD_ARGS="" CARGO_BUILD_LOCKED=true'
   artifact-name:
     description: Name for the uploaded artifact (must be passed explicitly, e.g. wheels-Linux)
     required: false

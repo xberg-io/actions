@@ -4,6 +4,22 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.67] - 2026-06-14
+
+### Changed
+
+- **All cargo invocations now pass `--locked`.** Sixteen action scripts and
+  workflow steps under `build-android-natives`, `build-csharp-natives`,
+  `build-dart-package`, `build-go-ffi`, `build-gpu-test-binary`,
+  `build-ios-xcframework`, `build-java-natives`, `build-php-extension`,
+  `build-python-sdist`, `build-rust-cli`, `build-rust-ffi`,
+  `build-swift-artifactbundle`, `build-swift-package`, `build-zig-package`,
+  `test-java-ffi`, and `verify-install` were invoking `cargo build/test/run`
+  without `--locked`. Without it, a broken upstream release (recent example:
+  `brotli-decompressor 5.0.1` over the pinned `5.0.0`) can be silently
+  substituted at build time. All wrappers now respect the committed
+  `Cargo.lock`.
+
 ### Fixed
 
 - **`build-python-wheels`: install `numactl-devel` in manylinux containers for ORT aarch64 linker.** ONNX Runtime on `linux-aarch64` links against `libnuma.so.1`, but the AlmaLinux 8 manylinux_2_28 base does not preinstall the dev headers. `CIBW_BEFORE_ALL_LINUX` now passes `numactl-devel` alongside `cmake gcc-c++` to the `$PKG install` line so `cargo build --release` on `aarch64-unknown-linux-gnu` resolves `-lnuma` instead of failing with `/usr/bin/ld: cannot find -lnuma`. Fixes kreuzberg `Rust (ubuntu-24.04-arm)` linker failure observed on CI run 27492590412. (`build-python-wheels/action.yml`)

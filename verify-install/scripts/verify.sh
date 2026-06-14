@@ -175,9 +175,9 @@ go)
 
 rust)
   if [[ "$INPUT_SMOKE_ONLY" == "true" ]]; then
-    cargo run --quiet
+    cargo run --locked --quiet
   else
-    cargo run
+    cargo run --locked
   fi
   ;;
 

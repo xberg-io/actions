@@ -60,22 +60,22 @@ workspace="${GITHUB_WORKSPACE:-$PWD}"
 target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-darwin"
+  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-darwin"
   if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
-    echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-darwin"
+    echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target x86_64-apple-darwin"
   else
     echo "[dry-run] skip x86_64-apple-darwin (include-macos-x86_64=false)"
   fi
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-ios"
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target aarch64-apple-ios-sim"
+  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-ios"
+  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-ios-sim"
   if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
-    echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag --target x86_64-apple-ios"
+    echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target x86_64-apple-ios"
     echo "[dry-run] lipo arm64-sim x86_64 -> ios-sim fat"
   else
     echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
   fi
-  echo "[dry-run] cargo zigbuild -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
-  echo "[dry-run] cargo zigbuild -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
   echo "[dry-run] would assemble $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle"
   echo "[dry-run] would generate info.json with SE-0305 metadata"
   if [[ -n "$HEADER_PATH" ]]; then
@@ -122,28 +122,28 @@ mkdir -p "$bundle_dir"
 echo "=== Building Apple targets ==="
 echo "Building aarch64-apple-darwin..."
 # shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
+cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
 
 if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
   echo "Building x86_64-apple-darwin..."
   # shellcheck disable=SC2086
-  cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
+  cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
 else
   echo "Skipping x86_64-apple-darwin (include-macos-x86_64=false)"
 fi
 
 echo "Building aarch64-apple-ios..."
 # shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios
+cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios
 
 echo "Building aarch64-apple-ios-sim..."
 # shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
+cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
 
 if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
   echo "Building x86_64-apple-ios..."
   # shellcheck disable=SC2086
-  cargo build -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
+  cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
 else
   echo "Skipping x86_64-apple-ios (include-ios-x86_64=false)"
 fi
@@ -154,11 +154,11 @@ echo "=== Building Linux targets (cargo-zigbuild) ==="
 
 echo "Building aarch64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
 
 echo "Building x86_64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
 
 # Determine the target subdirectory for library lookup
 case "$BUILD_PROFILE" in

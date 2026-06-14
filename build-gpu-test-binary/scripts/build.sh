@@ -12,7 +12,7 @@ if [[ "$working_directory" != "." ]]; then
   cd "$working_directory"
 fi
 
-cargo_args=(test -p "$package")
+cargo_args=(test --locked -p "$package")
 if [[ -n "$features" ]]; then
   cargo_args+=(--features "$features")
 fi

@@ -88,8 +88,14 @@ def build_cargo_args(
     verbose: bool,
     additional_flags: str,
 ) -> list[str]:
-    """Construct the cargo build argument list from build parameters."""
-    args: list[str] = ["build"]
+    """Construct the cargo build argument list from build parameters.
+
+    `--locked` is always passed so the committed `Cargo.lock` is respected; a
+    broken or stale upstream release on crates.io cannot silently substitute
+    itself for a pinned dep at build time. Mirror this pattern in every action
+    that wraps `cargo build`.
+    """
+    args: list[str] = ["build", "--locked"]
 
     if manifest_path:
         args += ["--manifest-path", manifest_path]

@@ -67,7 +67,7 @@ normalize_swift_bridge_core() {
 }
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[dry-run] cargo build -p $CRATE_NAME $profile_flag"
+  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag"
   echo "[dry-run] would resolve out/ under $build_root/$CRATE_NAME-*/out"
   echo "[dry-run] would write combined header to $bridge_c_dst/RustBridgeC.h"
   echo "[dry-run] would write swift bridge files to $bridge_swift_dst/"
@@ -81,7 +81,7 @@ fi
 
 echo "=== Building cargo crate $CRATE_NAME (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
-cargo build -p "$CRATE_NAME" $profile_flag
+cargo build --locked -p "$CRATE_NAME" $profile_flag
 
 # Resolve the most recent out/ directory; cargo can keep multiple build hashes.
 shopt -s nullglob

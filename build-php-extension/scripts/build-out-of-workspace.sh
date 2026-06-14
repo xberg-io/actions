@@ -65,7 +65,18 @@ if grep -q 'workspace = true' Cargo.toml 2>/dev/null; then
   echo "Stripped workspace inheritance from binding crate Cargo.toml"
 fi
 
-# Generate fresh lockfile for out-of-workspace build.
+# Seed lockfile from workspace so transitive deps stay pinned at the versions
+# the workspace lock froze. Without this seed, the lockfile this temp crate
+# ships to consumers would resolve every dep to the latest semver-compatible
+# version (e.g. broken `brotli-decompressor 5.0.1` over the pinned `5.0.0`).
+if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
+  cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
+fi
+
+# Generate fresh lockfile for out-of-workspace build. With the seed above
+# present, cargo's `resolve_with_previous` reuses every entry that still
+# satisfies the (workspace-stripped) manifest; only newly-needed entries are
+# resolved against the registry.
 cargo generate-lockfile
 
 # Pin `time` to 0.3.47 to avoid the trait-impl conflict between `time` 0.3.48
@@ -74,7 +85,7 @@ cargo generate-lockfile
 cargo update -p time --precise 0.3.47 || true
 
 # Build the crate.
-cargo build --release
+cargo build --locked --release
 
 # Copy built artifact back to workspace target dir.
 mkdir -p "$WORKSPACE_ROOT/target/release"

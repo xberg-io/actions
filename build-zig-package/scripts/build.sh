@@ -43,7 +43,7 @@ target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
 ffi_library_path="$target_dir/$target_subdir/$lib_filename"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[dry-run] cargo build -p $FFI_CRATE $profile_flag"
+  echo "[dry-run] cargo build --locked -p $FFI_CRATE $profile_flag"
   echo "[dry-run] cd $PACKAGE_DIR && zig build"
   echo "[dry-run] expected ffi library: $ffi_library_path"
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -59,7 +59,7 @@ fi
 
 echo "=== Building cargo crate $FFI_CRATE (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
-cargo build -p "$FFI_CRATE" $profile_flag
+cargo build --locked -p "$FFI_CRATE" $profile_flag
 
 if [[ ! -f "$ffi_library_path" ]]; then
   echo "Warning: expected FFI library not found at $ffi_library_path" >&2

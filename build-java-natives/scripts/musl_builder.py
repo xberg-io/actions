@@ -52,10 +52,14 @@ def build_in_docker(
     # Prepare build environment
     cwd = Path.cwd().resolve()
 
-    # Build command inside container
+    # Build command inside container.
+    # `--locked` enforces the committed Cargo.lock so transitive deps cannot
+    # silently re-resolve to incompatible versions (e.g. broken upstream
+    # `brotli-decompressor 5.0.1` over the pinned `5.0.0`).
     build_cmd = [
         "cargo",
         "build",
+        "--locked",
         "-p",
         crate_name,
         "--release",
@@ -125,8 +129,9 @@ def build_or_fallback(
     if is_musl_target(target):
         build_in_docker(crate_name, target, env_vars)
     else:
-        # Native build
-        build_cmd = ["cargo", "build", "-p", crate_name, "--release", "--target", target]
+        # Native build. `--locked` enforces the committed Cargo.lock; see
+        # `build_in_docker` for the rationale.
+        build_cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
         if manifest_path:
             build_cmd.extend(["--manifest-path", str(manifest_path)])
 

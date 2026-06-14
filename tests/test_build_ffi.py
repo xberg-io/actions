@@ -31,7 +31,7 @@ def test_build_cargo_args_default():
         verbose=True,
         additional_flags="",
     )
-    assert args == ["build", "--package", "mylib", "--release", "-vv"]
+    assert args == ["build", "--locked", "--package", "mylib", "--release", "-vv"]
 
 
 def test_build_cargo_args_with_manifest():
@@ -44,7 +44,7 @@ def test_build_cargo_args_with_manifest():
         verbose=True,
         additional_flags="",
     )
-    assert args[:3] == ["build", "--manifest-path", "/path/to/Cargo.toml"]
+    assert args[:4] == ["build", "--locked", "--manifest-path", "/path/to/Cargo.toml"]
     assert "--package" not in args
     assert "--release" in args
     assert "-vv" in args

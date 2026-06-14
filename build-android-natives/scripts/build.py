@@ -99,7 +99,10 @@ def main() -> None:
         print("[build-android-natives] Installing cargo-ndk...")
         run_command(["cargo", "install", "cargo-ndk", "--locked"])
 
-    # Build for each ABI
+    # Build for each ABI.
+    # `--locked` enforces the committed Cargo.lock so transitive deps cannot
+    # silently re-resolve at NDK cross-compile time (e.g. broken upstream
+    # `brotli-decompressor 5.0.1` over the pinned `5.0.0`).
     for abi, _target in zip(abis, rust_targets, strict=True):
         cmd = [
             "cargo",
@@ -111,6 +114,7 @@ def main() -> None:
             "-o",
             str(output_dir),
             "build",
+            "--locked",
             "-p",
             crate_name,
             "--release",

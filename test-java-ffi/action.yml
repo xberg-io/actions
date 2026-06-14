@@ -31,7 +31,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        cargo build --release --package "${{ inputs.ffi-crate-name }}"
+        cargo build --locked --release --package "${{ inputs.ffi-crate-name }}"
         mkdir -p "${{ inputs.java-package-dir }}/src/main/resources"
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           cp "target/release/${{ inputs.ffi-lib-name }}.dll" "${{ inputs.java-package-dir }}/src/main/resources/"

@@ -44,7 +44,7 @@ def cargo_release_dir(target: str) -> Path:
 
 def run_cargo_build(crate_name: str, target: str) -> None:
     """Invoke ``cargo build -p <crate> --release --target <triple>``."""
-    cmd = ["cargo", "build", "-p", crate_name, "--release", "--target", target]
+    cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
     print(f"[build-go-ffi] Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
