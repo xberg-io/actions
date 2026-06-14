@@ -53,7 +53,9 @@ jobs:
         run: |
           [ -n "${{ steps.build.outputs.library-path }}" ]
           test -f "${{ steps.build.outputs.library-path }}"
-          file "${{ steps.build.outputs.library-path }}" | grep -Ei 'shared object|dynamic library|dll'
+          # macOS `file` outputs `Mach-O 64-bit dynamically linked shared library`,
+          # Linux outputs `ELF 64-bit LSB shared object`, Windows outputs PE32+ DLL.
+          file "${{ steps.build.outputs.library-path }}" | grep -Ei 'shared object|shared library|dynamic library|dll|dylib'
 
       - name: Verify macOS dylib install_name uses @rpath
         if: runner.os == 'macOS'
