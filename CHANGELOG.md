@@ -6,6 +6,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ### Fixed
 
+- **`build-python-wheels`: install `numactl-devel` in manylinux containers for ORT aarch64 linker.** ONNX Runtime on `linux-aarch64` links against `libnuma.so.1`, but the AlmaLinux 8 manylinux_2_28 base does not preinstall the dev headers. `CIBW_BEFORE_ALL_LINUX` now passes `numactl-devel` alongside `cmake gcc-c++` to the `$PKG install` line so `cargo build --release` on `aarch64-unknown-linux-gnu` resolves `-lnuma` instead of failing with `/usr/bin/ld: cannot find -lnuma`. Fixes kreuzberg `Rust (ubuntu-24.04-arm)` linker failure observed on CI run 27492590412. (`build-python-wheels/action.yml`)
+
 - **`publish-github-release/scripts/ensure_release.py`: close critical gaps in release-creation safety.** The v1.8.63 retry-on-404 fix absorbed tag-propagation lag but had three vulnerabilities:
   1. **Retry exhaustion without fallback.** After 20×10s retries return 404, the script silently falls through to `create_release`, reproducing the original bug. Now after retries exhaust, the script calls the canonical git-tag endpoint (`GET /repos/{owner}/{repo}/git/refs/tags/{tag}`) and exits with a clear error if the tag doesn't actually exist.
   2. **Unvalidated release creation.** GitHub's POST `/releases` can return `tag_name="untagged-..."` even when the request sends `tag_name="v3.6.2"`. This was the actual root cause of html-to-markdown v3.6.2 (the tag existed but the release was corrupted). Now the script asserts the response `tag_name` matches the request; if not, it immediately PATCHes the release to repair the `tag_name`. If the PATCH also fails to stick, the script exits 1.

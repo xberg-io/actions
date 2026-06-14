@@ -100,7 +100,7 @@ runs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
           source ~/.cargo/env &&
           PKG=$(command -v dnf >/dev/null && echo dnf || echo yum) &&
-          $PKG install -y cmake gcc-c++ &&
+          $PKG install -y cmake gcc-c++ numactl-devel &&
           for codec in libaom-devel libdav1d-devel libde265-devel x265-devel; do $PKG install -y "$codec" || true; done &&
           curl -fsSL -o /tmp/libheif.tar.gz https://github.com/strukturag/libheif/releases/download/v1.23.0/libheif-1.23.0.tar.gz &&
           tar -xzf /tmp/libheif.tar.gz -C /tmp &&
