@@ -174,6 +174,8 @@ runs:
       env:
         CRATE_DIR: ${{ inputs.crate-dir }}
         NPM_DIR: ${{ inputs.npm-dir }}
+        JS_NAME: ${{ inputs.js-name }}
+        DTS_NAME: ${{ inputs.dts-name }}
         TARBALL_NAME: ${{ inputs.pack-target-tarball }}
       run: |
         set -euo pipefail
@@ -184,5 +186,17 @@ runs:
         # has no `--force-local` flag, so dodging the colon is the only
         # portable option.
         cd "${GITHUB_WORKSPACE}"
-        tar -czf "${TARBALL_NAME}" -C "${CRATE_DIR}" "${NPM_DIR}"
+        # Include napi-generated JS loader + TS declarations alongside the
+        # npm/ tree. Without these the main package ships only README/LICENSE
+        # (the `files` array in package.json lists index.js + index.d.ts but
+        # they live at crate root, not under npm/). They are identical across
+        # all targets, so last-writer-wins on extract is fine.
+        tar_members=("${NPM_DIR}")
+        if [ -f "${CRATE_DIR}/${JS_NAME}" ]; then
+          tar_members+=("${JS_NAME}")
+        fi
+        if [ -f "${CRATE_DIR}/${DTS_NAME}" ]; then
+          tar_members+=("${DTS_NAME}")
+        fi
+        tar -czf "${TARBALL_NAME}" -C "${CRATE_DIR}" "${tar_members[@]}"
         echo "target-tarball=${GITHUB_WORKSPACE}/${TARBALL_NAME}" >> "${GITHUB_OUTPUT}"

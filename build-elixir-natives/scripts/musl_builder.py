@@ -57,10 +57,14 @@ def build_in_docker(
     # Prepare build environment
     cwd = Path.cwd().resolve()
 
-    # Build command inside container
+    # Build command inside container.
+    # `--locked` enforces the committed Cargo.lock so transitive deps don't
+    # silently re-resolve to incompatible versions (e.g. time 0.3.48 vs
+    # cookie 0.18.1's expected time 0.3.47).
     build_cmd = [
         "cargo",
         "build",
+        "--locked",
         "-p",
         crate_name,
         "--release",
@@ -139,8 +143,10 @@ def build_or_fallback(
     if is_musl_target(target):
         build_in_docker(crate_name, target, manifest_path, env_vars)
     else:
-        # Native build
-        build_cmd = ["cargo", "build", "-p", crate_name, "--release", "--target", target]
+        # Native build. `--locked` enforces the committed Cargo.lock so transitive
+        # deps don't silently re-resolve to incompatible versions (e.g. time 0.3.48
+        # vs cookie 0.18.1's expected time 0.3.47).
+        build_cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
         if manifest_path:
             build_cmd.extend(["--manifest-path", str(manifest_path)])
 

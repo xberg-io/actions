@@ -68,6 +68,11 @@ fi
 # Generate fresh lockfile for out-of-workspace build.
 cargo generate-lockfile
 
+# Pin `time` to 0.3.47 to avoid the trait-impl conflict between `time` 0.3.48
+# and `cookie` 0.18.1 (E0119: conflicting `From<HourBase>` for `ModifierValue::Type`).
+# `|| true` covers the case where `time` is not in the resolved graph.
+cargo update -p time --precise 0.3.47 || true
+
 # Build the crate.
 cargo build --release
 

@@ -70,6 +70,10 @@ runs:
       working-directory: ${{ inputs.package-dir }}
       env:
         RB_SYS_CARGO_PROFILE: release
+        # Enforce committed Cargo.lock so transitive deps don't silently re-resolve
+        # to incompatible versions (e.g. time 0.3.48 vs cookie 0.18.1's 0.3.47).
+        # CARGO_NET_FROZEN requires Cargo.lock to match resolution — equivalent to --locked.
+        CARGO_NET_FROZEN: "true"
       run: bundle exec rake compile
 
     - name: Build platform gem (Unix)
@@ -155,7 +159,10 @@ runs:
         PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         $unixPath = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE/$env:PACKAGE_DIR'"
-        ridk exec bash -lc "cd '$unixPath' && export CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CARGO_BUILD_TARGET=x86_64-pc-windows-gnu RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
+        # CARGO_NET_FROZEN enforces the committed Cargo.lock (equivalent to --locked) so
+        # transitive deps don't silently re-resolve to incompatible versions
+        # (e.g. time 0.3.48 vs cookie 0.18.1's 0.3.47).
+        ridk exec bash -lc "cd '$unixPath' && export CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CARGO_BUILD_TARGET=x86_64-pc-windows-gnu CARGO_NET_FROZEN=true RUSTFLAGS=\"-C link-arg=-fuse-ld=lld\" && bundle exec rake compile"
 
     - name: Build platform gem (Windows)
       if: runner.os == 'Windows'
@@ -169,7 +176,9 @@ runs:
           # lockfile materializes against the container's Ruby version
           # rather than the host's.
           gem install rb_sys
-          rb-sys-dock --platform "${{ inputs.dock-platform }}" -- bash -c "bundle install --jobs=4 --retry=3 && bundle exec rake compile && bundle exec rake build"
+          # CARGO_NET_FROZEN enforces Cargo.lock (equivalent to --locked) so transitive
+          # deps don't silently re-resolve (e.g. time 0.3.48 vs cookie 0.18.1's 0.3.47).
+          rb-sys-dock --platform "${{ inputs.dock-platform }}" -- bash -c "export CARGO_NET_FROZEN=true && bundle install --jobs=4 --retry=3 && bundle exec rake compile && bundle exec rake build"
         else
           # Native build via MSYS2/mingw (fallback if dock-platform not specified)
           bundle exec rake compile

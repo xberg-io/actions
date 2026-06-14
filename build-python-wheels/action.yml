@@ -96,7 +96,22 @@ runs:
       run: python -m cibuildwheel --output-dir wheelhouse "${{ inputs.package-dir }}"
       env:
         CIBW_BUILD: ${{ inputs.cibw-build }}
-        CIBW_BEFORE_ALL_LINUX: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
+        CIBW_BEFORE_ALL_LINUX: >
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+          source ~/.cargo/env &&
+          (command -v dnf >/dev/null && PKG=dnf || PKG=yum) &&
+          $PKG install -y cmake gcc-c++ &&
+          for codec in libaom-devel libdav1d-devel libde265-devel x265-devel; do $PKG install -y "$codec" || true; done &&
+          curl -fsSL -o /tmp/libheif.tar.gz https://github.com/strukturag/libheif/releases/download/v1.23.0/libheif-1.23.0.tar.gz &&
+          tar -xzf /tmp/libheif.tar.gz -C /tmp &&
+          mkdir -p /tmp/libheif-1.23.0/build &&
+          cd /tmp/libheif-1.23.0/build &&
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib -DWITH_EXAMPLES=OFF -DWITH_GDK_PIXBUF=OFF -DBUILD_TESTING=OFF &&
+          make -j"$(nproc)" &&
+          make install &&
+          ldconfig &&
+          cd - &&
+          rm -rf /tmp/libheif*
         # macOS-latest runner images pre-install a Rust toolchain into
         # ~/.cargo and ~/.rustup. When cibuildwheel triggers
         # `rustup install <toolchain>` (via rust-toolchain.toml), rustup

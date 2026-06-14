@@ -2,6 +2,19 @@
 
 All notable changes to kreuzberg-dev/actions are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **`build-python-wheels`: source-build libheif 1.23.0 in manylinux containers.** Ubuntu Noble apt and the AlmaLinux 8 manylinux_2_28 base both ship libheif 1.17.x, but `libheif-sys 5.3+` requires `libheif >= 1.21`. `CIBW_BEFORE_ALL_LINUX` now installs `cmake`, `gcc-c++`, and codec headers (`libde265-devel libaom-devel x265-devel libdav1d-devel`) via dnf/yum, then downloads + compiles + installs libheif 1.23.0 to `/usr/local`. Without this, every Linux wheel build for any kreuzberg consumer fails at the `libheif-sys` build script with `Package 'libheif' has version '1.17.6', required version is '>= 1.21'`. macOS and Windows wheel paths are unchanged.
+
+- **`publish-github-release/scripts/ensure_release.py`: close critical gaps in release-creation safety.** The v1.8.63 retry-on-404 fix absorbed tag-propagation lag but had three vulnerabilities:
+  1. **Retry exhaustion without fallback.** After 20×10s retries return 404, the script silently falls through to `create_release`, reproducing the original bug. Now after retries exhaust, the script calls the canonical git-tag endpoint (`GET /repos/{owner}/{repo}/git/refs/tags/{tag}`) and exits with a clear error if the tag doesn't actually exist.
+  2. **Unvalidated release creation.** GitHub's POST `/releases` can return `tag_name="untagged-..."` even when the request sends `tag_name="v3.6.2"`. This was the actual root cause of html-to-markdown v3.6.2 (the tag existed but the release was corrupted). Now the script asserts the response `tag_name` matches the request; if not, it immediately PATCHes the release to repair the `tag_name`. If the PATCH also fails to stick, the script exits 1.
+  3. **No repair for pre-existing broken drafts.** When a prior workflow run left a broken draft with `name="v3.6.2"` and `tag_name="untagged-..."`, the tag-lookup 404-retries can't find it (because `GET /releases/tags/v3.6.2` requires a working `tag_name`). The script now lists all releases, finds any draft whose `name == tag` and `tag_name` starts with `"untagged-"`, and repairs it in-place via PATCH before creating a new release.
+
+  Tests added to verify retry exhaustion exits cleanly (not silently), POST response validation, and broken-draft repair. Added Gap 2 existing-release path tests: `test_main_release_exists_with_broken_tag_repairs` (lines 395–411) validates tag_name repair via PATCH; `test_main_release_exists_broken_tag_patch_fails_exits_1` (lines 430–440) confirms sys.exit(1) on PATCH failure.
+
 ## [1.8.63] - 2026-06-13
 
 ### Fixed
