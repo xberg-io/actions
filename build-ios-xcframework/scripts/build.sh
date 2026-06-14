@@ -53,18 +53,18 @@ BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 
 # Determine profile flag for cargo
-PROFILE_FLAG=""
+PROFILE_FLAG=()
 case "$BUILD_PROFILE" in
 dev)
-  PROFILE_FLAG=""
+  PROFILE_FLAG=()
   TARGET_SUBDIR="debug"
   ;;
 release)
-  PROFILE_FLAG="--release"
+  PROFILE_FLAG=(--release)
   TARGET_SUBDIR="release"
   ;;
 *)
-  PROFILE_FLAG="--profile" "$BUILD_PROFILE"
+  PROFILE_FLAG=(--profile "$BUILD_PROFILE")
   TARGET_SUBDIR="$BUILD_PROFILE"
   ;;
 esac
@@ -95,11 +95,11 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 
 # Build for device arm64
 echo "[build-ios-xcframework] Building for aarch64-apple-ios..."
-cargo build -p "$CRATE_NAME" $PROFILE_FLAG --target aarch64-apple-ios
+cargo build -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios
 
 # Build for simulator arm64
 echo "[build-ios-xcframework] Building for aarch64-apple-ios-sim..."
-cargo build -p "$CRATE_NAME" $PROFILE_FLAG --target aarch64-apple-ios-sim
+cargo build -p "$CRATE_NAME" "${PROFILE_FLAG[@]}" --target aarch64-apple-ios-sim
 
 # Create simulator library (arm64 only; x86_64-apple-ios deprecated Intel simulator not supported)
 echo "[build-ios-xcframework] Preparing simulator library..."
