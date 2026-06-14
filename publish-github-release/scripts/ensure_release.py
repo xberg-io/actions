@@ -8,6 +8,7 @@ Usage (GitHub Actions via env vars):
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -57,10 +58,43 @@ def github_request(method: str, url: str, token: str, data: dict[str, Any] | Non
 
 
 def get_release_by_tag(owner: str, repo: str, tag: str, token: str) -> dict[str, Any] | None:
-    """Get release info for a tag. Returns dict if found, None if 404."""
+    """Get release info for a tag. Returns dict if found, None if 404.
+
+    Retries on 404 with exponential backoff (20 attempts, 10s interval) to absorb
+    GitHub API read-replica propagation delays after tag push.
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
-    status, data = github_request("GET", url, token)
-    return data if status == 200 else None
+    max_attempts = 20
+    sleep_seconds = 10
+
+    for attempt in range(1, max_attempts + 1):
+        status, data = github_request("GET", url, token)
+        if status == 200:
+            return data
+
+        if status == 404 and attempt < max_attempts:
+            print(
+                f"Release lookup attempt {attempt}/{max_attempts} did not find {tag}; "
+                f"tag may not be propagated yet, retrying in {sleep_seconds}s...",
+                file=sys.stderr,
+            )
+            time.sleep(sleep_seconds)
+        elif status != 200:
+            return None
+
+    return None
+
+
+def tag_exists_on_git(owner: str, repo: str, tag: str, token: str) -> bool:
+    """Verify tag exists via git refs endpoint.
+
+    After get_release_by_tag exhausts retries, check if the tag itself is present
+    on disk via the canonical git-tag endpoint. This catches cases where the tag
+    exists but release metadata is missing.
+    """
+    url = f"https://api.github.com/repos/{owner}/{repo}/git/refs/tags/{tag}"
+    status, _data = github_request("GET", url, token)
+    return status == 200
 
 
 def create_release(
@@ -98,14 +132,31 @@ def create_release(
     return data
 
 
-def update_release(owner: str, repo: str, release_id: int, draft: bool, token: str) -> dict[str, Any]:
-    """Update a release via PATCH /repos/{owner}/{repo}/releases/{id}."""
+def update_release(
+    owner: str, repo: str, release_id: int, draft: bool | None = None, tag_name: str | None = None, token: str = ""
+) -> dict[str, Any]:
+    """Update a release via PATCH /repos/{owner}/{repo}/releases/{id}.
+
+    Supports updating draft status and/or tag_name.
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/{release_id}"
 
-    body_dict = {"draft": draft}
+    body_dict: dict[str, Any] = {}
+    if draft is not None:
+        body_dict["draft"] = draft
+    if tag_name is not None:
+        body_dict["tag_name"] = tag_name
 
     _status, data = github_request("PATCH", url, token, body_dict)
     return data
+
+
+def list_releases(owner: str, repo: str, token: str, per_page: int = 30) -> list[dict[str, Any]]:
+    """List all releases for a repo via GET /repos/{owner}/{repo}/releases."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page={per_page}"
+    _status, data = github_request("GET", url, token)
+    # data could be dict (error) or list (releases); ensure we return list
+    return data if isinstance(data, list) else []
 
 
 def main() -> None:
@@ -153,24 +204,86 @@ def main() -> None:
     if existing:
         print(f"Release {tag} already exists")
         is_draft = existing.get("draft", False)
+
+        # Gap 2: Validate tag_name; if broken (untagged-...), repair it
+        actual_tag_name = existing.get("tag_name", "")
+        if actual_tag_name != tag:
+            print(
+                f"Warning: release has tag_name={actual_tag_name}, expected {tag}; repairing...",
+                file=sys.stderr,
+            )
+            release_id = int(existing.get("id", 0))
+            repaired = update_release(owner, repo, release_id, tag_name=tag, token=token)
+            if repaired.get("tag_name") != tag:
+                print(
+                    f"Error: PATCH to fix tag_name failed; release still has tag_name={repaired.get('tag_name')}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Repaired tag_name to {tag}")
+
         if is_draft and not draft:
             print(f"Publishing draft release {tag}...")
-            release_id: int = existing.get("id", 0)
-            update_release(owner, repo, release_id, False, token)
+            release_id = int(existing.get("id", 0))
+            update_release(owner, repo, release_id, draft=False, token=token)
     else:
-        print(f"Creating release {tag}...")
-        create_release(
-            owner,
-            repo,
-            tag,
-            title,
-            generate_notes,
-            draft,
-            prerelease,
-            notes=notes,
-            target=target,
-            token=token,
-        )
+        # Gap 1: If release lookup exhausted retries and returned None, verify the tag exists
+        if not tag_exists_on_git(owner, repo, tag, token):
+            print(
+                f"Error: Tag {tag} not found in repository after {20} retries and git verification",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        # Gap 3: Before creating, check for pre-existing broken drafts by name
+        all_releases = list_releases(owner, repo, token)
+        broken_draft = None
+        for rel in all_releases:
+            if rel.get("name") == tag and rel.get("tag_name", "").startswith("untagged-"):
+                broken_draft = rel
+                break
+
+        if broken_draft:
+            print(f"Found pre-existing broken draft for {tag}; repairing tag_name...")
+            release_id = int(broken_draft.get("id", 0))
+            repaired = update_release(owner, repo, release_id, tag_name=tag, token=token)
+            if repaired.get("tag_name") != tag:
+                print(
+                    f"Error: PATCH to fix broken draft tag_name failed; still has tag_name={repaired.get('tag_name')}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Repaired broken draft, tag_name now {tag}")
+        else:
+            print(f"Creating release {tag}...")
+            created = create_release(
+                owner,
+                repo,
+                tag,
+                title,
+                generate_notes,
+                draft,
+                prerelease,
+                notes=notes,
+                target=target,
+                token=token,
+            )
+
+            # Gap 2: Validate create_release response has correct tag_name
+            if created.get("tag_name") != tag:
+                print(
+                    f"Warning: created release has tag_name={created.get('tag_name')}, expected {tag}; repairing...",
+                    file=sys.stderr,
+                )
+                release_id = int(created.get("id", 0))
+                repaired = update_release(owner, repo, release_id, tag_name=tag, token=token)
+                if repaired.get("tag_name") != tag:
+                    print(
+                        f"Error: PATCH to fix tag_name failed; release still has tag_name={repaired.get('tag_name')}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                print(f"Repaired tag_name to {tag}")
 
     print(f"Release {tag} ready")
 

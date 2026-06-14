@@ -81,14 +81,52 @@ class TestGetReleaseByTag(unittest.TestCase):
             "GET", "https://api.github.com/repos/owner/repo/releases/tags/v2.0.0", "token"
         )
 
+    @patch("ensure_release.time.sleep")
     @patch("ensure_release.github_request")
-    def test_release_not_exists(self, mock_request) -> None:
+    def test_release_not_exists(self, mock_request, mock_sleep) -> None:
         """Test getting non-existent release returns None."""
         mock_request.return_value = (404, {})
 
         result = ensure_release.get_release_by_tag("owner", "repo", "v3.0.0", "token")
 
         assert result is None
+        # Should sleep 19 times (between 20 attempts)
+        assert mock_sleep.call_count == 19
+
+    @patch("ensure_release.time.sleep")
+    @patch("ensure_release.github_request")
+    def test_release_propagation_retry_succeeds(self, mock_request, mock_sleep) -> None:
+        """Test retrying on 404 (read-replica lag) until release appears."""
+        release_data = {"id": 999, "tag_name": "v3.1.0", "draft": True}
+        # Simulate: first 2 attempts get 404 (read-replica lag), third succeeds
+        mock_request.side_effect = [
+            (404, {}),
+            (404, {}),
+            (200, release_data),
+        ]
+
+        result = ensure_release.get_release_by_tag("owner", "repo", "v3.1.0", "token")
+
+        assert result == release_data
+        # Verify sleep was called twice (between attempts 1-2 and 2-3)
+        assert mock_sleep.call_count == 2
+        # Verify github_request was called 3 times total
+        assert mock_request.call_count == 3
+
+    @patch("ensure_release.time.sleep")
+    @patch("ensure_release.github_request")
+    def test_release_exhausts_retries_returns_none(self, mock_request, mock_sleep) -> None:
+        """Test exhausting all 20 retries on 404 returns None (Gap 1 pre-check)."""
+        # All 20 attempts return 404 (tag not propagated)
+        mock_request.return_value = (404, {})
+
+        result = ensure_release.get_release_by_tag("owner", "repo", "v4.0.0", "token")
+
+        assert result is None
+        # Should sleep 19 times (between 20 attempts)
+        assert mock_sleep.call_count == 19
+        # Should call github_request exactly 20 times
+        assert mock_request.call_count == 20
 
 
 class TestCreateRelease(unittest.TestCase):
@@ -169,6 +207,66 @@ class TestCreateRelease(unittest.TestCase):
         assert body["target_commitish"] == "main"
 
 
+class TestTagExistsOnGit(unittest.TestCase):
+    """Test tag_exists_on_git function (Gap 1)."""
+
+    @patch("ensure_release.github_request")
+    def test_tag_exists_returns_true(self, mock_request) -> None:
+        """Test tag exists on git returns True."""
+        mock_request.return_value = (200, {"ref": "refs/tags/v1.0.0"})
+
+        result = ensure_release.tag_exists_on_git("owner", "repo", "v1.0.0", "token")
+
+        assert result is True
+        mock_request.assert_called_once_with(
+            "GET", "https://api.github.com/repos/owner/repo/git/refs/tags/v1.0.0", "token"
+        )
+
+    @patch("ensure_release.github_request")
+    def test_tag_not_exists_returns_false(self, mock_request) -> None:
+        """Test tag does not exist on git returns False."""
+        mock_request.return_value = (404, {})
+
+        result = ensure_release.tag_exists_on_git("owner", "repo", "v2.0.0", "token")
+
+        assert result is False
+
+
+class TestListReleases(unittest.TestCase):
+    """Test list_releases function (Gap 3)."""
+
+    @patch("ensure_release.github_request")
+    def test_list_releases_success(self, mock_request) -> None:
+        """Test listing releases returns list."""
+        releases = [
+            {"id": 1, "tag_name": "v1.0.0", "name": "v1.0.0"},
+            {"id": 2, "tag_name": "untagged-xyz", "name": "v1.1.0"},
+        ]
+        mock_request.return_value = (200, releases)
+
+        result = ensure_release.list_releases("owner", "repo", "token")
+
+        assert result == releases
+
+    @patch("ensure_release.github_request")
+    def test_list_releases_empty(self, mock_request) -> None:
+        """Test listing releases when empty returns empty list."""
+        mock_request.return_value = (200, [])
+
+        result = ensure_release.list_releases("owner", "repo", "token")
+
+        assert result == []
+
+    @patch("ensure_release.github_request")
+    def test_list_releases_error_returns_empty(self, mock_request) -> None:
+        """Test listing releases on error returns empty list."""
+        mock_request.return_value = (500, {"message": "error"})
+
+        result = ensure_release.list_releases("owner", "repo", "token")
+
+        assert result == []
+
+
 class TestUpdateRelease(unittest.TestCase):
     """Test update_release function."""
 
@@ -185,6 +283,35 @@ class TestUpdateRelease(unittest.TestCase):
         call_args = mock_request.call_args
         body = call_args[0][3]
         assert not body["draft"]
+
+    @patch("ensure_release.github_request")
+    def test_update_tag_name(self, mock_request) -> None:
+        """Test updating tag_name (Gap 2)."""
+        updated_data = {"id": 456, "tag_name": "v2.0.0", "draft": False}
+        mock_request.return_value = (200, updated_data)
+
+        result = ensure_release.update_release("owner", "repo", 456, tag_name="v2.0.0", token="token")
+
+        assert result == updated_data
+
+        call_args = mock_request.call_args
+        body = call_args[0][3]
+        assert body["tag_name"] == "v2.0.0"
+
+    @patch("ensure_release.github_request")
+    def test_update_both_draft_and_tag_name(self, mock_request) -> None:
+        """Test updating both draft and tag_name."""
+        updated_data = {"id": 456, "tag_name": "v2.0.0", "draft": False}
+        mock_request.return_value = (200, updated_data)
+
+        result = ensure_release.update_release("owner", "repo", 456, draft=False, tag_name="v2.0.0", token="token")
+
+        assert result == updated_data
+
+        call_args = mock_request.call_args
+        body = call_args[0][3]
+        assert body["draft"] is False
+        assert body["tag_name"] == "v2.0.0"
 
 
 class TestMain(unittest.TestCase):
@@ -211,8 +338,14 @@ class TestMain(unittest.TestCase):
         """Test creating release when it doesn't exist."""
         mock_get.return_value = None
 
-        with patch("ensure_release.create_release") as mock_create:
-            mock_create.return_value = {"id": 123}
+        with (
+            patch("ensure_release.create_release") as mock_create,
+            patch("ensure_release.tag_exists_on_git") as mock_tag_exists,
+            patch("ensure_release.list_releases") as mock_list,
+        ):
+            mock_create.return_value = {"id": 123, "tag_name": "v1.0.0"}
+            mock_tag_exists.return_value = True
+            mock_list.return_value = []
 
             with patch("sys.stdout", new=StringIO()) as mock_stdout:
                 ensure_release.main()
@@ -265,6 +398,70 @@ class TestMain(unittest.TestCase):
             "GITHUB_REPOSITORY": "owner/repo",
         },
     )
+    def test_main_release_exists_with_broken_tag_repairs(self, mock_get, mock_update) -> None:
+        """Test Gap 2: existing release with broken tag_name is repaired."""
+        # get_release_by_tag returns existing release with broken tag_name
+        mock_get.return_value = {"id": 456, "tag_name": "untagged-broken", "draft": False}
+        # PATCH to fix tag_name succeeds
+        mock_update.return_value = {"id": 456, "tag_name": "v1.0.0", "draft": False}
+
+        with patch("sys.stdout", new=StringIO()) as mock_stdout:
+            with patch("sys.stderr", new=StringIO()) as mock_stderr:
+                ensure_release.main()
+                output = mock_stdout.getvalue()
+                stderr = mock_stderr.getvalue()
+                assert "Repaired tag_name to v1.0.0" in output
+                assert "Warning: release has tag_name=untagged-broken" in stderr
+
+        # Verify update_release was called with correct tag_name
+        mock_update.assert_called_once_with("owner", "repo", 456, tag_name="v1.0.0", token="token123")
+
+    @patch("ensure_release.update_release")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_release_exists_broken_tag_patch_fails_exits_1(self, mock_get, mock_update) -> None:
+        """Test Gap 2: if PATCH to fix existing release tag_name fails, exit 1."""
+        # get_release_by_tag returns existing release with broken tag_name
+        mock_get.return_value = {"id": 456, "tag_name": "untagged-broken", "draft": False}
+        # PATCH to fix tag_name fails (response still has wrong tag_name)
+        mock_update.return_value = {"id": 456, "tag_name": "untagged-still-broken", "draft": False}
+
+        with pytest.raises(SystemExit) as ctx:
+            ensure_release.main()
+
+        assert ctx.value.code == 1
+
+    @patch("ensure_release.update_release")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
     def test_main_release_exists_as_draft_publish(self, mock_get, mock_update) -> None:
         """Test publishing draft release when INPUT_DRAFT=false."""
         mock_get.return_value = {"id": 456, "tag_name": "v1.0.0", "draft": True}
@@ -274,7 +471,7 @@ class TestMain(unittest.TestCase):
             ensure_release.main()
             output = mock_stdout.getvalue()
             assert "Publishing draft release v1.0.0" in output
-            mock_update.assert_called_once_with("owner", "repo", 456, False, "token123")
+            mock_update.assert_called_once_with("owner", "repo", 456, draft=False, token="token123")
 
     @patch.dict(
         "os.environ",
@@ -329,6 +526,156 @@ class TestMain(unittest.TestCase):
         """Test missing GH_TOKEN causes exit."""
         with pytest.raises(SystemExit) as ctx:
             ensure_release.main()
+        assert ctx.value.code == 1
+
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_retries_exhausted_tag_missing_exits_gap1(self, mock_get, mock_tag_exists, mock_list) -> None:
+        """Test Gap 1: exhausted retries + missing tag on git refs → exit 1."""
+        mock_get.return_value = None  # Retries exhausted
+        mock_tag_exists.return_value = False  # Tag doesn't exist on git
+
+        with pytest.raises(SystemExit) as ctx:
+            ensure_release.main()
+
+        assert ctx.value.code == 1
+        mock_tag_exists.assert_called_once_with("owner", "repo", "v1.0.0", "token123")
+
+    @patch("ensure_release.update_release")
+    @patch("ensure_release.create_release")
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_create_release_wrong_tag_name_repairs_gap2(
+        self, mock_get, mock_tag_exists, mock_list, mock_create, mock_update
+    ) -> None:
+        """Test Gap 2: create_release returns untagged-..., script PATCHes it."""
+        mock_get.return_value = None  # No existing release
+        mock_tag_exists.return_value = True  # Tag exists on git
+        mock_list.return_value = []  # No pre-existing broken drafts
+        # create_release returns wrong tag_name
+        mock_create.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
+        # PATCH to fix it succeeds
+        mock_update.return_value = {"id": 123, "tag_name": "v1.0.0", "draft": False}
+
+        with patch("sys.stdout", new=StringIO()) as mock_stdout:
+            ensure_release.main()
+            output = mock_stdout.getvalue()
+            assert "Repaired tag_name to v1.0.0" in output
+
+        # Verify update_release was called to fix tag_name
+        mock_update.assert_called()
+        call_kwargs = [call[1] for call in mock_update.call_args_list if "tag_name" in call[1]]
+        assert any(call.get("tag_name") == "v1.0.0" for call in call_kwargs)
+
+    @patch("ensure_release.update_release")
+    @patch("ensure_release.create_release")
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_preexisting_broken_draft_repaired_gap3(
+        self, mock_get, mock_tag_exists, mock_list, mock_create, mock_update
+    ) -> None:
+        """Test Gap 3: pre-existing broken draft found and PATCHead in-place."""
+        mock_get.return_value = None  # No release via tag lookup
+        mock_tag_exists.return_value = True  # Tag exists on git
+        # list_releases finds a pre-existing broken draft
+        mock_list.return_value = [{"id": 999, "tag_name": "untagged-broken", "name": "v1.0.0", "draft": True}]
+        # PATCH to fix it
+        mock_update.return_value = {"id": 999, "tag_name": "v1.0.0", "draft": True}
+
+        with patch("sys.stdout", new=StringIO()) as mock_stdout:
+            ensure_release.main()
+            output = mock_stdout.getvalue()
+            assert "Found pre-existing broken draft" in output
+            assert "Repaired broken draft" in output
+
+        # Verify create_release was NOT called (broken draft was fixed instead)
+        mock_create.assert_not_called()
+        # Verify update_release was called to fix the broken draft
+        mock_update.assert_called_once()
+
+    @patch("ensure_release.update_release")
+    @patch("ensure_release.create_release")
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_create_release_patch_fails_exits(
+        self, mock_get, mock_tag_exists, mock_list, mock_create, mock_update
+    ) -> None:
+        """Test Gap 2: if PATCH to fix tag_name fails, exit 1."""
+        mock_get.return_value = None
+        mock_tag_exists.return_value = True
+        mock_list.return_value = []
+        # create_release returns wrong tag_name
+        mock_create.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
+        # PATCH to fix fails (still returns wrong tag_name)
+        mock_update.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
+
+        with pytest.raises(SystemExit) as ctx:
+            ensure_release.main()
+
         assert ctx.value.code == 1
 
 
