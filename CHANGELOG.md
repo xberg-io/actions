@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.69] - 2026-06-14
+
+### Fixed
+
+- **`rewrite-native-deps`: strip `path = "..."` from `[workspace.dependencies]` entries so the sdist's workspace `Cargo.toml` resolves on consumer install.** v1.8.66 added `[patch.*]` stripping for sdist consumers (resolves #390), but missed `[workspace.dependencies]`. cargo eagerly validates every workspace-dependency entry, even when no member uses `workspace = true` for that name. A leftover `path = "crates/<core>"` points at a directory NOT shipped in the sdist (alef publish prepare only ships the binding crate via maturin's manifest-path), so consumer `pip install` of html-to-markdown==3.6.4 on Alpine/musl bails with `failed to read .../crates/<core>/Cargo.toml`. The new step parses `Cargo.toml` after the [patch.*] strip and drops every `path` attribute from `[workspace.dependencies]` entries (both inline-table forms and dotted-table standalone lines), leaving the version so the dep resolves from the registry. Resolves kreuzberg-dev/html-to-markdown#402.
+
 ## [1.8.68] - 2026-06-14
 
 ### Fixed

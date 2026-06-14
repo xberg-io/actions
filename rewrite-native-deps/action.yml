@@ -81,3 +81,69 @@ runs:
         else
           echo "No [patch.*] sections in workspace Cargo.toml; nothing to strip."
         fi
+
+    - name: Strip path= from [workspace.dependencies] entries so sdist consumers resolve registry deps
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        # cargo eagerly validates every `[workspace.dependencies]` entry even when
+        # no member uses `workspace = true` for that name. A leftover
+        # `path = "crates/<core>"` in workspace.dependencies points at a directory
+        # NOT shipped in the sdist (alef publish prepare only ships the binding
+        # crate via maturin's manifest-path), so cargo bails on consumer install
+        # with `failed to read .../crates/<core>/Cargo.toml`. Strip the `path`
+        # attribute from every workspace.dependencies entry, leaving the version
+        # so the dep resolves from the registry. Stripping the entry entirely is
+        # also safe — alef-generated binding crates use explicit version deps,
+        # not `workspace = true` — but dropping just `path` is the minimal change.
+        # Resolves kreuzberg-dev/html-to-markdown#402 (Alpine/musl sdist install
+        # still failing after #390 fix because [workspace.dependencies] was missed).
+        if [ -f Cargo.toml ] && grep -q '^\[workspace\.dependencies\]' Cargo.toml; then
+          python3 - <<'PY'
+        import re
+        import sys
+        from pathlib import Path
+
+        p = Path("Cargo.toml")
+        lines = p.read_text().splitlines(keepends=True)
+        out = []
+        in_ws_deps = False
+        section_re = re.compile(r"^\[([^\]]+)\]")
+        # Match `path = "..."` or `path="..."`, plus a trailing comma + optional space
+        # (so `, path = "..."` cleans up to nothing inside an inline-table entry).
+        path_in_inline_re = re.compile(r",\s*path\s*=\s*\"[^\"]+\"")
+        # Also handle the form where `path` comes first: `{ path = "...", ...`
+        path_first_in_inline_re = re.compile(r"path\s*=\s*\"[^\"]+\"\s*,\s*")
+        # Standalone `path = "..."` lines inside dotted tables.
+        standalone_path_re = re.compile(r"^\s*path\s*=\s*\"[^\"]+\"\s*\n?$")
+
+        stripped_lines = 0
+        for line in lines:
+            m = section_re.match(line)
+            if m:
+                in_ws_deps = m.group(1) == "workspace.dependencies" or m.group(1).startswith("workspace.dependencies.")
+                out.append(line)
+                continue
+            if in_ws_deps:
+                if standalone_path_re.match(line):
+                    stripped_lines += 1
+                    continue
+                new = path_in_inline_re.sub("", line)
+                if new == line:
+                    new = path_first_in_inline_re.sub("", line)
+                if new != line:
+                    stripped_lines += 1
+                out.append(new)
+            else:
+                out.append(line)
+
+        if stripped_lines:
+            p.write_text("".join(out))
+            print(f"Stripped path= from {stripped_lines} [workspace.dependencies] entries.")
+        else:
+            print("No path= attributes in [workspace.dependencies]; nothing to strip.")
+        PY
+        else
+          echo "No [workspace.dependencies] section in Cargo.toml; nothing to strip."
+        fi
