@@ -4,21 +4,17 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.68] - 2026-06-14
+
+### Fixed
+
+- **Every `cargo build` / `maturin build` / `cargo zigbuild` / `cargo ndk … build` / `cargo run` / `cargo test` invocation now passes `--locked` (or `CARGO_BUILD_LOCKED=true` for the maturin-wrapped paths).** Previously a `cargo build` invocation without `--locked` silently updates the lockfile to the latest semver-compatible versions before compiling. Combined with the `cargo generate-lockfile` step in `alef publish prepare` (separately fixed in alef), this let broken upstream releases — specifically `brotli-decompressor 5.0.1` and `5.0.2`, whose `alloc-no-stdlib` v2/v3 split trips `error[E0277] StandardAlloc: alloc::Allocator<u8> is not satisfied` — leak into bindings whose committed `Cargo.lock` already pinned the known-good `5.0.0`. This caused kreuzcrawl v0.3.0-rc.60's `Build Elixir NIF (macos-arm64 nif-2.17)` and `Build PHP extension (php8.3 macos-arm64)` jobs to fail despite the source repo's pin being correct.
+
+  Sweep touches: `build-rust-cli/action.yml`, `build-rust-ffi/scripts/build.py` (in `build_cargo_args`), `build-go-ffi/scripts/build.py`, `build-java-natives/scripts/musl_builder.py` (Docker and native build paths), `build-csharp-natives/scripts/musl_builder.py` (Docker and native build paths), `build-android-natives/scripts/build.py` (the `cargo ndk … build` line), `build-dart-package/scripts/build.sh`, `build-swift-package/scripts/build.sh`, `build-swift-artifactbundle/scripts/build.sh` (4 `cargo build` + 2 `cargo zigbuild` + dry-run echoes), `build-ios-xcframework/scripts/build.sh`, `build-zig-package/scripts/build.sh`, `build-gpu-test-binary/scripts/build.sh` (changes `cargo_args=(test -p …)` to include `--locked`), `build-php-extension/action.yml` (Windows path), `build-php-extension/scripts/build-out-of-workspace.sh` (also now seeds `Cargo.lock` from `$WORKSPACE_ROOT/Cargo.lock` before `cargo generate-lockfile` so the out-of-workspace temp build inherits the workspace's pins), `build-python-sdist/scripts/build-out-of-workspace.sh` (same workspace-lock seed before `cargo generate-lockfile` so the lockfile shipped inside the sdist preserves pins on consumer install), `build-python-wheels/action.yml` (adds `CARGO_BUILD_LOCKED=true` to the `CIBW_ENVIRONMENT`, `CIBW_ENVIRONMENT_MACOS`, `CIBW_ENVIRONMENT_WINDOWS` defaults so maturin's nested cargo respects the committed lock inside cibuildwheel containers), `test-java-ffi/action.yml`, `verify-install/scripts/verify.sh` (both `cargo run` invocations).
+
+  `actions/tests/test_build_ffi.py` updated to assert the new `--locked` arg position. Existing `--locked` usages in `setup-android-ndk`, `cargo install`, `cargo-zigbuild` install, and `install-alef/scripts/unix.sh` were already correct and are unchanged. `cargo generate-lockfile` invocations in `build-elixir-hex`, `publish-hex`, and the Windows `build-php-extension` PowerShell path are unchanged — they only generate files for dry-run/staging, not for the publish artifact. `cargo update -p time --precise 0.3.47` in the PHP path stays as an explicit intentional pin.
+
 ## [1.8.67] - 2026-06-14
-
-### Changed
-
-- **All cargo invocations now pass `--locked`.** Sixteen action scripts and
-  workflow steps under `build-android-natives`, `build-csharp-natives`,
-  `build-dart-package`, `build-go-ffi`, `build-gpu-test-binary`,
-  `build-ios-xcframework`, `build-java-natives`, `build-php-extension`,
-  `build-python-sdist`, `build-rust-cli`, `build-rust-ffi`,
-  `build-swift-artifactbundle`, `build-swift-package`, `build-zig-package`,
-  `test-java-ffi`, and `verify-install` were invoking `cargo build/test/run`
-  without `--locked`. Without it, a broken upstream release (recent example:
-  `brotli-decompressor 5.0.1` over the pinned `5.0.0`) can be silently
-  substituted at build time. All wrappers now respect the committed
-  `Cargo.lock`.
 
 ### Fixed
 
