@@ -95,6 +95,31 @@ runs:
       run: |
         "$GITHUB_ACTION_PATH/scripts/verify-install.sh" "${{ inputs.target }}"
 
+    - name: Install protoc
+      shell: bash
+      run: |
+        if command -v protoc >/dev/null 2>&1; then
+          echo "protoc already present: $(protoc --version)"
+          exit 0
+        fi
+        case "$RUNNER_OS" in
+          Linux)
+            sudo apt-get update -y
+            sudo apt-get install -y --no-install-recommends protobuf-compiler
+            ;;
+          macOS)
+            brew install protobuf
+            ;;
+          Windows)
+            choco install protoc -y --no-progress
+            ;;
+          *)
+            echo "::error::Unknown RUNNER_OS=$RUNNER_OS; cannot install protoc"
+            exit 1
+            ;;
+        esac
+        protoc --version
+
     - name: Setup sccache
       if: inputs.use-sccache == 'true'
       uses: mozilla-actions/sccache-action@v0.0.10

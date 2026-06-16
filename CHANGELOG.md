@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.70] - 2026-06-16
+
+### Fixed
+
+- **`setup-rust`: install `protoc` on every runner.** Several common crates (`etcd-client`, `tonic`, anything depending on `prost-build`) shell out to `protoc` from their `build.rs`. GitHub-hosted Linux/macOS/Windows runners do not preinstall it, so `cargo build` on a consumer crate panics with `Failed to compile proto files: Could not find protoc`. The new step installs `protobuf-compiler` via apt on Linux, `protobuf` via Homebrew on macOS, and `protoc` via Chocolatey on Windows, skipping if already present. Fixes the v1.6.1 liter-llm `Build CLI binary` failures (etcd-client transitive dep through liter-llm-proxy). (`setup-rust/action.yml`)
+
 ## [1.8.69] - 2026-06-14
 
 ### Fixed
