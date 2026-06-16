@@ -227,10 +227,28 @@ def main() -> None:
             release_id = int(existing.get("id", 0))
             update_release(owner, repo, release_id, draft=False, token=token)
     else:
-        # Gap 1: If release lookup exhausted retries and returned None, verify the tag exists
-        if not tag_exists_on_git(owner, repo, tag, token):
+        # Pre-creation check: ensure tag exists on remote via exponential backoff polling
+        # workflow_dispatch pattern: tag push → dispatch → publish should see tag within seconds
+        max_tag_wait_attempts = 12
+        tag_wait_interval = 5
+        tag_confirmed = False
+
+        for attempt in range(1, max_tag_wait_attempts + 1):
+            if tag_exists_on_git(owner, repo, tag, token):
+                tag_confirmed = True
+                break
+            if attempt < max_tag_wait_attempts:
+                print(
+                    f"Tag {tag} not visible yet ({attempt}/{max_tag_wait_attempts}); "
+                    f"retrying in {tag_wait_interval}s...",
+                    file=sys.stderr,
+                )
+                time.sleep(tag_wait_interval)
+
+        if not tag_confirmed:
             print(
-                f"Error: Tag {tag} not found in repository after {20} retries and git verification",
+                f"Error: Tag {tag} not found on remote after {max_tag_wait_attempts * tag_wait_interval}s. "
+                f"Push the tag before publishing.",
                 file=sys.stderr,
             )
             sys.exit(1)

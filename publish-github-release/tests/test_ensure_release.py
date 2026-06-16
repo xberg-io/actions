@@ -528,6 +528,7 @@ class TestMain(unittest.TestCase):
             ensure_release.main()
         assert ctx.value.code == 1
 
+    @patch("ensure_release.time.sleep")
     @patch("ensure_release.list_releases")
     @patch("ensure_release.tag_exists_on_git")
     @patch("ensure_release.get_release_by_tag")
@@ -546,16 +547,19 @@ class TestMain(unittest.TestCase):
             "GITHUB_REPOSITORY": "owner/repo",
         },
     )
-    def test_main_retries_exhausted_tag_missing_exits_gap1(self, mock_get, mock_tag_exists, mock_list) -> None:
-        """Test Gap 1: exhausted retries + missing tag on git refs → exit 1."""
+    def test_main_retries_exhausted_tag_missing_exits_gap1(
+        self, mock_get, mock_tag_exists, mock_list, mock_sleep
+    ) -> None:
+        """Test Gap 1: pre-creation polling exhausted, tag missing on git refs → exit 1."""
         mock_get.return_value = None  # Retries exhausted
-        mock_tag_exists.return_value = False  # Tag doesn't exist on git
+        mock_tag_exists.return_value = False  # Tag doesn't exist on git (fails all polling attempts)
 
         with pytest.raises(SystemExit) as ctx:
             ensure_release.main()
 
         assert ctx.value.code == 1
-        mock_tag_exists.assert_called_once_with("owner", "repo", "v1.0.0", "token123")
+        # Should poll 12 times (max_tag_wait_attempts)
+        assert mock_tag_exists.call_count == 12
 
     @patch("ensure_release.update_release")
     @patch("ensure_release.create_release")
@@ -677,6 +681,84 @@ class TestMain(unittest.TestCase):
             ensure_release.main()
 
         assert ctx.value.code == 1
+
+    @patch("ensure_release.time.sleep")
+    @patch("ensure_release.create_release")
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_pre_creation_tag_polling_succeeds(
+        self, mock_get, mock_tag_exists, mock_list, mock_create, mock_sleep
+    ) -> None:
+        """Test pre-creation tag-existence polling: tag appears on retry, create succeeds."""
+        mock_get.return_value = None  # No existing release
+        # Simulate tag not visible on first attempt, then visible
+        mock_tag_exists.side_effect = [False, True]
+        mock_list.return_value = []
+        mock_create.return_value = {"id": 123, "tag_name": "v1.0.0", "draft": False}
+
+        with patch("sys.stdout", new=StringIO()) as mock_stdout:
+            ensure_release.main()
+            output = mock_stdout.getvalue()
+            assert "Creating release v1.0.0" in output
+            assert "Release v1.0.0 ready" in output
+
+        # Verify tag_exists_on_git was called twice (first returns False, second True)
+        assert mock_tag_exists.call_count == 2
+        # Verify sleep was called once (between the two attempts)
+        mock_sleep.assert_called_once()
+
+    @patch("ensure_release.time.sleep")
+    @patch("ensure_release.create_release")
+    @patch("ensure_release.list_releases")
+    @patch("ensure_release.tag_exists_on_git")
+    @patch("ensure_release.get_release_by_tag")
+    @patch.dict(
+        "os.environ",
+        {
+            "INPUT_TAG": "v1.0.0",
+            "INPUT_TITLE": "Release 1.0.0",
+            "INPUT_GENERATE_NOTES": "false",
+            "INPUT_DRAFT": "false",
+            "INPUT_PRERELEASE": "false",
+            "INPUT_NOTES": "",
+            "INPUT_TARGET": "",
+            "INPUT_DRY_RUN": "false",
+            "GH_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "owner/repo",
+        },
+    )
+    def test_main_pre_creation_tag_polling_timeout_exits(
+        self, mock_get, mock_tag_exists, mock_list, mock_create, mock_sleep
+    ) -> None:
+        """Test pre-creation tag-existence polling: tag never appears, exit 1."""
+        mock_get.return_value = None  # No existing release
+        mock_tag_exists.return_value = False  # Tag never becomes visible
+        mock_list.return_value = []
+
+        with pytest.raises(SystemExit) as ctx:
+            ensure_release.main()
+
+        assert ctx.value.code == 1
+        # Verify tag_exists_on_git was called 12 times (max_tag_wait_attempts)
+        assert mock_tag_exists.call_count == 12
+        # Verify sleep was called 11 times (between attempts, not after final one)
+        assert mock_sleep.call_count == 11
 
 
 if __name__ == "__main__":
