@@ -37,9 +37,5 @@ runs:
         elixir-version: ${{ inputs.elixir-version }}
         otp-version: ${{ inputs.otp-version }}
         hexpm-mirrors: ${{ inputs.hexpm-mirrors }}
-
-    - name: Install Hex and Rebar
-      shell: bash
-      env:
-        HEX_MIRROR: https://cdn.hex.pm
-      run: mix local.hex --force && mix local.rebar --force
+        install-hex: true
+        install-rebar: true
