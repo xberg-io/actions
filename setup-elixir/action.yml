@@ -9,6 +9,12 @@ inputs:
     description: OTP version to install
     required: false
     default: "28"
+  hexpm-mirrors:
+    description: Newline-separated list of Hex package mirrors to try in order
+    required: false
+    default: |
+      https://cdn.hex.pm
+      https://builds.hex.pm
 runs:
   using: composite
   steps:
@@ -30,7 +36,10 @@ runs:
       with:
         elixir-version: ${{ inputs.elixir-version }}
         otp-version: ${{ inputs.otp-version }}
+        hexpm-mirrors: ${{ inputs.hexpm-mirrors }}
 
     - name: Install Hex and Rebar
       shell: bash
+      env:
+        HEX_MIRROR: https://cdn.hex.pm
       run: mix local.hex --force && mix local.rebar --force

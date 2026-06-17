@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`setup-elixir`: default `hexpm-mirrors` to cdn.hex.pm to bypass builds.hex.pm OTP 27.2 TLS key_usage_mismatch.** OTP 27.2's stricter TLS validation rejects the certificate chain on `builds.hex.pm` due to a key_usage/extKeyUsage mismatch, causing `mix local.hex --force` and `mix local.rebar --force` to fail with `TLS client: … key_usage_mismatch`. The `erlef/setup-beam@v1` action supports multiple mirrors via the `hexpm-mirrors` input; the new default prioritizes `https://cdn.hex.pm` (uses a compatible cert chain) with `https://builds.hex.pm` as fallback. The action also sets `HEX_MIRROR=https://cdn.hex.pm` on the "Install Hex and Rebar" step to cover the inline `mix local.hex/rebar` calls that bypass the `erlef/setup-beam` step. Callers can override `hexpm-mirrors` to customize the mirror list. Fixes OTP 27.2 test-elixir CI failures in tslp and other Elixir-dependent polyglot repos. (`setup-elixir/action.yml`)
+
 ## [1.8.71] - 2026-06-16
 
 ### Fixed
