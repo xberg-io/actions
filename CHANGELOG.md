@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.74] - 2026-06-17
+
 ### Fixed
 
 - **`setup-elixir`: drop redundant `Install Hex and Rebar` step that pinned `HEX_MIRROR=https://cdn.hex.pm`.** The wrapper previously ran `mix local.hex --force && mix local.rebar --force` after `erlef/setup-beam@v1` had already installed both, hardcoding `HEX_MIRROR=https://cdn.hex.pm`. On arm64 GitHub-hosted runners `cdn.hex.pm` now fails DNS (`getaddrinfo ENOTFOUND cdn.hex.pm`) intermittently, causing every Setup Elixir step to fail at the redundant install even though `setup-beam`'s mirror-fallback logic had already successfully installed hex/rebar via `https://builds.hex.pm`. The wrapper now relies on `setup-beam`'s built-in `install-hex: true` / `install-rebar: true` (which honors the mirror list with proper fallback) and drops the duplicate step entirely. Fixes the rc.55 `Validate (Lint & Format)` CI failure and all downstream Elixir CI jobs on arm64 runners. (`setup-elixir/action.yml`)
