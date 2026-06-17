@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.72] - 2026-06-17
+
 ### Fixed
 
 - **`publish-crates`: inject `version = "<INPUT_VERSION>"` into every intra-workspace path-dep that lacks one, then restore the manifest after each `cargo publish`.** `cargo publish` validates every `[dependencies]`, `[dev-dependencies]`, and `[build-dependencies]` entry (including `[target.'cfg(...)'.<kind>]` and `[dependencies.<name>]` dotted-table variants) and rejects manifests where a `path = "..."` dep has no `version = "..."` constraint with `error: all dependencies must have a version requirement specified when publishing`. Some manifests deliberately omit the version on a sibling-path dep to work around unrelated build-graph bugs — kreuzberg's `crates/kreuzberg/Cargo.toml` strips it from `kreuzberg-tesseract` (commit `719a626991`) to dodge a maturin sdist "links collision" — which made every `cargo publish -p kreuzberg` fail with that error. The publish script now resolves the manifest path for each crate via `cargo metadata`, scans only dependency sections (skipping `[workspace.dependencies]`, `[features]`, etc.), rewrites every path-only entry idempotently (single-line inline tables, multi-line inline tables, and dotted-table forms), and restores the original bytes on context exit — success, failure, or exception. `workspace = true` entries and deps that already declare `version` are left untouched. Surfaced by kreuzberg `v5.0.0-rc.19`. (`publish-crates/scripts/publish.py`, `tests/test_inject_versions.py`)
