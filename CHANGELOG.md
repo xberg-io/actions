@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.73] - 2026-06-17
+
+### Fixed
+
+- **`setup-chrome`: explicitly connect chromium snap interfaces and run a blocking smoke test on linux-arm64.** The intermittent `Content snap command-chain for /snap/chromium/<rev>/gpu-2404/bin/gpu-2404-provider-wrapper not found: ensure slot is connected` abort observed downstream (kreuzcrawl C E2E job) is caused by racy snap interface autoconnect on GitHub-hosted Ubuntu ARM runners. The action now explicitly connects `chromium:{gpu-2404, hardware-observe, process-control, system-observe, mount-observe, network-observe, opengl, audio-*, camera, joystick, removable-media, cups-control, u2f-devices}` (each `|| true` since revisions vary), logs `snap connections chromium` for diagnostics, and replaces the previous `|| true` smoke test with a fail-fast retry loop that validates rendering (`chromium --headless=new --disable-gpu --no-sandbox --use-mock-keychain --dump-dom about:blank | grep -qi '<html'`). Three attempts with linear backoff; `exit 1` on final failure so a broken runner fails this step instead of producing confusing downstream test aborts. Docstring corrected — Chrome for Testing publishes no linux-arm64 build (only linux64), so the prior "downloads Chrome for Testing" claim was inaccurate. (`setup-chrome/action.yml`)
+
 ## [1.8.72] - 2026-06-17
 
 ### Fixed
