@@ -1,14 +1,17 @@
 name: Setup Chrome
 description: >
   Install a Chrome-compatible browser for headless tests. On `ubuntu-*-arm`
-  runners downloads and installs Chrome for Testing (linux-arm64) directly
-  since the chromium apt package is a snap-stub that mangles command-line flags.
+  runners installs the official chromium snap (Chrome for Testing has no
+  linux-arm64 build at the time of writing) and explicitly connects its
+  non-default interfaces so headless launches do not race snap-store
+  seeding or interface autoconnect. The install is followed by a blocking
+  smoke test that fails fast if chromium cannot render `about:blank`.
   On every other runner delegates to `browser-actions/setup-chrome@v1`
   with the requested channel/version.
 
 inputs:
   chrome-version:
-    description: "Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where the latest stable Chrome for Testing is installed."
+    description: "Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where the latest stable chromium snap is installed."
     required: false
     default: "stable"
 
@@ -27,15 +30,17 @@ runs:
           echo "linux_arm64=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Install Chrome for Testing (linux-arm64)
+    - name: Install chromium snap (linux-arm64)
       if: steps.detect.outputs.linux_arm64 == 'true'
       shell: bash
       run: |
         set -euxo pipefail
 
-        # On Ubuntu 24.04 (noble) ARM, the apt chromium package is a snap stub that mangles --flags.
-        # Install the official chromium snap with --classic confinement to get a real binary that
-        # properly handles command-line arguments like --disable-hang-monitor.
+        # Chrome for Testing publishes no linux-arm64 build (only linux64/x86_64), so on
+        # ubuntu-*-arm runners we fall back to the official chromium snap. The apt
+        # chromium package on noble is a stub that re-execs into snap and mangles
+        # command-line flags, so we install the snap directly with --classic confinement
+        # to get a real binary that respects flags like --disable-hang-monitor.
 
         # Snapd on GitHub-hosted ubuntu-*-arm runners is frequently not fully seeded when this
         # step first runs, which makes `snap install` fail with "error: cannot perform the
@@ -60,6 +65,33 @@ runs:
           sudo snap wait system seed.loaded || true
         done
 
+        # Explicitly connect non-default snap interfaces. Autoconnect on ubuntu-*-arm
+        # runners is racy — without this, headless chromium intermittently aborts with
+        # "Content snap command-chain for .../gpu-2404-provider-wrapper not found:
+        # ensure slot is connected". These connects are idempotent; allow them to fail
+        # individually (interface may not exist on every chromium revision) but verify
+        # at least the core ones below.
+        sudo snap connect chromium:hardware-observe || true
+        sudo snap connect chromium:process-control || true
+        sudo snap connect chromium:system-observe || true
+        sudo snap connect chromium:mount-observe || true
+        sudo snap connect chromium:network-observe || true
+        sudo snap connect chromium:opengl || true
+        sudo snap connect chromium:audio-playback || true
+        sudo snap connect chromium:audio-record || true
+        sudo snap connect chromium:camera || true
+        sudo snap connect chromium:joystick || true
+        sudo snap connect chromium:removable-media || true
+        sudo snap connect chromium:cups-control || true
+        sudo snap connect chromium:u2f-devices || true
+        # gpu-2404 content slot: connect explicitly so the gpu provider wrapper resolves
+        # at chromium launch (this is the root cause of the intermittent
+        # "Content snap command-chain ... not found" abort on Ubuntu ARM).
+        sudo snap connect chromium:gpu-2404 mesa-2404 || true
+
+        # Log connected interfaces for diagnostics on failure.
+        sudo snap connections chromium || true
+
         binary="/snap/chromium/current/usr/bin/chromium"
 
         # Create symlinks for common binary names
@@ -67,11 +99,31 @@ runs:
           sudo ln -sf "$binary" "/usr/local/bin/$alias"
         done
 
-        # Verify installation and proper flag handling
         chromium --version
-        # Quick sanity test: chromium should parse flags without snap wrapper errors
-        timeout 10 chromium --headless --disable-gpu --dump-dom about:blank >/dev/null 2>&1 || true
-        echo "Chrome for Testing installed successfully on linux-arm64"
+
+        # Blocking smoke test: chromium must successfully render about:blank with the
+        # same flag combo crawl tests use. We retry with backoff to absorb residual
+        # snap initialisation lag on first launch, but a final failure fails the step
+        # so a broken runner does not produce confusing downstream test failures.
+        smoke_attempts=0
+        smoke_max=3
+        until timeout 30 chromium \
+            --headless=new \
+            --disable-gpu \
+            --no-sandbox \
+            --use-mock-keychain \
+            --dump-dom about:blank | grep -qi '<html'; do
+          smoke_attempts=$((smoke_attempts + 1))
+          if [ "$smoke_attempts" -ge "$smoke_max" ]; then
+            echo "::error::chromium smoke test failed after ${smoke_max} attempts on linux-arm64"
+            sudo snap connections chromium || true
+            exit 1
+          fi
+          echo "chromium smoke attempt ${smoke_attempts} failed; sleeping $((smoke_attempts * 3))s before retry"
+          sleep $((smoke_attempts * 3))
+        done
+
+        echo "chromium snap installed and smoke-tested successfully on linux-arm64"
 
     - name: Setup Chrome (non-arm64)
       if: steps.detect.outputs.linux_arm64 != 'true'
