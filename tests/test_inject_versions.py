@@ -271,12 +271,36 @@ def test_temporary_injection_no_op_when_manifest_already_correct(tmp_path):
     manifest_path.write_text(original, encoding="utf-8")
     original_bytes = manifest_path.read_bytes()
 
-    with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION):
+    with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION) as injected:
         # Inside the context, the manifest should be byte-identical because no
-        # injection was required.
+        # injection was required, and the context must report no dirtying.
+        assert injected is False
         assert manifest_path.read_bytes() == original_bytes
 
     assert manifest_path.read_bytes() == original_bytes
+
+
+def test_temporary_injection_yields_true_when_manifest_rewritten(tmp_path):
+    original = (
+        "[dependencies]\n"
+        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
+    )
+    manifest_path = tmp_path / "Cargo.toml"
+    manifest_path.write_text(original, encoding="utf-8")
+
+    with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION) as injected:
+        # An injection occurred, so the context reports the tree is now dirty.
+        assert injected is True
+
+
+def test_temporary_injection_yields_false_for_missing_or_empty_path(tmp_path):
+    missing = tmp_path / "does-not-exist.toml"
+    with crates_mod._temporarily_inject_versions(str(missing), VERSION) as injected:
+        assert injected is False
+    with crates_mod._temporarily_inject_versions("", VERSION) as injected:
+        assert injected is False
+    with crates_mod._temporarily_inject_versions(None, VERSION) as injected:
+        assert injected is False
 
 
 def test_temporary_injection_silently_skips_missing_path(tmp_path):

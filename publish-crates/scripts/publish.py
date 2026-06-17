@@ -417,18 +417,24 @@ def _discover_manifest_paths(workspace_manifest_args: list[str]) -> dict[str, st
 
 
 @contextlib.contextmanager
-def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Iterator[None]:
+def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Iterator[bool]:
     """Inject path-dep versions into ``manifest_path`` for the duration of the context.
+
+    Yields ``True`` if the manifest was actually rewritten (and therefore the git
+    working tree is now dirty), ``False`` otherwise. Callers use this to decide
+    whether ``cargo publish`` must be invoked with ``--allow-dirty``: the injected
+    edit is an intentional, ephemeral publish-time transform, but ``cargo publish``
+    aborts on any uncommitted manifest change unless ``--allow-dirty`` is passed.
 
     Restores the original manifest content (byte-for-byte) on exit, regardless of
     whether the wrapped block raises.
     """
     if not manifest_path:
-        yield
+        yield False
         return
     path = Path(manifest_path)
     if not path.is_file():
-        yield
+        yield False
         return
     original_bytes = path.read_bytes()
     try:
@@ -436,26 +442,31 @@ def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Ite
     except UnicodeDecodeError:
         # Cargo.toml is UTF-8 by spec; if decode fails, leave the file untouched
         # rather than risk a corrupting rewrite.
-        yield
+        yield False
         return
     rewritten = inject_path_dep_versions(original_text, version)
-    if rewritten != original_text:
+    injected = rewritten != original_text
+    if injected:
         path.write_bytes(rewritten.encode("utf-8"))
     try:
-        yield
+        yield injected
     finally:
         path.write_bytes(original_bytes)
 
 
-def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
+def publish_crate(crate: str, manifest_args: list[str], allow_dirty: bool = False) -> tuple[int, str]:
     """Run ``cargo publish`` for ``crate``, retrying while an upstream crate is still propagating.
 
     Each retry re-invokes ``cargo publish``, which re-fetches the sparse index,
     so a dependency that finished propagating between attempts is picked up.
+
+    When ``allow_dirty`` is True, ``--allow-dirty`` is passed so cargo accepts the
+    publish-time path-dep version injection that intentionally dirties the manifest.
     """
+    dirty_args = ["--allow-dirty"] if allow_dirty else []
     exit_code, output = 0, ""
     for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
-        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args])
+        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, *dirty_args])
         if exit_code == 0 or is_already_published(output) or not is_dependency_not_ready(output):
             return exit_code, output
         if attempt < PUBLISH_RETRY_ATTEMPTS:
@@ -493,12 +504,13 @@ def main() -> None:
 
         if dry_run:
             print(f"  [dry-run] cargo publish -p {crate} --dry-run")
-            with _temporarily_inject_versions(crate_manifest, version):
-                _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run"])
+            with _temporarily_inject_versions(crate_manifest, version) as injected:
+                dirty_args = ["--allow-dirty"] if injected else []
+                _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run", *dirty_args])
             continue
 
-        with _temporarily_inject_versions(crate_manifest, version):
-            exit_code, output = publish_crate(crate, manifest_args)
+        with _temporarily_inject_versions(crate_manifest, version) as injected:
+            exit_code, output = publish_crate(crate, manifest_args, allow_dirty=injected)
 
         if exit_code == 0:
             print(f"  Published {crate}@{version}")

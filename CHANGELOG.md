@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish-crates`: pass `--allow-dirty` to `cargo publish` after path-dep version injection.** The v1.8.72 path-dep version injector rewrites the crate manifest in place at publish time (e.g. injecting `version = "5.0.0-rc.20"` into kreuzberg's `kreuzberg-tesseract` path-dep) and restores it on context exit. But the subsequent `cargo publish` was invoked without `--allow-dirty`, so cargo aborted with `error: 1 files in the working directory contain changes that were not yet committed into git: crates/kreuzberg/Cargo.toml`. The dirtiness is an intentional, ephemeral publish-time transform, so the publish must accept it. `_temporarily_inject_versions` now yields whether it actually rewrote the manifest, and `publish_crate` (plus the dry-run path) passes `--allow-dirty` only when an injection occurred — so unrelated/unexpected dirtiness is still caught. Surfaced by kreuzberg `v5.0.0-rc.20`. (`publish-crates/scripts/publish.py`, `tests/test_inject_versions.py`, `tests/test_publish_crates.py`)
+
 ## [1.8.74] - 2026-06-17
 
 ### Fixed

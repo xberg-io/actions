@@ -63,3 +63,35 @@ def test_parse_crate_list_extra_whitespace():
 def test_parse_crate_list_single():
     result = crates_mod.parse_crate_list("only-one")
     assert result == ["only-one"]
+
+
+# ---------------------------------------------------------------------------
+# publish_crate --allow-dirty handling
+# ---------------------------------------------------------------------------
+
+
+def test_publish_crate_passes_allow_dirty_when_injected(monkeypatch):
+    captured: list[list[str]] = []
+
+    def fake_run(cmd: list[str]):
+        captured.append(cmd)
+        return 0, "ok"
+
+    monkeypatch.setattr(crates_mod, "_run", fake_run)
+    exit_code, _ = crates_mod.publish_crate("kreuzberg", [], allow_dirty=True)
+    assert exit_code == 0
+    assert captured == [["cargo", "publish", "-p", "kreuzberg", "--allow-dirty"]]
+
+
+def test_publish_crate_omits_allow_dirty_by_default(monkeypatch):
+    captured: list[list[str]] = []
+
+    def fake_run(cmd: list[str]):
+        captured.append(cmd)
+        return 0, "ok"
+
+    monkeypatch.setattr(crates_mod, "_run", fake_run)
+    exit_code, _ = crates_mod.publish_crate("kreuzberg-tesseract", ["--manifest-path", "Cargo.toml"])
+    assert exit_code == 0
+    assert "--allow-dirty" not in captured[0]
+    assert captured == [["cargo", "publish", "-p", "kreuzberg-tesseract", "--manifest-path", "Cargo.toml"]]
