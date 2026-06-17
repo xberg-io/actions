@@ -9,8 +9,19 @@ crates.io sparse index before proceeding. This is required because cargo
 resolves intra-workspace path-dependencies via the index when packaging
 downstream crates — without this wait the next ``cargo publish`` immediately
 fails with ``failed to select a version for the requirement ...``.
+
+Before each publish, the crate's manifest is rewritten so that every
+intra-workspace ``path`` dependency that lacks a ``version`` constraint gains
+``version = "<INPUT_VERSION>"``. ``cargo publish`` rejects path-only deps with
+``all dependencies must have a version requirement specified``, but some
+manifests omit the version constraint deliberately to work around unrelated
+build-graph bugs (e.g. kreuzberg ``kreuzberg-tesseract`` for the maturin sdist
+"links collision" workaround). The original manifest is restored after each
+publish attempt, success or failure.
 """
 
+import contextlib
+import json
 import os
 import re
 import subprocess
@@ -18,6 +29,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
+from pathlib import Path
 
 # GitHub Actions captures Python stdout; default block-buffering swallows
 # per-crate progress when the job is cancelled (e.g. on timeout-minutes).
@@ -132,6 +145,308 @@ def wait_for_index(crate: str, version: str) -> None:
     )
 
 
+DEPENDENCY_SECTION_PATTERN = re.compile(
+    r"""
+    ^\[
+    (?:
+        (?P<plain>(?:dependencies|dev-dependencies|build-dependencies))
+        (?:\.(?P<plain_dep>[\w\-]+))?
+        |
+        target\.(?P<target_cfg>(?:'[^']*'|"[^"]*"|[^.\]]+))
+        \.(?P<target_kind>dependencies|dev-dependencies|build-dependencies)
+        (?:\.(?P<target_dep>[\w\-]+))?
+    )
+    \]\s*$
+    """,
+    re.VERBOSE,
+)
+
+PATH_VALUE_PATTERN = re.compile(r"""path\s*=\s*("(?:[^"\\]|\\.)*"|'[^']*')""")
+VERSION_KEY_PATTERN = re.compile(r"(?<![\w-])version\s*=")
+WORKSPACE_TRUE_PATTERN = re.compile(r"(?<![\w-])workspace\s*=\s*true(?![\w-])")
+INLINE_DEP_START_PATTERN = re.compile(r"""^\s*(?P<name>[A-Za-z0-9_\-]+)\s*=\s*\{""")
+
+
+def _is_dependency_section(header: str) -> tuple[bool, str | None]:
+    """Return (is_dep_section, dotted_dep_name).
+
+    ``dotted_dep_name`` is non-None for ``[dependencies.foo]`` style sections.
+    """
+    match = DEPENDENCY_SECTION_PATTERN.match(header.strip())
+    if not match:
+        return False, None
+    dep_name = match.group("plain_dep") or match.group("target_dep")
+    return True, dep_name
+
+
+def _strip_toml_comment(line: str) -> str:
+    """Return ``line`` with any trailing TOML comment removed (respecting quoted strings)."""
+    in_single = False
+    in_double = False
+    escape = False
+    for index, char in enumerate(line):
+        if escape:
+            escape = False
+            continue
+        if in_double and char == "\\":
+            escape = True
+            continue
+        if char == '"' and not in_single:
+            in_double = not in_double
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+            continue
+        if char == "#" and not in_single and not in_double:
+            return line[:index]
+    return line
+
+
+def _count_braces(line: str) -> tuple[int, int]:
+    """Return (opens, closes) of unquoted ``{`` and ``}`` in ``line``."""
+    no_comment = _strip_toml_comment(line)
+    in_single = False
+    in_double = False
+    escape = False
+    opens = 0
+    closes = 0
+    for char in no_comment:
+        if escape:
+            escape = False
+            continue
+        if in_double and char == "\\":
+            escape = True
+            continue
+        if char == '"' and not in_single:
+            in_double = not in_double
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+            continue
+        if in_single or in_double:
+            continue
+        if char == "{":
+            opens += 1
+        elif char == "}":
+            closes += 1
+    return opens, closes
+
+
+def _inject_version_into_inline_table(block: str, version: str) -> str:
+    """Insert ``version = "<version>"`` into the inline table spanning ``block``.
+
+    ``block`` is the substring starting at ``{`` and ending at the matching ``}``
+    (multi-line allowed). The insertion goes immediately after the ``path = "..."``
+    value so the placement is stable and minimal.
+    """
+    path_match = PATH_VALUE_PATTERN.search(block)
+    if not path_match:
+        return block
+    insertion = f', version = "{version}"'
+    end = path_match.end()
+    return block[:end] + insertion + block[end:]
+
+
+def _inject_version_into_dotted_block(block_lines: list[str], version: str) -> list[str]:
+    """Insert a ``version = "<version>"`` line under a ``[dependencies.foo]`` block.
+
+    The insertion goes immediately after the section header line so the placement
+    is stable and minimal. ``block_lines`` is mutated-but-returned for clarity.
+    """
+    if not block_lines:
+        return block_lines
+    return [block_lines[0], f'version = "{version}"\n', *block_lines[1:]]
+
+
+def _entry_needs_version(text: str) -> bool:
+    """Return True if the dependency entry ``text`` has a path but no version and is not workspace-inherited."""
+    if not PATH_VALUE_PATTERN.search(text):
+        return False
+    if WORKSPACE_TRUE_PATTERN.search(text):
+        return False
+    return not VERSION_KEY_PATTERN.search(text)
+
+
+def inject_path_dep_versions(manifest: str, version: str) -> str:  # noqa: PLR0912
+    """Return ``manifest`` with ``version = "<version>"`` injected into every path-dep that needs it.
+
+    Idempotent: deps that already declare ``version`` or ``workspace = true`` are
+    left untouched. Inline tables, multi-line inline tables, and dotted-table
+    (``[dependencies.foo]``) forms are all handled. Only ``[dependencies]``,
+    ``[dev-dependencies]``, ``[build-dependencies]`` and their
+    ``[target.'cfg(...)'.<kind>]`` variants are scanned.
+    """
+    lines = manifest.splitlines(keepends=True)
+    output: list[str] = []
+    index = 0
+    in_dep_section = False
+    dotted_dep_active = False
+    dotted_block: list[str] = []
+
+    def flush_dotted() -> None:
+        nonlocal dotted_block, dotted_dep_active
+        if not dotted_dep_active:
+            return
+        block_text = "".join(dotted_block)
+        if _entry_needs_version(block_text):
+            output.extend(_inject_version_into_dotted_block(dotted_block, version))
+        else:
+            output.extend(dotted_block)
+        dotted_block = []
+        dotted_dep_active = False
+
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+
+        if stripped.startswith("["):
+            flush_dotted()
+            is_dep, dotted_dep_name = _is_dependency_section(stripped)
+            if is_dep and dotted_dep_name is not None:
+                in_dep_section = False
+                dotted_dep_active = True
+                dotted_block = [line]
+                index += 1
+                continue
+            in_dep_section = is_dep
+            output.append(line)
+            index += 1
+            continue
+
+        if dotted_dep_active:
+            dotted_block.append(line)
+            index += 1
+            continue
+
+        if not in_dep_section:
+            output.append(line)
+            index += 1
+            continue
+
+        match = INLINE_DEP_START_PATTERN.match(line)
+        if not match:
+            output.append(line)
+            index += 1
+            continue
+
+        opens, closes = _count_braces(line)
+        entry_lines = [line]
+        depth = opens - closes
+        cursor = index
+        while depth > 0 and cursor + 1 < len(lines):
+            cursor += 1
+            next_line = lines[cursor]
+            entry_lines.append(next_line)
+            o, c = _count_braces(next_line)
+            depth += o - c
+
+        entry_text = "".join(entry_lines)
+        eq_pos = entry_text.find("=")
+        brace_pos = entry_text.find("{", eq_pos)
+        # Find matching closing brace by scanning braces with the same quoting rules.
+        depth = 0
+        close_pos = -1
+        in_single = False
+        in_double = False
+        escape = False
+        for position in range(brace_pos, len(entry_text)):
+            char = entry_text[position]
+            if escape:
+                escape = False
+                continue
+            if in_double and char == "\\":
+                escape = True
+                continue
+            if char == '"' and not in_single:
+                in_double = not in_double
+                continue
+            if char == "'" and not in_double:
+                in_single = not in_single
+                continue
+            if in_single or in_double:
+                continue
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    close_pos = position
+                    break
+
+        if close_pos == -1:
+            # Malformed manifest — emit verbatim and move on.
+            output.extend(entry_lines)
+            index = cursor + 1
+            continue
+
+        inline_block = entry_text[brace_pos : close_pos + 1]
+        if _entry_needs_version(inline_block):
+            rewritten_block = _inject_version_into_inline_table(inline_block, version)
+            rewritten = entry_text[:brace_pos] + rewritten_block + entry_text[close_pos + 1 :]
+            output.append(rewritten)
+        else:
+            output.extend(entry_lines)
+        index = cursor + 1
+
+    flush_dotted()
+    return "".join(output)
+
+
+def _discover_manifest_paths(workspace_manifest_args: list[str]) -> dict[str, str]:
+    """Return a ``{crate_name: manifest_path}`` mapping from ``cargo metadata``.
+
+    ``workspace_manifest_args`` is the existing ``--manifest-path`` list (may be empty).
+    Falls back to an empty dict if cargo metadata cannot be invoked, in which case
+    callers should fall back to skipping the injection rather than failing the publish.
+    """
+    cmd = ["cargo", "metadata", "--format-version", "1", "--no-deps", *workspace_manifest_args]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        print(
+            "  WARNING: `cargo metadata` failed; cannot map crate names to manifest paths "
+            f"for version injection. stderr:\n{result.stderr}",
+            file=sys.stderr,
+        )
+        return {}
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        print(f"  WARNING: `cargo metadata` returned invalid JSON: {exc}", file=sys.stderr)
+        return {}
+    return {package["name"]: package["manifest_path"] for package in data.get("packages", [])}
+
+
+@contextlib.contextmanager
+def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Iterator[None]:
+    """Inject path-dep versions into ``manifest_path`` for the duration of the context.
+
+    Restores the original manifest content (byte-for-byte) on exit, regardless of
+    whether the wrapped block raises.
+    """
+    if not manifest_path:
+        yield
+        return
+    path = Path(manifest_path)
+    if not path.is_file():
+        yield
+        return
+    original_bytes = path.read_bytes()
+    try:
+        original_text = original_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        # Cargo.toml is UTF-8 by spec; if decode fails, leave the file untouched
+        # rather than risk a corrupting rewrite.
+        yield
+        return
+    rewritten = inject_path_dep_versions(original_text, version)
+    if rewritten != original_text:
+        path.write_bytes(rewritten.encode("utf-8"))
+    try:
+        yield
+    finally:
+        path.write_bytes(original_bytes)
+
+
 def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     """Run ``cargo publish`` for ``crate``, retrying while an upstream crate is still propagating.
 
@@ -170,16 +485,20 @@ def main() -> None:
     crate_list = parse_crate_list(crates_input)
     manifest_args = build_manifest_args(manifest_path)
     total = len(crate_list)
+    crate_manifests = _discover_manifest_paths(manifest_args)
 
     for index, crate in enumerate(crate_list, start=1):
         print(f"Publishing {crate} ({index}/{total})...")
+        crate_manifest = crate_manifests.get(crate)
 
         if dry_run:
             print(f"  [dry-run] cargo publish -p {crate} --dry-run")
-            _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run"])
+            with _temporarily_inject_versions(crate_manifest, version):
+                _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run"])
             continue
 
-        exit_code, output = publish_crate(crate, manifest_args)
+        with _temporarily_inject_versions(crate_manifest, version):
+            exit_code, output = publish_crate(crate, manifest_args)
 
         if exit_code == 0:
             print(f"  Published {crate}@{version}")
