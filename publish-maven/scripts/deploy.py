@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
@@ -39,6 +40,55 @@ def build_mvn_args(
 def is_already_published(log_content: str) -> bool:
     """Return True if the Maven log indicates the version already exists."""
     return bool(re.search(r"component with package url.*already exists", log_content, re.IGNORECASE))
+
+
+def run_mvn_with_streaming(
+    mvn_command: list[str],
+    timeout_seconds: int,
+) -> tuple[int, str]:
+    """Run Maven command with streaming output and timeout.
+
+    Returns (returncode, accumulated_log).
+    On timeout, kills process and raises TimeoutError.
+    """
+    accumulated_log: list[str] = []
+    timed_out: bool = False
+    process_lock = threading.Lock()
+
+    def read_stream() -> None:
+        """Read stdout line-by-line and stream to console."""
+        nonlocal timed_out
+        try:
+            if proc.stdout:
+                for line in proc.stdout:
+                    with process_lock:
+                        if not timed_out:
+                            print(line, end="", flush=True)
+                            accumulated_log.append(line)
+        except Exception:
+            pass
+
+    proc = subprocess.Popen(
+        mvn_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    reader_thread = threading.Thread(target=read_stream, daemon=True)
+    reader_thread.start()
+
+    try:
+        returncode = proc.wait(timeout=timeout_seconds)
+        reader_thread.join(timeout=5)
+        return returncode, "".join(accumulated_log)
+    except subprocess.TimeoutExpired as e:
+        timed_out = True
+        proc.kill()
+        proc.wait()
+        reader_thread.join(timeout=5)
+        raise TimeoutError(f"Maven deploy exceeded {timeout_seconds}s timeout") from e
 
 
 def write_settings_xml(server_id: str, username: str, password: str, gpg_passphrase: str) -> str:
@@ -99,6 +149,7 @@ def main() -> None:
     username = os.environ.get("MAVEN_USERNAME", "")
     password = os.environ.get("MAVEN_PASSWORD", "")
     gpg_passphrase = os.environ.get("MAVEN_GPG_PASSPHRASE", "")
+    deploy_timeout = int(os.environ.get("INPUT_DEPLOY_TIMEOUT", "1800"))
 
     if not pom_file:
         print("Error: INPUT_POM_FILE is required", file=sys.stderr)
@@ -131,18 +182,30 @@ def main() -> None:
         tmp_path = tmp.name
 
     try:
-        result = subprocess.run(
-            ["mvn", "clean", "deploy", *mvn_args],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-        )
-        log_content = result.stdout or ""
-        Path(tmp_path).write_text(log_content)
-        print(log_content, end="")
+        returncode: int
+        log_content: str
+        try:
+            returncode, log_content = run_mvn_with_streaming(
+                ["mvn", "clean", "deploy", *mvn_args],
+                deploy_timeout,
+            )
+        except TimeoutError as e:
+            sys.stdout.flush()
+            print(
+                f"Error: {e}",
+                file=sys.stderr,
+            )
+            print(
+                "Maven deploy exceeded timeout — Central Portal likely stuck on publish confirmation;\n"
+                "check https://central.sonatype.com deployments.\n"
+                "If waitUntil=published, switch to validated.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
-        if result.returncode == 0:
+        Path(tmp_path).write_text(log_content)
+
+        if returncode == 0:
             print("Maven deploy completed successfully")
         elif is_already_published(log_content):
             print("Version already published to Maven Central, skipping")
