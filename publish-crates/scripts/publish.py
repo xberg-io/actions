@@ -462,11 +462,12 @@ def publish_crate(crate: str, manifest_args: list[str], allow_dirty: bool = Fals
 
     When ``allow_dirty`` is True, ``--allow-dirty`` is passed so cargo accepts the
     publish-time path-dep version injection that intentionally dirties the manifest.
+    Always passes ``--allow-dirty`` because path-dep version injection at publish time
+    is an intentional, transient transform that may dirty the working tree.
     """
-    dirty_args = ["--allow-dirty"] if allow_dirty else []
     exit_code, output = 0, ""
     for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
-        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, *dirty_args])
+        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, "--allow-dirty"])
         if exit_code == 0 or is_already_published(output) or not is_dependency_not_ready(output):
             return exit_code, output
         if attempt < PUBLISH_RETRY_ATTEMPTS:
@@ -509,8 +510,8 @@ def main() -> None:
                 _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run", *dirty_args])
             continue
 
-        with _temporarily_inject_versions(crate_manifest, version) as injected:
-            exit_code, output = publish_crate(crate, manifest_args, allow_dirty=injected)
+        with _temporarily_inject_versions(crate_manifest, version):
+            exit_code, output = publish_crate(crate, manifest_args)
 
         if exit_code == 0:
             print(f"  Published {crate}@{version}")

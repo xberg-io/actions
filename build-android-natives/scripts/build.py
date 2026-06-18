@@ -59,6 +59,8 @@ def main() -> None:
     abis_str = os.environ.get("INPUT_ABIS", "arm64-v8a,x86_64")
     api_level = os.environ.get("INPUT_API_LEVEL", "21")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/android-natives")
+    features = os.environ.get("INPUT_FEATURES", "")
+    no_default_features = os.environ.get("INPUT_NO_DEFAULT_FEATURES", "false").lower() == "true"
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
 
     abis = [a.strip() for a in abis_str.split(",") if a.strip()]
@@ -119,6 +121,10 @@ def main() -> None:
             crate_name,
             "--release",
         ]
+        if no_default_features:
+            cmd.append("--no-default-features")
+        if features:
+            cmd.extend(["--features", features])
         run_command(cmd)
 
     print(f"[build-android-natives] staged libraries under: {output_dir.resolve()}")

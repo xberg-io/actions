@@ -25,6 +25,14 @@ inputs:
     description: "Directory for the staging tree"
     required: false
     default: "dist/android-natives"
+  features:
+    description: "Cargo --features flag (comma-separated feature list). Leave empty for default features."
+    required: false
+    default: ""
+  no-default-features:
+    description: "Pass --no-default-features to cargo (true/false)"
+    required: false
+    default: "false"
   dry-run:
     description: "Skip cargo build and emit a plan only"
     required: false
@@ -47,6 +55,8 @@ runs:
         INPUT_ABIS: ${{ inputs.abis }}
         INPUT_API_LEVEL: ${{ inputs.api-level }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_FEATURES: ${{ inputs.features }}
+        INPUT_NO_DEFAULT_FEATURES: ${{ inputs.no-default-features }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
         python3 "${{ github.action_path }}/scripts/build.py"

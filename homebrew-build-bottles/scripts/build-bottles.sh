@@ -105,6 +105,15 @@ build_one_bottle() {
 
   normalize_tapped_formula "$formula"
 
+  # Ensure libheif is installed and available to pkg-config during bottle builds.
+  # Some formulae (e.g. kreuzberg) depend on libheif-sys which requires libheif.pc.
+  # Homebrew's sandbox may not expose libheif.pc without this.
+  if brew list libheif &>/dev/null; then
+    local libheif_prefix
+    libheif_prefix="$(brew --prefix libheif)"
+    export PKG_CONFIG_PATH="${libheif_prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+  fi
+
   brew install --build-bottle --verbose "${tap}/${formula}"
 
   brew bottle --json --no-rebuild "${tap}/${formula}"
