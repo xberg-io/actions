@@ -90,7 +90,7 @@ runs:
       uses: actions/setup-java@v4
       with:
         distribution: "temurin"
-        java-version: "17"
+        java-version: "25"
 
     - name: Setup .NET
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
