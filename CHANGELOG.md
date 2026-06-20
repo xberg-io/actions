@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.78] - 2026-06-20
+
+### Added
+
+- **`reusable-cli-release.yml`: `extra-cargo-args` passthrough input.** Optional string (default `""`) forwarded verbatim to `build-rust-cli` in all three build jobs (core matrix, `extra-targets`, musl), so feature-gated CLIs can pass e.g. `--features all`. kreuzcrawl ships api/mcp/mcp-http/warc/ai behind `--features all`; without this the reusable workflow would build default-feature binaries (no MCP server, no API). No-op for default-feature consumers such as html-to-markdown. (`.github/workflows/reusable-cli-release.yml`)
+
 ## [1.8.77] - 2026-06-20
 
 ### Added
