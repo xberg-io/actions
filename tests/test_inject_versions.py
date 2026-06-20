@@ -15,7 +15,8 @@ _SCRIPT_PATH = Path(__file__).resolve().parents[1] / "publish-crates" / "scripts
 
 def _import_script(name: str, path: Path):  # type: ignore[no-untyped-def]
     spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
+    assert spec
+    assert spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -31,10 +32,7 @@ VERSION = "5.0.0-rc.19"
 
 
 def test_inline_table_without_version_gets_injection():
-    manifest = (
-        "[dependencies]\n"
-        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
-    )
+    manifest = '[dependencies]\nkreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert (
         f'kreuzberg-tesseract = {{ path = "../kreuzberg-tesseract", version = "{VERSION}", optional = true }}'
@@ -44,8 +42,7 @@ def test_inline_table_without_version_gets_injection():
 
 def test_inline_table_with_version_is_left_alone():
     manifest = (
-        "[dependencies]\n"
-        'kreuzberg-libheif = { path = "../kreuzberg-libheif", version = "1.2.3", optional = true }\n'
+        '[dependencies]\nkreuzberg-libheif = { path = "../kreuzberg-libheif", version = "1.2.3", optional = true }\n'
     )
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
@@ -59,10 +56,7 @@ def test_workspace_true_entry_is_left_alone():
 
 def test_workspace_true_with_path_is_left_alone():
     # Defensive: even if both appear, workspace inheritance owns the version.
-    manifest = (
-        "[dependencies]\n"
-        'foo = { workspace = true, path = "../foo", optional = true }\n'
-    )
+    manifest = '[dependencies]\nfoo = { workspace = true, path = "../foo", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 
@@ -73,37 +67,19 @@ def test_workspace_true_with_path_is_left_alone():
 
 
 def test_dotted_table_without_version_gets_injection():
-    manifest = (
-        "[dependencies.foo]\n"
-        'path = "../foo"\n'
-        "optional = true\n"
-    )
+    manifest = '[dependencies.foo]\npath = "../foo"\noptional = true\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
-    assert (
-        "[dependencies.foo]\n"
-        f'version = "{VERSION}"\n'
-        'path = "../foo"\n'
-        "optional = true\n"
-    ) == rewritten
+    assert (f'[dependencies.foo]\nversion = "{VERSION}"\npath = "../foo"\noptional = true\n') == rewritten
 
 
 def test_dotted_table_with_version_is_left_alone():
-    manifest = (
-        "[dependencies.foo]\n"
-        'path = "../foo"\n'
-        'version = "1.2.3"\n'
-        "optional = true\n"
-    )
+    manifest = '[dependencies.foo]\npath = "../foo"\nversion = "1.2.3"\noptional = true\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 
 
 def test_dotted_table_with_workspace_is_left_alone():
-    manifest = (
-        "[dependencies.foo]\n"
-        "workspace = true\n"
-        "features = [\"bar\"]\n"
-    )
+    manifest = '[dependencies.foo]\nworkspace = true\nfeatures = ["bar"]\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 
@@ -128,10 +104,7 @@ def test_target_conditional_table_gets_injection():
 
 
 def test_target_conditional_table_with_version_left_alone():
-    manifest = (
-        "[target.'cfg(unix)'.dependencies]\n"
-        'foo = { path = "../foo", version = "1.0.0" }\n'
-    )
+    manifest = '[target.\'cfg(unix)\'.dependencies]\nfoo = { path = "../foo", version = "1.0.0" }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 
@@ -142,13 +115,13 @@ def test_target_conditional_table_with_version_left_alone():
 
 
 def test_dev_dependencies_get_injection():
-    manifest = "[dev-dependencies]\nfoo = { path = \"../foo\" }\n"
+    manifest = '[dev-dependencies]\nfoo = { path = "../foo" }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert f'version = "{VERSION}"' in rewritten
 
 
 def test_build_dependencies_get_injection():
-    manifest = "[build-dependencies]\nfoo = { path = \"../foo\" }\n"
+    manifest = '[build-dependencies]\nfoo = { path = "../foo" }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert f'version = "{VERSION}"' in rewritten
 
@@ -161,7 +134,7 @@ def test_build_dependencies_get_injection():
 def test_multiline_inline_table_without_version_gets_injection():
     manifest = (
         "[dependencies]\n"
-        "kreuzberg-tesseract = { path = \"../kreuzberg-tesseract\", default-features = false, features = [\n"
+        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", default-features = false, features = [\n'
         '    "build-tesseract-wasm",\n'
         '    "bundle-tessdata-eng",\n'
         "], optional = true }\n"
@@ -208,11 +181,7 @@ def test_non_dependency_sections_are_ignored():
 
 
 def test_dep_without_path_is_left_alone():
-    manifest = (
-        "[dependencies]\n"
-        'serde = { version = "1.0" }\n'
-        'thiserror = "1"\n'
-    )
+    manifest = '[dependencies]\nserde = { version = "1.0" }\nthiserror = "1"\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 
@@ -242,31 +211,25 @@ def test_temporary_injection_restores_original_bytes(tmp_path):
 
 
 def test_temporary_injection_restores_on_exception(tmp_path):
-    original = (
-        "[dependencies]\n"
-        'foo = { path = "../foo" }\n'
-    )
+    original = '[dependencies]\nfoo = { path = "../foo" }\n'
     manifest_path = tmp_path / "Cargo.toml"
     manifest_path.write_text(original, encoding="utf-8")
     original_bytes = manifest_path.read_bytes()
 
-    class Boom(RuntimeError):
+    class BoomError(RuntimeError):
         pass
 
     try:
         with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION):
-            raise Boom
-    except Boom:
+            raise BoomError
+    except BoomError:
         pass
 
     assert manifest_path.read_bytes() == original_bytes
 
 
 def test_temporary_injection_no_op_when_manifest_already_correct(tmp_path):
-    original = (
-        "[dependencies]\n"
-        'foo = { path = "../foo", version = "1.0.0" }\n'
-    )
+    original = '[dependencies]\nfoo = { path = "../foo", version = "1.0.0" }\n'
     manifest_path = tmp_path / "Cargo.toml"
     manifest_path.write_text(original, encoding="utf-8")
     original_bytes = manifest_path.read_bytes()
@@ -281,10 +244,7 @@ def test_temporary_injection_no_op_when_manifest_already_correct(tmp_path):
 
 
 def test_temporary_injection_yields_true_when_manifest_rewritten(tmp_path):
-    original = (
-        "[dependencies]\n"
-        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
-    )
+    original = '[dependencies]\nkreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
     manifest_path = tmp_path / "Cargo.toml"
     manifest_path.write_text(original, encoding="utf-8")
 

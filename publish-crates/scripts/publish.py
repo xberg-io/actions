@@ -267,7 +267,7 @@ def _entry_needs_version(text: str) -> bool:
     return not VERSION_KEY_PATTERN.search(text)
 
 
-def inject_path_dep_versions(manifest: str, version: str) -> str:  # noqa: PLR0912
+def inject_path_dep_versions(manifest: str, version: str) -> str:
     """Return ``manifest`` with ``version = "<version>"`` injected into every path-dep that needs it.
 
     Idempotent: deps that already declare ``version`` or ``workspace = true`` are
@@ -454,14 +454,12 @@ def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Ite
         path.write_bytes(original_bytes)
 
 
-def publish_crate(crate: str, manifest_args: list[str], allow_dirty: bool = False) -> tuple[int, str]:
+def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     """Run ``cargo publish`` for ``crate``, retrying while an upstream crate is still propagating.
 
     Each retry re-invokes ``cargo publish``, which re-fetches the sparse index,
     so a dependency that finished propagating between attempts is picked up.
 
-    When ``allow_dirty`` is True, ``--allow-dirty`` is passed so cargo accepts the
-    publish-time path-dep version injection that intentionally dirties the manifest.
     Always passes ``--allow-dirty`` because path-dep version injection at publish time
     is an intentional, transient transform that may dirty the working tree.
     """
