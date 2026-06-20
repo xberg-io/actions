@@ -10,20 +10,37 @@ on:
       - ".github/workflows/test-setup-php.yml"
 
 jobs:
-  # TODO: extend matrix to macos when needed
   test:
-    runs-on: ubuntu-latest
+    name: PHP ${{ matrix.php-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-latest is Apple Silicon (arm64). PHP 8.5 on Apple Silicon is the
+        # case that could not be provisioned while 8.5 was pre-release; it is GA +
+        # arm64-bottled now, so this matrix guards against that regression.
+        os: [ubuntu-latest, macos-latest]
+        php-version: ["8.4", "8.5"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: ./setup-php
+        with:
+          php-version: ${{ matrix.php-version }}
 
       - name: Verify installation
         shell: bash
         run: |
           php --version
           composer --version
+          php -r 'exit(version_compare(PHP_VERSION, "${{ matrix.php-version }}", ">=") ? 0 : 1);'
+
+  tools:
+    name: Tool install (phpstan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
 
       - name: Setup PHP with phpstan
         uses: ./setup-php
