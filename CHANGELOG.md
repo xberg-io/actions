@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- **`reusable-cli-proxy-publish.yml`: remove the cli-proxy reusable workflow (and its test workflow + fixtures).** It had no consumers: cli-proxy npm publishing now runs inline in each repo's `publish.yaml` via the `publish-npm@v1` composite action, because npm OIDC trusted publishing matches the `job_workflow_ref` and a reusable-workflow call would present the reusable file's name instead of `publish.yaml` (where the trusted publisher is bound). (`.github/workflows/reusable-cli-proxy-publish.yml`, `.github/workflows/test-reusable-cli-proxy-publish.yml`, `tests/fixtures/cli-proxy/`)
+
 ### Fixed
 
 - **`publish-npm`: publish the pure-JS umbrella package, not just per-platform sub-packages.** The skip guard treated any `.tgz` without a `.node` member as an empty stub, but the umbrella package consumers install (whose native binaries resolve via `optionalDependencies`) also ships no `.node` of its own — so it was silently skipped and never published, leaving only the per-platform sub-packages on the registry. A stub is now classified as a per-platform package (`os`/`cpu` pinned in its `package.json`) that lacks its prebuilt binary; the umbrella package (no `os`/`cpu`) always publishes. Surfaced by spikard `v0.16.0-rc.2`, whose `@spikard/node` umbrella was missing while its platform packages published; affects every napi-style binding repo. (`publish-npm/scripts/publish.py`, `tests/test_publish_npm.py`)

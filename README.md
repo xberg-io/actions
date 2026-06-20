@@ -138,7 +138,6 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
 | `reusable-check-registries.yml` | Matrix registry checks (replaces N separate check jobs) |
 | `reusable-python-publish.yml` | Python package build and PyPI publish |
 | `reusable-python-lint.yml` | Python linting via uv + prek |
-| `reusable-cli-proxy-publish.yml` | Publish CLI proxy npm + PyPI wrapper packages |
 
 ## Repository Workflows
 
@@ -218,16 +217,6 @@ jobs:
     uses: kreuzberg-dev/actions/.github/workflows/reusable-python-publish.yml@main
     with:
       package-name: my-package
-
-  publish-cli-proxy:
-    permissions:
-      id-token: write
-      contents: read
-    uses: kreuzberg-dev/actions/.github/workflows/reusable-cli-proxy-publish.yml@v1
-    with:
-      npm-package-dir: cli-proxy/npm
-      pypi-package-dir: cli-proxy/pypi
-      npm-tag: latest
 ```
 
 ## Development
