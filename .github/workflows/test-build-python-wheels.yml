@@ -11,7 +11,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cibw-build: cp312-manylinux_x86_64
+          - os: macos-latest
+            cibw-build: cp312-macosx_arm64
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -63,12 +71,27 @@ jobs:
           }
           RS
 
+      # Reproduce the macOS conflict: a consumer rust-toolchain.toml that pins a
+      # channel with the clippy component makes maturin's `cargo metadata`
+      # materialize that toolchain. On macos-latest the preinstalled stray
+      # cargo-clippy then collides unless the action wipes ~/.cargo + ~/.rustup
+      # first. This leg fails if the wipe regresses.
+      - name: Pin toolchain to exercise the rustup clippy-component path (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cat >rust-toolchain.toml <<'TOML'
+          [toolchain]
+          channel = "1.95"
+          components = ["rust-src", "rustfmt", "clippy"]
+          TOML
+
       - name: Build wheels via the action
         id: build
         uses: ./build-python-wheels
         with:
           package-dir: packages/python
-          cibw-build: "cp312-manylinux_x86_64"
+          cibw-build: ${{ matrix.cibw-build }}
           cibw-skip: ""
           upload-artifact: "false"
 

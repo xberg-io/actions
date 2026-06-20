@@ -129,15 +129,20 @@ runs:
           cd - &&
           rm -rf /tmp/libheif*;
           fi
-        # macOS-latest runner images pre-install a Rust toolchain into
-        # ~/.cargo and ~/.rustup. When cibuildwheel triggers
-        # `rustup install <toolchain>` (via rust-toolchain.toml), rustup
-        # may find a partially installed clippy component and fail with
+        # macos-latest runner images preinstall a Rust toolchain whose
+        # `bin/cargo-clippy` is not tracked by rustup's component manifest. When
+        # maturin runs `cargo metadata` inside a consumer checkout, the consumer's
+        # rust-toolchain.toml (channel = "1.95", components = [..., "clippy"]) makes
+        # rustup materialize the 1.95 toolchain and install the clippy component,
+        # which aborts on the untracked binary with
         # `failed to install component 'clippy-preview-aarch64-apple-darwin',
-        # detected conflict: 'bin/cargo-clippy'`. Pre-install 1.95 explicitly
-        # with minimal profile and all required components in CIBW_BEFORE_ALL_MACOS
-        # so that cibuildwheel's internal rustup skips installation.
-        CIBW_BEFORE_ALL_MACOS: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --component rust-src --component rustfmt --component clippy && source ~/.cargo/env
+        # detected conflict: 'bin/cargo-clippy'`, failing the wheel build. Wiping
+        # ~/.cargo and ~/.rustup gives the in-cibw rustup sole ownership of the
+        # toolchain state, so the rust-toolchain.toml-driven install is clean. A
+        # prior non-wiping pre-install (ac2ae06) regressed this: it staged the
+        # default `stable` toolchain (not the pinned 1.95) and left the stray
+        # binary in place, so the conflict reproduced.
+        CIBW_BEFORE_ALL_MACOS: rm -rf ~/.cargo ~/.rustup && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
         CIBW_BEFORE_ALL_WINDOWS: >
           curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
           refreshenv
