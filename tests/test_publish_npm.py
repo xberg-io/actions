@@ -1,4 +1,7 @@
 import importlib.util
+import io
+import json
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -111,3 +114,58 @@ def test_find_tgz_files(tmp_path: Path):
 def test_find_tgz_files_empty(tmp_path: Path):
     results = npm_mod.find_tgz_files(tmp_path)
     assert results == []
+
+
+# ---------------------------------------------------------------------------
+# is_platform_package / skip decision — umbrella package must publish
+# ---------------------------------------------------------------------------
+
+
+def _make_tgz(path: Path, package_json: dict, *, with_node: bool = False) -> Path:
+    """Write a minimal npm-style .tgz (members under `package/`)."""
+    with tarfile.open(path, "w:gz") as tar:
+        raw = json.dumps(package_json).encode("utf-8")
+        info = tarfile.TarInfo("package/package.json")
+        info.size = len(raw)
+        tar.addfile(info, io.BytesIO(raw))
+        if with_node:
+            blob = b"\x00binary"
+            ninfo = tarfile.TarInfo("package/index.node")
+            ninfo.size = len(blob)
+            tar.addfile(ninfo, io.BytesIO(blob))
+    return path
+
+
+def _should_skip(tgz: Path) -> bool:
+    # Mirrors the publish loop's skip guard.
+    return npm_mod.is_platform_package(tgz) and not npm_mod.has_native_binding(tgz)
+
+
+def test_platform_package_with_os_and_cpu(tmp_path: Path):
+    tgz = _make_tgz(tmp_path / "p-linux-x64-gnu.tgz", {"name": "@s/p-linux-x64-gnu", "os": ["linux"], "cpu": ["x64"]})
+    assert npm_mod.is_platform_package(tgz) is True
+
+
+def test_umbrella_package_has_no_os_or_cpu(tmp_path: Path):
+    tgz = _make_tgz(tmp_path / "p.tgz", {"name": "@s/p", "optionalDependencies": {"@s/p-linux-x64-gnu": "1.0.0"}})
+    assert npm_mod.is_platform_package(tgz) is False
+
+
+def test_umbrella_package_is_published_not_skipped(tmp_path: Path):
+    # The pure-JS umbrella package has no .node of its own but must still publish.
+    tgz = _make_tgz(tmp_path / "p.tgz", {"name": "@s/p", "optionalDependencies": {"@s/p-linux-x64-gnu": "1.0.0"}})
+    assert _should_skip(tgz) is False
+
+
+def test_platform_stub_without_binary_is_skipped(tmp_path: Path):
+    tgz = _make_tgz(tmp_path / "p-linux-x64-musl.tgz", {"name": "@s/p-linux-x64-musl", "os": ["linux"], "cpu": ["x64"]})
+    assert _should_skip(tgz) is True
+
+
+def test_platform_package_with_binary_is_published(tmp_path: Path):
+    tgz = _make_tgz(
+        tmp_path / "p-linux-x64-gnu.tgz",
+        {"name": "@s/p-linux-x64-gnu", "os": ["linux"], "cpu": ["x64"]},
+        with_node=True,
+    )
+    assert _should_skip(tgz) is False

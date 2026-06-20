@@ -6,6 +6,7 @@ Usage (GitHub Actions via env vars):
     INPUT_PACKAGES_DIR=dist/packages/ python3 publish.py
 """
 
+import json
 import os
 import re
 import subprocess
@@ -89,6 +90,31 @@ def has_native_binding(tgz_path: Path) -> bool:
             for member in tar.getmembers():
                 if member.name.endswith(".node"):
                     return True
+    except Exception:
+        pass
+    return False
+
+
+def is_platform_package(tgz_path: Path) -> bool:
+    """Check whether a .tgz is a per-platform binding package.
+
+    napi-rs platform sub-packages (e.g. `@scope/pkg-linux-x64-gnu`) pin `os`
+    and/or `cpu` in their package.json; the pure-JS umbrella package (the one
+    consumers install, whose binaries resolve via `optionalDependencies`) sets
+    neither. Only platform packages may be skipped as empty stubs — the umbrella
+    package has no `.node` of its own and must still publish.
+    """
+    import tarfile
+
+    try:
+        with tarfile.open(tgz_path, "r:gz") as tar:
+            for member in tar.getmembers():
+                if member.name.endswith("package.json") and member.name.count("/") == 1:
+                    extracted = tar.extractfile(member)
+                    if extracted is None:
+                        continue
+                    pkg = json.loads(extracted.read().decode("utf-8"))
+                    return bool(pkg.get("os") or pkg.get("cpu"))
     except Exception:
         pass
     return False
@@ -247,11 +273,14 @@ def main() -> None:
     for tgz in tgz_files:
         name = tgz.name
 
-        # Skip stub packages (platform-specific bindings without prebuilt .node files).
-        # These are placeholders created during bootstrap for musl variants and similar.
-        # Publishing them triggers npm Sigstore validation failures on empty payloads.
-        if not has_native_binding(tgz):
-            print(f"  Skipping {name} (stub package with no .node binding)")
+        # Skip per-platform stub packages (os/cpu pinned bindings without a
+        # prebuilt .node file) — placeholders created during bootstrap for musl
+        # variants and similar; publishing them triggers npm Sigstore validation
+        # failures on empty payloads. The pure-JS umbrella package also has no
+        # .node of its own but is NOT a stub: consumers install it and resolve
+        # binaries via its optionalDependencies, so it must still publish.
+        if is_platform_package(tgz) and not has_native_binding(tgz):
+            print(f"  Skipping {name} (platform stub with no .node binding)")
             skipped += 1
             continue
 

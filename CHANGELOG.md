@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish-npm`: publish the pure-JS umbrella package, not just per-platform sub-packages.** The skip guard treated any `.tgz` without a `.node` member as an empty stub, but the umbrella package consumers install (whose native binaries resolve via `optionalDependencies`) also ships no `.node` of its own — so it was silently skipped and never published, leaving only the per-platform sub-packages on the registry. A stub is now classified as a per-platform package (`os`/`cpu` pinned in its `package.json`) that lacks its prebuilt binary; the umbrella package (no `os`/`cpu`) always publishes. Surfaced by spikard `v0.16.0-rc.2`, whose `@spikard/node` umbrella was missing while its platform packages published; affects every napi-style binding repo. (`publish-npm/scripts/publish.py`, `tests/test_publish_npm.py`)
+
 ## [1.8.79] - 2026-06-20
 
 ### Added
