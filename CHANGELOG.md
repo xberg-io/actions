@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.80] - 2026-06-20
+
 ### Removed
 
 - **`reusable-cli-proxy-publish.yml`: remove the cli-proxy reusable workflow (and its test workflow + fixtures).** It had no consumers: cli-proxy npm publishing now runs inline in each repo's `publish.yaml` via the `publish-npm@v1` composite action, because npm OIDC trusted publishing matches the `job_workflow_ref` and a reusable-workflow call would present the reusable file's name instead of `publish.yaml` (where the trusted publisher is bound). (`.github/workflows/reusable-cli-proxy-publish.yml`, `.github/workflows/test-reusable-cli-proxy-publish.yml`, `tests/fixtures/cli-proxy/`)
