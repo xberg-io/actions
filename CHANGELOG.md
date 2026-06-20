@@ -4,6 +4,8 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.76] - 2026-06-20
+
 ### Fixed
 
 - **`publish-maven`: stream `mvn clean deploy` output live and bound the step with a configurable timeout.** The previous `subprocess.run(..., stdout=PIPE, stderr=STDOUT)` buffered all Maven output and printed it only after the process returned. If the Central Portal hung during publish confirmation and GitHub cancelled the job timeout, the buffered output was lost entirely, leaving zero diagnostic clues. Also, no timeout was set on the subprocess — a stuck Central Portal burn silently until GitHub's ~360min job timeout, producing an opaque "The operation was canceled" failure instead of an actionable error. The fix replaces PIPE capture with `subprocess.Popen(..., bufsize=1)` and a line-by-line reader thread that `print(line, end="", flush=True)` immediately while accumulating for the `is_already_published()` check. A bounded wall-clock timeout (default 1800s = 30min, override via `INPUT_DEPLOY_TIMEOUT`) wraps the deploy; on timeout the process is killed, all streamed output is flushed, and a clear error (with link to <https://central.sonatype.com> deployments) is printed to stderr instead of an opaque GitHub cancellation. Surfaced by tslp `v1.9.0` publish hang. (`publish-maven/scripts/deploy.py`)
