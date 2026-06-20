@@ -1,0 +1,95 @@
+name: Publish CLI Proxy Packages
+
+# Centralized publish for CLI proxy packages — the thin npm + PyPI wrapper
+# packages that download a repo's prebuilt CLI binary at install time.
+#
+# Two independent jobs, each gated by its own toggle so a repo can ship only
+# one ecosystem if needed:
+#   - npm  : delegates to publish-npm@v1 (OIDC trusted publishing; the caller
+#            job's `id-token: write` is the only credential needed).
+#   - pypi : builds the proxy sdist/wheel with `uv build` (publish-pypi does NOT
+#            build — it publishes a prebuilt dist), then delegates to
+#            publish-pypi@v1 (uv trusted publishing via OIDC). Pinned to the
+#            `pypi` environment so PyPI's trusted-publisher binding matches.
+
+on:
+  workflow_call:
+    inputs:
+      npm-package-dir:
+        description: "Directory of the npm proxy package to publish"
+        required: false
+        type: string
+        default: "cli-proxy/npm"
+      pypi-package-dir:
+        description: "Directory of the PyPI proxy package (uv builds its dist here before publishing)"
+        required: false
+        type: string
+        default: "cli-proxy/pypi"
+      npm-tag:
+        description: "npm dist-tag to apply (e.g. latest, next, beta)"
+        required: false
+        type: string
+        default: "latest"
+      publish-npm:
+        description: "Publish the npm proxy package"
+        required: false
+        type: boolean
+        default: true
+      publish-pypi:
+        description: "Publish the PyPI proxy package"
+        required: false
+        type: boolean
+        default: true
+      dry-run:
+        description: "Validate and build without actually publishing"
+        required: false
+        type: string
+        default: "false"
+      checkout-ref:
+        description: "Git ref to publish from (defaults to the triggering ref)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  npm:
+    name: Publish npm proxy package
+    if: inputs.publish-npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - uses: kreuzberg-dev/actions/publish-npm@v1
+        with:
+          package-dir: ${{ inputs.npm-package-dir }}
+          npm-tag: ${{ inputs.npm-tag }}
+          access: public
+          provenance: "true"
+          dry-run: ${{ inputs.dry-run }}
+
+  pypi:
+    name: Publish PyPI proxy package
+    if: inputs.publish-pypi
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Build PyPI proxy package
+        run: uv build "${{ inputs.pypi-package-dir }}" -o "${{ inputs.pypi-package-dir }}/dist"
+
+      - uses: kreuzberg-dev/actions/publish-pypi@v1
+        with:
+          packages-dir: ${{ inputs.pypi-package-dir }}/dist
+          dry-run: ${{ inputs.dry-run }}

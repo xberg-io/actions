@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cli-proxy-fixture"
+version = "0.0.0"
+description = "Minimal CLI proxy fixture for dry-run publish tests."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+
+[project.scripts]
+cli-proxy-fixture = "cli_proxy_fixture.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cli_proxy_fixture"]
