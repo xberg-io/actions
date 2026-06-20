@@ -78,6 +78,16 @@ on:
         required: false
         type: string
         default: "[]"
+      extra-cargo-args:
+        description: >
+          Extra arguments forwarded verbatim to `build-rust-cli` for every build
+          job (core, extra-targets, musl) — e.g. `--features all`. Required by
+          repos whose CLI is feature-gated (kreuzcrawl ships api/mcp/warc/ai
+          behind `--features all`); empty by default so default-feature repos
+          (e.g. html-to-markdown) are unaffected.
+        required: false
+        type: string
+        default: ""
 
 jobs:
   cli-binaries:
@@ -110,6 +120,7 @@ jobs:
           package-name: ${{ inputs.package-name }}
           binary-name: ${{ inputs.binary-name }}
           target: ${{ matrix.platform.target }}
+          extra-cargo-args: ${{ inputs.extra-cargo-args }}
 
       - name: Package CLI artifact
         # Archive layout (.tar.gz on Unix, .zip on Windows) varies per OS in a
@@ -177,6 +188,7 @@ jobs:
           package-name: ${{ inputs.package-name }}
           binary-name: ${{ inputs.binary-name }}
           target: ${{ matrix.platform.target }}
+          extra-cargo-args: ${{ inputs.extra-cargo-args }}
 
       - name: Package CLI artifact
         env:
@@ -240,6 +252,7 @@ jobs:
           package-name: ${{ inputs.package-name }}
           binary-name: ${{ inputs.binary-name }}
           target: x86_64-unknown-linux-musl
+          extra-cargo-args: ${{ inputs.extra-cargo-args }}
 
       - name: Package CLI artifact
         env:
