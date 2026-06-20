@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.81] - 2026-06-20
+
+### Fixed
+
+- **`retag-for-republish`: consume a `token` input so republish can move tags.** The action ran its `gh api` tag delete/create with `GH_TOKEN: github.token`, but the default `GITHUB_TOKEN` cannot write git refs (`HTTP 403 Resource not accessible by integration`), so `republish: true` flows failed at "Retag for republish". Add a `token` input (defaults to `github.token` for back-compat) and use it; callers already passing a GitHub App installation token with `contents: write` now succeed. (`retag-for-republish/action.yml`)
+
 ## [1.8.80] - 2026-06-20
 
 ### Removed

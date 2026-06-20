@@ -7,6 +7,14 @@ inputs:
   tag:
     description: "The tag to move to HEAD (e.g. v1.2.3)"
     required: true
+  token:
+    description: >
+      Token used to delete/recreate the tag via the GitHub API. The default
+      GITHUB_TOKEN cannot write git refs (returns HTTP 403), so pass a GitHub
+      App installation token with `contents: write`. Defaults to github.token
+      for backward compatibility.
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   sha:
@@ -21,6 +29,6 @@ runs:
       shell: bash
       env:
         INPUT_TAG: ${{ inputs.tag }}
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.token }}
       run: >-
         python3 "${{ github.action_path }}/scripts/retag.py"
