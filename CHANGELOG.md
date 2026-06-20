@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.79] - 2026-06-20
+
+### Added
+
+- **`reusable-cli-proxy-publish.yml`: add reusable workflow to publish cli-proxy npm + PyPI packages.** A `workflow_call` reusable workflow that publishes the thin CLI proxy wrapper packages (npm + PyPI) which download a repo's prebuilt CLI binary at install time. Two independent, separately-gated jobs: an npm job (`publish-npm`, default `true`) delegating to `publish-npm@v1` (OIDC trusted publishing, `access: public`, `provenance: true`); and a pypi job (`publish-pypi`, default `true`, pinned to the `pypi` environment) that runs `uv build` on the proxy package — `publish-pypi@v1` publishes a prebuilt dist and does not build — before delegating to `publish-pypi@v1`. The caller's job needs `permissions: id-token: write` for both registries' OIDC flows. Inputs: `npm-package-dir` (default `cli-proxy/npm`), `pypi-package-dir` (default `cli-proxy/pypi`), `npm-tag` (default `latest`), `publish-npm`/`publish-pypi` (boolean toggles), `dry-run` (default `"false"`), `checkout-ref` (default `""`). (`.github/workflows/reusable-cli-proxy-publish.yml`)
+
 ## [1.8.78] - 2026-06-20
 
 ### Added
