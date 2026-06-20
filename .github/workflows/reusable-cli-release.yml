@@ -1,0 +1,318 @@
+name: Build & Release CLI Binaries
+
+# Centralized CLI binary build + release for Rust polyglot repos.
+#
+# Builds a standalone Rust CLI for a reliable cross-platform target set, then
+# uploads the archives to the repo's GitHub Release. The reliable matrix
+# (x64+arm64 linux-gnu, arm64 macOS, x64 Windows) is the set whose runners are
+# consistently available; the more scarce runners (x64 macOS, arm64 Windows)
+# are intentionally excluded so a single starved/failed leg can never block the
+# whole release. musl is built as a separate best-effort job so its failure
+# never fails the workflow or blocks the core uploads.
+
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        description: "Cargo package name to build (e.g. html-to-markdown-cli)"
+        required: true
+        type: string
+      binary-name:
+        description: "Output binary name without extension (e.g. html-to-markdown)"
+        required: true
+        type: string
+      tag:
+        description: "Git tag of the GitHub Release to upload assets to"
+        required: true
+        type: string
+      asset-prefix:
+        description: "Prefix for staged archive names and the upload glob"
+        required: false
+        type: string
+        default: "cli-"
+      checkout-ref:
+        description: "Git ref to build (defaults to the triggering ref)"
+        required: false
+        type: string
+        default: ""
+      dry-run:
+        description: "Build and stage assets without uploading to the release"
+        required: false
+        type: string
+        default: "false"
+      build-musl:
+        description: "Also build x86_64-unknown-linux-musl as a best-effort job"
+        required: false
+        type: boolean
+        default: true
+      checksums:
+        description: >
+          Generate and upload a `<asset-prefix>SHA256SUMS` file covering all
+          uploaded archives, so consumers (e.g. cli proxy packages) can do
+          fail-closed verification.
+        required: false
+        type: boolean
+        default: false
+      targets:
+        description: >
+          JSON array of {os, target} objects for the core (required) matrix.
+          Defaults to the reliable cross-platform set. Override only when a repo
+          genuinely needs a different set.
+        required: false
+        type: string
+        default: >-
+          [
+            {"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"},
+            {"os": "ubuntu-24.04-arm", "target": "aarch64-unknown-linux-gnu"},
+            {"os": "macos-latest", "target": "aarch64-apple-darwin"},
+            {"os": "windows-latest", "target": "x86_64-pc-windows-msvc"}
+          ]
+      extra-targets:
+        description: >
+          JSON array of {os, target} objects for best-effort (continue-on-error)
+          builds — e.g. scarcer runners (x64 macOS, arm64 Windows) a repo wants
+          to ship but which must NOT block the release if their runner is
+          starved or the build fails. Uploaded only if they succeed. Empty by
+          default. Use this instead of adding flaky targets to `targets`, which
+          would re-introduce the strict-gate stranding this workflow prevents.
+        required: false
+        type: string
+        default: "[]"
+
+jobs:
+  cli-binaries:
+    name: Build CLI binary (${{ matrix.platform.target }})
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(inputs.targets) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+
+      - uses: kreuzberg-dev/actions/setup-rust@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          cache-key-prefix: publish-cli-${{ matrix.platform.target }}
+
+      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+        id: build
+        with:
+          package-name: ${{ inputs.package-name }}
+          binary-name: ${{ inputs.binary-name }}
+          target: ${{ matrix.platform.target }}
+
+      - name: Package CLI artifact
+        # Archive layout (.tar.gz on Unix, .zip on Windows) varies per OS in a
+        # way no shared composite covers; tiny and self-contained.
+        env:
+          BINARY_PATH: ${{ steps.build.outputs.binary-path }}
+          TARGET: ${{ matrix.platform.target }}
+          BINARY_NAME: ${{ inputs.binary-name }}
+          ASSET_PREFIX: ${{ inputs.asset-prefix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="${ASSET_PREFIX}${TARGET}"
+          mkdir -p "$STAGE"
+          cp LICENSE "$STAGE/" 2>/dev/null || true
+          cp README.md "$STAGE/" 2>/dev/null || true
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}.exe"
+            7z a "${STAGE}.zip" "$STAGE" >/dev/null
+          else
+            cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+            tar -czf "${STAGE}.tar.gz" "$STAGE"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.asset-prefix }}${{ matrix.platform.target }}
+          path: |
+            ${{ inputs.asset-prefix }}${{ matrix.platform.target }}.tar.gz
+            ${{ inputs.asset-prefix }}${{ matrix.platform.target }}.zip
+          if-no-files-found: ignore
+          retention-days: 14
+
+  cli-binaries-extra:
+    name: Build CLI binary (best-effort ${{ matrix.platform.target }})
+    if: ${{ inputs.extra-targets != '[]' }}
+    # Best-effort: scarcer/flaky runners a repo wants to ship but which must
+    # never block the release. The `upload` job gates only on `cli-binaries`.
+    continue-on-error: true
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(inputs.extra-targets) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+
+      - uses: kreuzberg-dev/actions/setup-rust@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          cache-key-prefix: publish-cli-${{ matrix.platform.target }}
+
+      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+        id: build
+        with:
+          package-name: ${{ inputs.package-name }}
+          binary-name: ${{ inputs.binary-name }}
+          target: ${{ matrix.platform.target }}
+
+      - name: Package CLI artifact
+        env:
+          BINARY_PATH: ${{ steps.build.outputs.binary-path }}
+          TARGET: ${{ matrix.platform.target }}
+          BINARY_NAME: ${{ inputs.binary-name }}
+          ASSET_PREFIX: ${{ inputs.asset-prefix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="${ASSET_PREFIX}${TARGET}"
+          mkdir -p "$STAGE"
+          cp LICENSE "$STAGE/" 2>/dev/null || true
+          cp README.md "$STAGE/" 2>/dev/null || true
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}.exe"
+            7z a "${STAGE}.zip" "$STAGE" >/dev/null
+          else
+            cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+            tar -czf "${STAGE}.tar.gz" "$STAGE"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.asset-prefix }}${{ matrix.platform.target }}
+          path: |
+            ${{ inputs.asset-prefix }}${{ matrix.platform.target }}.tar.gz
+            ${{ inputs.asset-prefix }}${{ matrix.platform.target }}.zip
+          if-no-files-found: ignore
+          retention-days: 14
+
+  cli-binaries-musl:
+    name: Build CLI binary (x86_64-unknown-linux-musl)
+    if: ${{ inputs.build-musl }}
+    # Best-effort: a musl failure must not fail the workflow or block the core
+    # uploads (the `upload` job gates only on `cli-binaries`).
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Free disk space
+        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+
+      - name: Install musl tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - uses: kreuzberg-dev/actions/setup-rust@v1
+        with:
+          target: x86_64-unknown-linux-musl
+          cache-key-prefix: publish-cli-x86_64-unknown-linux-musl
+
+      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+        id: build
+        with:
+          package-name: ${{ inputs.package-name }}
+          binary-name: ${{ inputs.binary-name }}
+          target: x86_64-unknown-linux-musl
+
+      - name: Package CLI artifact
+        env:
+          BINARY_PATH: ${{ steps.build.outputs.binary-path }}
+          BINARY_NAME: ${{ inputs.binary-name }}
+          ASSET_PREFIX: ${{ inputs.asset-prefix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="${ASSET_PREFIX}x86_64-unknown-linux-musl"
+          mkdir -p "$STAGE"
+          cp LICENSE "$STAGE/" 2>/dev/null || true
+          cp README.md "$STAGE/" 2>/dev/null || true
+          cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+          tar -czf "${STAGE}.tar.gz" "$STAGE"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.asset-prefix }}x86_64-unknown-linux-musl
+          path: ${{ inputs.asset-prefix }}x86_64-unknown-linux-musl.tar.gz
+          if-no-files-found: ignore
+          retention-days: 14
+
+  upload:
+    name: Upload CLI binaries to GitHub Release
+    needs: [cli-binaries, cli-binaries-extra, cli-binaries-musl]
+    # Run whenever the core matrix succeeded, even if the best-effort musl job
+    # failed or was skipped (so partial-but-complete core sets always ship).
+    if: ${{ !cancelled() && needs.cli-binaries.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ inputs.asset-prefix }}*
+          path: dist/cli
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        if: ${{ inputs.checksums }}
+        shell: bash
+        working-directory: dist/cli
+        env:
+          ASSET_PREFIX: ${{ inputs.asset-prefix }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=( *.tar.gz *.zip )
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No CLI archives found to checksum" >&2
+            exit 0
+          fi
+          sha256sum "${files[@]}" > "${ASSET_PREFIX}SHA256SUMS"
+          cat "${ASSET_PREFIX}SHA256SUMS"
+
+      - name: Ensure release is published (un-draft)
+        # Idempotent: PATCHes an existing draft to published; no-op when already
+        # published. Prevents CLI binaries from being stranded in a draft when a
+        # repo's release-finalize is gated on the whole publish matrix.
+        uses: kreuzberg-dev/actions/publish-github-release@v1
+        with:
+          tag: ${{ inputs.tag }}
+          draft: "false"
+          dry-run: ${{ inputs.dry-run }}
+
+      - uses: kreuzberg-dev/actions/upload-release-assets@v1
+        with:
+          tag: ${{ inputs.tag }}
+          working-directory: dist/cli
+          dry-run: ${{ inputs.dry-run }}
+          fail-if-empty: "false"
+          assets: |
+            ${{ inputs.asset-prefix }}*.tar.gz
+            ${{ inputs.asset-prefix }}*.zip
+            ${{ inputs.asset-prefix }}SHA256SUMS

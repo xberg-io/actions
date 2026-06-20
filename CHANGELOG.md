@@ -4,6 +4,10 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`reusable-cli-release.yml`: centralized CLI binary build + GitHub Release upload.** A `workflow_call` reusable workflow that builds a standalone Rust CLI across a reliable cross-platform matrix (x64+arm64 linux-gnu, arm64 macOS, x64 Windows) and uploads the archives to the repo's release. The reliable set deliberately excludes the scarce x64-macOS and arm64-Windows runners whose queue starvation previously blocked *all* CLI uploads — a single stuck leg failed the strict `upload` gate, leaving zero CLI assets on the release (observed on html-to-markdown v3.6.18). musl is a separate `continue-on-error` best-effort job, so its failure never fails the workflow or blocks the core uploads; `upload` runs whenever the core matrix succeeds (`!cancelled() && needs.cli-binaries.result == 'success'`). The upload step also un-drafts the release (`publish-github-release@v1 draft:false`, idempotent) so CLI binaries are never stranded in a draft, and can emit a `<asset-prefix>SHA256SUMS` file (`checksums: true`) for fail-closed verification by CLI proxy packages. Scarcer/flaky platforms (x64 macOS, arm64 Windows) belong in `extra-targets` — a separate `continue-on-error` best-effort matrix that ships when it builds but never blocks the release — rather than `targets`, which is strict-gated. Inputs: `package-name`, `binary-name`, `tag`, `asset-prefix` (default `cli-`), `checkout-ref`, `dry-run`, `build-musl` (default `true`), `checksums` (default `false`), `targets` (core matrix), `extra-targets` (best-effort matrix, default `[]`). (`.github/workflows/reusable-cli-release.yml`)
+
 ## [1.8.76] - 2026-06-20
 
 ### Fixed
