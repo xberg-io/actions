@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.82] - 2026-06-21
+
+### Fixed
+
+- **`build-python-wheels`: deterministically install the pinned Rust toolchain on macOS.** `CIBW_BEFORE_ALL_MACOS` installed the default `stable` toolchain and relied on a lazy, `rust-toolchain.toml`-driven install of the pinned channel when maturin ran `cargo metadata` — which left the toolchain without a `cargo` proxy (`error: 'cargo' is not installed for the toolchain '1.95-aarch64-apple-darwin'`), failing every macOS wheel build. Now installs rustup with `--default-toolchain none --profile default`, reads the channel from the consumer's `rust-toolchain.toml` at `$GITHUB_WORKSPACE`, and explicitly `rustup toolchain install`s it with the full default profile (so `cargo`/`clippy`/`rustfmt` are present before the build). Falls back to `stable` when no channel is found. (`build-python-wheels/action.yml`)
+
 ## [1.8.81] - 2026-06-20
 
 ### Fixed
