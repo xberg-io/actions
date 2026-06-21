@@ -26,7 +26,7 @@ inputs:
     required: false
     default: "10"
   request-timeout-ms:
-    description: "schemathesis --request-timeout (milliseconds)."
+    description: "Per-request timeout in milliseconds. Converted to seconds for schemathesis 4.x's --request-timeout."
     required: false
     default: "30000"
   checks:
@@ -34,9 +34,9 @@ inputs:
     required: false
     default: "not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance,negative_data_rejection"
   schemathesis-version:
-    description: "Optional pip spec for schemathesis (e.g. 'schemathesis==3.39.0'). Defaults to latest."
+    description: "Optional pip spec for schemathesis (e.g. 'schemathesis==4.21.0'). Defaults to the 4.x line."
     required: false
-    default: "schemathesis"
+    default: "schemathesis>=4,<5"
   extra-args:
     description: "Extra arguments appended to the schemathesis run command."
     required: false
