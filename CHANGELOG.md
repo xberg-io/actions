@@ -4,6 +4,12 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.8.83] - 2026-06-21
+
+### Fixed
+
+- **`run-api-contract-tests`: support schemathesis 4.x.** The action installed schemathesis unpinned (`latest`), so it silently moved to the 4.x line — where `--request-timeout` is interpreted in **seconds** rather than the milliseconds 3.x used. The action forwards its `request-timeout-ms` input verbatim, so the 30000 ms default became a 30000-second (effectively unbounded) per-request timeout. Convert the ms input to seconds before invoking schemathesis, and pin the default install to `schemathesis>=4,<5` so a future major can't change the CLI contract unannounced. All other flags (`--max-examples`, `--checks` and the standard check names) are unchanged on 4.x. (`run-api-contract-tests/scripts/run.sh`, `run-api-contract-tests/action.yml`)
+
 ## [1.8.82] - 2026-06-21
 
 ### Fixed
