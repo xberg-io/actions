@@ -35,8 +35,10 @@ def validate_gem_structure(path: Path) -> bool:
         return False
     result = subprocess.run(["gem", "spec", str(path)], capture_output=True, text=True, check=False)
     if result.returncode != 0:
+        # Mirror the exact command run (positional path, no `--file`: that flag was
+        # removed in RubyGems 3.3+) so the log shows what actually executed.
         print(
-            f"  Diagnostic: `gem spec --file {path.name}` exited with code {result.returncode}",
+            f"  Diagnostic: `gem spec {path.name}` exited with code {result.returncode}",
             file=sys.stderr,
         )
         if result.stderr.strip():

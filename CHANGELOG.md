@@ -4,6 +4,11 @@ All notable changes to kreuzberg-dev/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish-crates`: handle the first-ever publish of a new crate under Trusted Publishing.** crates.io OIDC tokens cannot *create* a crate that has never been published (`Trusted Publishing tokens do not support creating new crates. Publish the crate manually, first`), which hard-failed the whole release the moment a new crate (e.g. kreuzberg's `kreuzberg-candle-ocr` in v5.0.0) entered the publish list. The script now detects this specific rejection, stops retrying it (retrying never grants the token create permission), records the crate, and lets the remaining crates publish; at end-of-run it fails with one consolidated, actionable summary naming each crate and the exact one-time manual bootstrap (`CARGO_REGISTRY_TOKEN=<classic-token> cargo publish -p <crate> --allow-dirty`). Already-published versions (including an existing rc) still take the idempotent success path. (`publish-crates/scripts/publish.py`)
+- **`publish-rubygems`: report the actual `gem spec` command in the failure diagnostic.** On a structurally-invalid gem the diagnostic printed `gem spec --file <name>`, but the `--file` flag was removed in RubyGems 3.3+ and the script already invokes `gem spec <path>` positionally. The misleading text made "invalid gem structure" failures look like a flag/version problem rather than a corrupt archive. Print the real positional command. (`publish-rubygems/scripts/publish.py`)
+
 ## [1.8.83] - 2026-06-21
 
 ### Fixed

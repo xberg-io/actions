@@ -51,6 +51,17 @@ DEPENDENCY_NOT_READY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# crates.io Trusted Publishing (OIDC) tokens are scoped to crates that already
+# exist on the registry — they cannot *create* a brand-new crate. The very first
+# publish of a new crate must be done once, manually, by a maintainer holding a
+# classic API token. After that one-time bootstrap, every subsequent version
+# (including all the bindings' downstream crates) publishes fine via OIDC.
+# cargo surfaces the registry's rejection verbatim; match its stable wording.
+NEW_CRATE_TRUSTED_PUBLISHING_PATTERN = re.compile(
+    r"Trusted Publishing tokens do not support creating new crates",
+    re.IGNORECASE,
+)
+
 INDEX_POLL_TIMEOUT_SECONDS = 600
 INDEX_POLL_INTERVAL_SECONDS = 5
 
@@ -70,6 +81,16 @@ def is_already_published(output: str) -> bool:
 def is_dependency_not_ready(output: str) -> bool:
     """Return True if cargo publish failed because an upstream crate has not propagated."""
     return bool(DEPENDENCY_NOT_READY_PATTERN.search(output))
+
+
+def is_new_crate_trusted_publishing(output: str) -> bool:
+    """Return True if the publish failed because a new crate can't be created via OIDC.
+
+    crates.io Trusted Publishing tokens cannot create a crate that has never been
+    published. This is a one-time bootstrap problem, not a transient one: retrying
+    never helps, because the OIDC token will never gain create permission.
+    """
+    return bool(NEW_CRATE_TRUSTED_PUBLISHING_PATTERN.search(output))
 
 
 def build_manifest_args(manifest_path: str) -> list[str]:
@@ -466,6 +487,10 @@ def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     exit_code, output = 0, ""
     for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
         exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, "--allow-dirty"])
+        # Stop immediately on a new-crate OIDC rejection: retrying never grants the
+        # token create permission, so the only fix is a one-time manual publish.
+        if is_new_crate_trusted_publishing(output):
+            return exit_code, output
         if exit_code == 0 or is_already_published(output) or not is_dependency_not_ready(output):
             return exit_code, output
         if attempt < PUBLISH_RETRY_ATTEMPTS:
@@ -497,6 +522,12 @@ def main() -> None:
     total = len(crate_list)
     crate_manifests = _discover_manifest_paths(manifest_args)
 
+    # Crates that could not be published because they don't yet exist on
+    # crates.io and the OIDC (Trusted Publishing) token cannot create them.
+    # Collected across the whole run so independent crates still get a chance
+    # to publish, then surfaced together as one actionable summary at the end.
+    new_crates_needing_manual_publish: list[str] = []
+
     for index, crate in enumerate(crate_list, start=1):
         print(f"Publishing {crate} ({index}/{total})...")
         crate_manifest = crate_manifests.get(crate)
@@ -517,10 +548,38 @@ def main() -> None:
         elif is_already_published(output):
             print(f"  {crate}@{version} already published, skipping")
             wait_for_index(crate, version)
+        elif is_new_crate_trusted_publishing(output):
+            # First-ever publish of a brand-new crate: OIDC can't create it.
+            # Don't hard-fail the whole release here — record it and continue so
+            # already-existing crates still publish, then fail with a clear,
+            # actionable summary at the end naming the one-time manual step.
+            new_crates_needing_manual_publish.append(crate)
+            print(
+                f"  {crate} does not exist on crates.io and cannot be created via "
+                "Trusted Publishing (OIDC). A maintainer must publish it once, "
+                "manually, with a classic API token (see end-of-run summary).",
+                file=sys.stderr,
+            )
         else:
             print(f"  Error publishing {crate}:", file=sys.stderr)
             print(output, file=sys.stderr)
             sys.exit(1)
+
+    if new_crates_needing_manual_publish:
+        names = " ".join(new_crates_needing_manual_publish)
+        print(
+            "\nERROR: the following crate(s) have never been published and cannot be "
+            "created by a Trusted Publishing (OIDC) token:\n"
+            f"  {names}\n\n"
+            "crates.io requires the *first* publish of a new crate to be done once, "
+            "manually, by a maintainer holding a classic API token. After that, every "
+            "subsequent release publishes automatically via OIDC. To bootstrap each "
+            "crate above, run locally with a token that has publish-new scope:\n"
+            f"  CARGO_REGISTRY_TOKEN=<classic-token> cargo publish -p <crate> --allow-dirty\n\n"
+            "Then re-run this release; the crate will be recognized and published via OIDC.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     print("All crates published successfully")
 

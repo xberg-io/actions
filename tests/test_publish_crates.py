@@ -32,6 +32,26 @@ def test_is_already_published_false():
 
 
 # ---------------------------------------------------------------------------
+# is_new_crate_trusted_publishing
+# ---------------------------------------------------------------------------
+
+
+def test_is_new_crate_trusted_publishing_true():
+    output = (
+        "error: failed to publish to registry at https://crates.io\n"
+        "Caused by:\n"
+        "  the remote server responded with an error (status 400 Bad Request): "
+        "Trusted Publishing tokens do not support creating new crates. "
+        "Publish the crate manually, first"
+    )
+    assert crates_mod.is_new_crate_trusted_publishing(output) is True
+
+
+def test_is_new_crate_trusted_publishing_false():
+    assert crates_mod.is_new_crate_trusted_publishing("error: already exists in the registry") is False
+
+
+# ---------------------------------------------------------------------------
 # build_manifest_args
 # ---------------------------------------------------------------------------
 
@@ -85,3 +105,28 @@ def test_publish_crate_always_passes_allow_dirty(monkeypatch):
     assert captured == [
         ["cargo", "publish", "-p", "kreuzberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]
     ]
+
+
+def test_publish_crate_does_not_retry_new_crate_trusted_publishing(monkeypatch):
+    """A new-crate OIDC rejection must fail fast — retrying never grants create permission."""
+    calls = 0
+
+    def fake_run(cmd: list[str]):
+        nonlocal calls
+        calls += 1
+        return 1, "Trusted Publishing tokens do not support creating new crates. Publish the crate manually, first"
+
+    slept: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    monkeypatch.setattr(crates_mod, "_run", fake_run)
+    monkeypatch.setattr(crates_mod.time, "sleep", fake_sleep)
+
+    exit_code, output = crates_mod.publish_crate("kreuzberg-candle-ocr", [])
+
+    assert exit_code == 1
+    assert crates_mod.is_new_crate_trusted_publishing(output) is True
+    assert calls == 1, "must not retry the new-crate rejection"
+    assert slept == [], "must not sleep between (non-existent) retries"
