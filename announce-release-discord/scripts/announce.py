@@ -3,10 +3,12 @@
 
 Behavior:
   - Skip prerelease tags (any tag containing a '-' suffix per semver).
-  - Dedup via a marker asset (.discord-announced) on the GitHub Release —
+  - Dedup via a marker asset (discord-announced.marker) on the GitHub Release —
     surviving tag delete/recreate republish cycles, since the prepare job
     only creates the release if missing.
-  - Fetch release notes from the GitHub Release body when not provided.
+  - Fetch release notes from the GitHub Release body when not provided, stripping
+    language install snippets and regenerating GitHub release notes when the body
+    has been replaced by package-specific instructions.
   - POST a Discord embed via the webhook.
   - Upload the marker asset on success.
 
@@ -39,6 +41,12 @@ DISCORD_DESCRIPTION_LIMIT = 4000
 DEFAULT_EMBED_COLOR = 0x5865F2  # Discord Blurple
 STABLE_TAG_PATTERN = re.compile(r"^v\d+\.\d+\.\d+$")
 ALLOWED_WEBHOOK_SCHEMES = frozenset({"https"})
+RELEASE_FIELDS = "body,name,publishedAt,targetCommitish,url"
+PACKAGE_INSTALL_SECTION_PATTERNS = (
+    re.compile(r"(?im)^\s*<!--\s*zig-fetch\s*-->\s*$"),
+    re.compile(r"(?im)^\s*#{0,6}\s*Swift Package Manager\s*$"),
+    re.compile(r"(?im)^\s*#{1,6}\s*Zig\s*$"),
+)
 
 
 def env_str(key: str, default: str = "") -> str:
@@ -90,14 +98,67 @@ def already_announced(tag: str, repo: str) -> bool:
 
 
 def fetch_release(tag: str, repo: str) -> dict[str, Any]:
-    payload = gh_release_view(tag, "body,name,publishedAt,url", repo)
+    payload = gh_release_view(tag, RELEASE_FIELDS, repo)
     return payload or {}
+
+
+def generate_release_notes(tag: str, repo: str, target_commitish: str = "") -> dict[str, Any]:
+    cmd = [
+        "gh",
+        "api",
+        f"repos/{repo}/releases/generate-notes",
+        "-X",
+        "POST",
+        "-f",
+        f"tag_name={tag}",
+    ]
+    if target_commitish:
+        cmd.extend(["-f", f"target_commitish={target_commitish}"])
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        if result.stderr:
+            print(f"Warning: gh release generate-notes failed: {result.stderr.strip()}", file=sys.stderr)
+        return {}
+    try:
+        parsed = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return {}
+    return cast("dict[str, Any]", parsed) if isinstance(parsed, dict) else {}
+
+
+def is_placeholder_release_note(body: str, tag: str) -> bool:
+    return body.strip() == f"Release {tag}"
+
+
+def release_log_from_body(raw: str, tag: str) -> str:
+    body = (raw or "").strip()
+    if not body:
+        return ""
+
+    section_starts = [
+        match.start() for pattern in PACKAGE_INSTALL_SECTION_PATTERNS if (match := pattern.search(body)) is not None
+    ]
+    if section_starts:
+        body = body[: min(section_starts)].strip()
+
+    if is_placeholder_release_note(body, tag):
+        return ""
+    return body
+
+
+def release_log_for_announcement(release: dict[str, Any], tag: str, repo: str) -> str:
+    body_log = release_log_from_body(str(release.get("body") or ""), tag)
+    if body_log:
+        return body_log
+
+    generated = generate_release_notes(tag, repo, str(release.get("targetCommitish") or ""))
+    return str(generated.get("body") or "").strip()
 
 
 def normalize_notes(raw: str, tag: str) -> str:
     body = (raw or "").strip()
-    placeholder = f"Release {tag}"
-    if not body or body == placeholder:
+    if not body or is_placeholder_release_note(body, tag):
         return "_No release notes provided._"
     if len(body) > DISCORD_DESCRIPTION_LIMIT:
         body = body[: DISCORD_DESCRIPTION_LIMIT - 1].rstrip() + "…"
@@ -246,7 +307,7 @@ def main() -> None:
         timestamp = _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
     else:
         release = fetch_release(tag, repo)
-        description = normalize_notes(release.get("body", ""), tag)
+        description = normalize_notes(release_log_for_announcement(release, tag, repo), tag)
         timestamp = release.get("publishedAt") or _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
 
     payload = build_payload(

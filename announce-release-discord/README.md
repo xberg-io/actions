@@ -1,13 +1,17 @@
 # announce-release-discord
 
-Post a release announcement to a Discord channel via webhook, with two
-guarantees the publish workflows rely on:
+Post a release announcement to a Discord channel via webhook, with the
+behaviors the publish workflows rely on:
 
 - **Prerelease tags are skipped.** Only `vMAJOR.MINOR.PATCH` tags announce.
   Anything containing a `-` suffix (`-rc.1`, `-alpha`, `-beta`, `-pre`) is
   ignored.
+- **Release-log body.** The announcement uses the release log, not language
+  install snippets. When a GitHub Release body has been replaced by Swift
+  instructions or appended with the Zig fetch block, the action strips those
+  sections and regenerates GitHub release notes if no release log remains.
 - **Idempotent.** After a successful post, the action uploads a
-  `.discord-announced` marker asset to the GitHub Release. Subsequent runs
+  `discord-announced.marker` marker asset to the GitHub Release. Subsequent runs
   on the same tag (e.g. after a tag delete + recreate + republish) detect
   the marker and skip — no double announcements.
 
@@ -85,7 +89,7 @@ marker upload.
 | `webhook-url` | yes | — | Discord webhook URL — pass via secrets. |
 | `repo` | no | `${{ github.repository }}` | `owner/name`, used for the release URL and embed footer. |
 | `project-name` | no | repo name | Display name in the embed title. |
-| `notes` | no | empty | Override the release body. When empty, fetched from the GitHub Release. |
+| `notes` | no | empty | Override the release body. When empty, fetched from the GitHub Release log. |
 | `color` | no | `0x5865F2` | Embed accent color (decimal, `0xHEX`, or `#HEX`). |
 | `dry-run` | no | `false` | Render the payload to logs without posting. |
 | `token` | no | `${{ github.token }}` | Used by `gh release view` and the marker asset upload. |
@@ -101,7 +105,7 @@ marker upload.
 After a successful POST the action runs:
 
 ```sh
-gh release upload "$TAG" .discord-announced --clobber
+gh release upload "$TAG" discord-announced.marker --clobber
 ```
 
 On the next run for the same tag, the action checks
@@ -111,5 +115,5 @@ step in publish workflows only **creates** the release if missing — it
 never deletes — so the marker survives tag retag/republish cycles.
 
 If you ever need to force a re-announcement (e.g. content was wrong),
-manually delete the `.discord-announced` asset from the GitHub Release
+manually delete the `discord-announced.marker` asset from the GitHub Release
 and rerun the workflow.
