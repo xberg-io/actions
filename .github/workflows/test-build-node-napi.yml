@@ -79,7 +79,10 @@ jobs:
               "build": "napi build --platform --release"
             },
             "files": ["index.js", "index.d.ts", "*.node"],
-            "napi": { "name": "fixture-napi" },
+            "napi": {
+              "binaryName": "fixture-napi",
+              "targets": ["x86_64-unknown-linux-gnu"]
+            },
             "devDependencies": {
               "@napi-rs/cli": "3.7.2"
             }
