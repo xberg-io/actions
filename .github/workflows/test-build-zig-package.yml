@@ -60,7 +60,7 @@ jobs:
           .{
               .name = .fixture,
               .version = "0.0.1",
-              .fingerprint = 0xfeedfacecafebeef,
+              .fingerprint = 0x5e540eeff314b8d,
               .paths = .{""},
           }
           ZON

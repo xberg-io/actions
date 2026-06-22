@@ -93,8 +93,8 @@ mkdir -p "$WORKSPACE_ROOT/target/release"
 # Determine OS and copy appropriate artifact.
 if [[ "${RUNNER_OS:-}" == "macOS" ]] || [[ "$(uname)" == "Darwin" ]]; then
   cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.dylib" "$WORKSPACE_ROOT/target/release/"
-  echo "extension-path=$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.dylib"
+  echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.dylib"
 else
   cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.so" "$WORKSPACE_ROOT/target/release/"
-  echo "extension-path=$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.so"
+  echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.so"
 fi
