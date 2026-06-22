@@ -48,8 +48,12 @@ def validate_gem_structure(path: Path) -> bool:
 
 
 def find_gem_files(directory: Path) -> list[Path]:
-    """Return all *.gem files in directory (non-recursive)."""
-    return sorted(directory.glob("*.gem"))
+    """Return all *.gem files in directory or subdirectories.
+
+    GitHub Actions download-artifact with merge-multiple: true creates nested
+    directory structure (dist/rubygems-{label}/*.gem), so we search recursively.
+    """
+    return sorted(directory.rglob("*.gem"))
 
 
 def _run(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
