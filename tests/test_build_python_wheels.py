@@ -20,10 +20,21 @@ def _read() -> str:
 
 
 def _macos_before_all(content: str) -> str:
-    for line in content.splitlines():
+    lines = content.splitlines()
+    for index, line in enumerate(lines):
         stripped = line.strip()
         if stripped.startswith("CIBW_BEFORE_ALL_MACOS:"):
-            return stripped.split(":", 1)[1].strip()
+            value = stripped.split(":", 1)[1].strip()
+            if value != ">":
+                return value
+
+            block_lines = []
+            for block_line in lines[index + 1 :]:
+                if block_line.startswith("        ") and block_line.strip():
+                    block_lines.append(block_line.strip())
+                    continue
+                break
+            return "\n".join(block_lines)
     raise AssertionError("CIBW_BEFORE_ALL_MACOS not found in action.yml")
 
 
