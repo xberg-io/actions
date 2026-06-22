@@ -79,7 +79,12 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        pnpm install --filter ./${{ inputs.crate-dir }}...
+        # --no-frozen-lockfile: pnpm defaults frozen-lockfile=true in CI, but the
+        # napi platform packages live in optionalDependencies pinned to the
+        # unpublished release version and can never be recorded in pnpm-lock.yaml,
+        # so a frozen install fails with ERR_PNPM_OUTDATED_LOCKFILE. The lockfile
+        # is left unchanged (only the unrecordable optional deps differ).
+        pnpm install --no-frozen-lockfile --filter ./${{ inputs.crate-dir }}...
 
     - name: Build NAPI-RS bindings (default / legacy)
       if: inputs.target == ''
