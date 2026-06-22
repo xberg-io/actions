@@ -34,6 +34,7 @@ jobs:
           path = "src/main.rs"
           TOML
           echo 'fn main() { println!("hello from fixture-cli"); }' >src/main.rs
+          cargo generate-lockfile --offline
 
       - name: Build CLI binary via the action
         id: build
