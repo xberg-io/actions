@@ -47,6 +47,7 @@ jobs:
           #pragma once
           int fixture_add(int a, int b);
           H
+          cargo generate-lockfile
 
       - name: Build Go FFI archive via the action
         id: build

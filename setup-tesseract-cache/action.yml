@@ -44,6 +44,15 @@ runs:
       shell: bash
       run: ${{ github.action_path }}/scripts/setup-dirs.sh "${{ inputs.label }}" "${{ inputs.cache-dir-prefix }}"
 
+    - name: Resolve cache key paths
+      id: cache-key-paths
+      if: inputs.enable-cache == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        crate_dir="$(dirname "${{ inputs.tesseract-crate-toml }}")"
+        echo "build-rs=${crate_dir}/build.rs" >> "$GITHUB_OUTPUT"
+
     - name: Cache tesseract build cache
       if: inputs.enable-cache == 'true'
       uses: actions/cache@v5
@@ -51,7 +60,7 @@ runs:
         path: |
           ${{ inputs.cache-dir-prefix }}/${{ inputs.label }}
           .xdg-cache/${{ inputs.label }}
-        key: kreuzberg-tesseract-cache-v2-${{ runner.os }}-${{ inputs.label }}-${{ hashFiles(inputs.tesseract-crate-toml, format('{0}/build.rs', dirname(inputs.tesseract-crate-toml))) }}
+        key: kreuzberg-tesseract-cache-v2-${{ runner.os }}-${{ inputs.label }}-${{ hashFiles(inputs.tesseract-crate-toml, steps.cache-key-paths.outputs.build-rs) }}
         restore-keys: |
           kreuzberg-tesseract-cache-v2-${{ runner.os }}-${{ inputs.label }}-
 

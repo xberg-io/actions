@@ -50,10 +50,9 @@ jobs:
         shell: bash
         env:
           INPUT_TAG: v0.0.0-fixture
-          GITHUB_REPOSITORY: ""
         run: |
           set +e
-          output=$(python3 retag-for-republish/scripts/retag.py 2>&1)
+          output=$(env -u GITHUB_REPOSITORY python3 retag-for-republish/scripts/retag.py 2>&1)
           rc=$?
           set -e
           if [[ "${rc}" -eq 0 ]]; then

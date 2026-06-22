@@ -43,6 +43,7 @@ jobs:
           #[unsafe(no_mangle)]
           pub extern "C" fn fixture_add(a: i32, b: i32) -> i32 { a + b }
           RS
+          cargo generate-lockfile
 
       - name: Build Java natives via the action
         id: build

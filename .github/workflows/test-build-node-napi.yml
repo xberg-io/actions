@@ -23,14 +23,26 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install napi CLI
+      - name: Install pnpm
         shell: bash
-        run: npm install -g @napi-rs/cli
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.25.0 --activate
 
       - name: Stage a tiny NAPI-RS crate
         shell: bash
         run: |
           mkdir -p packages/node/src
+          cat >pnpm-workspace.yaml <<'YAML'
+          packages:
+            - "packages/*"
+          YAML
+          cat >package.json <<'JSON'
+          {
+            "private": true,
+            "packageManager": "pnpm@10.25.0"
+          }
+          JSON
           cat >packages/node/Cargo.toml <<'TOML'
           [package]
           name = "fixture-napi"
@@ -63,16 +75,23 @@ jobs:
             "name": "fixture-napi",
             "version": "0.0.1",
             "main": "index.js",
+            "scripts": {
+              "build": "napi build --platform --release"
+            },
             "files": ["index.js", "index.d.ts", "*.node"],
-            "napi": { "name": "fixture-napi" }
+            "napi": { "name": "fixture-napi" },
+            "devDependencies": {
+              "@napi-rs/cli": "3.7.2"
+            }
           }
           JSON
+          cargo generate-lockfile --manifest-path packages/node/Cargo.toml
 
       - name: Build NAPI bindings via the action
         uses: ./build-node-napi
         with:
           crate-dir: packages/node
-          build-command: "napi build --platform --release"
+          build-command: "pnpm run build"
 
       - name: Verify .node artifact produced
         shell: bash

@@ -66,7 +66,11 @@ if ($DllDirs.Count -eq 0) {
   exit 1
 }
 
-$Dest = Join-Path $env:GITHUB_WORKSPACE $DestDir
+if ([System.IO.Path]::IsPathRooted($DestDir)) {
+  $Dest = $DestDir
+} else {
+  $Dest = Join-Path $env:GITHUB_WORKSPACE $DestDir
+}
 New-Item -ItemType Directory -Path $Dest -Force | Out-Null
 Copy-Item -Path (Join-Path $OrtLib '*') -Destination $Dest -Force
 foreach ($Dir in $DllDirs) {

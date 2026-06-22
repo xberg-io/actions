@@ -64,6 +64,7 @@ jobs:
               .paths = .{""},
           }
           ZON
+          cargo generate-lockfile
 
       - name: Build Zig package via the action
         id: build

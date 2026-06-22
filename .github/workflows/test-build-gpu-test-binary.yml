@@ -35,6 +35,7 @@ jobs:
           TOML
           echo 'pub fn add(a: i32, b: i32) -> i32 { a + b }' >fixture/src/lib.rs
           echo '#[test] fn t() { assert_eq!(fixture_pkg::add(1, 1), 2); }' >fixture/tests/smoke.rs
+          cargo generate-lockfile --manifest-path fixture/Cargo.toml
 
       - name: Build the test binary via the action
         id: build

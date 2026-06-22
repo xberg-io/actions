@@ -49,6 +49,7 @@ jobs:
 
           rustler::init!("Elixir.FixtureNif");
           RS
+          cargo generate-lockfile
 
       - name: Build Elixir NIF via the action
         id: build

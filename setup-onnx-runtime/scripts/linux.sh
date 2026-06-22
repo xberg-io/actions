@@ -59,7 +59,10 @@ if ! ls "$ort_root/lib"/*.so* 1>/dev/null 2>&1; then
   exit 1
 fi
 
-dest="$GITHUB_WORKSPACE/$dest_dir"
+case "$dest_dir" in
+/*) dest="$dest_dir" ;;
+*) dest="$GITHUB_WORKSPACE/$dest_dir" ;;
+esac
 mkdir -p "$dest"
 cp -f "$ort_root/lib/"*.so* "$dest/"
 

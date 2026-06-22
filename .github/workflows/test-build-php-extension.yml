@@ -26,8 +26,8 @@ jobs:
       - name: Stage a tiny ext-php-rs crate
         shell: bash
         run: |
-          mkdir -p src
-          cat >Cargo.toml <<'TOML'
+          mkdir -p packages/fixture-phpext/src
+          cat >packages/fixture-phpext/Cargo.toml <<'TOML'
           [package]
           name = "fixture-phpext"
           version = "0.0.1"
@@ -41,7 +41,7 @@ jobs:
           [dependencies]
           ext-php-rs = "0.13"
           TOML
-          cat >src/lib.rs <<'RS'
+          cat >packages/fixture-phpext/src/lib.rs <<'RS'
           use ext_php_rs::prelude::*;
 
           #[php_function]
