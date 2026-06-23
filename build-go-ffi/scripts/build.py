@@ -42,9 +42,23 @@ def cargo_release_dir(target: str) -> Path:
     return Path("target") / target / "release"
 
 
-def run_cargo_build(crate_name: str, target: str) -> None:
-    """Invoke ``cargo build -p <crate> --release --target <triple>``."""
-    cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
+def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> None:
+    """Invoke cargo build (or cargo zigbuild for linux-gnu with glibc floor).
+
+    For linux-gnu targets with glibc_version set, uses cargo zigbuild with
+    --target <triple>.<glibc_version> for glibc floor lowering. Artifacts
+    are still emitted to target/<base-triple>/release.
+    """
+    # Use zigbuild for linux-gnu targets with glibc floor lowering
+    use_zigbuild = "linux-gnu" in target and glibc_version
+    glibc_suffixed_target = f"{target}.{glibc_version}" if use_zigbuild else target
+
+    if use_zigbuild:
+        cmd = ["cargo", "zigbuild", "--locked", "-p", crate_name, "--release", "--target", glibc_suffixed_target]
+        print(f"[build-go-ffi] glibc floor: {glibc_version} (target: {glibc_suffixed_target})")
+    else:
+        cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
+
     print(f"[build-go-ffi] Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
@@ -101,6 +115,7 @@ def main() -> None:
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/go-ffi")
     archive_name = os.environ.get("INPUT_ARCHIVE_NAME", "") or f"{lib_name}-{target}.tar.gz"
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
+    glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
 
     archive_path = (output_dir / archive_name).resolve()
     staging_dir = output_dir / f"{lib_name}-{target}"
@@ -112,6 +127,8 @@ def main() -> None:
         print(f"  lib-name:     {lib_name}")
         print(f"  header-path:  {header_path}")
         print(f"  archive-path: {archive_path}")
+        if glibc_version:
+            print(f"  glibc-version: {glibc_version}")
         write_github_output("archive-path", str(archive_path))
         write_github_output("archive-sha256", "")
         return
@@ -120,7 +137,7 @@ def main() -> None:
         print(f"Error: header not found at {header_path}", file=sys.stderr)
         sys.exit(1)
 
-    run_cargo_build(crate_name, target)
+    run_cargo_build(crate_name, target, glibc_version)
 
     release_dir = cargo_release_dir(target)
     library = release_dir / library_filename(lib_name, target)

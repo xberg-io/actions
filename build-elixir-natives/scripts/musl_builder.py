@@ -128,10 +128,13 @@ def build_or_fallback(
     target: str,
     manifest_path: Path | None = None,
     env_vars: dict[str, str] | None = None,
+    glibc_version: str = "",
 ) -> None:
     """Build a cdylib crate, using Docker for musl targets if necessary.
 
     For musl targets: builds in Alpine container.
+    For gnu targets with glibc_version set: builds with cargo zigbuild to pin the
+    glibc floor (e.g. 2.28).
     For other targets: builds natively on the host.
 
     Args:
@@ -139,14 +142,30 @@ def build_or_fallback(
         target: Rust target triple
         manifest_path: Optional path to Cargo.toml (used for both Docker and native builds)
         env_vars: Optional dict of environment variables to pass to cargo
+        glibc_version: glibc floor for gnu targets (e.g. "2.28"); empty = native cargo build
     """
     if is_musl_target(target):
         build_in_docker(crate_name, target, manifest_path, env_vars)
     else:
-        # Native build. `--locked` enforces the committed Cargo.lock so transitive
-        # deps don't silently re-resolve to incompatible versions (e.g. time 0.3.48
-        # vs cookie 0.18.1's expected time 0.3.47).
-        build_cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
+        # Native build, or `cargo zigbuild` for gnu targets to pin the glibc floor.
+        # `--locked` enforces the committed Cargo.lock so transitive deps don't
+        # silently re-resolve to incompatible versions (e.g. time 0.3.48 vs
+        # cookie 0.18.1's expected time 0.3.47). `cargo zigbuild` REPLACES the
+        # `build` subcommand (no literal "build" follows it).
+        use_zigbuild = "linux-gnu" in target and glibc_version
+        if use_zigbuild:
+            build_cmd = [
+                "cargo",
+                "zigbuild",
+                "--locked",
+                "-p",
+                crate_name,
+                "--release",
+                "--target",
+                f"{target}.{glibc_version}",
+            ]
+        else:
+            build_cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
         if manifest_path:
             build_cmd.extend(["--manifest-path", str(manifest_path)])
 
@@ -154,6 +173,9 @@ def build_or_fallback(
         if env_vars:
             env.update(env_vars)
 
-        print(f"[musl-builder] Building for {target} natively on host")
+        builder = "cargo zigbuild" if use_zigbuild else "cargo build"
+        print(f"[musl-builder] Building for {target} natively on host ({builder})")
+        if use_zigbuild:
+            print(f"[musl-builder] glibc floor: {glibc_version} (target: {target}.{glibc_version})")
         print(f"[musl-builder] Running: {' '.join(build_cmd)}")
         subprocess.run(build_cmd, check=True, env=env)

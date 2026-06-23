@@ -37,9 +37,9 @@ def cargo_release_dir(target: str) -> Path:
     return Path("target") / target / "release"
 
 
-def run_cargo_build(crate_name: str, target: str) -> None:
-    """Build using musl Docker builder for musl targets, native build otherwise."""
-    build_or_fallback(crate_name, target)
+def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> None:
+    """Build using musl Docker builder for musl targets, zigbuild for gnu targets, native otherwise."""
+    build_or_fallback(crate_name, target, glibc_version=glibc_version)
 
 
 def write_github_output(name: str, value: str) -> None:
@@ -66,6 +66,7 @@ def main() -> None:
     lib_name = os.environ.get("INPUT_LIB_NAME", "") or crate_name.replace("-", "_")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/java-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
+    glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
 
     lib_filename = library_filename(lib_name, target)
     staging_dir = output_dir / "native" / classifier
@@ -78,13 +79,15 @@ def main() -> None:
         print(f"  lib:         {lib_filename}")
         print(f"  staging-dir: {staging_dir}")
         print(f"  library:     {staged_lib}")
+        if glibc_version:
+            print(f"  glibc-version: {glibc_version}")
         staging_dir.mkdir(parents=True, exist_ok=True)
         staged_lib.write_bytes(b"")
         write_github_output("library-path", str(staged_lib.resolve()))
         write_github_output("staging-dir", str(staging_dir.resolve()))
         return
 
-    run_cargo_build(crate_name, target)
+    run_cargo_build(crate_name, target, glibc_version)
 
     release_dir = cargo_release_dir(target)
     source_lib = release_dir / lib_filename

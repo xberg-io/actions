@@ -33,6 +33,10 @@ inputs:
     description: "Disable sccache for this build (useful for FFI builds that conflict with sccache)"
     required: false
     default: "true"
+  glibc-version:
+    description: "glibc version for gnu targets (e.g. '2.28') to enable zigbuild; empty = native cargo build"
+    required: false
+    default: ""
 
 outputs:
   library-path:
@@ -65,6 +69,7 @@ runs:
         ADDITIONAL_FLAGS: ${{ inputs.additional-flags }}
         MANIFEST_PATH: ${{ inputs.manifest-path }}
         DISABLE_SCCACHE: ${{ inputs.disable-sccache }}
+        GLIBC_VERSION: ${{ inputs.glibc-version }}
       run: |
         python3 "$GITHUB_ACTION_PATH/scripts/build.py"
 

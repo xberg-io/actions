@@ -33,6 +33,7 @@ class BuildConfig:
     disable_sccache: bool
     cargo_target_dir: str
     openssl_dir: str
+    glibc_version: str
 
     @classmethod
     def from_env(cls) -> "BuildConfig":
@@ -49,6 +50,7 @@ class BuildConfig:
             disable_sccache=env.get("DISABLE_SCCACHE", "true").lower() == "true",
             cargo_target_dir=env.get("CARGO_TARGET_DIR", ""),
             openssl_dir=env.get("OPENSSL_DIR", ""),
+            glibc_version=env.get("GLIBC_VERSION", ""),
         )
 
 
@@ -87,6 +89,7 @@ def build_cargo_args(
     target: str,
     verbose: bool,
     additional_flags: str,
+    glibc_version: str = "",
 ) -> list[str]:
     """Construct the cargo build argument list from build parameters.
 
@@ -94,6 +97,9 @@ def build_cargo_args(
     broken or stale upstream release on crates.io cannot silently substitute
     itself for a pinned dep at build time. Mirror this pattern in every action
     that wraps `cargo build`.
+
+    For linux-gnu targets with glibc_version set, appends .<glibc_version> to
+    the target triple for zigbuild to enforce a glibc floor.
     """
     args: list[str] = ["build", "--locked"]
 
@@ -109,7 +115,12 @@ def build_cargo_args(
         args += ["--features", features]
 
     if target:
-        args += ["--target", target]
+        # Use zigbuild for linux-gnu targets with glibc floor lowering
+        if "linux-gnu" in target and glibc_version:
+            glibc_suffixed_target = f"{target}.{glibc_version}"
+            args += ["--target", glibc_suffixed_target]
+        else:
+            args += ["--target", target]
 
     if verbose:
         args.append("-vv")
@@ -210,8 +221,20 @@ def _build_env(config: BuildConfig) -> dict[str, str]:
     return env
 
 
-def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str]) -> None:
-    """Run cargo with the given args, streaming output to stdout.
+def assemble_cargo_cmd(cargo_args: list[str], use_zigbuild: bool) -> list[str]:
+    """Build the argv list for the cargo invocation.
+
+    `cargo zigbuild` REPLACES the `build` subcommand, so the leading "build"
+    in ``cargo_args`` (which always starts with it) is dropped when zigbuilding —
+    ``cargo zigbuild build ...`` errors with "unexpected argument 'build'".
+    """
+    if use_zigbuild:
+        return ["cargo", "zigbuild", *cargo_args[1:]]
+    return ["cargo", *cargo_args]
+
+
+def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str], use_zigbuild: bool = False) -> None:
+    """Run cargo (or cargo zigbuild) with the given args, streaming output to stdout.
 
     Raises SystemExit(1) on build failure.
     """
@@ -221,8 +244,10 @@ def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str]) -> None:
         log_path = Path(log_file.name)
 
     try:
+        cmd = assemble_cargo_cmd(cargo_args, use_zigbuild)
+
         with subprocess.Popen(
-            ["cargo", *cargo_args],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -243,7 +268,7 @@ def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str]) -> None:
     if proc.returncode != 0:
         print()
         print("=== Build Failed ===")
-        print(f"Command: cargo {' '.join(cargo_args)}")
+        print(f"Command: {' '.join(cmd)}")
         print()
         diagnose_build_failure(log_content)
         raise SystemExit(1)
@@ -334,15 +359,21 @@ def main() -> None:
         target=config.target,
         verbose=config.verbose,
         additional_flags=config.additional_flags,
+        glibc_version=config.glibc_version,
     )
 
-    print(f"Build command: cargo {' '.join(cargo_args)}")
+    # Use zigbuild for linux-gnu targets with glibc floor lowering
+    use_zigbuild = "linux-gnu" in config.target and config.glibc_version
+    if use_zigbuild:
+        print(f"[build-rust-ffi] glibc floor: {config.glibc_version}")
+
+    print(f"Build command: {' '.join(assemble_cargo_cmd(cargo_args, use_zigbuild))}")
     print()
     print("=== Build Environment ===")
     _print_build_environment(config)
     print()
 
-    _run_cargo_build(cargo_args, _build_env(config))
+    _run_cargo_build(cargo_args, _build_env(config), use_zigbuild=use_zigbuild)
 
     target_dir = _full_target_dir(config)
 

@@ -92,6 +92,37 @@ def test_build_cargo_args_with_target():
     assert args[args.index("--target") + 1] == "x86_64-unknown-linux-gnu"
 
 
+def test_build_cargo_args_with_gnu_target_and_glibc_version():
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="x86_64-unknown-linux-gnu",
+        verbose=False,
+        additional_flags="",
+        glibc_version="2.28",
+    )
+    assert "--target" in args
+    assert args[args.index("--target") + 1] == "x86_64-unknown-linux-gnu.2.28"
+
+
+def test_build_cargo_args_with_non_gnu_target_ignores_glibc_version():
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="aarch64-apple-darwin",
+        verbose=False,
+        additional_flags="",
+        glibc_version="2.28",
+    )
+    assert "--target" in args
+    # glibc_version should be ignored for non-gnu targets
+    assert args[args.index("--target") + 1] == "aarch64-apple-darwin"
+
+
 def test_build_cargo_args_with_additional_flags():
     args = build_mod.build_cargo_args(
         crate_name="mylib",
@@ -117,6 +148,29 @@ def test_build_cargo_args_no_verbose():
         additional_flags="",
     )
     assert "-vv" not in args
+
+
+# ---------------------------------------------------------------------------
+# assemble_cargo_cmd
+# ---------------------------------------------------------------------------
+
+
+def test_assemble_cargo_cmd_plain_build():
+    # cargo_args always begins with the "build" subcommand.
+    cmd = build_mod.assemble_cargo_cmd(["build", "--locked", "--release"], use_zigbuild=False)
+    assert cmd == ["cargo", "build", "--locked", "--release"]
+
+
+def test_assemble_cargo_cmd_zigbuild_drops_build_subcommand():
+    # Regression: `cargo zigbuild build ...` errors with "unexpected argument
+    # 'build'". zigbuild REPLACES the build subcommand, so the leading "build"
+    # must be dropped.
+    cmd = build_mod.assemble_cargo_cmd(
+        ["build", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"],
+        use_zigbuild=True,
+    )
+    assert cmd == ["cargo", "zigbuild", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"]
+    assert "build" not in cmd  # the subcommand "build" must not survive alongside "zigbuild"
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +293,7 @@ def test_full_target_dir_release():
         disable_sccache=False,
         cargo_target_dir="",
         openssl_dir="",
+        glibc_version="",
     )
     result = build_mod._full_target_dir(config)
     assert result == Path("target/release")
@@ -256,6 +311,7 @@ def test_full_target_dir_debug():
         disable_sccache=False,
         cargo_target_dir="",
         openssl_dir="",
+        glibc_version="",
     )
     result = build_mod._full_target_dir(config)
     assert result == Path("target/debug")
@@ -273,6 +329,7 @@ def test_full_target_dir_with_target():
         disable_sccache=False,
         cargo_target_dir="",
         openssl_dir="",
+        glibc_version="",
     )
     result = build_mod._full_target_dir(config)
     assert result == Path("target/aarch64-unknown-linux-gnu/release")
@@ -290,6 +347,7 @@ def test_full_target_dir_custom_dir():
         disable_sccache=False,
         cargo_target_dir="custom",
         openssl_dir="",
+        glibc_version="",
     )
     result = build_mod._full_target_dir(config)
     assert result == Path("custom/release")
@@ -314,6 +372,7 @@ def test_build_env_disables_sccache(monkeypatch):
         disable_sccache=True,
         cargo_target_dir="",
         openssl_dir="",
+        glibc_version="",
     )
     env = build_mod._build_env(config)
     assert env["RUSTC_WRAPPER"] == ""
@@ -334,6 +393,7 @@ def test_build_env_keeps_sccache(monkeypatch):
         disable_sccache=False,
         cargo_target_dir="",
         openssl_dir="",
+        glibc_version="",
     )
     env = build_mod._build_env(config)
     assert env.get("RUSTC_WRAPPER") == "sccache"

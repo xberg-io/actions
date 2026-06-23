@@ -16,6 +16,10 @@ inputs:
     description: Additional arguments to pass to cargo build
     required: false
     default: ""
+  glibc-version:
+    description: 'glibc floor for gnu targets via cargo-zigbuild (e.g. "2.28"). Empty (default) = plain cargo build; opt-in only (caller must install zig + cargo-zigbuild).'
+    required: false
+    default: ""
 
 outputs:
   binary-path:
@@ -33,11 +37,24 @@ runs:
         TARGET_FLAG=""
         TARGET_DIR="target/release"
         if [[ -n "${{ inputs.target }}" ]]; then
-          TARGET_FLAG="--target ${{ inputs.target }}"
-          TARGET_DIR="target/${{ inputs.target }}/release"
+          # Use zigbuild for linux-gnu targets with glibc floor lowering
+          if [[ "${{ inputs.target }}" == *"-linux-gnu" ]] && [[ -n "${{ inputs.glibc-version }}" ]]; then
+            CARGO_CMD="cargo zigbuild"
+            GLIBC_SUFFIXED_TARGET="${{ inputs.target }}.${{ inputs.glibc-version }}"
+            TARGET_FLAG="--target ${GLIBC_SUFFIXED_TARGET}"
+            # Artifacts are emitted to target/<base-triple>/release, not target/<base-triple>.glibc/release
+            TARGET_DIR="target/${{ inputs.target }}/release"
+            echo "[build-rust-cli] glibc floor: ${{ inputs.glibc-version }} (target: ${GLIBC_SUFFIXED_TARGET})"
+          else
+            CARGO_CMD="cargo build"
+            TARGET_FLAG="--target ${{ inputs.target }}"
+            TARGET_DIR="target/${{ inputs.target }}/release"
+          fi
+        else
+          CARGO_CMD="cargo build"
         fi
 
-        cargo build --locked --release --package "${{ inputs.package-name }}" $TARGET_FLAG ${{ inputs.extra-cargo-args }}
+        ${CARGO_CMD} --locked --release --package "${{ inputs.package-name }}" $TARGET_FLAG ${{ inputs.extra-cargo-args }}
 
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           echo "binary-path=$GITHUB_WORKSPACE/${TARGET_DIR}/${{ inputs.binary-name }}.exe" >> "$GITHUB_OUTPUT"

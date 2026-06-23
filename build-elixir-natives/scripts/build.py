@@ -99,9 +99,9 @@ def detect_nif_api_version() -> str:
     return result.stdout.strip()
 
 
-def run_cargo_build(crate_name: str, crate_path: Path, target: str) -> None:
-    """Build using musl Docker builder for musl targets, native build otherwise."""
-    build_or_fallback(crate_name, target, manifest_path=crate_path / "Cargo.toml")
+def run_cargo_build(crate_name: str, crate_path: Path, target: str, glibc_version: str = "") -> None:
+    """Build using musl Docker builder for musl targets, zigbuild for gnu targets, native otherwise."""
+    build_or_fallback(crate_name, target, manifest_path=crate_path / "Cargo.toml", glibc_version=glibc_version)
 
 
 def compute_sha256(path: Path) -> str:
@@ -136,6 +136,7 @@ def main() -> None:
     nif_crate_path = Path(os.environ.get("INPUT_NIF_CRATE_PATH", "") or "packages/elixir/native/kreuzberg_nif")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/elixir-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
+    glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
 
     nif_api_version = os.environ.get("INPUT_NIF_API_VERSION", "").strip()
     if not nif_api_version and not dry_run:
@@ -155,12 +156,14 @@ def main() -> None:
         print(f"  nif-version:     {nif_version}")
         print(f"  nif-api-version: {nif_api_version}")
         print(f"  archive-path:    {archive_path}")
+        if glibc_version:
+            print(f"  glibc-version:   {glibc_version}")
         write_github_output("archive-path", str(archive_path))
         write_github_output("archive-sha256", "")
         write_github_output("archive-name", archive_name)
         return
 
-    run_cargo_build(nif_crate_name, nif_crate_path, target)
+    run_cargo_build(nif_crate_name, nif_crate_path, target, glibc_version)
 
     # The Rust crate produces the lib with platform-conventional name.
     # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.

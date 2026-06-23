@@ -30,6 +30,10 @@ inputs:
     description: "Skip cargo build and produce a plan instead"
     required: false
     default: "false"
+  glibc-version:
+    description: "glibc floor for gnu targets via cargo-zigbuild (e.g. '2.28'). Empty (default) = plain cargo build; opt-in only (caller must install zig + cargo-zigbuild)."
+    required: false
+    default: ""
 
 outputs:
   archive-path:
@@ -53,6 +57,7 @@ runs:
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_ARCHIVE_NAME: ${{ inputs.archive-name }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_GLIBC_VERSION: ${{ inputs.glibc-version }}
       run: |
         set -euo pipefail
         python3 "${{ github.action_path }}/scripts/build.py"
