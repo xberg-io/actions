@@ -74,6 +74,14 @@ inputs:
     description: "Swift Package Manager binary target name (e.g., 'RustBridge'); defaults to artifact-name if not specified"
     required: false
     default: ""
+  linux-features:
+    description: >
+      Extra Cargo features to enable for the Linux (cargo-zigbuild) targets,
+      e.g. "kreuzberg/openssl-vendored" for crates that statically vendor
+      OpenSSL on Linux. Empty by default — repos whose swift crate has no such
+      feature (e.g. html-to-markdown) must leave this unset.
+    required: false
+    default: ""
 
 outputs:
   bundle-path:
@@ -110,6 +118,7 @@ runs:
         INPUT_INCLUDE_IOS_X86_64: ${{ inputs.include-ios-x86_64 }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
+        INPUT_LINUX_FEATURES: ${{ inputs.linux-features }}
       run: |
         bash "${{ github.action_path }}/scripts/build.sh"
 
