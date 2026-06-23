@@ -111,13 +111,31 @@ runs:
             brew install protobuf
             ;;
           Windows)
-            choco install protoc -y --no-progress
+            choco install protoc -y --no-progress || true
+            # choco's shim dir is normally on PATH, but step-to-step PATH
+            # propagation can lag and the install itself occasionally flakes,
+            # leaving later steps with "protoc: command not found". If protoc
+            # still isn't resolvable, fall back to the official prebuilt zip and
+            # export its bin via GITHUB_PATH so subsequent steps can find it.
+            if ! command -v protoc >/dev/null 2>&1; then
+              echo "choco protoc not resolvable; falling back to prebuilt release zip"
+              protoc_version="29.3"
+              curl -fsSL -o "$RUNNER_TEMP/protoc.zip" \
+                "https://github.com/protocolbuffers/protobuf/releases/download/v${protoc_version}/protoc-${protoc_version}-win64.zip"
+              unzip -q -o "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+              echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+              export PATH="$RUNNER_TEMP/protoc/bin:$PATH"
+            fi
             ;;
           *)
             echo "::error::Unknown RUNNER_OS=$RUNNER_OS; cannot install protoc"
             exit 1
             ;;
         esac
+        if ! command -v protoc >/dev/null 2>&1; then
+          echo "::error::protoc installation failed; not on PATH (RUNNER_OS=$RUNNER_OS)"
+          exit 1
+        fi
         protoc --version
 
     - name: Setup sccache
@@ -129,6 +147,19 @@ runs:
       shell: bash
       run: |
         "$GITHUB_ACTION_PATH/scripts/configure-flags.sh" "${{ inputs.use-sccache }}" "${{ inputs.macos-dynamic-lookup }}"
+
+    - name: Harden cargo network retries
+      shell: bash
+      run: |
+        # Transient registry/crates.io download failures (e.g. "curl failed"
+        # mid `cargo build` during heavy parallel release fan-out) should
+        # self-heal rather than fail the job. Cargo only retries a narrow set of
+        # HTTP statuses by default; raise the retry count and prefer the git CLI
+        # for git-source fetches.
+        {
+          echo "CARGO_NET_RETRY=5"
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true"
+        } >> "$GITHUB_ENV"
 
     - name: Generate Cargo.lock hash
       id: cargo-hash
