@@ -74,8 +74,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   else
     echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
   fi
-  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
-  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu --features kreuzberg/openssl-vendored"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu --features kreuzberg/openssl-vendored"
   echo "[dry-run] would assemble $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle"
   echo "[dry-run] would generate info.json with SE-0305 metadata"
   if [[ -n "$HEADER_PATH" ]]; then
@@ -154,11 +154,11 @@ echo "=== Building Linux targets (cargo-zigbuild) ==="
 
 echo "Building aarch64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu --features kreuzberg/openssl-vendored
 
 echo "Building x86_64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu --features kreuzberg/openssl-vendored
 
 # Determine the target subdirectory for library lookup
 case "$BUILD_PROFILE" in
