@@ -112,7 +112,7 @@ def build_in_docker(
         f"""
 set -e
 apk add --no-cache \\
-  curl gcc musl-dev openssl-dev perl linux-headers
+  curl gcc musl-dev perl linux-headers
 rustup target add {target}
 {linker_env_var} {" ".join(build_cmd)}
 """,
@@ -129,7 +129,6 @@ def build_or_fallback(
     manifest_path: Path | None = None,
     env_vars: dict[str, str] | None = None,
     glibc_version: str = "",
-    linux_features: str = "",
 ) -> None:
     """Build a cdylib crate, using Docker for musl targets if necessary.
 
@@ -144,9 +143,6 @@ def build_or_fallback(
         manifest_path: Optional path to Cargo.toml (used for both Docker and native builds)
         env_vars: Optional dict of environment variables to pass to cargo
         glibc_version: glibc floor for gnu targets (e.g. "2.28"); empty = native cargo build
-        linux_features: extra Cargo features added only on the zigbuild path (e.g.
-                        "kreuzberg/openssl-vendored" — zigcc cannot find the Debian
-                        multiarch system OpenSSL headers, so OpenSSL must be vendored)
     """
     if is_musl_target(target):
         build_in_docker(crate_name, target, manifest_path, env_vars)
@@ -168,8 +164,6 @@ def build_or_fallback(
                 "--target",
                 f"{target}.{glibc_version}",
             ]
-            if linux_features:
-                build_cmd.extend(["--features", linux_features])
         else:
             build_cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
         if manifest_path:

@@ -123,56 +123,6 @@ def test_build_cargo_args_with_non_gnu_target_ignores_glibc_version():
     assert args[args.index("--target") + 1] == "aarch64-apple-darwin"
 
 
-def test_build_cargo_args_linux_features_applied_on_zigbuild_path():
-    # zigcc cannot find the Debian multiarch system OpenSSL headers, so the
-    # caller asks for kreuzberg/openssl-vendored to be enabled — but only on the
-    # cargo-zigbuild (linux-gnu + glibc floor) path.
-    args = build_mod.build_cargo_args(
-        crate_name="mylib",
-        manifest_path="",
-        build_profile="release",
-        features="",
-        target="x86_64-unknown-linux-gnu",
-        verbose=False,
-        additional_flags="",
-        glibc_version="2.28",
-        linux_features="kreuzberg/openssl-vendored",
-    )
-    assert ["--features", "kreuzberg/openssl-vendored"] == args[-2:]
-
-
-def test_build_cargo_args_linux_features_ignored_without_glibc_floor():
-    # No glibc_version → plain cargo build (no zigbuild) → linux_features ignored.
-    args = build_mod.build_cargo_args(
-        crate_name="mylib",
-        manifest_path="",
-        build_profile="release",
-        features="",
-        target="x86_64-unknown-linux-gnu",
-        verbose=False,
-        additional_flags="",
-        glibc_version="",
-        linux_features="kreuzberg/openssl-vendored",
-    )
-    assert "kreuzberg/openssl-vendored" not in args
-
-
-def test_build_cargo_args_linux_features_ignored_on_non_gnu_target():
-    # macOS target never uses zigbuild, so linux_features must not leak in.
-    args = build_mod.build_cargo_args(
-        crate_name="mylib",
-        manifest_path="",
-        build_profile="release",
-        features="",
-        target="aarch64-apple-darwin",
-        verbose=False,
-        additional_flags="",
-        glibc_version="2.28",
-        linux_features="kreuzberg/openssl-vendored",
-    )
-    assert "kreuzberg/openssl-vendored" not in args
-
-
 def test_build_cargo_args_with_additional_flags():
     args = build_mod.build_cargo_args(
         crate_name="mylib",
@@ -319,13 +269,6 @@ def test_diagnose_build_failure_missing_deps(capsys):
     assert "Missing dependencies detected" in captured.out
 
 
-def test_diagnose_build_failure_openssl(capsys):
-    log = "checking...\nerror: openssl not found\nsome other line"
-    build_mod.diagnose_build_failure(log)
-    captured = capsys.readouterr()
-    assert "OpenSSL errors detected" in captured.out
-
-
 # ---------------------------------------------------------------------------
 # _full_target_dir
 # ---------------------------------------------------------------------------
@@ -342,7 +285,6 @@ def test_full_target_dir_release():
         manifest_path="",
         disable_sccache=False,
         cargo_target_dir="",
-        openssl_dir="",
         glibc_version="",
     )
     result = build_mod._full_target_dir(config)
@@ -360,7 +302,6 @@ def test_full_target_dir_debug():
         manifest_path="",
         disable_sccache=False,
         cargo_target_dir="",
-        openssl_dir="",
         glibc_version="",
     )
     result = build_mod._full_target_dir(config)
@@ -378,7 +319,6 @@ def test_full_target_dir_with_target():
         manifest_path="",
         disable_sccache=False,
         cargo_target_dir="",
-        openssl_dir="",
         glibc_version="",
     )
     result = build_mod._full_target_dir(config)
@@ -396,7 +336,6 @@ def test_full_target_dir_custom_dir():
         manifest_path="",
         disable_sccache=False,
         cargo_target_dir="custom",
-        openssl_dir="",
         glibc_version="",
     )
     result = build_mod._full_target_dir(config)
@@ -421,7 +360,6 @@ def test_build_env_disables_sccache(monkeypatch):
         manifest_path="",
         disable_sccache=True,
         cargo_target_dir="",
-        openssl_dir="",
         glibc_version="",
     )
     env = build_mod._build_env(config)
@@ -442,7 +380,6 @@ def test_build_env_keeps_sccache(monkeypatch):
         manifest_path="",
         disable_sccache=False,
         cargo_target_dir="",
-        openssl_dir="",
         glibc_version="",
     )
     env = build_mod._build_env(config)
@@ -498,8 +435,6 @@ def test_build_config_from_env(monkeypatch):
     monkeypatch.setenv("MANIFEST_PATH", "/some/Cargo.toml")
     monkeypatch.setenv("DISABLE_SCCACHE", "false")
     monkeypatch.setenv("CARGO_TARGET_DIR", "/tmp/cargo")
-    monkeypatch.setenv("OPENSSL_DIR", "/usr/local/openssl")
-
     config = build_mod.BuildConfig.from_env()
 
     assert config.crate_name == "my-ffi"
@@ -511,4 +446,3 @@ def test_build_config_from_env(monkeypatch):
     assert config.manifest_path == "/some/Cargo.toml"
     assert config.disable_sccache is False
     assert config.cargo_target_dir == "/tmp/cargo"
-    assert config.openssl_dir == "/usr/local/openssl"

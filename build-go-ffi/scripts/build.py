@@ -42,16 +42,12 @@ def cargo_release_dir(target: str) -> Path:
     return Path("target") / target / "release"
 
 
-def run_cargo_build(crate_name: str, target: str, glibc_version: str = "", linux_features: str = "") -> None:
+def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> None:
     """Invoke cargo build (or cargo zigbuild for linux-gnu with glibc floor).
 
     For linux-gnu targets with glibc_version set, uses cargo zigbuild with
     --target <triple>.<glibc_version> for glibc floor lowering. Artifacts
     are still emitted to target/<base-triple>/release.
-
-    ``linux_features`` adds ``--features`` only on the zigbuild path (e.g.
-    "kreuzberg/openssl-vendored" — zigcc cannot find the Debian multiarch
-    system OpenSSL headers, so the crate must vendor OpenSSL from source).
     """
     # Use zigbuild for linux-gnu targets with glibc floor lowering
     use_zigbuild = "linux-gnu" in target and glibc_version
@@ -60,9 +56,6 @@ def run_cargo_build(crate_name: str, target: str, glibc_version: str = "", linux
     if use_zigbuild:
         cmd = ["cargo", "zigbuild", "--locked", "-p", crate_name, "--release", "--target", glibc_suffixed_target]
         print(f"[build-go-ffi] glibc floor: {glibc_version} (target: {glibc_suffixed_target})")
-        if linux_features:
-            cmd += ["--features", linux_features]
-            print(f"[build-go-ffi] linux-features: {linux_features}")
     else:
         cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
 
@@ -123,7 +116,6 @@ def main() -> None:
     archive_name = os.environ.get("INPUT_ARCHIVE_NAME", "") or f"{lib_name}-{target}.tar.gz"
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
     glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
-    linux_features = os.environ.get("INPUT_LINUX_FEATURES", "")
 
     archive_path = (output_dir / archive_name).resolve()
     staging_dir = output_dir / f"{lib_name}-{target}"
@@ -145,7 +137,7 @@ def main() -> None:
         print(f"Error: header not found at {header_path}", file=sys.stderr)
         sys.exit(1)
 
-    run_cargo_build(crate_name, target, glibc_version, linux_features)
+    run_cargo_build(crate_name, target, glibc_version)
 
     release_dir = cargo_release_dir(target)
     library = release_dir / library_filename(lib_name, target)

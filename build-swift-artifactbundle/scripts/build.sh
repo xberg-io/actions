@@ -27,11 +27,6 @@ INCLUDE_IOS_X86_64="${INPUT_INCLUDE_IOS_X86_64:-true}"
 # shellcheck disable=SC2034
 PACKAGE_MANIFEST_PATH="${INPUT_PACKAGE_MANIFEST_PATH:-}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
-# Optional extra Cargo features for the Linux (cargo-zigbuild) targets, e.g.
-# "kreuzberg/openssl-vendored" for crates that statically vendor OpenSSL on
-# Linux. Empty by default — only the kreuzberg core swift crate needs it; other
-# repos (html-to-markdown, …) have no such feature and must not be forced to.
-LINUX_FEATURES="${INPUT_LINUX_FEATURES:-}"
 
 # Set defaults for lib_name and artifact_name
 if [[ -z "$LIB_NAME" ]]; then
@@ -79,8 +74,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   else
     echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
   fi
-  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu ${LINUX_FEATURES:+--features $LINUX_FEATURES}"
-  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu ${LINUX_FEATURES:+--features $LINUX_FEATURES}"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target aarch64-unknown-linux-gnu"
+  echo "[dry-run] cargo zigbuild --locked -p $CRATE_NAME $profile_flag --target x86_64-unknown-linux-gnu"
   echo "[dry-run] would assemble $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle"
   echo "[dry-run] would generate info.json with SE-0305 metadata"
   if [[ -n "$HEADER_PATH" ]]; then
@@ -159,12 +154,10 @@ echo "=== Building Linux targets (cargo-zigbuild) ==="
 
 echo "Building aarch64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu ${LINUX_FEATURES:+--features $LINUX_FEATURES}
-
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
 echo "Building x86_64-unknown-linux-gnu..."
 # shellcheck disable=SC2086
-cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu ${LINUX_FEATURES:+--features $LINUX_FEATURES}
-
+cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
 # Determine the target subdirectory for library lookup
 case "$BUILD_PROFILE" in
 release)

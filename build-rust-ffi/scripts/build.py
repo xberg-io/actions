@@ -32,9 +32,7 @@ class BuildConfig:
     manifest_path: str
     disable_sccache: bool
     cargo_target_dir: str
-    openssl_dir: str
     glibc_version: str
-    linux_features: str = ""
 
     @classmethod
     def from_env(cls) -> "BuildConfig":
@@ -50,9 +48,7 @@ class BuildConfig:
             manifest_path=env.get("MANIFEST_PATH", ""),
             disable_sccache=env.get("DISABLE_SCCACHE", "true").lower() == "true",
             cargo_target_dir=env.get("CARGO_TARGET_DIR", ""),
-            openssl_dir=env.get("OPENSSL_DIR", ""),
             glibc_version=env.get("GLIBC_VERSION", ""),
-            linux_features=env.get("LINUX_FEATURES", ""),
         )
 
 
@@ -92,7 +88,6 @@ def build_cargo_args(
     verbose: bool,
     additional_flags: str,
     glibc_version: str = "",
-    linux_features: str = "",
 ) -> list[str]:
     """Construct the cargo build argument list from build parameters.
 
@@ -126,12 +121,6 @@ def build_cargo_args(
             args += ["--target", glibc_suffixed_target]
         else:
             args += ["--target", target]
-
-    # Extra features only on the zigbuild path: zigcc cannot find the Debian
-    # multiarch system OpenSSL headers, so openssl-dependent crates must vendor
-    # OpenSSL from source (e.g. kreuzberg/openssl-vendored).
-    if use_zigbuild and linux_features:
-        args += ["--features", linux_features]
 
     if verbose:
         args.append("-vv")
@@ -191,12 +180,6 @@ def diagnose_build_failure(log_content: str) -> None:
             print(line)
         print("Missing dependencies detected.")
 
-    openssl_errors = [line for line in lines if "openssl" in line.lower() and "error" in line.lower()]
-    if openssl_errors:
-        for line in openssl_errors[:5]:
-            print(line)
-        print("OpenSSL errors detected. Verify OPENSSL_DIR is set correctly.")
-
 
 def _print_build_environment(config: BuildConfig) -> None:
     """Print build tool versions and relevant environment settings."""
@@ -218,8 +201,6 @@ def _print_build_environment(config: BuildConfig) -> None:
     print(f"CARGO_TARGET_DIR: {config.cargo_target_dir or '<not set>'}")
     if config.target:
         print(f"Target: {config.target}")
-    if config.openssl_dir:
-        print(f"OPENSSL_DIR: {config.openssl_dir}")
 
 
 def _build_env(config: BuildConfig) -> dict[str, str]:
@@ -371,11 +352,10 @@ def main() -> None:
         verbose=config.verbose,
         additional_flags=config.additional_flags,
         glibc_version=config.glibc_version,
-        linux_features=config.linux_features,
     )
 
     # Use zigbuild for linux-gnu targets with glibc floor lowering
-    use_zigbuild = "linux-gnu" in config.target and config.glibc_version
+    use_zigbuild = bool("linux-gnu" in config.target and config.glibc_version)
     if use_zigbuild:
         print(f"[build-rust-ffi] glibc floor: {config.glibc_version}")
 

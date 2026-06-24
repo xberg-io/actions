@@ -84,11 +84,6 @@ jobs:
       - name: Setup Rust
         uses: ./setup-rust
 
-      - name: Setup OpenSSL
-        uses: ./setup-openssl
-
       - name: Verify
         run: |
           rustc --version
-          openssl version
-          echo "OPENSSL_DIR=${OPENSSL_DIR:-not set}"
