@@ -38,9 +38,9 @@ def cargo_release_dir(target: str) -> Path:
     return Path("target") / target / "release"
 
 
-def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> None:
+def run_cargo_build(crate_name: str, target: str, glibc_version: str = "", linux_features: str = "") -> None:
     """Build using musl Docker builder for musl targets, zigbuild for gnu targets, native otherwise."""
-    build_or_fallback(crate_name, target, glibc_version=glibc_version)
+    build_or_fallback(crate_name, target, glibc_version=glibc_version, linux_features=linux_features)
 
 
 def write_github_output(name: str, value: str) -> None:
@@ -151,6 +151,7 @@ def main() -> None:
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/csharp-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
     glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
+    linux_features = os.environ.get("INPUT_LINUX_FEATURES", "")
 
     lib_filename = library_filename(lib_name, target)
     staging_dir = output_dir / "runtimes" / rid / "native"
@@ -169,7 +170,7 @@ def main() -> None:
         write_github_output("staging-dir", str(staging_dir.resolve() if staging_dir.exists() else staging_dir))
         return
 
-    run_cargo_build(crate_name, target, glibc_version)
+    run_cargo_build(crate_name, target, glibc_version, linux_features)
 
     release_dir = cargo_release_dir(target)
     source_lib = release_dir / lib_filename

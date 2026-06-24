@@ -34,6 +34,10 @@ inputs:
     description: "glibc floor for gnu targets via cargo-zigbuild (e.g. '2.28'). Empty (default) = plain cargo build; opt-in only (caller must install zig + cargo-zigbuild)."
     required: false
     default: ""
+  linux-features:
+    description: "Extra Cargo features enabled only on the linux-gnu cargo-zigbuild path (e.g. 'kreuzberg/openssl-vendored' to vendor OpenSSL, since zigcc cannot find the Debian multiarch system headers). Empty by default; ignored on native/macOS/Windows builds."
+    required: false
+    default: ""
 
 outputs:
   archive-path:
@@ -58,6 +62,7 @@ runs:
         INPUT_ARCHIVE_NAME: ${{ inputs.archive-name }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_GLIBC_VERSION: ${{ inputs.glibc-version }}
+        INPUT_LINUX_FEATURES: ${{ inputs.linux-features }}
       run: |
         set -euo pipefail
         python3 "${{ github.action_path }}/scripts/build.py"

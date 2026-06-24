@@ -20,6 +20,15 @@ inputs:
     description: 'glibc floor for gnu targets via cargo-zigbuild (e.g. "2.28"). Empty (default) = plain cargo build; opt-in only (caller must install zig + cargo-zigbuild).'
     required: false
     default: ""
+  linux-features:
+    description: >
+      Extra Cargo features to enable only on the linux-gnu cargo-zigbuild path
+      (i.e. when target is *-linux-gnu and glibc-version is set), e.g.
+      "kreuzberg/openssl-vendored" for crates that must statically vendor OpenSSL
+      because zigcc cannot find the Debian multiarch system headers. Empty by
+      default; ignored on native/macOS/Windows builds.
+    required: false
+    default: ""
 
 outputs:
   binary-path:
@@ -36,6 +45,8 @@ runs:
         set -euo pipefail
         TARGET_FLAG=""
         TARGET_DIR="target/release"
+        # Extra features applied only on the cargo-zigbuild path (see linux-features input).
+        LINUX_FEATURES_FLAG=""
         if [[ -n "${{ inputs.target }}" ]]; then
           # Use zigbuild for linux-gnu targets with glibc floor lowering
           if [[ "${{ inputs.target }}" == *"-linux-gnu" ]] && [[ -n "${{ inputs.glibc-version }}" ]]; then
@@ -45,6 +56,10 @@ runs:
             # Artifacts are emitted to target/<base-triple>/release, not target/<base-triple>.glibc/release
             TARGET_DIR="target/${{ inputs.target }}/release"
             echo "[build-rust-cli] glibc floor: ${{ inputs.glibc-version }} (target: ${GLIBC_SUFFIXED_TARGET})"
+            if [[ -n "${{ inputs.linux-features }}" ]]; then
+              LINUX_FEATURES_FLAG="--features ${{ inputs.linux-features }}"
+              echo "[build-rust-cli] linux-features: ${{ inputs.linux-features }}"
+            fi
           else
             CARGO_CMD="cargo build"
             TARGET_FLAG="--target ${{ inputs.target }}"
@@ -54,7 +69,7 @@ runs:
           CARGO_CMD="cargo build"
         fi
 
-        ${CARGO_CMD} --locked --release --package "${{ inputs.package-name }}" $TARGET_FLAG ${{ inputs.extra-cargo-args }}
+        ${CARGO_CMD} --locked --release --package "${{ inputs.package-name }}" $TARGET_FLAG $LINUX_FEATURES_FLAG ${{ inputs.extra-cargo-args }}
 
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           echo "binary-path=$GITHUB_WORKSPACE/${TARGET_DIR}/${{ inputs.binary-name }}.exe" >> "$GITHUB_OUTPUT"

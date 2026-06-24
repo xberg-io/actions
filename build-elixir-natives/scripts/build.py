@@ -99,9 +99,17 @@ def detect_nif_api_version() -> str:
     return result.stdout.strip()
 
 
-def run_cargo_build(crate_name: str, crate_path: Path, target: str, glibc_version: str = "") -> None:
+def run_cargo_build(
+    crate_name: str, crate_path: Path, target: str, glibc_version: str = "", linux_features: str = ""
+) -> None:
     """Build using musl Docker builder for musl targets, zigbuild for gnu targets, native otherwise."""
-    build_or_fallback(crate_name, target, manifest_path=crate_path / "Cargo.toml", glibc_version=glibc_version)
+    build_or_fallback(
+        crate_name,
+        target,
+        manifest_path=crate_path / "Cargo.toml",
+        glibc_version=glibc_version,
+        linux_features=linux_features,
+    )
 
 
 def compute_sha256(path: Path) -> str:
@@ -137,6 +145,7 @@ def main() -> None:
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/elixir-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
     glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")
+    linux_features = os.environ.get("INPUT_LINUX_FEATURES", "")
 
     nif_api_version = os.environ.get("INPUT_NIF_API_VERSION", "").strip()
     if not nif_api_version and not dry_run:
@@ -163,7 +172,7 @@ def main() -> None:
         write_github_output("archive-name", archive_name)
         return
 
-    run_cargo_build(nif_crate_name, nif_crate_path, target, glibc_version)
+    run_cargo_build(nif_crate_name, nif_crate_path, target, glibc_version, linux_features)
 
     # The Rust crate produces the lib with platform-conventional name.
     # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.

@@ -123,6 +123,56 @@ def test_build_cargo_args_with_non_gnu_target_ignores_glibc_version():
     assert args[args.index("--target") + 1] == "aarch64-apple-darwin"
 
 
+def test_build_cargo_args_linux_features_applied_on_zigbuild_path():
+    # zigcc cannot find the Debian multiarch system OpenSSL headers, so the
+    # caller asks for kreuzberg/openssl-vendored to be enabled — but only on the
+    # cargo-zigbuild (linux-gnu + glibc floor) path.
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="x86_64-unknown-linux-gnu",
+        verbose=False,
+        additional_flags="",
+        glibc_version="2.28",
+        linux_features="kreuzberg/openssl-vendored",
+    )
+    assert ["--features", "kreuzberg/openssl-vendored"] == args[-2:]
+
+
+def test_build_cargo_args_linux_features_ignored_without_glibc_floor():
+    # No glibc_version → plain cargo build (no zigbuild) → linux_features ignored.
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="x86_64-unknown-linux-gnu",
+        verbose=False,
+        additional_flags="",
+        glibc_version="",
+        linux_features="kreuzberg/openssl-vendored",
+    )
+    assert "kreuzberg/openssl-vendored" not in args
+
+
+def test_build_cargo_args_linux_features_ignored_on_non_gnu_target():
+    # macOS target never uses zigbuild, so linux_features must not leak in.
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="aarch64-apple-darwin",
+        verbose=False,
+        additional_flags="",
+        glibc_version="2.28",
+        linux_features="kreuzberg/openssl-vendored",
+    )
+    assert "kreuzberg/openssl-vendored" not in args
+
+
 def test_build_cargo_args_with_additional_flags():
     args = build_mod.build_cargo_args(
         crate_name="mylib",

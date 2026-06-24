@@ -34,6 +34,7 @@ class BuildConfig:
     cargo_target_dir: str
     openssl_dir: str
     glibc_version: str
+    linux_features: str = ""
 
     @classmethod
     def from_env(cls) -> "BuildConfig":
@@ -51,6 +52,7 @@ class BuildConfig:
             cargo_target_dir=env.get("CARGO_TARGET_DIR", ""),
             openssl_dir=env.get("OPENSSL_DIR", ""),
             glibc_version=env.get("GLIBC_VERSION", ""),
+            linux_features=env.get("LINUX_FEATURES", ""),
         )
 
 
@@ -90,6 +92,7 @@ def build_cargo_args(
     verbose: bool,
     additional_flags: str,
     glibc_version: str = "",
+    linux_features: str = "",
 ) -> list[str]:
     """Construct the cargo build argument list from build parameters.
 
@@ -114,13 +117,21 @@ def build_cargo_args(
     if features:
         args += ["--features", features]
 
+    # Use zigbuild for linux-gnu targets with glibc floor lowering
+    use_zigbuild = bool(target and "linux-gnu" in target and glibc_version)
+
     if target:
-        # Use zigbuild for linux-gnu targets with glibc floor lowering
-        if "linux-gnu" in target and glibc_version:
+        if use_zigbuild:
             glibc_suffixed_target = f"{target}.{glibc_version}"
             args += ["--target", glibc_suffixed_target]
         else:
             args += ["--target", target]
+
+    # Extra features only on the zigbuild path: zigcc cannot find the Debian
+    # multiarch system OpenSSL headers, so openssl-dependent crates must vendor
+    # OpenSSL from source (e.g. kreuzberg/openssl-vendored).
+    if use_zigbuild and linux_features:
+        args += ["--features", linux_features]
 
     if verbose:
         args.append("-vv")
@@ -360,6 +371,7 @@ def main() -> None:
         verbose=config.verbose,
         additional_flags=config.additional_flags,
         glibc_version=config.glibc_version,
+        linux_features=config.linux_features,
     )
 
     # Use zigbuild for linux-gnu targets with glibc floor lowering
