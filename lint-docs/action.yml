@@ -25,7 +25,7 @@ runs:
   using: composite
   steps:
     - name: Install Task
-      uses: kreuzberg-dev/actions/install-task@v1
+      uses: xberg-io/actions/install-task@v1
 
     - name: Install prek
       shell: bash
@@ -93,7 +93,7 @@ runs:
         tool: lychee
 
     - name: Install textlint + kreuzberg rule set
-      uses: kreuzberg-dev/actions/setup-textlint@v1
+      uses: xberg-io/actions/setup-textlint@v1
 
     - name: Lint documentation links
       shell: bash
@@ -123,7 +123,7 @@ runs:
 
     - name: Install alef CLI
       if: inputs.validate-snippets == 'true'
-      uses: kreuzberg-dev/actions/install-alef@v1
+      uses: xberg-io/actions/install-alef@v1
       with:
         version: ${{ inputs.alef-ref }}
 

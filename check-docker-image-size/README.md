@@ -20,7 +20,7 @@ Inspect a locally-built Docker image and warn or fail when it exceeds a size thr
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/check-docker-image-size@v1
+- uses: xberg-io/actions/check-docker-image-size@v1
   with:
     image: kreuzberg:cli
     warn-mb: "200"

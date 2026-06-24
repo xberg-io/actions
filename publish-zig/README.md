@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: kreuzberg-dev/actions/publish-zig@v1
+      - uses: xberg-io/actions/publish-zig@v1
         with:
           working-directory: packages/zig
           update-release-notes: 'true'
@@ -93,7 +93,7 @@ Example:
     pattern: ffi-*
     path: ffi-artifacts
     merge-multiple: true
-- uses: kreuzberg-dev/actions/publish-zig@v1
+- uses: xberg-io/actions/publish-zig@v1
   with:
     working-directory: packages/zig
     multi-platform-ffi-dir: ffi-artifacts

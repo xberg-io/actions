@@ -10,7 +10,7 @@ Install Maven and Java runtime in a cross-platform way.
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-maven@v1
+- uses: xberg-io/actions/setup-maven@v1
   with:
     version: "3.9.11"
     java-version: "21"

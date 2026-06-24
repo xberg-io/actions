@@ -5,7 +5,7 @@ arm64+x86_64) and bundle into an XCFramework, ready for integration into
 Xcode projects or Swift Package Manager distributions.
 
 The action expects the caller to have already checked out the repo and run
-`kreuzberg-dev/actions/setup-rust@v1`. It does not install any toolchains itself.
+`xberg-io/actions/setup-rust@v1`. It does not install any toolchains itself.
 Must run on `macos-latest`.
 
 ## Inputs
@@ -34,9 +34,9 @@ Must run on `macos-latest`.
 runs-on: macos-latest
 steps:
   - uses: actions/checkout@v6
-  - uses: kreuzberg-dev/actions/setup-rust@v1
+  - uses: xberg-io/actions/setup-rust@v1
   - id: xcfw
-    uses: kreuzberg-dev/actions/build-ios-xcframework@v1
+    uses: xberg-io/actions/build-ios-xcframework@v1
     with:
       crate-name: my-crate
       lib-name: my_lib

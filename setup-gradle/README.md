@@ -7,13 +7,13 @@ GitHub-hosted runners.
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-gradle@v1
+- uses: xberg-io/actions/setup-gradle@v1
 ```
 
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-gradle@v1
+- uses: xberg-io/actions/setup-gradle@v1
   with:
     gradle-version: "8.11"
     java-version: "21"

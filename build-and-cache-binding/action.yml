@@ -99,7 +99,7 @@ runs:
 
     - name: Restore binding from cache
       id: restore-cache
-      uses: kreuzberg-dev/actions/cache-binding-artifact@v1
+      uses: xberg-io/actions/cache-binding-artifact@v1
       with:
         binding-name: ${{ inputs.binding-name }}
         cache-key: ${{ steps.compute-keys.outputs.cache-key }}
@@ -184,7 +184,7 @@ runs:
 
     - name: Save binding to cache
       if: env.CACHE_HIT == 'false'
-      uses: kreuzberg-dev/actions/cache-binding-artifact@v1
+      uses: xberg-io/actions/cache-binding-artifact@v1
       with:
         binding-name: ${{ inputs.binding-name }}
         cache-key: ${{ steps.compute-keys.outputs.cache-key }}

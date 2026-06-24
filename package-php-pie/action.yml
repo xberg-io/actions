@@ -1,8 +1,8 @@
 name: Package PHP extension as PIE archive
 description: |
   Wrap alef publish package --lang php to produce a PIE-conventional pre-built
-  binary archive. Requires alef CLI on PATH (use kreuzberg-dev/actions/install-alef
-  first) and a built .so/.dylib/.dll (use kreuzberg-dev/actions/build-php-extension).
+  binary archive. Requires alef CLI on PATH (use xberg-io/actions/install-alef
+  first) and a built .so/.dylib/.dll (use xberg-io/actions/build-php-extension).
 
 inputs:
   php-version:

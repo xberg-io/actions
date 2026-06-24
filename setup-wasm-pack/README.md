@@ -17,13 +17,13 @@ No-ops if the requested version is already on `PATH`.
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-wasm-pack@v1
+- uses: xberg-io/actions/setup-wasm-pack@v1
 ```
 
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-wasm-pack@v1
+- uses: xberg-io/actions/setup-wasm-pack@v1
   with:
     wasm-pack-version: "0.13.1"
 ```

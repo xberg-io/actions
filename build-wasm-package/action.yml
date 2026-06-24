@@ -28,7 +28,7 @@ runs:
   steps:
     - name: Install wasm-pack
       if: inputs.wasm-pack-version != 'skip'
-      uses: kreuzberg-dev/actions/setup-wasm-pack@v1
+      uses: xberg-io/actions/setup-wasm-pack@v1
       with:
         wasm-pack-version: ${{ inputs.wasm-pack-version }}
 

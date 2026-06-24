@@ -50,7 +50,7 @@ def asset_extension(target: str) -> str:
     Renaming the macOS `.dylib` to `.so` inside the tarball is the only way
     to keep `lib_name-vN-nif-X.Y-<triple>.so.tar.gz` resolvable on macOS;
     Erlang loads NIFs by file contents, not extension.
-    See: kreuzberg-dev/actions/generate-elixir-checksums/scripts/generate.py.
+    See: xberg-io/actions/generate-elixir-checksums/scripts/generate.py.
     """
     return "dll" if "windows" in target else "so"
 

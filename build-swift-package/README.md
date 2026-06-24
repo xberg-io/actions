@@ -13,8 +13,8 @@ runs, the package is ready for a Git tag.
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: kreuzberg-dev/actions/setup-rust@v1
-- uses: kreuzberg-dev/actions/build-swift-package@v1
+- uses: xberg-io/actions/setup-rust@v1
+- uses: xberg-io/actions/build-swift-package@v1
   with:
     package-dir: packages/swift
     crate-name: kreuzberg-swift

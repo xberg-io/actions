@@ -24,7 +24,7 @@ and writes a step summary. Idempotent — safe to re-run.
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/finalize-release@v1
+- uses: xberg-io/actions/finalize-release@v1
   with:
     tag: ${{ needs.prepare.outputs.tag }}
     is-prerelease: ${{ needs.prepare.outputs.is_prerelease }}
@@ -34,7 +34,7 @@ and writes a step summary. Idempotent — safe to re-run.
 ### Auto-derive prerelease from tag
 
 ```yaml
-- uses: kreuzberg-dev/actions/finalize-release@v1
+- uses: xberg-io/actions/finalize-release@v1
   with:
     tag: ${{ needs.prepare.outputs.tag }}
     # is-prerelease defaults to "auto" — true for v1.2.3-rc.1, false for v1.2.3

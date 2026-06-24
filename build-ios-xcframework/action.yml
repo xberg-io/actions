@@ -2,7 +2,7 @@ name: Build iOS XCFramework
 description: >
   Cross-compile a Rust crate for all iOS targets (device arm64, simulator
   arm64+x86_64) and bundle into an XCFramework. Caller must have already
-  called kreuzberg-dev/actions/setup-rust@v1. Must run on macos-latest.
+  called xberg-io/actions/setup-rust@v1. Must run on macos-latest.
 
 inputs:
   crate-name:

@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Check registry
         id: check
-        uses: kreuzberg-dev/actions/check-registry@v1
+        uses: xberg-io/actions/check-registry@v1
         with:
           registry: ${{ matrix.check.registry }}
           package: ${{ matrix.check.package }}

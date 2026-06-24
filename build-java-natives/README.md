@@ -5,7 +5,7 @@ resulting native library at the Panama FFM-expected resource path,
 ready to be packed into a `kreuzberg-natives-{classifier}` JAR.
 
 The action expects the caller to have already checked out the repo and
-run `kreuzberg-dev/actions/setup-rust@v1` with the right target
+run `xberg-io/actions/setup-rust@v1` with the right target
 installed. It does not install any toolchains itself.
 
 ## Inputs
@@ -47,11 +47,11 @@ strategy:
 runs-on: ${{ matrix.os }}
 steps:
   - uses: actions/checkout@v6
-  - uses: kreuzberg-dev/actions/setup-rust@v1
+  - uses: xberg-io/actions/setup-rust@v1
     with:
       target: ${{ matrix.target }}
   - id: natives
-    uses: kreuzberg-dev/actions/build-java-natives@v1
+    uses: xberg-io/actions/build-java-natives@v1
     with:
       target: ${{ matrix.target }}
       classifier: ${{ matrix.classifier }}

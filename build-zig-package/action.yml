@@ -6,7 +6,7 @@ description: >
   action's job is health-checking — not producing an upload artifact.
 
   Assumes the calling workflow has already checked out the repo and set up
-  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`).
+  Rust (e.g. via `xberg-io/actions/setup-rust@v1`).
 
 inputs:
   ffi-crate:

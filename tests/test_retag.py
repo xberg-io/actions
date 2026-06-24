@@ -19,8 +19,8 @@ def test_build_delete_url():
 
 
 def test_build_delete_url_nested_repo():
-    result = mod.build_delete_url("kreuzberg-dev/actions", "v0.5.0")
-    assert result == "repos/kreuzberg-dev/actions/git/refs/tags/v0.5.0"
+    result = mod.build_delete_url("xberg-io/actions", "v0.5.0")
+    assert result == "repos/xberg-io/actions/git/refs/tags/v0.5.0"
 
 
 def test_build_delete_url_starts_with_repos():

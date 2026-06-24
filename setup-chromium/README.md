@@ -29,7 +29,7 @@ None required.
 ### With direct binary execution
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-chromium@v1
+- uses: xberg-io/actions/setup-chromium@v1
   id: chromium
 
 - name: Run headless tests
@@ -44,7 +44,7 @@ None required.
 ### With environment variable
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-chromium@v1
+- uses: xberg-io/actions/setup-chromium@v1
   id: chromium
 
 - name: Run e2e tests

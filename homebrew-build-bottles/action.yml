@@ -17,7 +17,7 @@ inputs:
     description: "Semantic version (e.g. 1.8.0)"
     required: true
   tap:
-    description: "Tap repo (e.g. kreuzberg-dev/tap)"
+    description: "Tap repo (e.g. xberg-io/tap)"
     required: true
   formulas:
     description: >
@@ -27,7 +27,7 @@ inputs:
     description: "Directory to write bottle JSON manifests to"
     required: true
   github-repo:
-    description: "Source repository for bottle tarball uploads (e.g. kreuzberg-dev/foo)"
+    description: "Source repository for bottle tarball uploads (e.g. xberg-io/foo)"
     required: true
   token:
     description: "GitHub token with contents:write for `gh release upload`"

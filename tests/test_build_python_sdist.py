@@ -15,7 +15,7 @@ def _read() -> str:
 
 def test_runs_rewrite_then_maturin():
     content = _read()
-    assert "uses: kreuzberg-dev/actions/rewrite-native-deps@v1" in content
+    assert "uses: xberg-io/actions/rewrite-native-deps@v1" in content
     assert "lang: python" in content
     # Sdist build is delegated to the out-of-workspace helper so the
     # path-rewrite + maturin invocation can share a single staging dir.

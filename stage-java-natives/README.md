@@ -27,7 +27,7 @@ intact at the artifacts-dir root.
     path: artifacts/java-natives
     merge-multiple: true
 
-- uses: kreuzberg-dev/actions/stage-java-natives@v1
+- uses: xberg-io/actions/stage-java-natives@v1
   with:
     resources-dir: packages/java/src/main/resources/natives
     required-classifiers: linux-x86_64 linux-aarch64 macos-arm64 macos-x86_64 windows-x86_64 windows-aarch64

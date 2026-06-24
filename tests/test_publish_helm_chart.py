@@ -63,7 +63,7 @@ def test_validate_version_rejects_non_semver():
 
 
 def test_extract_registry_host_ghcr():
-    assert helm_mod.extract_registry_host("oci://ghcr.io/kreuzberg-dev/charts") == "ghcr.io"
+    assert helm_mod.extract_registry_host("oci://ghcr.io/xberg-io/charts") == "ghcr.io"
 
 
 def test_extract_registry_host_gcp():

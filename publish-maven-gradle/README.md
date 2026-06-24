@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kreuzberg-dev/actions/publish-maven-gradle@v1
+      - uses: xberg-io/actions/publish-maven-gradle@v1
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
@@ -63,7 +63,7 @@ jobs:
 ### Dry run
 
 ```yaml
-- uses: kreuzberg-dev/actions/publish-maven-gradle@v1
+- uses: xberg-io/actions/publish-maven-gradle@v1
   with:
     working-directory: packages/kotlin
     dry-run: 'true'

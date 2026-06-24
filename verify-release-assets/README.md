@@ -26,7 +26,7 @@ minimum-size check catches empty uploads.
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/verify-release-assets@v1
+- uses: xberg-io/actions/verify-release-assets@v1
   with:
     tag: ${{ needs.prepare.outputs.tag }}
     expected-assets: |

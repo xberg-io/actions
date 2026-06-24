@@ -9,7 +9,7 @@ description: >
   prepended). After this action runs the package is ready for tagging.
 
   Assumes the calling workflow has already checked out the repo and set up
-  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`).
+  Rust (e.g. via `xberg-io/actions/setup-rust@v1`).
 
 inputs:
   package-dir:

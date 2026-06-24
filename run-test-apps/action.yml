@@ -59,17 +59,17 @@ runs:
   using: composite
   steps:
     - name: Install alef
-      uses: kreuzberg-dev/actions/install-alef@v1
+      uses: xberg-io/actions/install-alef@v1
       with:
         version: ${{ inputs.alef-version }}
 
     - name: Setup Python
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'python' }}
-      uses: kreuzberg-dev/actions/setup-python-env@v1
+      uses: xberg-io/actions/setup-python-env@v1
 
     - name: Setup Node.js
       if: ${{ inputs.setup-toolchain == 'true' && (inputs.language == 'node' || inputs.language == 'wasm') }}
-      uses: kreuzberg-dev/actions/setup-node-workspace@v1
+      uses: xberg-io/actions/setup-node-workspace@v1
 
     - name: Setup Ruby
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'ruby' }}
@@ -79,11 +79,11 @@ runs:
 
     - name: Setup PHP
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'php' }}
-      uses: kreuzberg-dev/actions/setup-php@v1
+      uses: xberg-io/actions/setup-php@v1
 
     - name: Setup Go + CGo
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'go' }}
-      uses: kreuzberg-dev/actions/setup-go-cgo-env@v1
+      uses: xberg-io/actions/setup-go-cgo-env@v1
 
     - name: Setup Java
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'java' }}
@@ -123,7 +123,7 @@ runs:
 
     - name: Setup Homebrew (Linux)
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'brew' && runner.os == 'Linux' }}
-      uses: kreuzberg-dev/actions/install-homebrew-linux@v1
+      uses: xberg-io/actions/install-homebrew-linux@v1
 
     - name: Override test-app version pin
       shell: bash

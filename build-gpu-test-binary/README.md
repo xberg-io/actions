@@ -20,7 +20,7 @@ Build a single `cargo test --no-run` binary with JSON message output, then extra
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/build-gpu-test-binary@v1
+- uses: xberg-io/actions/build-gpu-test-binary@v1
   with:
     package: kreuzberg
     test-name: gpu_acceleration

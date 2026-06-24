@@ -7,7 +7,7 @@ description: >
   cross-compile to Android targets.
 
   Assumes the caller has already set up a Rust toolchain (e.g. via
-  kreuzberg-dev/actions/setup-rust@v1).
+  xberg-io/actions/setup-rust@v1).
 
 inputs:
   ndk-version:

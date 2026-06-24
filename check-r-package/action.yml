@@ -19,7 +19,7 @@ runs:
   using: composite
   steps:
     - name: Setup R
-      uses: kreuzberg-dev/actions/setup-r@v1
+      uses: xberg-io/actions/setup-r@v1
       with:
         r-version: ${{ inputs.r-version }}
         install-deps: "true"

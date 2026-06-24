@@ -26,11 +26,11 @@ manages AVD snapshots and KVM acceleration) and exports `ANDROID_HOME` /
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-android-emulator@v1
+- uses: xberg-io/actions/setup-android-emulator@v1
   with:
     api-level: "34"
 
-- uses: kreuzberg-dev/actions/build-android-natives@v1
+- uses: xberg-io/actions/build-android-natives@v1
   # builds the JNI .so per ABI
 
 - name: Run kotlin-android emulator e2e

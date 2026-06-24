@@ -191,7 +191,7 @@ runs:
 
     - name: Install alef (when using alef package_zig)
       if: inputs.use-alef-package == 'true'
-      uses: kreuzberg-dev/actions/install-alef@v1
+      uses: xberg-io/actions/install-alef@v1
       with:
         version: ${{ inputs.alef-version }}
 
@@ -370,7 +370,7 @@ runs:
           printf '%s\n' 'const std = @import("std");'
           printf '\n'
           printf '%s\n' '// alef-managed: this build.zig is overwritten at publish time by'
-          printf '%s\n' '// kreuzberg-dev/actions/publish-zig to point at the bundled'
+          printf '%s\n' '// xberg-io/actions/publish-zig to point at the bundled'
           printf '%s\n' '// lib/<rid>/ subdirectory selected from Zig'"'"'s compile-time target.'
           printf '%s\n' 'pub fn build(b: *std.Build) void {'
           printf '%s\n' '    const target = b.standardTargetOptions(.{});'
@@ -474,7 +474,7 @@ runs:
         # token has `contents:write`, whereas `gh release view <tag>` and
         # `/repos/.../releases/tags/<tag>` only resolve *published* tags and
         # 404 on drafts regardless of token scope. The publish workflows in
-        # kreuzberg-dev/* keep the release in draft until the terminal
+        # xberg-io/* keep the release in draft until the terminal
         # `release-finalize` step, so every prior consumer (this action,
         # publish-hex, publish-homebrew-source-formulas, …) must address
         # the release by id, not by tag.

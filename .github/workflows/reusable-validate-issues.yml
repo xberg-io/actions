@@ -6,7 +6,7 @@ name: Validate Issues (Reusable)
 #
 # In addition to title format, this workflow:
 #   - Auto-applies the canonical label for the prefix (bug/enhancement/documentation)
-#   - Adds the issue to the org project board kreuzberg-dev/1
+#   - Adds the issue to the org project board xberg-io/1
 #
 # The default GITHUB_TOKEN cannot edit org-level projects; callers must pass a
 # fine-grained PAT via `secrets: inherit` (org secret KREUZBERG_DEV_PROJECT_TOKEN).
@@ -15,7 +15,7 @@ on:
   workflow_call:
     secrets:
       KREUZBERG_DEV_PROJECT_TOKEN:
-        description: Fine-grained PAT with repository-projects=write and issues=write for kreuzberg-dev/1
+        description: Fine-grained PAT with repository-projects=write and issues=write for xberg-io/1
         required: false
 
 permissions:
@@ -81,7 +81,7 @@ jobs:
     needs: validate-issue-title
     runs-on: ubuntu-latest
     steps:
-      - name: Add issue to kreuzberg-dev/1
+      - name: Add issue to xberg-io/1
         env:
           GH_TOKEN: ${{ secrets.KREUZBERG_DEV_PROJECT_TOKEN || github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
@@ -90,7 +90,7 @@ jobs:
             echo "::warning::No project token available; skipping project board assignment"
             exit 0
           fi
-          if ! gh project item-add 1 --owner kreuzberg-dev --url "$ISSUE_URL"; then
+          if ! gh project item-add 1 --owner xberg-io --url "$ISSUE_URL"; then
             echo "::warning::Failed to add issue to project board (token may lack organization Projects: write scope)"
             exit 0
           fi

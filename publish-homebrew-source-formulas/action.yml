@@ -32,7 +32,7 @@ inputs:
     description: "Semantic version (e.g. 3.4.0-rc.42)."
     required: true
   github-repo:
-    description: "Source repository for `gh release download` (e.g. kreuzberg-dev/html-to-markdown)."
+    description: "Source repository for `gh release download` (e.g. xberg-io/html-to-markdown)."
     required: true
   dry-run:
     description: >
@@ -55,7 +55,7 @@ runs:
   using: composite
   steps:
     - name: Ensure gh CLI is available
-      uses: kreuzberg-dev/actions/ensure-gh@v1
+      uses: xberg-io/actions/ensure-gh@v1
 
     - name: Render formulas
       id: render

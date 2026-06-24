@@ -28,10 +28,10 @@ jobs:
             alef-x86_64-unknown-linux-gnu.tar.gz
         env:
           # gh release view inside the script needs a repo override since the
-          # smoke workflow runs in kreuzberg-dev/actions but verifies a
-          # release in kreuzberg-dev/alef. The script doesn't expose --repo,
+          # smoke workflow runs in xberg-io/actions but verifies a
+          # release in xberg-io/alef. The script doesn't expose --repo,
           # so we rely on GH_REPO which gh CLI honors as a default.
-          GH_REPO: kreuzberg-dev/alef
+          GH_REPO: xberg-io/alef
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Confirm both expected patterns matched

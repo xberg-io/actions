@@ -11,13 +11,13 @@ No-ops if `swift` is already resolvable on `PATH`.
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-swift@v1
+- uses: xberg-io/actions/setup-swift@v1
 ```
 
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-swift@v1
+- uses: xberg-io/actions/setup-swift@v1
   with:
     swift-version: "6.0"
 ```

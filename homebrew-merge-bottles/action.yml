@@ -23,7 +23,7 @@ inputs:
       Newline-separated list of formula names to merge (e.g. ts-pack, libts-pack).
     required: true
   github-repo:
-    description: "Source repository for bottle root_url (e.g. kreuzberg-dev/foo)"
+    description: "Source repository for bottle root_url (e.g. xberg-io/foo)"
     required: true
 
 runs:

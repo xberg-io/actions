@@ -5,7 +5,7 @@ resulting `.so` files under the output directory, ready to be packed into
 Android AAB or APK archives.
 
 The action expects the caller to have already checked out the repo, run
-`kreuzberg-dev/actions/setup-rust@v1`, and set up the Android SDK using
+`xberg-io/actions/setup-rust@v1`, and set up the Android SDK using
 `android-actions/setup-android@v3`. It does not install any toolchains itself.
 
 ## Inputs
@@ -35,9 +35,9 @@ runs-on: ubuntu-latest
 steps:
   - uses: actions/checkout@v6
   - uses: android-actions/setup-android@v3
-  - uses: kreuzberg-dev/actions/setup-rust@v1
+  - uses: xberg-io/actions/setup-rust@v1
   - id: natives
-    uses: kreuzberg-dev/actions/build-android-natives@v1
+    uses: xberg-io/actions/build-android-natives@v1
     with:
       crate-name: my-crate
       abis: ${{ matrix.abi }}

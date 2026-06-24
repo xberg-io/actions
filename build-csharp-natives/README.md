@@ -6,7 +6,7 @@ resulting native library at the NuGet RID-specific resource path
 asset selection requires this exact path layout.
 
 The action expects the caller to have already checked out the repo and
-run `kreuzberg-dev/actions/setup-rust@v1` with the right target
+run `xberg-io/actions/setup-rust@v1` with the right target
 installed.
 
 ## Inputs
@@ -48,11 +48,11 @@ strategy:
 runs-on: ${{ matrix.os }}
 steps:
   - uses: actions/checkout@v6
-  - uses: kreuzberg-dev/actions/setup-rust@v1
+  - uses: xberg-io/actions/setup-rust@v1
     with:
       target: ${{ matrix.target }}
   - id: natives
-    uses: kreuzberg-dev/actions/build-csharp-natives@v1
+    uses: xberg-io/actions/build-csharp-natives@v1
     with:
       target: ${{ matrix.target }}
       rid: ${{ matrix.rid }}

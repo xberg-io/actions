@@ -6,7 +6,7 @@ description: >
   SPM .binaryTarget distribution.
 
   Assumes the calling workflow has already checked out the repo and set up
-  Rust (e.g. via `kreuzberg-dev/actions/setup-rust@v1`). Must run on
+  Rust (e.g. via `xberg-io/actions/setup-rust@v1`). Must run on
   macos-latest. Linux targets are cross-compiled using the `cross` CLI.
 
 inputs:

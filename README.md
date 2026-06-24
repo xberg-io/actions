@@ -1,4 +1,4 @@
-# kreuzberg-dev/actions
+# xberg-io/actions
 
 Shared GitHub Actions composite actions and reusable workflows for the kreuzberg-dev polyrepo.
 
@@ -162,20 +162,20 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
 ### Composite actions
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-rust@v1
+- uses: xberg-io/actions/setup-rust@v1
   with:
     use-sccache: "true"
 
-- uses: kreuzberg-dev/actions/install-task@v1
+- uses: xberg-io/actions/install-task@v1
   with:
     version: latest
 
-- uses: kreuzberg-dev/actions/publish-npm@v1
+- uses: xberg-io/actions/publish-npm@v1
   with:
     packages-dir: dist
     dry-run: "false"
 
-- uses: kreuzberg-dev/actions/run-test-apps@v1
+- uses: xberg-io/actions/run-test-apps@v1
   with:
     language: python
     version: 0.3.0
@@ -194,7 +194,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kreuzberg-dev/actions/run-test-apps@v1
+      - uses: xberg-io/actions/run-test-apps@v1
         with:
           language: ${{ matrix.language }}
           version: ${{ github.ref_name }}
@@ -211,10 +211,10 @@ jobs:
 ```yaml
 jobs:
   validate-pr:
-    uses: kreuzberg-dev/actions/.github/workflows/reusable-validate-pr.yml@main
+    uses: xberg-io/actions/.github/workflows/reusable-validate-pr.yml@main
 
   publish:
-    uses: kreuzberg-dev/actions/.github/workflows/reusable-python-publish.yml@main
+    uses: xberg-io/actions/.github/workflows/reusable-python-publish.yml@main
     with:
       package-name: my-package
 ```

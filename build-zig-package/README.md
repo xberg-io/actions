@@ -4,14 +4,14 @@ Build the workspace FFI crate the Zig package links against and run
 `zig build` as a smoke check. Zig packages publish via Git tag tarballs, so
 this action verifies that the FFI artifact and `zig build` are healthy
 rather than producing an upload artifact. Pair with
-`kreuzberg-dev/actions/publish-zig@v1` for the tarball-and-tag flow.
+`xberg-io/actions/publish-zig@v1` for the tarball-and-tag flow.
 
 ## Usage
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: kreuzberg-dev/actions/setup-rust@v1
-- uses: kreuzberg-dev/actions/build-zig-package@v1
+- uses: xberg-io/actions/setup-rust@v1
+- uses: xberg-io/actions/build-zig-package@v1
   id: zig_build
   with:
     ffi-crate: kreuzberg-ffi
@@ -39,7 +39,7 @@ rather than producing an upload artifact. Pair with
 ## Notes
 
 - The action assumes the caller already ran `actions/checkout` and a Rust
-  toolchain action (e.g. `kreuzberg-dev/actions/setup-rust@v1`).
+  toolchain action (e.g. `xberg-io/actions/setup-rust@v1`).
 - After `cargo build` succeeds, `zig build` runs in `package-dir`. If
   `build.zig` declares a `test` step (`b.step("test", ...)`), `zig build
   test` runs as well.

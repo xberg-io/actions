@@ -48,7 +48,7 @@ render_bottle_block() {
   for jf in "${jsons[@]}"; do
     local tag_key sha cellar formatted_cellar
     # brew bottle --json keys the top-level object by the fully-qualified
-    # tap formula name (e.g. "kreuzberg-dev/tap/ts-pack"), not the bare
+    # tap formula name (e.g. "xberg-io/tap/ts-pack"), not the bare
     # formula name. There's exactly one key per file, so dereference via keys[0].
     tag_key=$(jq -r '.[keys[0]].bottle.tags | keys[0]' "$jf")
     sha=$(jq -r --arg tag "$tag_key" '.[keys[0]].bottle.tags[$tag].sha256' "$jf")

@@ -12,10 +12,10 @@ set -euo pipefail
 
 tag="${TAG:?TAG is required}"
 version="${VERSION:?VERSION is required}"
-tap="${TAP:?TAP is required (e.g. kreuzberg-dev/tap)}"
+tap="${TAP:?TAP is required (e.g. xberg-io/tap)}"
 formulas_raw="${FORMULAS:?FORMULAS is required (newline-separated list)}"
 out_dir="${OUT_DIR:?OUT_DIR is required}"
-github_repo="${GITHUB_REPO:?GITHUB_REPO is required (e.g. kreuzberg-dev/foo)}"
+github_repo="${GITHUB_REPO:?GITHUB_REPO is required (e.g. xberg-io/foo)}"
 
 mkdir -p "$out_dir"
 work_dir="$(mktemp -d)"

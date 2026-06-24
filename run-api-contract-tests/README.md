@@ -19,7 +19,7 @@ Run [schemathesis](https://schemathesis.readthedocs.io/) property-based contract
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/run-api-contract-tests@v1
+- uses: xberg-io/actions/run-api-contract-tests@v1
   with:
     image: kreuzberg:full
     port: "8000"

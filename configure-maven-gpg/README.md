@@ -16,7 +16,7 @@ Prepare the GPG environment for Maven publishing. Two concerns rolled into one a
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/configure-maven-gpg@v1
+- uses: xberg-io/actions/configure-maven-gpg@v1
   with:
     pom-file: packages/java/pom.xml
 ```

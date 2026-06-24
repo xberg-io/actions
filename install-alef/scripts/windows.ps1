@@ -32,13 +32,13 @@ function Build-FromSource {
   # runner; without it cargo aborts with "binary `alef` already exists".
   if ($ref -eq "main") {
     Write-Output "Building alef from main branch via cargo install..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked --force alef
+    cargo install --git https://github.com/xberg-io/alef --branch main --locked --force alef
   } else {
     Write-Output "Building alef v$ref from source via cargo install --tag..."
-    cargo install --git https://github.com/kreuzberg-dev/alef --tag "v$ref" --locked --force alef
+    cargo install --git https://github.com/xberg-io/alef --tag "v$ref" --locked --force alef
     if ($LASTEXITCODE -ne 0) {
       Write-Output "Tag build failed; falling back to main branch..."
-      cargo install --git https://github.com/kreuzberg-dev/alef --branch main --locked --force alef
+      cargo install --git https://github.com/xberg-io/alef --branch main --locked --force alef
     }
   }
   # cargo installs into $alefBinDir\bin; move the binary so it lives directly
@@ -54,7 +54,7 @@ function Build-FromSource {
 function Install-FromRelease {
   param([string] $version)
   $zipPath = "$alefBinDir\alef.zip"
-  $directUrl = "https://github.com/kreuzberg-dev/alef/releases/download/v$version/alef-x86_64-pc-windows-gnu.zip"
+  $directUrl = "https://github.com/xberg-io/alef/releases/download/v$version/alef-x86_64-pc-windows-gnu.zip"
 
   try {
     Invoke-WebRequest -Uri $directUrl -OutFile $zipPath
@@ -64,7 +64,7 @@ function Install-FromRelease {
       $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
       $headers["X-GitHub-Api-Version"] = "2022-11-28"
     }
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/kreuzberg-dev/alef/releases/tags/v$version" -Headers $headers
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/xberg-io/alef/releases/tags/v$version" -Headers $headers
     $asset = $release.assets | Where-Object { $_.name -match "windows.*\.zip" } | Select-Object -First 1
     if (-not $asset) {
       throw "Could not find Windows release for alef v$version"

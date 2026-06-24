@@ -17,7 +17,7 @@ def _read() -> str:
 
 def test_runs_rewrite_then_mix_hex_build() -> None:
     content = _read()
-    assert "uses: kreuzberg-dev/actions/rewrite-native-deps@v1" in content
+    assert "uses: xberg-io/actions/rewrite-native-deps@v1" in content
     assert "lang: elixir" in content
     assert "mix hex.build" in content
 

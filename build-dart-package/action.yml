@@ -6,7 +6,7 @@ description: >
   crate. Emits the path to the resulting dynamic/static library.
 
   This action assumes the calling workflow has already checked out the repo
-  and set up Rust (via kreuzberg-dev/actions/setup-rust@v1).
+  and set up Rust (via xberg-io/actions/setup-rust@v1).
 
 inputs:
   package-dir:

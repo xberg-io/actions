@@ -47,12 +47,12 @@ strategy:
 runs-on: ${{ matrix.os }}
 steps:
   - uses: actions/checkout@v6
-  - uses: kreuzberg-dev/actions/setup-rust@v1
+  - uses: xberg-io/actions/setup-rust@v1
     with:
       target: ${{ matrix.target }}
-  - uses: kreuzberg-dev/actions/setup-elixir@v1
+  - uses: xberg-io/actions/setup-elixir@v1
   - id: nif
-    uses: kreuzberg-dev/actions/build-elixir-natives@v1
+    uses: xberg-io/actions/build-elixir-natives@v1
     with:
       target: ${{ matrix.target }}
       nif-version: ${{ needs.prepare.outputs.version }}

@@ -14,7 +14,7 @@ Run after `cargo build --package <crate-name>`. Then invoke phpunit with
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-php-ci-ini@v1
+- uses: xberg-io/actions/setup-php-ci-ini@v1
   id: php-ini
   with:
     crate-name: kreuzcrawl-php
@@ -25,7 +25,7 @@ Run after `cargo build --package <crate-name>`. Then invoke phpunit with
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-php-ci-ini@v1
+- uses: xberg-io/actions/setup-php-ci-ini@v1
   with:
     crate-name: kreuzberg-php
     output-name: php-kreuzberg.ini

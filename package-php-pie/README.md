@@ -8,10 +8,10 @@ its path, name, and SHA-256 as step outputs.
 
 ## Prerequisites
 
-Run [`kreuzberg-dev/actions/install-alef`](../install-alef/README.md) before
+Run [`xberg-io/actions/install-alef`](../install-alef/README.md) before
 this action so the `alef` CLI is on `PATH`. The extension binary itself must
 already be built — use
-[`kreuzberg-dev/actions/build-php-extension`](../build-php-extension) for that.
+[`xberg-io/actions/build-php-extension`](../build-php-extension) for that.
 
 ## PIE filename convention
 
@@ -63,23 +63,23 @@ jobs:
           php-version: "8.4"
 
       - name: Set up Rust
-        uses: kreuzberg-dev/actions/setup-rust@v1
+        uses: xberg-io/actions/setup-rust@v1
         with:
           targets: x86_64-unknown-linux-gnu
 
       - name: Install alef
-        uses: kreuzberg-dev/actions/install-alef@v1
+        uses: xberg-io/actions/install-alef@v1
 
       - name: Build PHP extension
         id: build
-        uses: kreuzberg-dev/actions/build-php-extension@v1
+        uses: xberg-io/actions/build-php-extension@v1
         with:
           crate-name: html-to-markdown-php
           lib-name: html_to_markdown
 
       - name: Package as PIE archive
         id: package
-        uses: kreuzberg-dev/actions/package-php-pie@v1
+        uses: xberg-io/actions/package-php-pie@v1
         with:
           php-version: "8.4"
           php-ts: "nts"
@@ -97,7 +97,7 @@ jobs:
 
 ```yaml
       - name: Package as PIE archive (Windows)
-        uses: kreuzberg-dev/actions/package-php-pie@v1
+        uses: xberg-io/actions/package-php-pie@v1
         with:
           php-version: "8.4"
           php-ts: "nts"

@@ -82,7 +82,7 @@ if [[ "$version" == "main" ]]; then
   # the fallback branch runs. Disable errexit/pipefail just around the lookup.
   set +e +o pipefail
   sha="$(curl --silent --fail "${auth_args[@]}" \
-    "https://api.github.com/repos/kreuzberg-dev/alef/commits/main" |
+    "https://api.github.com/repos/xberg-io/alef/commits/main" |
     grep -m1 '"sha"' | sed -E 's/.*"([0-9a-f]+)".*/\1/')"
   set -eo pipefail
   if [[ -n "$sha" ]]; then
@@ -100,7 +100,7 @@ else
     else
       set +e +o pipefail
       tag="$(curl --silent --fail "${auth_args[@]}" \
-        "https://api.github.com/repos/kreuzberg-dev/alef/releases/latest" |
+        "https://api.github.com/repos/xberg-io/alef/releases/latest" |
         grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
       set -eo pipefail
       if [[ -z "$tag" ]]; then

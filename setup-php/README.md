@@ -12,7 +12,7 @@ Install PHP runtime with Composer and optional global tools.
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-php@v1
+- uses: xberg-io/actions/setup-php@v1
   with:
     php-version: "8.2"
     coverage: "pcov"

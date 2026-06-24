@@ -14,13 +14,13 @@ Works on both macOS (`stat -f`) and Linux (`stat -c`). Run after
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-swift-bridge@v1
+- uses: xberg-io/actions/setup-swift-bridge@v1
 ```
 
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-swift-bridge@v1
+- uses: xberg-io/actions/setup-swift-bridge@v1
   with:
     profile: release
     crate-name: kreuzberg-swift

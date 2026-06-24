@@ -23,7 +23,7 @@ def _read(action_dir: str) -> str:
 
 def test_rewrite_action_installs_alef_then_runs_publish_prepare():
     content = _read("rewrite-native-deps")
-    assert "uses: kreuzberg-dev/actions/install-alef@v1" in content
+    assert "uses: xberg-io/actions/install-alef@v1" in content
     assert "publish prepare --lang" in content
     assert "--require-registry" in content
 
@@ -67,7 +67,7 @@ def test_rewrite_action_runs_at_repo_root_by_default():
 )
 def test_source_build_action_embeds_rewrite(action_dir: str, lang: str):
     content = _read(action_dir)
-    assert "uses: kreuzberg-dev/actions/rewrite-native-deps@v1" in content
+    assert "uses: xberg-io/actions/rewrite-native-deps@v1" in content
     assert f"lang: {lang}" in content
     # opt-out input present and defaulting on
     assert "rewrite-native-deps:" in content

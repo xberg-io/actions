@@ -6,14 +6,14 @@ action installs Flutter (optional) and `flutter_rust_bridge_codegen`, runs
 the FRB code generator inside the package directory, then builds the named
 cargo crate and emits the path of the resulting library. Publishing
 (`dart pub publish`) is left to a separate action — pair this with
-`kreuzberg-dev/actions/publish-pub@v1`.
+`xberg-io/actions/publish-pub@v1`.
 
 ## Usage
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: kreuzberg-dev/actions/setup-rust@v1
-- uses: kreuzberg-dev/actions/build-dart-package@v1
+- uses: xberg-io/actions/setup-rust@v1
+- uses: xberg-io/actions/build-dart-package@v1
   id: dart_build
   with:
     package-dir: packages/dart
@@ -28,7 +28,7 @@ Skip the Flutter setup if the workflow already installed it:
 - uses: subosito/flutter-action@v2
   with:
     flutter-version: '3.27.0'
-- uses: kreuzberg-dev/actions/build-dart-package@v1
+- uses: xberg-io/actions/build-dart-package@v1
   with:
     setup-flutter: 'false'
 ```
@@ -54,7 +54,7 @@ Skip the Flutter setup if the workflow already installed it:
 ## Notes
 
 - The action assumes the caller already ran `actions/checkout` and a Rust
-  toolchain action (e.g. `kreuzberg-dev/actions/setup-rust@v1`).
+  toolchain action (e.g. `xberg-io/actions/setup-rust@v1`).
 - The platform-specific library suffix is selected from `RUNNER_OS`.
 - The library name matches Cargo's convention: dashes in the crate name
   become underscores (`kreuzberg-dart` -> `libkreuzberg_dart.{so,dylib}`,

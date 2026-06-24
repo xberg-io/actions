@@ -107,14 +107,14 @@ jobs:
 
       - name: Free disk space
         if: runner.os == 'Linux'
-        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+        uses: xberg-io/actions/free-disk-space-linux@v1
 
-      - uses: kreuzberg-dev/actions/setup-rust@v1
+      - uses: xberg-io/actions/setup-rust@v1
         with:
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
 
-      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+      - uses: xberg-io/actions/build-rust-cli@v1
         id: build
         with:
           package-name: ${{ inputs.package-name }}
@@ -175,14 +175,14 @@ jobs:
 
       - name: Free disk space
         if: runner.os == 'Linux'
-        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+        uses: xberg-io/actions/free-disk-space-linux@v1
 
-      - uses: kreuzberg-dev/actions/setup-rust@v1
+      - uses: xberg-io/actions/setup-rust@v1
         with:
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
 
-      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+      - uses: xberg-io/actions/build-rust-cli@v1
         id: build
         with:
           package-name: ${{ inputs.package-name }}
@@ -236,17 +236,17 @@ jobs:
           submodules: recursive
 
       - name: Free disk space
-        uses: kreuzberg-dev/actions/free-disk-space-linux@v1
+        uses: xberg-io/actions/free-disk-space-linux@v1
 
       - name: Install musl tools
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - uses: kreuzberg-dev/actions/setup-rust@v1
+      - uses: xberg-io/actions/setup-rust@v1
         with:
           target: x86_64-unknown-linux-musl
           cache-key-prefix: publish-cli-x86_64-unknown-linux-musl
 
-      - uses: kreuzberg-dev/actions/build-rust-cli@v1
+      - uses: xberg-io/actions/build-rust-cli@v1
         id: build
         with:
           package-name: ${{ inputs.package-name }}
@@ -313,13 +313,13 @@ jobs:
         # Idempotent: PATCHes an existing draft to published; no-op when already
         # published. Prevents CLI binaries from being stranded in a draft when a
         # repo's release-finalize is gated on the whole publish matrix.
-        uses: kreuzberg-dev/actions/publish-github-release@v1
+        uses: xberg-io/actions/publish-github-release@v1
         with:
           tag: ${{ inputs.tag }}
           draft: "false"
           dry-run: ${{ inputs.dry-run }}
 
-      - uses: kreuzberg-dev/actions/upload-release-assets@v1
+      - uses: xberg-io/actions/upload-release-assets@v1
         with:
           tag: ${{ inputs.tag }}
           working-directory: dist/cli

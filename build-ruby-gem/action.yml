@@ -46,7 +46,7 @@ runs:
   steps:
     - name: Rewrite native dependencies to registry versions
       if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
-      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      uses: xberg-io/actions/rewrite-native-deps@v1
       with:
         lang: ruby
         alef-version: ${{ inputs.alef-version }}

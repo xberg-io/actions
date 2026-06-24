@@ -52,7 +52,7 @@ runs:
   using: composite
   steps:
     - name: Setup R
-      uses: kreuzberg-dev/actions/setup-r@v1
+      uses: xberg-io/actions/setup-r@v1
       with:
         r-version: "4.4"
         install-deps: "true"
@@ -60,7 +60,7 @@ runs:
 
     - name: Rewrite native dependencies to registry versions
       if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
-      uses: kreuzberg-dev/actions/rewrite-native-deps@v1
+      uses: xberg-io/actions/rewrite-native-deps@v1
       with:
         lang: r
         alef-version: ${{ inputs.alef-version }}

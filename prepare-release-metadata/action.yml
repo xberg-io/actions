@@ -119,7 +119,7 @@ runs:
   using: composite
   steps:
     - name: Install alef
-      uses: kreuzberg-dev/actions/install-alef@v1
+      uses: xberg-io/actions/install-alef@v1
       with:
         version: ${{ inputs.alef-version }}
 

@@ -26,7 +26,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: kreuzberg-dev/actions/publish-pub@v1
+      - uses: xberg-io/actions/publish-pub@v1
         with:
           package-dir: packages/dart
 ```
@@ -34,7 +34,7 @@ jobs:
 ### Dry run
 
 ```yaml
-- uses: kreuzberg-dev/actions/publish-pub@v1
+- uses: xberg-io/actions/publish-pub@v1
   with:
     package-dir: packages/dart
     dry-run: 'true'
@@ -46,7 +46,7 @@ jobs:
 - uses: dart-lang/setup-dart@v1
   with:
     sdk: '3.5.0'
-- uses: kreuzberg-dev/actions/publish-pub@v1
+- uses: xberg-io/actions/publish-pub@v1
   with:
     package-dir: packages/dart
     setup-dart: 'false'

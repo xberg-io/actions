@@ -16,6 +16,6 @@ Install Node.js, textlint, and the kreuzberg-dev standard rule set in one batche
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-textlint@v1
+- uses: xberg-io/actions/setup-textlint@v1
 - run: scripts/ci/docs/textlint.sh
 ```

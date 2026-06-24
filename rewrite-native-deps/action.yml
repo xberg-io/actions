@@ -32,7 +32,7 @@ runs:
   using: composite
   steps:
     - name: Install alef CLI
-      uses: kreuzberg-dev/actions/install-alef@v1
+      uses: xberg-io/actions/install-alef@v1
       with:
         version: ${{ inputs.alef-version }}
 
@@ -68,7 +68,7 @@ runs:
         # registry dep → cargo bails with `failed to read .../Cargo.toml`.
         # Strip the [patch.*] sections entirely; they are dev/workspace
         # affordances that have no meaning in a published source distribution.
-        # Resolves kreuzberg-dev/html-to-markdown#390 (Alpine/musl sdist install).
+        # Resolves xberg-io/html-to-markdown#390 (Alpine/musl sdist install).
         if [ -f Cargo.toml ] && grep -q '^\[patch\.' Cargo.toml; then
           awk '
             BEGIN { in_patch = 0 }
@@ -97,7 +97,7 @@ runs:
         # so the dep resolves from the registry. Stripping the entry entirely is
         # also safe — alef-generated binding crates use explicit version deps,
         # not `workspace = true` — but dropping just `path` is the minimal change.
-        # Resolves kreuzberg-dev/html-to-markdown#402 (Alpine/musl sdist install
+        # Resolves xberg-io/html-to-markdown#402 (Alpine/musl sdist install
         # still failing after #390 fix because [workspace.dependencies] was missed).
         if [ -f Cargo.toml ] && grep -q '^\[workspace\.dependencies\]' Cargo.toml; then
           python3 - <<'PY'

@@ -53,7 +53,7 @@ detect_target() {
 install_from_release() {
   local version="$1" target max_attempts=3 attempt=1 wait_time=2
   target="$(detect_target)"
-  local url="https://github.com/kreuzberg-dev/alef/releases/download/v${version}/alef-${target}.tar.gz"
+  local url="https://github.com/xberg-io/alef/releases/download/v${version}/alef-${target}.tar.gz"
 
   while [[ $attempt -le $max_attempts ]]; do
     echo "Installing alef v${version} for ${target} (attempt ${attempt}/${max_attempts})..."
@@ -112,7 +112,7 @@ build_from_source() {
     echo "Building alef from main branch via cargo install..."
     CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
       cargo install \
-      --git https://github.com/kreuzberg-dev/alef \
+      --git https://github.com/xberg-io/alef \
       --branch main \
       --locked \
       --force \
@@ -121,7 +121,7 @@ build_from_source() {
     echo "Building alef v${ref} from source via cargo install --tag..."
     if ! CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
       cargo install \
-      --git https://github.com/kreuzberg-dev/alef \
+      --git https://github.com/xberg-io/alef \
       --tag "v${ref}" \
       --locked \
       --force \
@@ -129,7 +129,7 @@ build_from_source() {
       echo "Tag build failed; falling back to main branch..." >&2
       CARGO_INSTALL_ROOT="$alef_bin_dir/.." \
         cargo install \
-        --git https://github.com/kreuzberg-dev/alef \
+        --git https://github.com/xberg-io/alef \
         --branch main \
         --locked \
         --force \

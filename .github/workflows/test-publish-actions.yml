@@ -411,7 +411,7 @@ jobs:
         with:
           chart-path: pkg
           version: 0.1.0
-          registry: oci://ghcr.io/kreuzberg-dev/charts
+          registry: oci://ghcr.io/xberg-io/charts
           username: dummy
           password: dummy
           dry-run: "true"

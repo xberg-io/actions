@@ -12,7 +12,7 @@ Set `HEX_API_KEY` in the calling workflow's environment. The action checks
 its presence before publishing and fails fast if missing.
 
 ```yaml
-- uses: kreuzberg-dev/actions/publish-gleam@v1
+- uses: xberg-io/actions/publish-gleam@v1
   env:
     HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
   with:
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kreuzberg-dev/actions/publish-gleam@v1
+      - uses: xberg-io/actions/publish-gleam@v1
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
         with:
@@ -40,7 +40,7 @@ jobs:
 ### Dry run
 
 ```yaml
-- uses: kreuzberg-dev/actions/publish-gleam@v1
+- uses: xberg-io/actions/publish-gleam@v1
   with:
     package-dir: packages/gleam
     dry-run: 'true'
@@ -53,7 +53,7 @@ jobs:
   with:
     otp-version: '27'
     gleam-version: '1.6'
-- uses: kreuzberg-dev/actions/publish-gleam@v1
+- uses: xberg-io/actions/publish-gleam@v1
   env:
     HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
   with:

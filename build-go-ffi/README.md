@@ -5,7 +5,7 @@ shared library together with the C header into a tar.gz that the Go cgo
 binding can unpack at install time.
 
 The action expects the caller to have already checked out the repository and
-run `kreuzberg-dev/actions/setup-rust@v1` (with the right target installed).
+run `xberg-io/actions/setup-rust@v1` (with the right target installed).
 It does not install any toolchains itself.
 
 ## Contract for Go `go generate` consumers
@@ -58,11 +58,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: kreuzberg-dev/actions/setup-rust@v1
+      - uses: xberg-io/actions/setup-rust@v1
         with:
           target: ${{ matrix.target }}
       - id: ffi
-        uses: kreuzberg-dev/actions/build-go-ffi@v1
+        uses: xberg-io/actions/build-go-ffi@v1
         with:
           target: ${{ matrix.target }}
       - uses: actions/upload-artifact@v7
@@ -75,7 +75,7 @@ jobs:
 
 ```yaml
 - id: ffi
-  uses: kreuzberg-dev/actions/build-go-ffi@v1
+  uses: xberg-io/actions/build-go-ffi@v1
   with:
     target: ${{ matrix.target }}
     crate-name: html-to-markdown-ffi

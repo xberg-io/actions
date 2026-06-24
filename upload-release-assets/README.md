@@ -29,7 +29,7 @@ the same files. Replaces the per-purpose `upload-cli-binaries.sh`,
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/upload-release-assets@v1
+- uses: xberg-io/actions/upload-release-assets@v1
   with:
     tag: ${{ needs.prepare.outputs.tag }}
     assets: |
@@ -41,7 +41,7 @@ the same files. Replaces the per-purpose `upload-cli-binaries.sh`,
 ### With dry-run
 
 ```yaml
-- uses: kreuzberg-dev/actions/upload-release-assets@v1
+- uses: xberg-io/actions/upload-release-assets@v1
   with:
     tag: v1.2.3
     assets: dist/**/*.tar.gz

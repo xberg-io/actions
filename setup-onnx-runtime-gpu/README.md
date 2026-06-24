@@ -18,7 +18,7 @@ Download the GPU/CUDA build of ONNX Runtime, extract it under `$RUNNER_TEMP`, an
 ## Example
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-onnx-runtime-gpu@v1
+- uses: xberg-io/actions/setup-onnx-runtime-gpu@v1
   with:
     version: "1.24.2"
 ```

@@ -2,7 +2,7 @@ name: Build Android Native Libraries
 description: >
   Cross-compile a Rust crate for Android ABIs using cargo-ndk and stage
   the resulting .so files under dist/android-natives/{abi}/lib{lib}.so.
-  Caller must have already called kreuzberg-dev/actions/setup-rust@v1
+  Caller must have already called xberg-io/actions/setup-rust@v1
   and set up the Android SDK (android-actions/setup-android@v3).
 
 inputs:

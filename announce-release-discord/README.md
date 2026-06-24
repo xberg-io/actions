@@ -25,7 +25,7 @@ on the calling job to upload the dedup marker asset.
 permissions:
   contents: write
 steps:
-  - uses: kreuzberg-dev/actions/announce-release-discord@v1
+  - uses: xberg-io/actions/announce-release-discord@v1
     with:
       tag: ${{ needs.prepare.outputs.tag }}
       webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -57,7 +57,7 @@ announce-discord:
   permissions:
     contents: write
   steps:
-    - uses: kreuzberg-dev/actions/announce-release-discord@v1
+    - uses: xberg-io/actions/announce-release-discord@v1
       with:
         tag: ${{ needs.prepare.outputs.tag }}
         webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -71,7 +71,7 @@ from a workflow that doesn't pre-compute that flag.
 ### Dry run
 
 ```yaml
-- uses: kreuzberg-dev/actions/announce-release-discord@v1
+- uses: xberg-io/actions/announce-release-discord@v1
   with:
     tag: v1.2.3
     webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}

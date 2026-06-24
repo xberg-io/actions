@@ -26,15 +26,15 @@ The artifact bundle is suitable for distribution via Swift Package Manager:
 ## Prerequisites
 
 - **macOS runner** (e.g. `macos-latest`): required for Apple target compilation
-- **Rust setup** (e.g. via `kreuzberg-dev/actions/setup-rust@v1`)
+- **Rust setup** (e.g. via `xberg-io/actions/setup-rust@v1`)
 - **Cross CLI** installed (action handles this automatically)
 
 ## Usage
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: kreuzberg-dev/actions/setup-rust@v1
-- uses: kreuzberg-dev/actions/build-swift-artifactbundle@v1
+- uses: xberg-io/actions/setup-rust@v1
+- uses: xberg-io/actions/build-swift-artifactbundle@v1
   with:
     crate-name: my-rust-crate
     lib-name: my_rust_crate
@@ -126,7 +126,7 @@ Use the `dry-run: true` input to preview the planned build without actually
 compiling:
 
 ```yaml
-- uses: kreuzberg-dev/actions/build-swift-artifactbundle@v1
+- uses: xberg-io/actions/build-swift-artifactbundle@v1
   with:
     crate-name: my-crate
     dry-run: "true"

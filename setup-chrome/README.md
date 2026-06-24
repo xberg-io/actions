@@ -12,13 +12,13 @@ Install a Chrome-compatible browser for headless tests across Linux
 ## Usage
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-chrome@v1
+- uses: xberg-io/actions/setup-chrome@v1
 ```
 
 With overrides:
 
 ```yaml
-- uses: kreuzberg-dev/actions/setup-chrome@v1
+- uses: xberg-io/actions/setup-chrome@v1
   with:
     chrome-version: "stable"
 ```
