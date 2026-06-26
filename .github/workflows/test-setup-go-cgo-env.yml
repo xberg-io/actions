@@ -21,13 +21,13 @@ jobs:
           # The action requires the FFI library directory to exist; smoke
           # test only verifies the env wiring, not the actual link step.
           mkdir -p target/release
-          mkdir -p crates/kreuzberg-ffi/include
+          mkdir -p crates/xberg-ffi/include
 
       - name: Setup Go cgo env
         uses: ./setup-go-cgo-env
         with:
-          ffi-crate-dir: "crates/kreuzberg-ffi"
-          ffi-lib-name: "kreuzberg_ffi"
+          ffi-crate-dir: "crates/xberg-ffi"
+          ffi-lib-name: "xberg_ffi"
 
       - name: Verify cgo environment
         shell: bash

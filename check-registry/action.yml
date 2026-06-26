@@ -9,7 +9,7 @@ inputs:
     description: "Registry to check"
     required: true
   package:
-    description: "Package name (e.g. 'kreuzberg', '@kreuzberg/node-linux-x64-gnu', 'dev.kreuzberg:kreuzberg')"
+    description: "Package name (e.g. 'xberg', '@xberg-io/node-linux-x64-gnu', 'io.xberg:xberg')"
     required: true
   version:
     description: "Version to check for"

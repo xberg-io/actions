@@ -9,12 +9,12 @@ name: Validate Issues (Reusable)
 #   - Adds the issue to the org project board xberg-io/1
 #
 # The default GITHUB_TOKEN cannot edit org-level projects; callers must pass a
-# fine-grained PAT via `secrets: inherit` (org secret KREUZBERG_DEV_PROJECT_TOKEN).
+# fine-grained PAT via `secrets: inherit` (org secret XBERG_DEV_PROJECT_TOKEN).
 
 on:
   workflow_call:
     secrets:
-      KREUZBERG_DEV_PROJECT_TOKEN:
+      XBERG_DEV_PROJECT_TOKEN:
         description: Fine-grained PAT with repository-projects=write and issues=write for xberg-io/1
         required: false
 
@@ -83,7 +83,7 @@ jobs:
     steps:
       - name: Add issue to xberg-io/1
         env:
-          GH_TOKEN: ${{ secrets.KREUZBERG_DEV_PROJECT_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.XBERG_DEV_PROJECT_TOKEN || github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then

@@ -3,7 +3,7 @@ description: >
   Run schemathesis property-based contract tests against a running
   API. Starts the supplied Docker image, waits for the OpenAPI
   endpoint to respond, then invokes schemathesis with the standard
-  kreuzberg-dev check set. Always tears the container down.
+  xberg-io check set. Always tears the container down.
 
 inputs:
   image:

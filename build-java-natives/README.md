@@ -2,7 +2,7 @@
 
 Build the Rust FFI crate for one Rust target triple and stage the
 resulting native library at the Panama FFM-expected resource path,
-ready to be packed into a `kreuzberg-natives-{classifier}` JAR.
+ready to be packed into a `xberg-natives-{classifier}` JAR.
 
 The action expects the caller to have already checked out the repo and
 run `xberg-io/actions/setup-rust@v1` with the right target
@@ -13,7 +13,7 @@ installed. It does not install any toolchains itself.
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `kreuzberg-ffi` | Cargo package name to build. |
+| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
 | `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
 | `classifier` | yes | — | Maven classifier, e.g. `linux-x86_64`, `linux-aarch64-musl`, `darwin-aarch64`, `windows-x86_64`. |
 | `output-dir` | no | `dist/java-natives` | Staging root directory. |

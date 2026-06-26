@@ -55,7 +55,7 @@ def build_publish_flags(access: str, npm_tag: str, provenance: bool, dry_run: bo
     """Build the list of flags to pass to `npm publish`.
 
     Note: --force bypasses npm's pre-publish validation for new scoped packages.
-    This is required for platform-specific subpackages (e.g. @kreuzberg/node-linux-arm64-musl)
+    This is required for platform-specific subpackages (e.g. @xberg-io/node-linux-arm64-musl)
     on their first publish, as npm CLI cannot validate the package exists before creation.
     """
     flags: list[str] = ["--access", access, "--tag", npm_tag, "--ignore-scripts", "--force"]

@@ -2,7 +2,7 @@ name: Build Java Native Libraries
 description: >
   Build the FFI crate for one Rust target and stage the resulting native
   library at the Panama FFM-expected resource path so it can later be
-  packed into a `kreuzberg-natives-{classifier}` JAR. Caller is
+  packed into a `xberg-natives-{classifier}` JAR. Caller is
   responsible for setup-rust + target install.
 
 inputs:

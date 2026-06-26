@@ -14,7 +14,7 @@ rather than producing an upload artifact. Pair with
 - uses: xberg-io/actions/build-zig-package@v1
   id: zig_build
   with:
-    ffi-crate: kreuzberg-ffi
+    ffi-crate: xberg-ffi
     package-dir: packages/zig
 - run: echo "FFI lib at ${{ steps.zig_build.outputs.ffi-library-path }}"
 ```
@@ -23,7 +23,7 @@ rather than producing an upload artifact. Pair with
 
 | Name | Required | Default | Description |
 |---|---|---|---|
-| `ffi-crate` | no | `kreuzberg-ffi` | Workspace FFI crate Zig links against. |
+| `ffi-crate` | no | `xberg-ffi` | Workspace FFI crate Zig links against. |
 | `package-dir` | no | `packages/zig` | Directory containing `build.zig` and `build.zig.zon`. |
 | `build-profile` | no | `release` | Cargo profile for the FFI crate (`release`, `dev`, or custom). |
 | `setup-zig` | no | `true` | Install Zig via `mlugg/setup-zig`. |
@@ -44,8 +44,8 @@ rather than producing an upload artifact. Pair with
   `build.zig` declares a `test` step (`b.step("test", ...)`), `zig build
   test` runs as well.
 - The FFI library name follows Cargo's convention: dashes in the crate
-  name become underscores (`kreuzberg-ffi` -> `libkreuzberg_ffi.{so,dylib}`,
-  `kreuzberg_ffi.dll`).
+  name become underscores (`xberg-ffi` -> `libxberg_ffi.{so,dylib}`,
+  `xberg_ffi.dll`).
 - `dev`/`debug` profiles map to `target/debug/`; everything else maps to
   `target/<profile>/`.
 - Zig publication still happens via `publish-zig`; this action does not

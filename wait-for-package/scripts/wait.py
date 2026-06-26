@@ -4,7 +4,7 @@
 Supports: npm, pypi, cratesio, maven, rubygems
 
 Usage (GitHub Actions via env vars):
-    INPUT_REGISTRY=pypi INPUT_PACKAGE=kreuzberg INPUT_VERSION=4.4.6 python3 wait.py
+    INPUT_REGISTRY=pypi INPUT_PACKAGE=xberg INPUT_VERSION=4.4.6 python3 wait.py
 """
 
 import json

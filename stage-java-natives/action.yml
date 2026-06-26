@@ -24,7 +24,7 @@ inputs:
       that MUST be present after staging. The action fails if any are missing.
     required: true
   lib-name:
-    description: "Base library name (e.g. `kreuzberg_ffi`). Used to verify each classifier has a matching lib."
+    description: "Base library name (e.g. `xberg_ffi`). Used to verify each classifier has a matching lib."
     required: true
 
 runs:

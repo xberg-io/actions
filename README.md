@@ -1,6 +1,6 @@
 # xberg-io/actions
 
-Shared GitHub Actions composite actions and reusable workflows for the kreuzberg-dev polyrepo.
+Shared GitHub Actions composite actions and reusable workflows for the xberg-io polyrepo.
 
 ## Actions
 
@@ -23,7 +23,7 @@ Shared GitHub Actions composite actions and reusable workflows for the kreuzberg
 | `install-alef` | Alef CLI installation |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 | `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
-| `setup-textlint` | textlint + the kreuzberg-dev standard rule set in one batched npm install |
+| `setup-textlint` | textlint + the xberg-io standard rule set in one batched npm install |
 | `setup-onnx-runtime-gpu` | Download and stage the GPU/CUDA build of ONNX Runtime; exports `ORT_DYLIB_PATH` + `LD_LIBRARY_PATH` |
 | `configure-maven-gpg` | Prefer `gpg2` (shimmed as `gpg`) and patch legacy `--pinentry-mode loopback` two-arg form in `pom.xml` |
 

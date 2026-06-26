@@ -8,7 +8,7 @@ Composite action that prepares a GitHub Actions runner for Rust Android cross-co
 4. Adds the requested Rust Android targets via `rustup target add`
 5. Optionally installs `cargo-ndk`
 
-Designed for reuse across `kreuzberg-dev` Rust libraries with Android binding targets. Assumes a Rust toolchain is already installed (e.g. via `xberg-io/actions/setup-rust@v1`).
+Designed for reuse across `xberg-io` Rust libraries with Android binding targets. Assumes a Rust toolchain is already installed (e.g. via `xberg-io/actions/setup-rust@v1`).
 
 ## Inputs
 

@@ -14,8 +14,8 @@ target installed) and `setup-elixir@v1`.
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `nif-crate-name` | no | `kreuzberg_nif` | Cargo package name of the NIF crate. |
-| `nif-crate-path` | no | `packages/elixir/native/kreuzberg_nif` | Path to the NIF crate's manifest directory. |
+| `nif-crate-name` | no | `xberg_nif` | Cargo package name of the NIF crate. |
+| `nif-crate-path` | no | `packages/elixir/native/xberg_nif` | Path to the NIF crate's manifest directory. |
 | `package-dir` | no | `packages/elixir` | Path to the Elixir package (containing `mix.exs`). |
 | `nif-version` | yes | — | Package version embedded in the artifact name (e.g. `5.0.0`). |
 | `nif-api-version` | no | `""` | Erlang NIF API version (e.g. `2.16`). Empty → auto-detect via `erl`. |

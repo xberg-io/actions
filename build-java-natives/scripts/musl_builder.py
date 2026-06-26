@@ -34,7 +34,7 @@ def build_in_docker(
     """Build a Rust cdylib crate inside Alpine container for musl target.
 
     Args:
-        crate_name: Cargo package name (e.g., "kreuzberg-ffi")
+        crate_name: Cargo package name (e.g., "xberg-ffi")
         target: Rust target triple (e.g., "aarch64-unknown-linux-musl")
         env_vars: Optional dict of environment variables to pass to cargo
 

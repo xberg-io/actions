@@ -65,7 +65,7 @@ def fetch_release_assets(tag: str) -> list[dict[str, Any]]:
     `GET /releases/tags/<tag>` lookup that `gh release view <tag>` performs
     always returns 404 for them. Listing all releases (which the same
     endpoint surfaces when the token grants `contents:read` plus draft
-    visibility, e.g. the GitHub App tokens used in the kreuzberg-dev
+    visibility, e.g. the GitHub App tokens used in the xberg-io
     publish workflows) reaches draft and published releases uniformly.
 
     Falls back to `gh release view <tag>` if the API listing returns no

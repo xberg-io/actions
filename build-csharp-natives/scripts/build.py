@@ -8,7 +8,7 @@ host linker incompatibilities. For other targets, builds natively on the host.
 
 Inputs (env vars):
     INPUT_TARGET: Rust target triple (required)
-    INPUT_CRATE_NAME: cargo package name (default kreuzberg-ffi)
+    INPUT_CRATE_NAME: cargo package name (default xberg-ffi)
     INPUT_LIB_NAME: library base name (default = crate-name with - → _)
     INPUT_RID: .NET runtime identifier (required), e.g. linux-x64
     INPUT_OUTPUT_DIR: staging root (default dist/csharp-natives)
@@ -146,7 +146,7 @@ def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
 def main() -> None:
     target = ensure_input("INPUT_TARGET", os.environ.get("INPUT_TARGET", ""))
     rid = ensure_input("INPUT_RID", os.environ.get("INPUT_RID", ""))
-    crate_name = os.environ.get("INPUT_CRATE_NAME", "kreuzberg-ffi") or "kreuzberg-ffi"
+    crate_name = os.environ.get("INPUT_CRATE_NAME", "xberg-ffi") or "xberg-ffi"
     lib_name = os.environ.get("INPUT_LIB_NAME", "") or crate_name.replace("-", "_")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/csharp-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"

@@ -5,7 +5,7 @@ description: >
 
 inputs:
   image:
-    description: "Image reference to inspect (e.g. kreuzberg:cli)"
+    description: "Image reference to inspect (e.g. xberg:cli)"
     required: true
   warn-mb:
     description: "Emit a workflow warning if image is larger than this many MB. Empty = no warn threshold."

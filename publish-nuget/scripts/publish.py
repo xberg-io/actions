@@ -81,7 +81,7 @@ def _exchange_oidc_for_nuget_key(oidc_token: str, nuget_username: str) -> str | 
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {oidc_token}",
-            "User-Agent": "kreuzberg-dev-actions/publish-nuget",
+            "User-Agent": "xberg-io-actions/publish-nuget",
         },
         method="POST",
     )

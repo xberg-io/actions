@@ -17,7 +17,7 @@ cargo crate and emits the path of the resulting library. Publishing
   id: dart_build
   with:
     package-dir: packages/dart
-    crate-name: kreuzberg-dart
+    crate-name: xberg-dart
 - name: Show artifact
   run: ls -l "${{ steps.dart_build.outputs.library-path }}"
 ```
@@ -38,7 +38,7 @@ Skip the Flutter setup if the workflow already installed it:
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `package-dir` | no | `packages/dart` | Directory containing `pubspec.yaml` and the FRB config. |
-| `crate-name` | no | `kreuzberg-dart` | Cargo crate name of the Rust binding crate. |
+| `crate-name` | no | `xberg-dart` | Cargo crate name of the Rust binding crate. |
 | `build-profile` | no | `release` | Cargo profile (`release`, `dev`, or a custom named profile). |
 | `setup-flutter` | no | `true` | Install Flutter via `subosito/flutter-action`. |
 | `flutter-version` | no | `3.27.0` | Flutter version, passed to `subosito/flutter-action`. |
@@ -57,8 +57,8 @@ Skip the Flutter setup if the workflow already installed it:
   toolchain action (e.g. `xberg-io/actions/setup-rust@v1`).
 - The platform-specific library suffix is selected from `RUNNER_OS`.
 - The library name matches Cargo's convention: dashes in the crate name
-  become underscores (`kreuzberg-dart` -> `libkreuzberg_dart.{so,dylib}`,
-  `kreuzberg_dart.dll`).
+  become underscores (`xberg-dart` -> `libxberg_dart.{so,dylib}`,
+  `xberg_dart.dll`).
 - `dev`/`debug` profiles map to `target/debug/`; everything else maps to
   `target/<profile>/`.
 - `flutter_rust_bridge_codegen` is installed with `--locked` and skipped if

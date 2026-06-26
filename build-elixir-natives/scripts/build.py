@@ -8,8 +8,8 @@ host linker incompatibilities. For other targets, builds natively on the host.
 
 Inputs (env vars):
     INPUT_TARGET: Rust target triple (required)
-    INPUT_NIF_CRATE_NAME: cargo package name of NIF crate (default kreuzberg_nif)
-    INPUT_NIF_CRATE_PATH: path to NIF crate dir (default packages/elixir/native/kreuzberg_nif)
+    INPUT_NIF_CRATE_NAME: cargo package name of NIF crate (default xberg_nif)
+    INPUT_NIF_CRATE_PATH: path to NIF crate dir (default packages/elixir/native/xberg_nif)
     INPUT_PACKAGE_DIR: Elixir package dir (default packages/elixir)
     INPUT_NIF_VERSION: package version (required)
     INPUT_NIF_API_VERSION: Erlang NIF API version (default "" = auto-detect)
@@ -137,8 +137,8 @@ def ensure_input(name: str, value: str) -> str:
 def main() -> None:
     target = ensure_input("INPUT_TARGET", os.environ.get("INPUT_TARGET", ""))
     nif_version = ensure_input("INPUT_NIF_VERSION", os.environ.get("INPUT_NIF_VERSION", ""))
-    nif_crate_name = os.environ.get("INPUT_NIF_CRATE_NAME", "kreuzberg_nif") or "kreuzberg_nif"
-    nif_crate_path = Path(os.environ.get("INPUT_NIF_CRATE_PATH", "") or "packages/elixir/native/kreuzberg_nif")
+    nif_crate_name = os.environ.get("INPUT_NIF_CRATE_NAME", "xberg_nif") or "xberg_nif"
+    nif_crate_path = Path(os.environ.get("INPUT_NIF_CRATE_PATH", "") or "packages/elixir/native/xberg_nif")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/elixir-natives")
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"
     glibc_version = os.environ.get("INPUT_GLIBC_VERSION", "")

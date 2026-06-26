@@ -15,10 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Use a known-good public release in the kreuzberg-dev org that has
+      # Use a known-good public release in the xberg-io org that has
       # stable named assets. v0.26.2 of alef ships the Linux and macOS
       # tarballs that we can fnmatch against.
-      - name: Verify against an existing kreuzberg-dev release
+      - name: Verify against an existing xberg-io release
         id: verify
         uses: ./verify-release-assets
         with:

@@ -54,7 +54,7 @@ def good_node_tgz(tmp_path: Path) -> Path:
     (pkg / "index.js").write_text("")
     (pkg / "index.d.ts").write_text("")
     (pkg / "LICENSE").write_text("MIT")
-    tgz = tmp_path / "kreuzberg-liter-llm-node-1.4.0-rc.27.tgz"
+    tgz = tmp_path / "xberg-liter-llm-node-1.4.0-rc.27.tgz"
     with tarfile.open(tgz, "w:gz") as tf:
         for f in pkg.iterdir():
             tf.add(f, arcname=f"package/{f.name}")
@@ -159,7 +159,7 @@ def good_node_platform_tgz(tmp_path: Path) -> Path:
     pkg.mkdir()
     (pkg / "package.json").write_text("{}")
     (pkg / "index.darwin-arm64.node").write_bytes(b"\x00" * 100)
-    tgz = tmp_path / "kreuzberg-html-to-markdown-node-darwin-arm64-3.6.0-rc.12.tgz"
+    tgz = tmp_path / "xberg-html-to-markdown-node-darwin-arm64-3.6.0-rc.12.tgz"
     with tarfile.open(tgz, "w:gz") as tf:
         for f in pkg.iterdir():
             tf.add(f, arcname=f"package/{f.name}")

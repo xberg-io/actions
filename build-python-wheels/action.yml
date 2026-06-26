@@ -66,7 +66,7 @@ inputs:
     description: >
       Build and install libheif 1.23.0 (plus codec headers) in the manylinux
       container before building wheels. Required only by libheif-sys consumers
-      (e.g. kreuzberg). Opt-in — defaults to off so consumers that do not link
+      (e.g. xberg). Opt-in — defaults to off so consumers that do not link
       libheif are not coupled to its system dependencies.
     required: false
     default: "false"
@@ -109,7 +109,7 @@ runs:
       env:
         CIBW_BUILD: ${{ inputs.cibw-build }}
         # libheif is built only when `build-libheif` is opt-in (libheif-sys consumers
-        # such as kreuzberg). Consumers that do not link libheif skip it entirely and
+        # such as xberg). Consumers that do not link libheif skip it entirely and
         # avoid coupling to codec system deps that are unavailable on some manylinux bases.
         CIBW_BEFORE_ALL_LINUX: >
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&

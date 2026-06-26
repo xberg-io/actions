@@ -27,8 +27,8 @@ With overrides:
 ```yaml
 - uses: xberg-io/actions/setup-php-ci-ini@v1
   with:
-    crate-name: kreuzberg-php
-    output-name: php-kreuzberg.ini
+    crate-name: xberg-php
+    output-name: php-xberg.ini
     extensions: "ctype dom libxml mbstring tokenizer xml xmlwriter json"
     build-dir-priority: "target/release target/debug"
 ```

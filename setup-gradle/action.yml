@@ -1,6 +1,6 @@
 name: Setup Gradle
 description: >
-  Install Gradle via `gradle/actions/setup-gradle@v6` with kreuzberg-dev
+  Install Gradle via `gradle/actions/setup-gradle@v6` with xberg-io
   defaults. Mirrors the wiring used inside `publish-maven-gradle`.
 
 inputs:

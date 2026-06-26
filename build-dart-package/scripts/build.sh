@@ -4,13 +4,13 @@
 #
 # Reads (env vars set by the composite action):
 #   INPUT_PACKAGE_DIR    - directory containing pubspec.yaml (e.g. packages/dart)
-#   INPUT_CRATE_NAME     - cargo crate name (e.g. kreuzberg-dart)
+#   INPUT_CRATE_NAME     - cargo crate name (e.g. xberg-dart)
 #   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
 #   INPUT_DRY_RUN        - "true" to print commands and exit
 set -euo pipefail
 
 PACKAGE_DIR="${INPUT_PACKAGE_DIR:-packages/dart}"
-CRATE_NAME="${INPUT_CRATE_NAME:-kreuzberg-dart}"
+CRATE_NAME="${INPUT_CRATE_NAME:-xberg-dart}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 

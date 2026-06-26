@@ -27,9 +27,9 @@ Archives produced by this action have a standardized layout for consumption by
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `kreuzberg-ffi` | Cargo package name to build. |
+| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
 | `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `header-path` | no | `crates/kreuzberg-ffi/include/kreuzberg.h` | C header to bundle alongside the library. |
+| `header-path` | no | `crates/xberg-ffi/include/xberg.h` | C header to bundle alongside the library. |
 | `output-dir` | no | `dist/go-ffi` | Directory for the staging tree and archive. |
 | `archive-name` | no | `{lib-name}-{target}.tar.gz` | Override the default archive filename. |
 | `dry-run` | no | `false` | Skip cargo build and emit a plan only. |

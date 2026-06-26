@@ -22,7 +22,7 @@ inputs:
     description: "Version being verified (e.g. 1.4.0-rc.27)."
     required: true
   package-name:
-    description: "Package name as published (e.g. liter-llm, @kreuzberg/liter-llm-node)."
+    description: "Package name as published (e.g. liter-llm, @xberg-io/liter-llm-node)."
     required: true
   artifact-source:
     description: >

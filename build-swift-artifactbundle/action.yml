@@ -13,7 +13,7 @@ inputs:
   crate-name:
     description: "Cargo package name"
     required: false
-    default: "kreuzberg-swift"
+    default: "xberg-swift"
   lib-name:
     description: "Library base name (default = crate-name with '-' replaced by '_')"
     required: false

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ffi_lib_dir="${1:-target/release}"
-ffi_lib_name="${2:-kreuzberg_ffi}"
+ffi_lib_name="${2:-xberg_ffi}"
 
 set +e
 echo "=========================================="

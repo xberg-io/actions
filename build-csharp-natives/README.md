@@ -14,7 +14,7 @@ installed.
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `kreuzberg-ffi` | Cargo package name to build. |
+| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
 | `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
 | `rid` | yes | — | .NET RID, e.g. `linux-x64`, `linux-arm64`, `linux-musl-x64`, `osx-arm64`, `win-x64`. |
 | `output-dir` | no | `dist/csharp-natives` | Staging root directory. |

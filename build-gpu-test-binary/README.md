@@ -22,7 +22,7 @@ Build a single `cargo test --no-run` binary with JSON message output, then extra
 ```yaml
 - uses: xberg-io/actions/build-gpu-test-binary@v1
   with:
-    package: kreuzberg
+    package: xberg
     test-name: gpu_acceleration
     features: paddle-ocr,layout-detection,embeddings,pdf,ocr,ort-dynamic
     output-name: gpu-acceleration-test

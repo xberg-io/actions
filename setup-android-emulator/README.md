@@ -16,7 +16,7 @@ manages AVD snapshots and KVM acceleration) and exports `ANDROID_HOME` /
 | `target`    | `google_apis`  | System image: `google_apis` \| `default` \| `google_apis_playstore` |
 | `arch`      | `x86_64`       | ABI: `x86_64` (KVM, GHA Linux) \| `arm64-v8a` (slower)     |
 | `profile`   | `pixel_6`      | AVD hardware profile                                        |
-| `avd-name`  | `kreuzberg-test` | AVD identifier                                            |
+| `avd-name`  | `xberg-test` | AVD identifier                                            |
 
 ## Outputs
 

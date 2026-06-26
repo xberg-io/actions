@@ -1,6 +1,6 @@
 # setup-textlint
 
-Install Node.js, textlint, and the kreuzberg-dev standard rule set in one batched `npm install`. Used for prose linting in docs CI.
+Install Node.js, textlint, and the xberg-io standard rule set in one batched `npm install`. Used for prose linting in docs CI.
 
 ## Inputs
 

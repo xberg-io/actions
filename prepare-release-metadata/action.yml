@@ -145,7 +145,7 @@ runs:
         set -euo pipefail
 
         # Resolve tag, ref, dry-run, force-republish, targets per event type.
-        # Mirrors the dispatch logic in kreuzberg's
+        # Mirrors the dispatch logic in xberg's
         # validate-and-compute-release-metadata.sh so consuming workflows that
         # rely on the prior behavior keep working.
         case "${EVENT_NAME}" in

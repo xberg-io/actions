@@ -45,7 +45,7 @@ The artifact bundle is suitable for distribution via Swift Package Manager:
 
 | Name | Required | Default | Description |
 |---|---|---|---|
-| `crate-name` | no | `kreuzberg-swift` | Cargo package name. |
+| `crate-name` | no | `xberg-swift` | Cargo package name. |
 | `lib-name` | no | crate-name with `-` → `_` | Library base name for the static `.a` file. |
 | `artifact-name` | no | PascalCase of lib-name | Artifact bundle name without extension. |
 | `header-path` | no | `` | Optional path to C headers directory to embed in bundle. |

@@ -32,17 +32,17 @@ VERSION = "5.0.0-rc.19"
 
 
 def test_inline_table_without_version_gets_injection():
-    manifest = '[dependencies]\nkreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
+    manifest = '[dependencies]\nxberg-tesseract = { path = "../xberg-tesseract", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert (
-        f'kreuzberg-tesseract = {{ path = "../kreuzberg-tesseract", version = "{VERSION}", optional = true }}'
+        f'xberg-tesseract = {{ path = "../xberg-tesseract", version = "{VERSION}", optional = true }}'
         in rewritten
     )
 
 
 def test_inline_table_with_version_is_left_alone():
     manifest = (
-        '[dependencies]\nkreuzberg-libheif = { path = "../kreuzberg-libheif", version = "1.2.3", optional = true }\n'
+        '[dependencies]\nxberg-libheif = { path = "../xberg-libheif", version = "1.2.3", optional = true }\n'
     )
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
@@ -92,12 +92,12 @@ def test_dotted_table_with_workspace_is_left_alone():
 def test_target_conditional_table_gets_injection():
     manifest = (
         "[target.'cfg(target_arch = \"wasm32\")'.dependencies]\n"
-        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", default-features = false, '
+        'xberg-tesseract = { path = "../xberg-tesseract", default-features = false, '
         'features = ["build-tesseract-wasm"], optional = true }\n'
     )
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert f'version = "{VERSION}"' in rewritten
-    assert 'path = "../kreuzberg-tesseract"' in rewritten
+    assert 'path = "../xberg-tesseract"' in rewritten
     # Idempotent on re-run.
     again = crates_mod.inject_path_dep_versions(rewritten, VERSION)
     assert again == rewritten
@@ -134,7 +134,7 @@ def test_build_dependencies_get_injection():
 def test_multiline_inline_table_without_version_gets_injection():
     manifest = (
         "[dependencies]\n"
-        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", default-features = false, features = [\n'
+        'xberg-tesseract = { path = "../xberg-tesseract", default-features = false, features = [\n'
         '    "build-tesseract-wasm",\n'
         '    "bundle-tessdata-eng",\n'
         "], optional = true }\n"
@@ -149,7 +149,7 @@ def test_multiline_inline_table_without_version_gets_injection():
 def test_multiline_inline_table_with_version_left_alone():
     manifest = (
         "[dependencies]\n"
-        'kreuzberg-libheif = { path = "../kreuzberg-libheif", version = "5.0.0-rc.19", features = [\n'
+        'xberg-libheif = { path = "../xberg-libheif", version = "5.0.0-rc.19", features = [\n'
         '    "decode",\n'
         "], optional = true }\n"
     )
@@ -165,7 +165,7 @@ def test_multiline_inline_table_with_version_left_alone():
 def test_non_dependency_sections_are_ignored():
     manifest = (
         "[package]\n"
-        'name = "kreuzberg"\n'
+        'name = "xberg"\n'
         "[features]\n"
         'foo = ["path"]\n'
         "[workspace.dependencies]\n"
@@ -194,9 +194,9 @@ def test_dep_without_path_is_left_alone():
 def test_temporary_injection_restores_original_bytes(tmp_path):
     original = (
         "[package]\n"
-        'name = "kreuzberg"\n'
+        'name = "xberg"\n'
         "[dependencies]\n"
-        'kreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
+        'xberg-tesseract = { path = "../xberg-tesseract", optional = true }\n'
     )
     manifest_path = tmp_path / "Cargo.toml"
     manifest_path.write_text(original, encoding="utf-8")
@@ -244,7 +244,7 @@ def test_temporary_injection_no_op_when_manifest_already_correct(tmp_path):
 
 
 def test_temporary_injection_yields_true_when_manifest_rewritten(tmp_path):
-    original = '[dependencies]\nkreuzberg-tesseract = { path = "../kreuzberg-tesseract", optional = true }\n'
+    original = '[dependencies]\nxberg-tesseract = { path = "../xberg-tesseract", optional = true }\n'
     manifest_path = tmp_path / "Cargo.toml"
     manifest_path.write_text(original, encoding="utf-8")
 

@@ -3,13 +3,13 @@
 # (plus `zig build test` if defined in build.zig) as a smoke check.
 #
 # Reads (env vars set by the composite action):
-#   INPUT_FFI_CRATE      - cargo crate name (e.g. kreuzberg-ffi)
+#   INPUT_FFI_CRATE      - cargo crate name (e.g. xberg-ffi)
 #   INPUT_PACKAGE_DIR    - directory containing build.zig
 #   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
 #   INPUT_DRY_RUN        - "true" to print the plan and exit
 set -euo pipefail
 
-FFI_CRATE="${INPUT_FFI_CRATE:-kreuzberg-ffi}"
+FFI_CRATE="${INPUT_FFI_CRATE:-xberg-ffi}"
 PACKAGE_DIR="${INPUT_PACKAGE_DIR:-packages/zig}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"

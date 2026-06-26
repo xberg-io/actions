@@ -15,7 +15,7 @@ intra-workspace ``path`` dependency that lacks a ``version`` constraint gains
 ``version = "<INPUT_VERSION>"``. ``cargo publish`` rejects path-only deps with
 ``all dependencies must have a version requirement specified``, but some
 manifests omit the version constraint deliberately to work around unrelated
-build-graph bugs (e.g. kreuzberg ``kreuzberg-tesseract`` for the maturin sdist
+build-graph bugs (e.g. xberg ``xberg-tesseract`` for the maturin sdist
 "links collision" workaround). The original manifest is restored after each
 publish attempt, success or failure.
 """

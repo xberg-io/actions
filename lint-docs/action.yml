@@ -92,7 +92,7 @@ runs:
       with:
         tool: lychee
 
-    - name: Install textlint + kreuzberg rule set
+    - name: Install textlint + xberg rule set
       uses: xberg-io/actions/setup-textlint@v1
 
     - name: Lint documentation links

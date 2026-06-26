@@ -15,10 +15,10 @@ $ffiLibDir = $args[0]
 if ([string]::IsNullOrWhiteSpace($ffiLibDir)) { $ffiLibDir = "target/release" }
 
 $ffiCrateDir = $args[1]
-if ([string]::IsNullOrWhiteSpace($ffiCrateDir)) { $ffiCrateDir = "crates/kreuzberg-ffi" }
+if ([string]::IsNullOrWhiteSpace($ffiCrateDir)) { $ffiCrateDir = "crates/xberg-ffi" }
 
 $ffiLibName = $args[2]
-if ([string]::IsNullOrWhiteSpace($ffiLibName)) { $ffiLibName = "kreuzberg_ffi" }
+if ([string]::IsNullOrWhiteSpace($ffiLibName)) { $ffiLibName = "xberg_ffi" }
 
 $ffiHeaderPath = $args[3]
 

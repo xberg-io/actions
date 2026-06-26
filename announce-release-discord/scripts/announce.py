@@ -181,7 +181,7 @@ def build_payload(
     timestamp: str,
 ) -> dict[str, Any]:
     return {
-        "username": "kreuzberg releases",
+        "username": "xberg releases",
         "embeds": [
             {
                 "title": f"{project_name} {tag}",
@@ -213,7 +213,7 @@ def post_to_discord(webhook_url: str, payload: dict[str, Any]) -> None:
     request = urllib.request.Request(  # noqa: S310 — scheme validated above
         webhook_url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": "kreuzberg-release-announcer"},
+        headers={"Content-Type": "application/json", "User-Agent": "xberg-release-announcer"},
         method="POST",
     )
     try:

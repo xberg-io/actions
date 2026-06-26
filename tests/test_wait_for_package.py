@@ -99,18 +99,18 @@ def test_check_npm_scoped_package(monkeypatch):
 def test_check_pypi_found(monkeypatch):
     body = json.dumps({"info": {"version": "1.2.3"}})
     monkeypatch.setattr(wait_mod, "http_get", lambda url, **kwargs: (200, body))
-    assert wait_mod.check_pypi("kreuzberg", "1.2.3") is True
+    assert wait_mod.check_pypi("xberg", "1.2.3") is True
 
 
 def test_check_pypi_not_found(monkeypatch):
     monkeypatch.setattr(wait_mod, "http_get", lambda url, **kwargs: (404, ""))
-    assert wait_mod.check_pypi("kreuzberg", "1.2.3") is False
+    assert wait_mod.check_pypi("xberg", "1.2.3") is False
 
 
 def test_check_pypi_version_mismatch(monkeypatch):
     body = json.dumps({"info": {"version": "9.9.9"}})
     monkeypatch.setattr(wait_mod, "http_get", lambda url, **kwargs: (200, body))
-    assert wait_mod.check_pypi("kreuzberg", "1.2.3") is False
+    assert wait_mod.check_pypi("xberg", "1.2.3") is False
 
 
 # ---------------------------------------------------------------------------

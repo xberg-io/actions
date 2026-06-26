@@ -15,16 +15,16 @@ spec.loader.exec_module(mod)
 
 
 def test_build_nif_artifact_name_linux():
-    result = mod.build_nif_artifact_name("kreuzberg", "1.2.3", "2.17", "x86_64-unknown-linux-gnu")
-    assert result == "libkreuzberg-v1.2.3-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz"
+    result = mod.build_nif_artifact_name("xberg", "1.2.3", "2.17", "x86_64-unknown-linux-gnu")
+    assert result == "libxberg-v1.2.3-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz"
 
 
 def test_build_nif_artifact_name_darwin():
     # Darwin/apple targets ship as .so (not .dylib) because rustler_precompiled
     # 0.9.0 (the latest on Hex; no .dylib support exists) hardcodes .so for
     # every non-Windows consumer download URL in lib_name_with_ext/2.
-    result = mod.build_nif_artifact_name("kreuzberg", "1.2.3", "2.16", "aarch64-apple-darwin")
-    assert result == "libkreuzberg-v1.2.3-nif-2.16-aarch64-apple-darwin.so.tar.gz"
+    result = mod.build_nif_artifact_name("xberg", "1.2.3", "2.16", "aarch64-apple-darwin")
+    assert result == "libxberg-v1.2.3-nif-2.16-aarch64-apple-darwin.so.tar.gz"
 
 
 def test_build_nif_artifact_name_windows():

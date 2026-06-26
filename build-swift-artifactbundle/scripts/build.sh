@@ -5,7 +5,7 @@
 # directory with info.json and per-target static libraries, plus a zip.
 #
 # Reads (env vars set by the composite action):
-#   INPUT_CRATE_NAME        - cargo crate name (e.g. kreuzberg-swift)
+#   INPUT_CRATE_NAME        - cargo crate name (e.g. xberg-swift)
 #   INPUT_LIB_NAME          - library base name (default = crate_name with - → _)
 #   INPUT_ARTIFACT_NAME     - artifact bundle name (default = PascalCase of lib_name)
 #   INPUT_HEADER_PATH       - optional path to C headers directory
@@ -15,7 +15,7 @@
 #   INPUT_DRY_RUN           - "true" to print the plan and exit
 set -euo pipefail
 
-CRATE_NAME="${INPUT_CRATE_NAME:-kreuzberg-swift}"
+CRATE_NAME="${INPUT_CRATE_NAME:-xberg-swift}"
 LIB_NAME="${INPUT_LIB_NAME:-}"
 ARTIFACT_NAME="${INPUT_ARTIFACT_NAME:-}"
 BINARY_TARGET_NAME="${INPUT_BINARY_TARGET_NAME:-}"

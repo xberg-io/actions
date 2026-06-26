@@ -12,7 +12,7 @@ inputs:
   ffi-crate:
     description: "Workspace FFI crate name (the C library Zig links against)"
     required: false
-    default: "kreuzberg-ffi"
+    default: "xberg-ffi"
   package-dir:
     description: "Directory containing build.zig and build.zig.zon"
     required: false

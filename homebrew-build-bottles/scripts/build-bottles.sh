@@ -106,7 +106,7 @@ build_one_bottle() {
   normalize_tapped_formula "$formula"
 
   # Ensure libheif is installed and available to pkg-config during bottle builds.
-  # Some formulae (e.g. kreuzberg) depend on libheif-sys which requires libheif.pc.
+  # Some formulae (e.g. xberg) depend on libheif-sys which requires libheif.pc.
   # Homebrew's sandbox may not expose libheif.pc without this.
   if brew list libheif &>/dev/null; then
     local libheif_prefix

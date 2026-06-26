@@ -89,11 +89,11 @@ runs:
         CRATE_NAME: ${{ inputs.crate-name }}
         LIB_NAME: ${{ inputs.lib-name }}
         # Force /MD CRT for cc-rs MSVC builds. esaxx-rs (via gliner → tokenizers)
-        # builds with cc-rs which defaults to /MT. kreuzberg-tesseract uses cmake-rs
-        # which defaults to /MD. Linking both rlibs into kreuzberg_php.dll on
+        # builds with cc-rs which defaults to /MT. xberg-tesseract uses cmake-rs
+        # which defaults to /MD. Linking both rlibs into xberg_php.dll on
         # x86_64-pc-windows-msvc triggers LNK1319 mismatch. cc-rs honors
         # target-suffixed env vars only when compiling for that target, so safe
-        # on non-Windows builds. See kreuzberg commit 1ce6be9b17.
+        # on non-Windows builds. See xberg commit 1ce6be9b17.
         CFLAGS_x86_64_pc_windows_msvc: "/MD"
         CXXFLAGS_x86_64_pc_windows_msvc: "/MD"
         CFLAGS_i686_pc_windows_msvc: "/MD"

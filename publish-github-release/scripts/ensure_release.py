@@ -21,7 +21,7 @@ def get_github_api_headers(token: str) -> dict[str, str]:
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "kreuzberg-dev-actions-publish-github-release",
+        "User-Agent": "xberg-io-actions-publish-github-release",
     }
 
 

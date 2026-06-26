@@ -19,7 +19,7 @@ inputs:
   crate-name:
     description: "Cargo package name of the Rust binding crate"
     required: false
-    default: "kreuzberg-swift"
+    default: "xberg-swift"
   build-profile:
     description: "Cargo build profile (release, dev, or a custom named profile)"
     required: false

@@ -14,13 +14,13 @@
 #
 # Reads (env vars set by the composite action):
 #   INPUT_PACKAGE_DIR    - directory containing Package.swift
-#   INPUT_CRATE_NAME     - cargo crate name (e.g. kreuzberg-swift)
+#   INPUT_CRATE_NAME     - cargo crate name (e.g. xberg-swift)
 #   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
 #   INPUT_DRY_RUN        - "true" to print the plan and exit
 set -euo pipefail
 
 PACKAGE_DIR="${INPUT_PACKAGE_DIR:-packages/swift}"
-CRATE_NAME="${INPUT_CRATE_NAME:-kreuzberg-swift}"
+CRATE_NAME="${INPUT_CRATE_NAME:-xberg-swift}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 

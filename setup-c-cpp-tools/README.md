@@ -1,6 +1,6 @@
 # setup-c-cpp-tools
 
-Install the C/C++ toolchain used by the kreuzberg-dev pre-commit hooks.
+Install the C/C++ toolchain used by the xberg-io pre-commit hooks.
 
 Installs `cppcheck`, `clang-format`, and `shellcheck`. `cppcheck` is pinned to
 the version expected by `xberg-io/pre-commit-hooks` (currently `2.20.0`);

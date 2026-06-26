@@ -1,6 +1,6 @@
 # run-api-contract-tests
 
-Run [schemathesis](https://schemathesis.readthedocs.io/) property-based contract tests against a running API. The action starts the supplied Docker image as the system under test, waits for it to come up, then runs `schemathesis run` with the kreuzberg-dev standard check set. The container is always stopped on exit.
+Run [schemathesis](https://schemathesis.readthedocs.io/) property-based contract tests against a running API. The action starts the supplied Docker image as the system under test, waits for it to come up, then runs `schemathesis run` with the xberg-io standard check set. The container is always stopped on exit.
 
 ## Inputs
 
@@ -12,7 +12,7 @@ Run [schemathesis](https://schemathesis.readthedocs.io/) property-based contract
 | `startup-wait-seconds` | no | `5` | Sleep after `docker run -d` before testing. |
 | `max-examples` | no | `10` | schemathesis `--max-examples`. |
 | `request-timeout-ms` | no | `30000` | schemathesis `--request-timeout`. |
-| `checks` | no | (kreuzberg standard set) | Comma-separated schemathesis checks. |
+| `checks` | no | (xberg standard set) | Comma-separated schemathesis checks. |
 | `schemathesis-version` | no | `schemathesis` | pip spec for schemathesis. |
 | `extra-args` | no | `` | Extra args appended to `schemathesis run`. |
 
@@ -21,6 +21,6 @@ Run [schemathesis](https://schemathesis.readthedocs.io/) property-based contract
 ```yaml
 - uses: xberg-io/actions/run-api-contract-tests@v1
   with:
-    image: kreuzberg:full
+    image: xberg:full
     port: "8000"
 ```

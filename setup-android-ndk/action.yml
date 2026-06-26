@@ -3,7 +3,7 @@ description: >
   Resolve a preinstalled Android NDK on the runner, export ANDROID_NDK_HOME /
   ANDROID_NDK_ROOT / NDK_HOME, prepend the NDK host toolchain bin directory
   to PATH, install requested Rust Android targets, and (optionally) install
-  cargo-ndk. Designed for reuse across kreuzberg-dev Rust libraries that
+  cargo-ndk. Designed for reuse across xberg-io Rust libraries that
   cross-compile to Android targets.
 
   Assumes the caller has already set up a Rust toolchain (e.g. via

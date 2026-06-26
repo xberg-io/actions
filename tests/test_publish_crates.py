@@ -100,10 +100,10 @@ def test_publish_crate_always_passes_allow_dirty(monkeypatch):
     monkeypatch.setattr(crates_mod, "_run", fake_run)
     # publish_crate always appends --allow-dirty: publish-time path-dep version
     # injection is an intentional transform that may dirty the working tree.
-    exit_code, _ = crates_mod.publish_crate("kreuzberg-tesseract", ["--manifest-path", "Cargo.toml"])
+    exit_code, _ = crates_mod.publish_crate("xberg-tesseract", ["--manifest-path", "Cargo.toml"])
     assert exit_code == 0
     assert captured == [
-        ["cargo", "publish", "-p", "kreuzberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]
+        ["cargo", "publish", "-p", "xberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]
     ]
 
 
@@ -124,7 +124,7 @@ def test_publish_crate_does_not_retry_new_crate_trusted_publishing(monkeypatch):
     monkeypatch.setattr(crates_mod, "_run", fake_run)
     monkeypatch.setattr(crates_mod.time, "sleep", fake_sleep)
 
-    exit_code, output = crates_mod.publish_crate("kreuzberg-candle-ocr", [])
+    exit_code, output = crates_mod.publish_crate("xberg-candle-ocr", [])
 
     assert exit_code == 1
     assert crates_mod.is_new_crate_trusted_publishing(output) is True

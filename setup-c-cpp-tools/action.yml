@@ -1,6 +1,6 @@
 name: Setup C/C++ Tools
 description: |
-  Install the C/C++ toolchain used by kreuzberg-dev pre-commit hooks (cppcheck,
+  Install the C/C++ toolchain used by xberg-io pre-commit hooks (cppcheck,
   clang-format, shellcheck). Pins cppcheck to the version expected by
   xberg-io/pre-commit-hooks (currently 2.20.0) — Ubuntu's stock package is
   too old, so cppcheck is built from source via CMake when not already on PATH

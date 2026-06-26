@@ -9,8 +9,8 @@ digest.
 
 Usage (GitHub Actions via env vars):
     INPUT_TARGET=x86_64-unknown-linux-gnu \
-    INPUT_CRATE_NAME=kreuzberg-ffi \
-    INPUT_HEADER_PATH=crates/kreuzberg-ffi/include/kreuzberg.h \
+    INPUT_CRATE_NAME=xberg-ffi \
+    INPUT_HEADER_PATH=crates/xberg-ffi/include/xberg.h \
     INPUT_OUTPUT_DIR=dist/go-ffi \
     python3 build.py
 """
@@ -109,9 +109,9 @@ def create_archive(archive_path: Path, staging_dir: Path) -> None:
 
 def main() -> None:
     target = ensure_input("INPUT_TARGET", os.environ.get("INPUT_TARGET", ""))
-    crate_name = os.environ.get("INPUT_CRATE_NAME", "kreuzberg-ffi") or "kreuzberg-ffi"
+    crate_name = os.environ.get("INPUT_CRATE_NAME", "xberg-ffi") or "xberg-ffi"
     lib_name = os.environ.get("INPUT_LIB_NAME", "") or crate_name.replace("-", "_")
-    header_path = Path(os.environ.get("INPUT_HEADER_PATH", "") or "crates/kreuzberg-ffi/include/kreuzberg.h")
+    header_path = Path(os.environ.get("INPUT_HEADER_PATH", "") or "crates/xberg-ffi/include/xberg.h")
     output_dir = Path(os.environ.get("INPUT_OUTPUT_DIR", "") or "dist/go-ffi")
     archive_name = os.environ.get("INPUT_ARCHIVE_NAME", "") or f"{lib_name}-{target}.tar.gz"
     dry_run = os.environ.get("INPUT_DRY_RUN", "false").lower() == "true"

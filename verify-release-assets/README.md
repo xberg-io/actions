@@ -31,13 +31,13 @@ minimum-size check catches empty uploads.
     tag: ${{ needs.prepare.outputs.tag }}
     expected-assets: |
       # CLI binaries
-      kreuzberg-cli-*-x86_64-unknown-linux-gnu.tar.gz
-      kreuzberg-cli-*-aarch64-unknown-linux-gnu.tar.gz
-      kreuzberg-cli-*-aarch64-apple-darwin.tar.gz
-      kreuzberg-cli-*-x86_64-pc-windows-msvc.zip
+      xberg-cli-*-x86_64-unknown-linux-gnu.tar.gz
+      xberg-cli-*-aarch64-unknown-linux-gnu.tar.gz
+      xberg-cli-*-aarch64-apple-darwin.tar.gz
+      xberg-cli-*-x86_64-pc-windows-msvc.zip
       # C FFI artifacts
-      libkreuzberg-*-linux-x86_64.tar.gz
-      libkreuzberg-*-darwin-arm64.tar.gz
+      libxberg-*-linux-x86_64.tar.gz
+      libxberg-*-darwin-arm64.tar.gz
     min-size-bytes: 1024
 ```
 

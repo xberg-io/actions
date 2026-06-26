@@ -16,7 +16,7 @@ intact at the artifacts-dir root.
 | `artifacts-dir` | no | `artifacts/java-natives` | Directory the `java-natives-*` artifacts were downloaded into. |
 | `resources-dir` | yes | — | Maven resources dir. Libraries are staged as `{resources-dir}/{classifier}/{libfile}`. |
 | `required-classifiers` | yes | — | Whitespace-separated list of classifiers that must all be present. |
-| `lib-name` | yes | — | Library base name (e.g. `kreuzberg_ffi`). Used to verify each classifier has a matching lib. |
+| `lib-name` | yes | — | Library base name (e.g. `xberg_ffi`). Used to verify each classifier has a matching lib. |
 
 ## Usage
 

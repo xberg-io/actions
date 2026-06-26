@@ -12,7 +12,7 @@ inputs:
   crate-name:
     description: "Cargo package name to build"
     required: false
-    default: "kreuzberg-ffi"
+    default: "xberg-ffi"
   lib-name:
     description: "Base name of the produced library (default: crate-name with - → _)"
     required: false

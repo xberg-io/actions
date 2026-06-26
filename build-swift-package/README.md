@@ -17,7 +17,7 @@ runs, the package is ready for a Git tag.
 - uses: xberg-io/actions/build-swift-package@v1
   with:
     package-dir: packages/swift
-    crate-name: kreuzberg-swift
+    crate-name: xberg-swift
 - run: swift build --package-path packages/swift --configuration release
 ```
 
@@ -26,7 +26,7 @@ runs, the package is ready for a Git tag.
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `package-dir` | no | `packages/swift` | Directory containing `Package.swift`. |
-| `crate-name` | no | `kreuzberg-swift` | Cargo crate name of the Rust binding crate. |
+| `crate-name` | no | `xberg-swift` | Cargo crate name of the Rust binding crate. |
 | `build-profile` | no | `release` | Cargo profile (`release`, `dev`, or a custom named profile). |
 | `dry-run` | no | `false` | Print the planned commands and exit without building or syncing. |
 

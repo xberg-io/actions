@@ -3,7 +3,7 @@ description: Build a Rust FFI crate with cargo, with proper flags, error diagnos
 
 inputs:
   crate-name:
-    description: "Name of the Rust crate to build (e.g., kreuzberg-ffi, html-to-markdown-ffi)"
+    description: "Name of the Rust crate to build (e.g., xberg-ffi, html-to-markdown-ffi)"
     required: true
   features:
     description: "Cargo features to enable (comma-separated, optional)"

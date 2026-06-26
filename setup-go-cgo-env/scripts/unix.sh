@@ -3,8 +3,8 @@ set -euo pipefail
 
 ffi_lib_dir="${1:-target/release}"
 enable_rpath="${2:-true}"
-ffi_crate_dir="${3:-crates/kreuzberg-ffi}"
-ffi_lib_name="${4:-kreuzberg_ffi}"
+ffi_crate_dir="${3:-crates/xberg-ffi}"
+ffi_lib_name="${4:-xberg_ffi}"
 
 repo_root="${GITHUB_WORKSPACE}"
 ffi_path="${repo_root}/${ffi_lib_dir}"

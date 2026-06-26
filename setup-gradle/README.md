@@ -1,7 +1,7 @@
 # setup-gradle
 
 Install Gradle and Java via [`gradle/actions/setup-gradle`][upstream] with
-kreuzberg-dev defaults. Works on `ubuntu-24.04-arm` and the other standard
+xberg-io defaults. Works on `ubuntu-24.04-arm` and the other standard
 GitHub-hosted runners.
 
 ## Usage

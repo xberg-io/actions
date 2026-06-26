@@ -23,7 +23,7 @@ With overrides:
 - uses: xberg-io/actions/setup-swift-bridge@v1
   with:
     profile: release
-    crate-name: kreuzberg-swift
+    crate-name: xberg-swift
     packages-dir: packages/swift
 ```
 

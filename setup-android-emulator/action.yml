@@ -4,7 +4,7 @@ description: >
   reactivecircus/android-emulator-runner. Pins the API level, system image
   target, and ABI; exports ANDROID_HOME / ANDROID_SDK_ROOT so downstream
   `task ...:test:e2e` calls can drive the emulator. Designed for use across
-  kreuzberg-dev polyglot repos that ship a kotlin-android binding.
+  xberg-io polyglot repos that ship a kotlin-android binding.
 
   The emulator process itself is started by the consumer step that calls
   `reactivecircus/android-emulator-runner@v2` (this action only handles the
@@ -30,7 +30,7 @@ inputs:
   avd-name:
     description: "AVD identifier"
     required: false
-    default: "kreuzberg-test"
+    default: "xberg-test"
 
 outputs:
   android-home:

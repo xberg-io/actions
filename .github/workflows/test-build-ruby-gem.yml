@@ -4,7 +4,7 @@ on:
   # gem (gemspec + Rakefile + ext/extconf.rb + rake-compiler config) plus
   # `bundle install` resolving rb_sys/rake-compiler-dock from a Gemfile.
   # Faking that scaffolding inside the test is brittle; we wait for downstream
-  # repos (kreuzberg-rb, html-to-markdown-rb) to exercise the real path.
+  # repos (xberg-rb, html-to-markdown-rb) to exercise the real path.
   workflow_dispatch:
 
 jobs:

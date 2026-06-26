@@ -1,6 +1,6 @@
 name: Setup textlint
 description: >
-  Install textlint plus the kreuzberg-dev standard rule set in one
+  Install textlint plus the xberg-io standard rule set in one
   batched npm install. Pairs with a project-local `.textlintrc` and
   caller-provided runner script.
 
