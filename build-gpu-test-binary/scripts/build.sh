@@ -18,12 +18,26 @@ if [[ -n "$features" ]]; then
 fi
 cargo_args+=(--test "$test_name" --no-run --message-format=json)
 
+json_log=$(mktemp)
 stderr_log=$(mktemp)
 binary_path_file=$(mktemp)
-trap 'rm -f "$stderr_log" "$binary_path_file"' EXIT
+trap 'rm -f "$json_log" "$stderr_log" "$binary_path_file"' EXIT
 
-cargo "${cargo_args[@]}" 2>"$stderr_log" |
-  jq -r 'select(.executable != null) | .executable' |
+# Run cargo separately from the jq parse. Piped directly under `set -o pipefail`,
+# a compile failure aborts the script at the pipeline before the diagnostic block
+# below can print stderr, so every real error surfaced only as a bare "exit 101".
+set +e
+cargo "${cargo_args[@]}" >"$json_log" 2>"$stderr_log"
+cargo_status=$?
+set -e
+
+if [[ "$cargo_status" -ne 0 ]]; then
+  echo "::error::cargo ${cargo_args[*]} failed (exit ${cargo_status}); stderr below:" >&2
+  cat "$stderr_log" >&2
+  exit "$cargo_status"
+fi
+
+jq -r 'select(.executable != null) | .executable' <"$json_log" |
   head -1 >"$binary_path_file"
 
 if [[ ! -s "$binary_path_file" ]]; then
