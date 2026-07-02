@@ -49,9 +49,23 @@ jobs:
 
       - name: Set up Python
         if: ${{ inputs.setup-python }}
-        uses: xberg-io/actions/setup-python-env@v1
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ inputs.python-version }}
+
+      - name: Set up uv
+        if: ${{ inputs.setup-python }}
+        uses: astral-sh/setup-uv@v7
+
+      # Best-effort dependency install so poly's pyrefly type-check can resolve
+      # imports. Non-fatal: poly's core engines (ruff/oxc/…) are bundled and need
+      # no deps, and pyrefly missing-import findings are warnings. Repos with a
+      # non-root or workspace layout where a bare `uv sync` doesn't apply simply
+      # skip this without failing the job.
+      - name: Sync Python deps (best-effort)
+        if: ${{ inputs.setup-python }}
+        continue-on-error: true
+        run: uv sync || echo "uv sync skipped — non-fatal for poly lint"
 
       - name: Install poly
         uses: Goldziher/polylint@v0
