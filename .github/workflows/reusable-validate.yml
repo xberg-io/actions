@@ -1,0 +1,63 @@
+name: Validate
+
+# Single shared validation workflow for every xberg-io repo: run polylint
+# (format check + lint) over the whole tree. poly bundles its lint/format
+# engines (ruff, oxc, taplo, rumdl, …), so most repos need no toolchain. Rust
+# and Python toolchains are opt-in via inputs because poly's cargo/clippy hook
+# and pyrefly type-check delegate to the installed toolchain.
+
+on:
+  workflow_call:
+    inputs:
+      setup-rust:
+        description: "Install the Rust toolchain (needed when poly.toml enables the cargo/clippy hook)."
+        required: false
+        type: boolean
+        default: false
+      rust-components:
+        description: "rustup components for setup-rust."
+        required: false
+        type: string
+        default: "rustfmt, clippy"
+      setup-python:
+        description: "Install a Python env so poly's pyrefly type-check can resolve imports."
+        required: false
+        type: boolean
+        default: false
+      python-version:
+        description: "Python version for setup-python-env."
+        required: false
+        type: string
+        default: "3.13"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (poly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Rust
+        if: ${{ inputs.setup-rust }}
+        uses: xberg-io/actions/setup-rust@v1
+        with:
+          components: ${{ inputs.rust-components }}
+          install-llvm-cov: "false"
+
+      - name: Set up Python
+        if: ${{ inputs.setup-python }}
+        uses: xberg-io/actions/setup-python-env@v1
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install poly
+        uses: Goldziher/polylint@v0
+
+      - name: Format check
+        run: poly fmt --check .
+
+      - name: Lint
+        run: poly lint .
