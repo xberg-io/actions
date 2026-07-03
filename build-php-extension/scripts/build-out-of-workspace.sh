@@ -23,6 +23,35 @@ fi
 BUILD_TEMP=$(mktemp -d)
 trap 'rm -rf "$BUILD_TEMP"' EXIT
 
+# Strip relative internal `path = "..."` deps from the isolated crate's Cargo.toml,
+# keeping the `version` key so they resolve from the registry. rewrite-native-deps
+# is supposed to do this in the workspace, but if it left a path (e.g. the core
+# crate was not yet on the registry) the out-of-workspace crate would reference a
+# sibling dir that does not exist and cargo bails with
+# `failed to read .../crates/<core>/Cargo.toml`. No-op when rewrite-native-deps
+# already removed the path. Scoped strictly to *dependencies* sections so
+# [lib]/[[bin]] `path` keys are never touched.
+strip_internal_paths() {
+  python3 - "$1" <<'PY'
+import re, sys
+p = sys.argv[1]
+lines = open(p).read().splitlines(keepends=True)
+dep_hdr = re.compile(r'^\s*\[(build-|dev-)?dependencies(\.[^\]]+)?\]\s*$')
+tgt_dep_hdr = re.compile(r'^\s*\[target\.[^\]]+\.(build-|dev-)?dependencies(\.[^\]]+)?\]\s*$')
+any_hdr = re.compile(r'^\s*\[')
+path_rel = re.compile(r'(,\s*)?path\s*=\s*"(\.[^"]*|[^"]*/[^"]*)"(\s*,)?')
+def repl(m):
+    return ',' if (m.group(1) and m.group(3)) else ''
+in_deps = False
+out = []
+for ln in lines:
+    if any_hdr.match(ln):
+        in_deps = bool(dep_hdr.match(ln) or tgt_dep_hdr.match(ln))
+    out.append(path_rel.sub(repl, ln) if in_deps and 'path' in ln else ln)
+open(p, 'w').write(''.join(out))
+PY
+}
+
 # Copy crate to temp dir.
 cp -r "$CRATE_DIR" "$BUILD_TEMP/crate"
 cd "$BUILD_TEMP/crate"
@@ -64,6 +93,10 @@ if grep -q 'workspace = true' Cargo.toml 2>/dev/null; then
   rm -f Cargo.toml.bak
   echo "Stripped workspace inheritance from binding crate Cargo.toml"
 fi
+
+# Drop any residual internal path-dep so the out-of-workspace crate resolves it
+# from the registry instead of a sibling dir that does not exist here.
+strip_internal_paths Cargo.toml
 
 # Seed lockfile from workspace so transitive deps stay pinned at the versions
 # the workspace lock froze. Without this seed, the lockfile this temp crate

@@ -20,6 +20,35 @@ trap 'rm -rf "$BUILD_TEMP"' EXIT
 WORKSPACE_ROOT="$(cd "$WORKSPACE_ROOT" && pwd)"
 mkdir -p "$OUTPUT_DIR"
 
+# Strip relative internal `path = "..."` deps from an isolated crate's Cargo.toml,
+# keeping the `version` key so they resolve from the registry. rewrite-native-deps
+# is supposed to do this in the workspace, but if it left a path (e.g. the core
+# crate was not yet on the registry) the isolated tree — which only copies the
+# package + binding crate, not the core crate — would reference a sibling dir that
+# does not exist and cargo bails with `failed to read .../crates/<core>/Cargo.toml`.
+# No-op when rewrite-native-deps already removed the path. Scoped strictly to
+# *dependencies* sections so [lib]/[[bin]] `path` keys are never touched.
+strip_internal_paths() {
+  python3 - "$1" <<'PY'
+import re, sys
+p = sys.argv[1]
+lines = open(p).read().splitlines(keepends=True)
+dep_hdr = re.compile(r'^\s*\[(build-|dev-)?dependencies(\.[^\]]+)?\]\s*$')
+tgt_dep_hdr = re.compile(r'^\s*\[target\.[^\]]+\.(build-|dev-)?dependencies(\.[^\]]+)?\]\s*$')
+any_hdr = re.compile(r'^\s*\[')
+path_rel = re.compile(r'(,\s*)?path\s*=\s*"(\.[^"]*|[^"]*/[^"]*)"(\s*,)?')
+def repl(m):
+    return ',' if (m.group(1) and m.group(3)) else ''
+in_deps = False
+out = []
+for ln in lines:
+    if any_hdr.match(ln):
+        in_deps = bool(dep_hdr.match(ln) or tgt_dep_hdr.match(ln))
+    out.append(path_rel.sub(repl, ln) if in_deps and 'path' in ln else ln)
+open(p, 'w').write(''.join(out))
+PY
+}
+
 # Determine if INPUT is a manifest path (file) or package dir.
 if [ -f "$WORKSPACE_ROOT/$INPUT" ]; then
   # Manifest path: copy parent directory.
@@ -85,6 +114,9 @@ else
     mkdir -p "$ISO/$(dirname "$pkg_rel")" "$ISO/$(dirname "$crate_rel")"
     cp -r "$FULL_PACKAGE_DIR" "$ISO/$pkg_rel"
     cp -r "$CRATE_DIR" "$ISO/$crate_rel"
+    # The core crate is deliberately NOT copied into the isolated tree; drop any
+    # residual internal path-dep so the binding crate resolves it from the registry.
+    strip_internal_paths "$ISO/$crate_rel/Cargo.toml"
 
     # Synthesize the isolated workspace root. Carry over [workspace.package] and
     # [workspace.dependencies] so any `field.workspace = true` /
@@ -127,7 +159,10 @@ PY
     if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
       cp "$WORKSPACE_ROOT/Cargo.lock" "$ISO/Cargo.lock"
     fi
-    (cd "$ISO" && (cargo generate-lockfile || { rm -f Cargo.lock; cargo generate-lockfile; }))
+    (cd "$ISO" && (cargo generate-lockfile || {
+      rm -f Cargo.lock
+      cargo generate-lockfile
+    }))
 
     cd "$ISO/$pkg_rel"
     # No -m: let the sdist filename derive from pyproject's [project] name so it
@@ -188,6 +223,10 @@ fi
 if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
   cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
 fi
+
+# Drop any residual internal path-dep so a consumer unpacking the sdist resolves
+# it from the registry instead of a sibling dir that does not exist off-workspace.
+strip_internal_paths Cargo.toml
 
 # Generate fresh lockfile. With the seed above present, cargo's
 # `resolve_with_previous` reuses every entry that still satisfies the
