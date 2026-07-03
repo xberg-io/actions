@@ -11,19 +11,18 @@ tasks:
     cmds:
       - uv lock --check || uv lock
       - uv sync --group dev
-      - pre-commit install
 
   update:
     desc: Update pre-commit hooks and dependencies
     cmds:
-      - pre-commit autoupdate
       - uv sync --group dev --upgrade
       - gh-actions-updater --update .
 
   lint:
-    desc: Run all linters via pre-commit (includes actionlint, shellcheck, shfmt)
+    desc: Run all linters and formatting checks via poly
     cmds:
-      - pre-commit run --all-files
+      - poly lint .
+      - poly fmt --check .
 
   test:
     desc: Run all tests
@@ -41,6 +40,6 @@ tasks:
       - act -W .github/workflows/{{.CLI_ARGS}}
 
   validate:
-    desc: Run lint (pre-commit handles actionlint + shellcheck + shfmt)
+    desc: Run lint (poly handles actionlint + shellcheck + shfmt)
     cmds:
       - task: lint
