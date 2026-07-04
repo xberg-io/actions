@@ -11,6 +11,7 @@ tasks:
     cmds:
       - uv lock --check || uv lock
       - uv sync --group dev
+      - poly hooks install
 
   update:
     desc: Update pre-commit hooks and dependencies
