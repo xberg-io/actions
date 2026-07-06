@@ -64,30 +64,15 @@ runs:
         cd "$PACKAGE_DIR"
         dart pub get
 
-    - name: Set up pub.dev trusted publishing via OIDC
-      id: oidc-token
-      shell: bash
-      run: |
-        # Request OIDC token from GitHub Actions for pub.dev trusted publishing
-        token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
-        token_request_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
-
-        if [ -z "$token_request_url" ] || [ -z "$token_request_token" ]; then
-          echo "Warning: OIDC environment not available; will attempt credential-less pub publish"
-          exit 0
-        fi
-
-        oidc_token=$(curl -sS "$token_request_url" \
-          -H "Authorization: bearer $token_request_token" \
-          -H "Accept: application/json" \
-          -d '{}' | jq -r '.oidcToken // empty' 2>/dev/null || echo "")
-
-        if [ -n "$oidc_token" ]; then
-          # Create credentials file for pub publish to use
-          mkdir -p ~/.config/dart
-          printf '{"accessToken":"%s","refreshToken":"","tokenEndpoint":"https://pub.dev/api/oauth/token","expiration":null}' "$oidc_token" > ~/.config/dart/pub-credentials.json
-          echo "oidc-configured=true" >> "$GITHUB_OUTPUT"
-        fi
+    # No manual OIDC step: `dart pub publish` performs pub.dev's native trusted-
+    # publishing exchange itself (requires `permissions: id-token: write`, set by
+    # the calling workflow). It requests an OIDC token with the correct
+    # `https://pub.dev` audience and exchanges it for a short-lived credential at
+    # publish time. The previous hand-rolled step minted a raw GitHub OIDC JWT up
+    # front and wrote it as a long-lived pub credential (no audience,
+    # expiration:null); that token expired mid-publish on large multi-native
+    # packages (e.g. xberg, ~10 min publish) -> "invalid timestamps". Small
+    # packages beat the clock and hid the bug. Let the native flow handle it.
 
     - name: Validate with pub publish --dry-run
       shell: bash
