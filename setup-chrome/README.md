@@ -30,4 +30,3 @@ With overrides:
 | `chrome-version` | no       | `stable` | Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where the chromium snap is installed. |
 
 [upstream]: https://github.com/browser-actions/setup-chrome
-[cft-manifest]: https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json

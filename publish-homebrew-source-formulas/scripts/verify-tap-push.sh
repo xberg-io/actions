@@ -13,8 +13,8 @@ FORMULAS="${2:-}"
 VERSION="${3:-}"
 
 if [[ -z "$TAP_REPO" || -z "$FORMULAS" || -z "$VERSION" ]]; then
-  echo "::error::Usage: verify-tap-push.sh <tap-repo> <formulas> <version>"
-  exit 1
+	echo "::error::Usage: verify-tap-push.sh <tap-repo> <formulas> <version>"
+	exit 1
 fi
 
 echo "Verifying Homebrew tap push for $VERSION..."
@@ -31,22 +31,22 @@ git clone --depth=1 "https://github.com/${TAP_REPO}.git" "$VERIFY_DIR" 2>&1 | gr
 
 # Verify each formula contains the expected version
 while IFS= read -r formula_name; do
-  [[ -z "$formula_name" ]] && continue
-  formula_file="$VERIFY_DIR/Formula/${formula_name}.rb"
+	[[ -z "$formula_name" ]] && continue
+	formula_file="$VERIFY_DIR/Formula/${formula_name}.rb"
 
-  if [[ ! -f "$formula_file" ]]; then
-    echo "::error::Formula file not found after push: $formula_file"
-    exit 1
-  fi
+	if [[ ! -f "$formula_file" ]]; then
+		echo "::error::Formula file not found after push: $formula_file"
+		exit 1
+	fi
 
-  if ! grep -q "version \"${VERSION}\"" "$formula_file"; then
-    echo "::error::Formula $formula_name does not contain version $VERSION"
-    echo "File contents:"
-    cat "$formula_file"
-    exit 1
-  fi
+	if ! grep -q "version \"${VERSION}\"" "$formula_file"; then
+		echo "::error::Formula $formula_name does not contain version $VERSION"
+		echo "File contents:"
+		cat "$formula_file"
+		exit 1
+	fi
 
-  echo "✓ $formula_name contains version $VERSION"
+	echo "✓ $formula_name contains version $VERSION"
 done <<<"$FORMULAS"
 
 echo "✓ Tap push verification succeeded — all formulas contain the correct version"

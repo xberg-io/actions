@@ -15,29 +15,29 @@ set -euo pipefail
 #     INPUT_DRY_RUN: "true" to skip cargo build (default false)
 
 function write_github_output() {
-  local name=$1
-  local value=$2
-  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "${name}=${value}" >>"${GITHUB_OUTPUT}"
-  else
-    echo "${name}=${value}"
-  fi
+	local name=$1
+	local value=$2
+	if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+		echo "${name}=${value}" >>"${GITHUB_OUTPUT}"
+	else
+		echo "${name}=${value}"
+	fi
 }
 
 function ensure_input() {
-  local name=$1
-  local value=$2
-  if [[ -z "$value" ]]; then
-    echo "Error: ${name} is required" >&2
-    exit 1
-  fi
-  echo "$value"
+	local name=$1
+	local value=$2
+	if [[ -z "$value" ]]; then
+		echo "Error: ${name} is required" >&2
+		exit 1
+	fi
+	echo "$value"
 }
 
 function to_pascal_case() {
-  local input=$1
-  # Convert underscores to PascalCase (capitalize each segment)
-  echo "$input" | sed -E 's/(^|_)([a-z])/\U\2/g'
+	local input=$1
+	# Convert underscores to PascalCase (capitalize each segment)
+	echo "$input" | sed -E 's/(^|_)([a-z])/\U\2/g'
 }
 
 CRATE_NAME=$(ensure_input "INPUT_CRATE_NAME" "${INPUT_CRATE_NAME:-}")
@@ -56,35 +56,35 @@ DRY_RUN="${INPUT_DRY_RUN:-false}"
 PROFILE_FLAG=()
 case "$BUILD_PROFILE" in
 dev)
-  PROFILE_FLAG=()
-  TARGET_SUBDIR="debug"
-  ;;
+	PROFILE_FLAG=()
+	TARGET_SUBDIR="debug"
+	;;
 release)
-  PROFILE_FLAG=(--release)
-  TARGET_SUBDIR="release"
-  ;;
+	PROFILE_FLAG=(--release)
+	TARGET_SUBDIR="release"
+	;;
 *)
-  PROFILE_FLAG=(--profile "$BUILD_PROFILE")
-  TARGET_SUBDIR="$BUILD_PROFILE"
-  ;;
+	PROFILE_FLAG=(--profile "$BUILD_PROFILE")
+	TARGET_SUBDIR="$BUILD_PROFILE"
+	;;
 esac
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[build-ios-xcframework] dry-run: skipping cargo build"
-  echo "  crate:             $CRATE_NAME"
-  echo "  lib:               $LIB_NAME"
-  echo "  xcframework:       $XCFRAMEWORK_NAME"
-  echo "  output:            $OUTPUT_DIR"
-  echo "  profile:           $BUILD_PROFILE"
-  echo "  target_subdir:     $TARGET_SUBDIR"
-  if [[ -n "$HEADER_PATH" ]]; then
-    echo "  headers:           $HEADER_PATH"
-  fi
+	echo "[build-ios-xcframework] dry-run: skipping cargo build"
+	echo "  crate:             $CRATE_NAME"
+	echo "  lib:               $LIB_NAME"
+	echo "  xcframework:       $XCFRAMEWORK_NAME"
+	echo "  output:            $OUTPUT_DIR"
+	echo "  profile:           $BUILD_PROFILE"
+	echo "  target_subdir:     $TARGET_SUBDIR"
+	if [[ -n "$HEADER_PATH" ]]; then
+		echo "  headers:           $HEADER_PATH"
+	fi
 
-  write_github_output "xcframework-path" "$(cd "$OUTPUT_DIR" 2>/dev/null && pwd || echo "$OUTPUT_DIR")/$XCFRAMEWORK_NAME.xcframework"
-  write_github_output "xcframework-zip" "$(cd "$OUTPUT_DIR" 2>/dev/null && pwd || echo "$OUTPUT_DIR")/$XCFRAMEWORK_NAME.xcframework.zip"
-  write_github_output "checksum" "placeholder-dry-run"
-  exit 0
+	write_github_output "xcframework-path" "$(cd "$OUTPUT_DIR" 2>/dev/null && pwd || echo "$OUTPUT_DIR")/$XCFRAMEWORK_NAME.xcframework"
+	write_github_output "xcframework-zip" "$(cd "$OUTPUT_DIR" 2>/dev/null && pwd || echo "$OUTPUT_DIR")/$XCFRAMEWORK_NAME.xcframework.zip"
+	write_github_output "checksum" "placeholder-dry-run"
+	exit 0
 fi
 
 echo "[build-ios-xcframework] Building for iOS targets..."
@@ -107,10 +107,10 @@ DEVICE_LIB="target/aarch64-apple-ios/$TARGET_SUBDIR/lib${LIB_NAME}.a"
 SIM_ARM64_LIB="target/aarch64-apple-ios-sim/$TARGET_SUBDIR/lib${LIB_NAME}.a"
 
 for lib in "$DEVICE_LIB" "$SIM_ARM64_LIB"; do
-  if [[ ! -f "$lib" ]]; then
-    echo "Error: built library not found at $lib" >&2
-    exit 1
-  fi
+	if [[ ! -f "$lib" ]]; then
+		echo "Error: built library not found at $lib" >&2
+		exit 1
+	fi
 done
 
 # Create XCFramework
@@ -120,16 +120,16 @@ XCFW="$OUTPUT_DIR/$XCFRAMEWORK_NAME.xcframework"
 
 HEADER_ARGS=""
 if [[ -n "$HEADER_PATH" ]] && [[ -d "$HEADER_PATH" ]]; then
-  HEADER_ARGS="-headers $HEADER_PATH"
+	HEADER_ARGS="-headers $HEADER_PATH"
 fi
 
 # shellcheck disable=SC2086
 xcodebuild -create-xcframework \
-  -library "$DEVICE_LIB" \
-  $HEADER_ARGS \
-  -library "$SIM_ARM64_LIB" \
-  $HEADER_ARGS \
-  -output "$XCFW"
+	-library "$DEVICE_LIB" \
+	$HEADER_ARGS \
+	-library "$SIM_ARM64_LIB" \
+	$HEADER_ARGS \
+	-output "$XCFW"
 
 echo "[build-ios-xcframework] Created XCFramework: $XCFW"
 

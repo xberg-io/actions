@@ -25,14 +25,14 @@ trap 'docker stop "$container_id" >/dev/null 2>&1 || true' EXIT
 sleep "$wait_secs"
 
 run_args=(run "http://localhost:${port}${spec_path}"
-  --max-examples="$max_examples"
-  --request-timeout="$request_timeout_seconds"
-  --checks "$checks")
+	--max-examples="$max_examples"
+	--request-timeout="$request_timeout_seconds"
+	--checks "$checks")
 if [[ -n "$extra_args" ]]; then
-  # Intentional word splitting on extra-args.
-  # shellcheck disable=SC2206
-  extras=($extra_args)
-  run_args+=("${extras[@]}")
+	# Intentional word splitting on extra-args.
+	# shellcheck disable=SC2206
+	extras=($extra_args)
+	run_args+=("${extras[@]}")
 fi
 
 set +e

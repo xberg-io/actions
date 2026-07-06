@@ -34,16 +34,11 @@ VERSION = "5.0.0-rc.19"
 def test_inline_table_without_version_gets_injection():
     manifest = '[dependencies]\nxberg-tesseract = { path = "../xberg-tesseract", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
-    assert (
-        f'xberg-tesseract = {{ path = "../xberg-tesseract", version = "{VERSION}", optional = true }}'
-        in rewritten
-    )
+    assert f'xberg-tesseract = {{ path = "../xberg-tesseract", version = "{VERSION}", optional = true }}' in rewritten
 
 
 def test_inline_table_with_version_is_left_alone():
-    manifest = (
-        '[dependencies]\nxberg-libheif = { path = "../xberg-libheif", version = "1.2.3", optional = true }\n'
-    )
+    manifest = '[dependencies]\nxberg-libheif = { path = "../xberg-libheif", version = "1.2.3", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
 

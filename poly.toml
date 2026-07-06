@@ -89,7 +89,7 @@ ignore = [
 stages = ["pre-commit"]
 
 [hooks.builtin]
-polylint = { exclude = [
+lint = { exclude = [
     "**/*.lock",
     "**/Cargo.lock",
     "**/go.sum",
@@ -97,7 +97,7 @@ polylint = { exclude = [
     "**/pnpm-lock.yaml",
     "**/uv.lock",
 ] }
-polyfmt = { exclude = [
+fmt = { exclude = [
     "**/*.lock",
     "**/Cargo.lock",
     "**/go.sum",
@@ -128,4 +128,3 @@ enabled = true
 
 [tools.actionlint]
 enabled = true
-

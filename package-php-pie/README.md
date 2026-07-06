@@ -8,7 +8,7 @@ its path, name, and SHA-256 as step outputs.
 
 ## Prerequisites
 
-Run [`xberg-io/actions/install-alef`](../install-alef/README.md) before
+Run [`xberg-io/actions/install-alef`](../install-alef) before
 this action so the `alef` CLI is on `PATH`. The extension binary itself must
 already be built — use
 [`xberg-io/actions/build-php-extension`](../build-php-extension) for that.

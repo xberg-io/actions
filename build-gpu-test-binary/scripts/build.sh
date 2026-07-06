@@ -9,12 +9,12 @@ output_name="${INPUT_OUTPUT_NAME:-gpu-test-binary}"
 working_directory="${INPUT_WORKING_DIRECTORY:-.}"
 
 if [[ "$working_directory" != "." ]]; then
-  cd "$working_directory"
+	cd "$working_directory"
 fi
 
 cargo_args=(test --locked -p "$package")
 if [[ -n "$features" ]]; then
-  cargo_args+=(--features "$features")
+	cargo_args+=(--features "$features")
 fi
 cargo_args+=(--test "$test_name" --no-run --message-format=json)
 
@@ -32,18 +32,18 @@ cargo_status=$?
 set -e
 
 if [[ "$cargo_status" -ne 0 ]]; then
-  echo "::error::cargo ${cargo_args[*]} failed (exit ${cargo_status}); stderr below:" >&2
-  cat "$stderr_log" >&2
-  exit "$cargo_status"
+	echo "::error::cargo ${cargo_args[*]} failed (exit ${cargo_status}); stderr below:" >&2
+	cat "$stderr_log" >&2
+	exit "$cargo_status"
 fi
 
 jq -r 'select(.executable != null) | .executable' <"$json_log" |
-  head -1 >"$binary_path_file"
+	head -1 >"$binary_path_file"
 
 if [[ ! -s "$binary_path_file" ]]; then
-  echo "::error::cargo test produced no executable; stderr below:" >&2
-  cat "$stderr_log" >&2
-  exit 1
+	echo "::error::cargo test produced no executable; stderr below:" >&2
+	cat "$stderr_log" >&2
+	exit 1
 fi
 
 test_bin=$(cat "$binary_path_file")

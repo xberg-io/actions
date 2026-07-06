@@ -28,7 +28,7 @@ inputs:
     required: false
     default: "dist/php-package"
   version:
-    description: 'Version string (auto-detected from Cargo.toml if absent).'
+    description: "Version string (auto-detected from Cargo.toml if absent)."
     required: false
     default: ""
   dry-run:
@@ -42,13 +42,13 @@ inputs:
 
 outputs:
   archive-path:
-    description: 'Path to the produced .tgz/.zip archive.'
+    description: "Path to the produced .tgz/.zip archive."
     value: ${{ steps.package.outputs.archive-path }}
   archive-name:
-    description: 'Just the filename (no directory).'
+    description: "Just the filename (no directory)."
     value: ${{ steps.package.outputs.archive-name }}
   sha256:
-    description: 'Hex SHA-256 of the archive.'
+    description: "Hex SHA-256 of the archive."
     value: ${{ steps.package.outputs.sha256 }}
 
 runs:

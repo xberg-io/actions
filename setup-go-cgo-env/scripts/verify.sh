@@ -21,20 +21,20 @@ echo "CGO_LDFLAGS=${CGO_LDFLAGS:-<not set>}"
 echo ""
 echo "=== Runtime Library Paths ==="
 if [ "${RUNNER_OS:-}" != "Windows" ]; then
-  echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-<not set>}"
-  echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-<not set>}"
-  echo "DYLD_FALLBACK_LIBRARY_PATH=${DYLD_FALLBACK_LIBRARY_PATH:-<not set>}"
+	echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-<not set>}"
+	echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-<not set>}"
+	echo "DYLD_FALLBACK_LIBRARY_PATH=${DYLD_FALLBACK_LIBRARY_PATH:-<not set>}"
 else
-  echo "PATH=${PATH:-<not set>}" | head -c 200
-  echo "..."
+	echo "PATH=${PATH:-<not set>}" | head -c 200
+	echo "..."
 fi
 echo ""
 echo "=== FFI Library Files ==="
 ffi_path="${GITHUB_WORKSPACE}/${ffi_lib_dir}"
 if [ -d "$ffi_path" ]; then
-  echo "FFI library directory: $ffi_path"
-  ls -lh "$ffi_path"/lib"${ffi_lib_name}".* 2>/dev/null || echo "No lib${ffi_lib_name} files found"
+	echo "FFI library directory: $ffi_path"
+	ls -lh "$ffi_path"/lib"${ffi_lib_name}".* 2>/dev/null || echo "No lib${ffi_lib_name} files found"
 else
-  echo "FFI library directory does not exist: $ffi_path"
+	echo "FFI library directory does not exist: $ffi_path"
 fi
 echo "=========================================="

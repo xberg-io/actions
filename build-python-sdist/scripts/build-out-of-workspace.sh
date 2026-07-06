@@ -9,8 +9,8 @@ OUTPUT_DIR="${2:-.}"
 WORKSPACE_ROOT="${3:-.}"
 
 if [ -z "$INPUT" ]; then
-  echo "Error: missing input (manifest-path or package-dir)" >&2
-  exit 1
+	echo "Error: missing input (manifest-path or package-dir)" >&2
+	exit 1
 fi
 
 # Create temp directory for out-of-workspace build.
@@ -29,7 +29,7 @@ mkdir -p "$OUTPUT_DIR"
 # No-op when rewrite-native-deps already removed the path. Scoped strictly to
 # *dependencies* sections so [lib]/[[bin]] `path` keys are never touched.
 strip_internal_paths() {
-  python3 - "$1" <<'PY'
+	python3 - "$1" <<'PY'
 import re, sys
 p = sys.argv[1]
 lines = open(p).read().splitlines(keepends=True)
@@ -51,79 +51,79 @@ PY
 
 # Determine if INPUT is a manifest path (file) or package dir.
 if [ -f "$WORKSPACE_ROOT/$INPUT" ]; then
-  # Manifest path: copy parent directory.
-  FULL_MANIFEST_PATH="$WORKSPACE_ROOT/$INPUT"
-  PARENT_DIR=$(dirname "$FULL_MANIFEST_PATH")
+	# Manifest path: copy parent directory.
+	FULL_MANIFEST_PATH="$WORKSPACE_ROOT/$INPUT"
+	PARENT_DIR=$(dirname "$FULL_MANIFEST_PATH")
 
-  cp -r "$PARENT_DIR" "$BUILD_TEMP/crate"
-  cd "$BUILD_TEMP/crate"
+	cp -r "$PARENT_DIR" "$BUILD_TEMP/crate"
+	cd "$BUILD_TEMP/crate"
 
-  echo "Building sdist from manifest: $INPUT"
+	echo "Building sdist from manifest: $INPUT"
 else
-  # Package directory: copy entire directory.
-  FULL_PACKAGE_DIR="$WORKSPACE_ROOT/$INPUT"
+	# Package directory: copy entire directory.
+	FULL_PACKAGE_DIR="$WORKSPACE_ROOT/$INPUT"
 
-  if [ ! -d "$FULL_PACKAGE_DIR" ]; then
-    echo "Error: input not found at $FULL_PACKAGE_DIR (neither file nor dir)" >&2
-    exit 1
-  fi
+	if [ ! -d "$FULL_PACKAGE_DIR" ]; then
+		echo "Error: input not found at $FULL_PACKAGE_DIR (neither file nor dir)" >&2
+		exit 1
+	fi
 
-  # Split layout: package dir holds pyproject.toml + py source but the Rust crate
-  # lives elsewhere (typical for monorepos: packages/python -> crates/<name>/Cargo.toml
-  # via pyproject's [tool.maturin] manifest-path). Out-of-workspace isolation can't
-  # work — maturin needs both the python sources and the crate, and they're in
-  # different roots. Fall back to in-workspace build from workspace root with the
-  # resolved -m manifest-path. rewrite-native-deps already ran in the workspace,
-  # so the crate's path-deps are registry deps.
-  if [ ! -f "$FULL_PACKAGE_DIR/Cargo.toml" ]; then
-    if [ ! -f "$FULL_PACKAGE_DIR/pyproject.toml" ]; then
-      echo "Error: $FULL_PACKAGE_DIR has neither Cargo.toml nor pyproject.toml" >&2
-      exit 1
-    fi
-    # Split layout: python sources live in the package dir, the Rust crate lives
-    # elsewhere (pyproject's [tool.maturin] manifest-path). Building in place lets
-    # cargo climb to the repo-root workspace, which drags every sibling member
-    # into `cargo metadata`. If two members declare the same `links` value (e.g. a
-    # core crate path-deps a `links`-bearing native crate while the binding crate
-    # pins the same crate to a registry version), cargo aborts with a duplicate
-    # `links` conflict. Instead, assemble an isolated workspace tree containing
-    # only the package dir + the crate, rooted at a synthetic [workspace] whose
-    # sole member is the binding crate — sibling members never enter the graph.
-    echo "Split layout detected; isolating $FULL_PACKAGE_DIR + crate into a single-member workspace"
-    if [[ ! "$OUTPUT_DIR" =~ ^/ ]]; then
-      abs_output_dir="$WORKSPACE_ROOT/$OUTPUT_DIR"
-    else
-      abs_output_dir="$OUTPUT_DIR"
-    fi
+	# Split layout: package dir holds pyproject.toml + py source but the Rust crate
+	# lives elsewhere (typical for monorepos: packages/python -> crates/<name>/Cargo.toml
+	# via pyproject's [tool.maturin] manifest-path). Out-of-workspace isolation can't
+	# work — maturin needs both the python sources and the crate, and they're in
+	# different roots. Fall back to in-workspace build from workspace root with the
+	# resolved -m manifest-path. rewrite-native-deps already ran in the workspace,
+	# so the crate's path-deps are registry deps.
+	if [ ! -f "$FULL_PACKAGE_DIR/Cargo.toml" ]; then
+		if [ ! -f "$FULL_PACKAGE_DIR/pyproject.toml" ]; then
+			echo "Error: $FULL_PACKAGE_DIR has neither Cargo.toml nor pyproject.toml" >&2
+			exit 1
+		fi
+		# Split layout: python sources live in the package dir, the Rust crate lives
+		# elsewhere (pyproject's [tool.maturin] manifest-path). Building in place lets
+		# cargo climb to the repo-root workspace, which drags every sibling member
+		# into `cargo metadata`. If two members declare the same `links` value (e.g. a
+		# core crate path-deps a `links`-bearing native crate while the binding crate
+		# pins the same crate to a registry version), cargo aborts with a duplicate
+		# `links` conflict. Instead, assemble an isolated workspace tree containing
+		# only the package dir + the crate, rooted at a synthetic [workspace] whose
+		# sole member is the binding crate — sibling members never enter the graph.
+		echo "Split layout detected; isolating $FULL_PACKAGE_DIR + crate into a single-member workspace"
+		if [[ ! "$OUTPUT_DIR" =~ ^/ ]]; then
+			abs_output_dir="$WORKSPACE_ROOT/$OUTPUT_DIR"
+		else
+			abs_output_dir="$OUTPUT_DIR"
+		fi
 
-    # Resolve the crate directory from pyproject's [tool.maturin] manifest-path.
-    rel_manifest=$(sed -n 's/^[[:space:]]*manifest-path[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
-      "$FULL_PACKAGE_DIR/pyproject.toml" | head -1)
-    if [ -z "$rel_manifest" ]; then
-      echo "Error: split layout but no [tool.maturin] manifest-path in $FULL_PACKAGE_DIR/pyproject.toml" >&2
-      exit 1
-    fi
-    CRATE_DIR=$(cd "$FULL_PACKAGE_DIR" && cd "$(dirname "$rel_manifest")" && pwd)
+		# Resolve the crate directory from pyproject's [tool.maturin] manifest-path.
+		rel_manifest=$(sed -n 's/^[[:space:]]*manifest-path[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+			"$FULL_PACKAGE_DIR/pyproject.toml" | head -1)
+		if [ -z "$rel_manifest" ]; then
+			echo "Error: split layout but no [tool.maturin] manifest-path in $FULL_PACKAGE_DIR/pyproject.toml" >&2
+			exit 1
+		fi
+		CRATE_DIR=$(cd "$FULL_PACKAGE_DIR" && cd "$(dirname "$rel_manifest")" && pwd)
 
-    # Preserve each tree's path relative to the workspace root so the pyproject
-    # manifest-path (e.g. ../../crates/<name>/Cargo.toml) still resolves.
-    pkg_rel=$(python3 -c "import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))" "$FULL_PACKAGE_DIR" "$WORKSPACE_ROOT")
-    crate_rel=$(python3 -c "import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))" "$CRATE_DIR" "$WORKSPACE_ROOT")
+		# Preserve each tree's path relative to the workspace root so the pyproject
+		# manifest-path (e.g. ../../crates/<name>/Cargo.toml) still resolves.
+		pkg_rel=$(python3 -c "import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))" "$FULL_PACKAGE_DIR" "$WORKSPACE_ROOT")
+		crate_rel=$(python3 -c "import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))" "$CRATE_DIR" "$WORKSPACE_ROOT")
 
-    ISO="$BUILD_TEMP/iso"
-    mkdir -p "$ISO/$(dirname "$pkg_rel")" "$ISO/$(dirname "$crate_rel")"
-    cp -r "$FULL_PACKAGE_DIR" "$ISO/$pkg_rel"
-    cp -r "$CRATE_DIR" "$ISO/$crate_rel"
-    # The core crate is deliberately NOT copied into the isolated tree; drop any
-    # residual internal path-dep so the binding crate resolves it from the registry.
-    strip_internal_paths "$ISO/$crate_rel/Cargo.toml"
+		ISO="$BUILD_TEMP/iso"
+		mkdir -p "$ISO/$(dirname "$pkg_rel")" "$ISO/$(dirname "$crate_rel")"
+		cp -r "$FULL_PACKAGE_DIR" "$ISO/$pkg_rel"
+		cp -r "$CRATE_DIR" "$ISO/$crate_rel"
+		# The core crate is deliberately NOT copied into the isolated tree; drop any
+		# residual internal path-dep so the binding crate resolves it from the registry.
+		strip_internal_paths "$ISO/$crate_rel/Cargo.toml"
 
-    # Synthesize the isolated workspace root. Carry over [workspace.package] and
-    # [workspace.dependencies] so any `field.workspace = true` /
-    # `dep = { workspace = true }` inheritance still resolves, but strip `path =`
-    # from the workspace deps so inherited internal crates resolve from their
-    # registry version key instead of climbing out of the isolated tree.
-    python3 - "$WORKSPACE_ROOT/Cargo.toml" "$ISO/Cargo.toml" "$crate_rel" <<'PY'
+		# Synthesize the isolated workspace root. Carry over [workspace.package] and
+		# [workspace.dependencies] so any `field.workspace = true` /
+		# `dep = { workspace = true }` inheritance still resolves, but strip `path =`
+		# from the workspace deps so inherited internal crates resolve from their
+		# registry version key instead of climbing out of the isolated tree.
+		python3 - "$WORKSPACE_ROOT/Cargo.toml" "$ISO/Cargo.toml" "$crate_rel" <<'PY'
 import re, sys
 
 src, dst, member = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -154,65 +154,65 @@ if deps.strip():
 open(dst, 'w').write('\n'.join(out) + '\n')
 PY
 
-    # Seed the lockfile from the workspace so transitive pins survive, then
-    # reconcile against the single-member manifest.
-    if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
-      cp "$WORKSPACE_ROOT/Cargo.lock" "$ISO/Cargo.lock"
-    fi
-    (cd "$ISO" && (cargo generate-lockfile || {
-      rm -f Cargo.lock
-      cargo generate-lockfile
-    }))
+		# Seed the lockfile from the workspace so transitive pins survive, then
+		# reconcile against the single-member manifest.
+		if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
+			cp "$WORKSPACE_ROOT/Cargo.lock" "$ISO/Cargo.lock"
+		fi
+		(cd "$ISO" && (cargo generate-lockfile || {
+			rm -f Cargo.lock
+			cargo generate-lockfile
+		}))
 
-    cd "$ISO/$pkg_rel"
-    # No -m: let the sdist filename derive from pyproject's [project] name so it
-    # matches the PyPI Trusted Publisher project (passing -m derives it from the
-    # Rust crate name and trips a 400 on publish).
-    maturin sdist --out "$abs_output_dir"
-    exit 0
-  fi
+		cd "$ISO/$pkg_rel"
+		# No -m: let the sdist filename derive from pyproject's [project] name so it
+		# matches the PyPI Trusted Publisher project (passing -m derives it from the
+		# Rust crate name and trips a 400 on publish).
+		maturin sdist --out "$abs_output_dir"
+		exit 0
+	fi
 
-  cp -r "$FULL_PACKAGE_DIR" "$BUILD_TEMP/package"
-  cd "$BUILD_TEMP/package"
+	cp -r "$FULL_PACKAGE_DIR" "$BUILD_TEMP/package"
+	cd "$BUILD_TEMP/package"
 
-  echo "Building sdist from package: $INPUT"
+	echo "Building sdist from package: $INPUT"
 fi
 
 # Strip workspace inheritance.
 if [ -f Cargo.toml ] && grep -q 'workspace = true' Cargo.toml 2>/dev/null; then
-  # Read workspace.package values from root Cargo.toml.
-  ws_version=""
-  ws_edition=""
-  ws_license=""
+	# Read workspace.package values from root Cargo.toml.
+	ws_version=""
+	ws_edition=""
+	ws_license=""
 
-  if grep -q "^\[workspace\.package\]" "$WORKSPACE_ROOT/Cargo.toml"; then
-    ws_section=$(sed -n '/^\[workspace\.package\]/,/^\[/p' "$WORKSPACE_ROOT/Cargo.toml" | head -n -1)
-    ws_version=$(echo "$ws_section" | grep "^version" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
-    ws_edition=$(echo "$ws_section" | grep "^edition" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
-    ws_license=$(echo "$ws_section" | grep "^license" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
-  fi
+	if grep -q "^\[workspace\.package\]" "$WORKSPACE_ROOT/Cargo.toml"; then
+		ws_section=$(sed -n '/^\[workspace\.package\]/,/^\[/p' "$WORKSPACE_ROOT/Cargo.toml" | head -n -1)
+		ws_version=$(echo "$ws_section" | grep "^version" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
+		ws_edition=$(echo "$ws_section" | grep "^edition" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
+		ws_license=$(echo "$ws_section" | grep "^license" | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
+	fi
 
-  # Remove workspace = true and conflicting fields.
-  sed -i.bak \
-    -e '/^edition = /d' \
-    -e '/^version = /d' \
-    -e '/^license = /d' \
-    -e 's/workspace = true//' \
-    Cargo.toml
+	# Remove workspace = true and conflicting fields.
+	sed -i.bak \
+		-e '/^edition = /d' \
+		-e '/^version = /d' \
+		-e '/^license = /d' \
+		-e 's/workspace = true//' \
+		Cargo.toml
 
-  # Add back explicit values if we found them.
-  if [ -n "$ws_version" ] && ! grep -q "^version =" Cargo.toml; then
-    sed -i.bak "s/^\[package\]/[package]\nversion = \"$ws_version\"/" Cargo.toml
-  fi
-  if [ -n "$ws_edition" ] && ! grep -q "^edition =" Cargo.toml; then
-    sed -i.bak "s/^\[package\]/[package]\nedition = \"$ws_edition\"/" Cargo.toml
-  fi
-  if [ -n "$ws_license" ] && ! grep -q "^license =" Cargo.toml; then
-    sed -i.bak "s/^\[package\]/[package]\nlicense = \"$ws_license\"/" Cargo.toml
-  fi
+	# Add back explicit values if we found them.
+	if [ -n "$ws_version" ] && ! grep -q "^version =" Cargo.toml; then
+		sed -i.bak "s/^\[package\]/[package]\nversion = \"$ws_version\"/" Cargo.toml
+	fi
+	if [ -n "$ws_edition" ] && ! grep -q "^edition =" Cargo.toml; then
+		sed -i.bak "s/^\[package\]/[package]\nedition = \"$ws_edition\"/" Cargo.toml
+	fi
+	if [ -n "$ws_license" ] && ! grep -q "^license =" Cargo.toml; then
+		sed -i.bak "s/^\[package\]/[package]\nlicense = \"$ws_license\"/" Cargo.toml
+	fi
 
-  rm -f Cargo.toml.bak
-  echo "Stripped workspace inheritance from binding crate Cargo.toml"
+	rm -f Cargo.toml.bak
+	echo "Stripped workspace inheritance from binding crate Cargo.toml"
 fi
 
 # Seed lockfile from workspace so transitive deps stay pinned at the versions
@@ -221,7 +221,7 @@ fi
 # a consumer's `pip install` (e.g. broken `brotli-decompressor 5.0.1` over the
 # pinned `5.0.0`).
 if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
-  cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
+	cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
 fi
 
 # Drop any residual internal path-dep so a consumer unpacking the sdist resolves

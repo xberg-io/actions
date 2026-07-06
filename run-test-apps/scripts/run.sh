@@ -21,16 +21,16 @@ set -e
 
 # Determine pass/fail
 if [ "$exit_code" -eq 0 ]; then
-  passed="true"
+	passed="true"
 else
-  passed="false"
+	passed="false"
 fi
 
 # Set outputs
 {
-  echo "passed=${passed}"
-  echo "exit-code=${exit_code}"
-  echo "log-path=${LOG_PATH}"
+	echo "passed=${passed}"
+	echo "exit-code=${exit_code}"
+	echo "log-path=${LOG_PATH}"
 } >>"$GITHUB_OUTPUT"
 
 echo "Test-apps for ${LANGUAGE}: exit_code=${exit_code}, log=${LOG_PATH}"

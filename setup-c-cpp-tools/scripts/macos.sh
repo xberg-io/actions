@@ -14,7 +14,7 @@ brew install "${brew_packages[@]}" || brew upgrade "${brew_packages[@]}"
 
 installed_version="$(cppcheck --version | awk '{print $2}')"
 if [[ "$installed_version" != "$CPPCHECK_VERSION" ]]; then
-  echo "Warning: brew installed cppcheck $installed_version, expected $CPPCHECK_VERSION" >&2
+	echo "Warning: brew installed cppcheck $installed_version, expected $CPPCHECK_VERSION" >&2
 fi
 
 cppcheck --version

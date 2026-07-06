@@ -102,9 +102,7 @@ def test_publish_crate_always_passes_allow_dirty(monkeypatch):
     # injection is an intentional transform that may dirty the working tree.
     exit_code, _ = crates_mod.publish_crate("xberg-tesseract", ["--manifest-path", "Cargo.toml"])
     assert exit_code == 0
-    assert captured == [
-        ["cargo", "publish", "-p", "xberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]
-    ]
+    assert captured == [["cargo", "publish", "-p", "xberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]]
 
 
 def test_publish_crate_does_not_retry_new_crate_trusted_publishing(monkeypatch):

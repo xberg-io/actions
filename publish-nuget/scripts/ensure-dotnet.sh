@@ -2,8 +2,8 @@
 set -euo pipefail
 
 if command -v dotnet >/dev/null 2>&1; then
-  echo "dotnet already available: $(dotnet --version)"
-  exit 0
+	echo "dotnet already available: $(dotnet --version)"
+	exit 0
 fi
 
 echo "Installing .NET SDK..."
@@ -14,7 +14,7 @@ rm -f /tmp/dotnet-install.sh
 
 export PATH="$HOME/.dotnet:$PATH"
 if [[ -n "${GITHUB_PATH:-}" ]]; then
-  echo "$HOME/.dotnet" >>"$GITHUB_PATH"
+	echo "$HOME/.dotnet" >>"$GITHUB_PATH"
 fi
 
 echo "Installed dotnet: $(dotnet --version)"

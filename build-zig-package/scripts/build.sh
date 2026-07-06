@@ -16,17 +16,17 @@ DRY_RUN="${INPUT_DRY_RUN:-false}"
 
 case "$BUILD_PROFILE" in
 release)
-  profile_flag="--release"
-  target_subdir="release"
-  ;;
+	profile_flag="--release"
+	target_subdir="release"
+	;;
 dev | debug)
-  profile_flag=""
-  target_subdir="debug"
-  ;;
+	profile_flag=""
+	target_subdir="debug"
+	;;
 *)
-  profile_flag="--profile $BUILD_PROFILE"
-  target_subdir="$BUILD_PROFILE"
-  ;;
+	profile_flag="--profile $BUILD_PROFILE"
+	target_subdir="$BUILD_PROFILE"
+	;;
 esac
 
 lib_basename="${FFI_CRATE//-/_}"
@@ -43,18 +43,18 @@ target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
 ffi_library_path="$target_dir/$target_subdir/$lib_filename"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[dry-run] cargo build --locked -p $FFI_CRATE $profile_flag"
-  echo "[dry-run] cd $PACKAGE_DIR && zig build"
-  echo "[dry-run] expected ffi library: $ffi_library_path"
-  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "ffi-library-path=$ffi_library_path" >>"$GITHUB_OUTPUT"
-  fi
-  exit 0
+	echo "[dry-run] cargo build --locked -p $FFI_CRATE $profile_flag"
+	echo "[dry-run] cd $PACKAGE_DIR && zig build"
+	echo "[dry-run] expected ffi library: $ffi_library_path"
+	if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+		echo "ffi-library-path=$ffi_library_path" >>"$GITHUB_OUTPUT"
+	fi
+	exit 0
 fi
 
 if [[ ! -d "$PACKAGE_DIR" ]]; then
-  echo "Error: package-dir '$PACKAGE_DIR' does not exist" >&2
-  exit 1
+	echo "Error: package-dir '$PACKAGE_DIR' does not exist" >&2
+	exit 1
 fi
 
 echo "=== Building cargo crate $FFI_CRATE (profile: $BUILD_PROFILE) ==="
@@ -62,36 +62,36 @@ echo "=== Building cargo crate $FFI_CRATE (profile: $BUILD_PROFILE) ==="
 cargo build --locked -p "$FFI_CRATE" $profile_flag
 
 if [[ ! -f "$ffi_library_path" ]]; then
-  echo "Warning: expected FFI library not found at $ffi_library_path" >&2
-  found=$(find "$target_dir/$target_subdir" -maxdepth 1 -type f \
-    \( -name "lib${lib_basename}.*" -o -name "${lib_basename}.dll" \) \
-    -print -quit 2>/dev/null || true)
-  if [[ -n "$found" ]]; then
-    ffi_library_path="$found"
-    echo "Resolved FFI library: $ffi_library_path"
-  else
-    echo "Error: no built FFI library found for $FFI_CRATE" >&2
-    exit 1
-  fi
+	echo "Warning: expected FFI library not found at $ffi_library_path" >&2
+	found=$(find "$target_dir/$target_subdir" -maxdepth 1 -type f \
+		\( -name "lib${lib_basename}.*" -o -name "${lib_basename}.dll" \) \
+		-print -quit 2>/dev/null || true)
+	if [[ -n "$found" ]]; then
+		ffi_library_path="$found"
+		echo "Resolved FFI library: $ffi_library_path"
+	else
+		echo "Error: no built FFI library found for $FFI_CRATE" >&2
+		exit 1
+	fi
 fi
 
 ffi_dir="$target_dir/$target_subdir"
 
 echo "=== Running zig build in $PACKAGE_DIR (-Dffi_path=$ffi_dir) ==="
 (
-  cd "$PACKAGE_DIR"
-  zig build -Dffi_path="$ffi_dir"
-  # If build.zig declares a `test` step, run it. We grep loosely; users may
-  # write either `b.step("test", ...)` or surrounding whitespace variants.
-  if [[ -f build.zig ]] && grep -Eq 'b\.step\(\s*"test"' build.zig; then
-    echo "=== Running zig build test ==="
-    zig build test -Dffi_path="$ffi_dir"
-  else
-    echo "No 'test' step found in build.zig; skipping zig build test"
-  fi
+	cd "$PACKAGE_DIR"
+	zig build -Dffi_path="$ffi_dir"
+	# If build.zig declares a `test` step, run it. We grep loosely; users may
+	# write either `b.step("test", ...)` or surrounding whitespace variants.
+	if [[ -f build.zig ]] && grep -Eq 'b\.step\(\s*"test"' build.zig; then
+		echo "=== Running zig build test ==="
+		zig build test -Dffi_path="$ffi_dir"
+	else
+		echo "No 'test' step found in build.zig; skipping zig build test"
+	fi
 )
 
 echo "Zig smoke build complete"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  echo "ffi-library-path=$ffi_library_path" >>"$GITHUB_OUTPUT"
+	echo "ffi-library-path=$ffi_library_path" >>"$GITHUB_OUTPUT"
 fi

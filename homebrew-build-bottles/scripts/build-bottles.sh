@@ -71,12 +71,12 @@ echo "::endgroup::"
 # only the local tap clone; homebrew-merge-bottles re-adds one block inside the
 # class afterwards. No-op when the formula has no bottle blocks.
 normalize_tapped_formula() {
-  local formula="$1"
-  local repo formula_file
-  repo="$(brew --repository "$tap" 2>/dev/null)" || return 0
-  for formula_file in "${repo}/Formula/${formula}.rb" "${repo}/${formula}.rb"; do
-    [[ -f "$formula_file" ]] || continue
-    python3 - "$formula_file" <<'PYEOF'
+	local formula="$1"
+	local repo formula_file
+	repo="$(brew --repository "$tap" 2>/dev/null)" || return 0
+	for formula_file in "${repo}/Formula/${formula}.rb" "${repo}/${formula}.rb"; do
+		[[ -f "$formula_file" ]] || continue
+		python3 - "$formula_file" <<'PYEOF'
 import re
 import sys
 
@@ -93,58 +93,58 @@ if stripped != content:
         fh.write(stripped)
     sys.stderr.write(f"normalize_tapped_formula: stripped stale bottle block(s) from {path}\n")
 PYEOF
-    return 0
-  done
+		return 0
+	done
 }
 
 build_one_bottle() {
-  local formula="$1"
-  echo "::group::Building bottle for ${formula}"
+	local formula="$1"
+	echo "::group::Building bottle for ${formula}"
 
-  brew uninstall --force "${tap}/${formula}" 2>/dev/null || true
+	brew uninstall --force "${tap}/${formula}" 2>/dev/null || true
 
-  normalize_tapped_formula "$formula"
+	normalize_tapped_formula "$formula"
 
-  # Ensure libheif is installed and available to pkg-config during bottle builds.
-  # Some formulae (e.g. xberg) depend on libheif-sys which requires libheif.pc.
-  # Homebrew's sandbox may not expose libheif.pc without this.
-  if brew list libheif &>/dev/null; then
-    local libheif_prefix
-    libheif_prefix="$(brew --prefix libheif)"
-    export PKG_CONFIG_PATH="${libheif_prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-  fi
+	# Ensure libheif is installed and available to pkg-config during bottle builds.
+	# Some formulae (e.g. xberg) depend on libheif-sys which requires libheif.pc.
+	# Homebrew's sandbox may not expose libheif.pc without this.
+	if brew list libheif &>/dev/null; then
+		local libheif_prefix
+		libheif_prefix="$(brew --prefix libheif)"
+		export PKG_CONFIG_PATH="${libheif_prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+	fi
 
-  brew install --build-bottle --verbose "${tap}/${formula}"
+	brew install --build-bottle --verbose "${tap}/${formula}"
 
-  brew bottle --json --no-rebuild "${tap}/${formula}"
+	brew bottle --json --no-rebuild "${tap}/${formula}"
 
-  local original_tarball
-  shopt -s nullglob
-  local tarballs=("${formula}--${version}".*.bottle.tar.gz)
-  shopt -u nullglob
-  if [[ ${#tarballs[@]} -eq 0 ]]; then
-    echo "ERROR: no bottle tarball produced for ${formula}" >&2
-    ls -la
-    return 1
-  fi
-  original_tarball="${tarballs[0]}"
+	local original_tarball
+	shopt -s nullglob
+	local tarballs=("${formula}--${version}".*.bottle.tar.gz)
+	shopt -u nullglob
+	if [[ ${#tarballs[@]} -eq 0 ]]; then
+		echo "ERROR: no bottle tarball produced for ${formula}" >&2
+		ls -la
+		return 1
+	fi
+	original_tarball="${tarballs[0]}"
 
-  local renamed_tarball="${original_tarball/--/-}"
-  if [[ "$renamed_tarball" != "$original_tarball" ]]; then
-    cp "$original_tarball" "$renamed_tarball"
-  fi
+	local renamed_tarball="${original_tarball/--/-}"
+	if [[ "$renamed_tarball" != "$original_tarball" ]]; then
+		cp "$original_tarball" "$renamed_tarball"
+	fi
 
-  shopt -s nullglob
-  local json_files=("${formula}--${version}".*.bottle.json)
-  shopt -u nullglob
-  for jf in "${json_files[@]}"; do
-    cp "$jf" "$out_dir/"
-  done
+	shopt -s nullglob
+	local json_files=("${formula}--${version}".*.bottle.json)
+	shopt -u nullglob
+	for jf in "${json_files[@]}"; do
+		cp "$jf" "$out_dir/"
+	done
 
-  echo "Uploading ${renamed_tarball} to release ${tag}"
-  gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
+	echo "Uploading ${renamed_tarball} to release ${tag}"
+	gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
 
-  echo "::endgroup::"
+	echo "::endgroup::"
 }
 
 # Iterate the newline-separated formula list. Read from FD 3 so that commands
@@ -152,9 +152,9 @@ build_one_bottle() {
 # iteration early — observed on macOS bash 3.2 where `gh release upload`
 # absorbed the remaining lines.
 while IFS= read -r formula <&3; do
-  formula="${formula// /}"
-  [[ -z "$formula" ]] && continue
-  build_one_bottle "$formula"
+	formula="${formula// /}"
+	[[ -z "$formula" ]] && continue
+	build_one_bottle "$formula"
 done 3<<<"$formulas_raw"
 
 echo "Bottles built; JSON manifests saved to ${out_dir}:"

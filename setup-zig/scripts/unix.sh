@@ -10,18 +10,18 @@ case "$(uname -s)" in
 Linux) os="linux" ;;
 Darwin) os="macos" ;;
 *)
-  echo "Unsupported OS: $(uname -s)" >&2
-  exit 1
-  ;;
+	echo "Unsupported OS: $(uname -s)" >&2
+	exit 1
+	;;
 esac
 
 case "$(uname -m)" in
 x86_64 | amd64) arch="x86_64" ;;
 aarch64 | arm64) arch="aarch64" ;;
 *)
-  echo "Unsupported arch: $(uname -m)" >&2
-  exit 1
-  ;;
+	echo "Unsupported arch: $(uname -m)" >&2
+	exit 1
+	;;
 esac
 
 platform="${arch}-${os}"
@@ -29,8 +29,8 @@ install_dir="${RUNNER_TEMP:-${HOME}/.local}/zig"
 mkdir -p "$install_dir"
 
 resolve_url() {
-  local v="$1"
-  python3 - "$v" "$platform" <<'PY'
+	local v="$1"
+	python3 - "$v" "$platform" <<'PY'
 import json
 import sys
 import urllib.request
@@ -72,26 +72,26 @@ archive="$install_dir/zig.tar.xz"
 attempt=1
 max_attempts=3
 while ((attempt <= max_attempts)); do
-  if curl --proto '=https' --tlsv1.2 --fail --location \
-    --connect-timeout 10 --max-time 600 \
-    --retry 2 --retry-delay 1 \
-    --output "$archive" "$url"; then
-    break
-  fi
-  echo "Download attempt $attempt failed" >&2
-  attempt=$((attempt + 1))
-  sleep 2
+	if curl --proto '=https' --tlsv1.2 --fail --location \
+		--connect-timeout 10 --max-time 600 \
+		--retry 2 --retry-delay 1 \
+		--output "$archive" "$url"; then
+		break
+	fi
+	echo "Download attempt $attempt failed" >&2
+	attempt=$((attempt + 1))
+	sleep 2
 done
 if ((attempt > max_attempts)); then
-  echo "Failed to download Zig from $url" >&2
-  exit 1
+	echo "Failed to download Zig from $url" >&2
+	exit 1
 fi
 
 tar -xJf "$archive" -C "$install_dir"
 extracted_dir="$(find "$install_dir" -maxdepth 1 -type d -name "zig-*" | head -n1)"
 if [[ -z "$extracted_dir" ]]; then
-  echo "Could not locate extracted zig directory under $install_dir" >&2
-  exit 1
+	echo "Could not locate extracted zig directory under $install_dir" >&2
+	exit 1
 fi
 
 echo "$extracted_dir" >>"$GITHUB_PATH"
