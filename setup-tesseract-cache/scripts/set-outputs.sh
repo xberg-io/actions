@@ -6,7 +6,15 @@ enable_cache="${2:?enable-cache required (true/false)}"
 cache_dir_prefix="${3:?cache-dir-prefix required}"
 
 if [ "$enable_cache" = "true" ]; then
-	cache_dir="${GITHUB_WORKSPACE}/${cache_dir_prefix}/${label}"
+	# `setup-dirs.sh` and the actions/cache `path:` both use `cache_dir_prefix` as-is
+	# (relative to the workspace when relative, absolute otherwise). Mirror that here:
+	# only prepend the workspace for a relative prefix. An absolute prefix (e.g. the
+	# test harness passes `${{ runner.temp }}/tesseract-cache`) must be used verbatim,
+	# else it double-joins into `${GITHUB_WORKSPACE}//abs/path` and the dir check fails.
+	case "$cache_dir_prefix" in
+	/*) cache_dir="${cache_dir_prefix}/${label}" ;;
+	*) cache_dir="${GITHUB_WORKSPACE}/${cache_dir_prefix}/${label}" ;;
+	esac
 
 	echo "TESSERACT_RS_CACHE_DIR=${cache_dir}" >>"$GITHUB_ENV"
 	echo "XDG_CACHE_HOME=${GITHUB_WORKSPACE}/.xdg-cache/${label}" >>"$GITHUB_ENV"
