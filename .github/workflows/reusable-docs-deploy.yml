@@ -1,0 +1,96 @@
+name: Deploy Docs
+
+# Shared build + GitHub Pages deploy for Astro Starlight docs sites (the
+# `@xberg-io/docs-theme` stack). Each repo's docs live in a self-contained
+# npm project (default `docs-site/`) with its own pnpm-lock.yaml; this builds
+# it and, when `deploy` is true, publishes the static output to Pages.
+#
+# Caller must grant the Pages permissions (a reusable workflow cannot exceed
+# them):
+#
+#   permissions:
+#     contents: read
+#     pages: write
+#     id-token: write
+#   jobs:
+#     docs:
+#       uses: xberg-io/actions/.github/workflows/reusable-docs-deploy.yml@v1
+#       with:
+#         deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: "Directory of the Astro docs site (holds package.json + pnpm-lock.yaml)."
+        required: false
+        type: string
+        default: "docs-site"
+      node-version:
+        description: "Node.js version."
+        required: false
+        type: string
+        default: "24"
+      build-command:
+        description: "Command that builds the static site into <working-directory>/dist."
+        required: false
+        type: string
+        default: "pnpm build"
+      deploy:
+        description: "Deploy the built site to GitHub Pages (typically only on push to the default branch)."
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      # Install pnpm as a JS package via system Node — avoids @pnpm/exe's broken
+      # SEA binary. Lockfile 9.0 is compatible between pnpm 10 (CI) and 11 (dev).
+      - name: Install pnpm
+        run: npm install --global pnpm@10
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.build-command }}
+
+      - name: Upload Pages artifact
+        if: ${{ inputs.deploy }}
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ inputs.working-directory }}/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    if: ${{ inputs.deploy }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

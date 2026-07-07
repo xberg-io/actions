@@ -138,6 +138,7 @@ covers `pypi`, `npm`, `wasm`, `rubygems`, `hex`, `maven`, `nuget`, `cratesio`,
 | `reusable-check-registries.yml` | Matrix registry checks (replaces N separate check jobs) |
 | `reusable-python-publish.yml` | Python package build and PyPI publish |
 | `reusable-python-lint.yml` | Python linting via uv + prek |
+| `reusable-docs-deploy.yml` | Build an Astro Starlight docs site and deploy it to GitHub Pages |
 
 ## Repository Workflows
 
