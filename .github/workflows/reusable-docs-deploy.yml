@@ -41,6 +41,11 @@ on:
         required: false
         type: boolean
         default: true
+      runner:
+        description: "Runner label(s) to run on. Defaults to GitHub-hosted; pass a self-hosted label to run on org runners."
+        required: false
+        type: string
+        default: "ubuntu-latest"
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -49,7 +54,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     steps:
@@ -83,7 +88,7 @@ jobs:
     name: Deploy
     needs: build
     if: ${{ inputs.deploy }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       pages: write
       id-token: write
