@@ -73,7 +73,7 @@ jobs:
         run: uv sync || echo "uv sync skipped — non-fatal for poly lint"
 
       - name: Install poly
-        uses: Goldziher/polylint@v0
+        uses: Goldziher/poly@v0
 
       - name: Format check
         run: poly fmt --check .
