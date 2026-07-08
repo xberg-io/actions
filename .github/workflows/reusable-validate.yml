@@ -79,7 +79,7 @@ jobs:
           # the action's dynamic "latest release" resolution (`gh release view`)
           # returns empty and fails. Passing a version skips that lookup. Bump on
           # poly releases.
-          version: "0.10.0"
+          version: "0.11.0"
 
       - name: Format check
         run: poly fmt --check .
