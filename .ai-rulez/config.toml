@@ -5,7 +5,7 @@ version = '4.0'
 name = 'actions'
 description = 'Shared GitHub Actions composite actions for xberg-io CI/CD pipelines'
 gitignore = true
-presets = ['claude', 'codex', 'copilot', 'cursor', 'antigravity']
+presets = ["claude", "codex"]
 builtins = ['cicd', 'default-commands']
 
 [[includes]]

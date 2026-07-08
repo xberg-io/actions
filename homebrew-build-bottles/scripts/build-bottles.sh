@@ -97,6 +97,30 @@ PYEOF
 	done
 }
 
+# Retry a command with exponential backoff. Bottle uploads go through
+# api.github.com, which intermittently drops connections on hosted runners
+# ("error connecting to api.github.com"); a single unretried `gh release
+# upload` failure has sunk an entire release (rc.15). Wrap network-facing
+# calls so a transient blip does not fail the job.
+retry() {
+	local -r max_attempts=5
+	local attempt=1
+	local delay=5
+	local status=0
+	while true; do
+		"$@" && return 0
+		status=$?
+		if ((attempt >= max_attempts)); then
+			echo "ERROR: command failed after ${max_attempts} attempts (exit ${status}): $*" >&2
+			return "$status"
+		fi
+		echo "warning: attempt ${attempt}/${max_attempts} failed (exit ${status}); retrying in ${delay}s: $*" >&2
+		sleep "$delay"
+		attempt=$((attempt + 1))
+		delay=$((delay * 2))
+	done
+}
+
 build_one_bottle() {
 	local formula="$1"
 	echo "::group::Building bottle for ${formula}"
@@ -142,7 +166,7 @@ build_one_bottle() {
 	done
 
 	echo "Uploading ${renamed_tarball} to release ${tag}"
-	gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
+	retry gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
 
 	echo "::endgroup::"
 }
