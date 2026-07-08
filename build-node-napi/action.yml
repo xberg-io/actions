@@ -160,6 +160,65 @@ runs:
         platform_name=$(basename "${platform_dir}")
         echo "Verified: ${platform_name} platform package contains $(basename "${node_file}")"
 
+    - name: Vendor dynamically-linked ONNX Runtime lib beside the .node
+      # When the crate links ONNX Runtime dynamically, setup-onnx-runtime stages
+      # libonnxruntime into the crate dir and the build bakes an
+      # @loader_path (macOS) / $ORIGIN (Linux) / own-dir (Windows) rpath into the
+      # .node. `napi artifacts` copies ONLY the .node into npm/<platform>/, so the
+      # ORT shared lib is absent from the published platform package and consumers
+      # hit ERR_DLOPEN_FAILED ("cannot find libonnxruntime") at require() time.
+      # Copy the staged ORT lib(s) alongside the .node and add every shippable
+      # binary to that package's `files` (npm publish honours `files`, dropping
+      # anything not listed). Auto-scoped: no-op when no ORT lib was staged
+      # (statically linked or non-ORT crates), so this stays safe for callers
+      # that don't use ONNX Runtime.
+      if: inputs.target != '' && inputs.collect-artifacts == 'true'
+      shell: bash
+      working-directory: ${{ inputs.crate-dir }}
+      env:
+        NPM_DIR: ${{ inputs.npm-dir }}
+      run: |
+        set -euo pipefail
+        # ORT shared libs staged into the crate dir by setup-onnx-runtime.
+        shopt -s nullglob
+        ort_libs=(libonnxruntime*.dylib libonnxruntime*.so* onnxruntime*.dll \
+          libonnxruntime_providers_*.dylib libonnxruntime_providers_*.so*)
+        shopt -u nullglob
+        if [ ${#ort_libs[@]} -eq 0 ]; then
+          echo "No ONNX Runtime shared lib staged in $(pwd); nothing to vendor (static/non-ORT build)."
+          exit 0
+        fi
+
+        node_file=$(find "${NPM_DIR}" -maxdepth 2 -name "*.node" -type f | head -1)
+        if [ -z "${node_file}" ]; then
+          echo "::error::ORT libs staged but no .node found under ${NPM_DIR}/ to vendor beside"
+          exit 1
+        fi
+        platform_dir=$(dirname "${node_file}")
+
+        for lib in "${ort_libs[@]}"; do
+          cp -f "${lib}" "${platform_dir}/"
+          echo "Vendored $(basename "${lib}") -> ${platform_dir}/"
+        done
+
+        # Reconcile the platform package.json `files` with the shippable binaries
+        # now on disk (the .node plus every vendored ORT lib). node is guaranteed
+        # present in this action's runtime.
+        node -e '
+          const fs = require("fs"), path = require("path");
+          const dir = process.argv[1];
+          const pkgPath = path.join(dir, "package.json");
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+          const shipExt = /\.(node|dylib|dll)$|\.so(\.[0-9]+)*$/;
+          const onDisk = fs.readdirSync(dir).filter((f) => shipExt.test(f));
+          const files = new Set(pkg.files || []);
+          for (const f of onDisk) files.add(f);
+          pkg.files = [...files].sort();
+          fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+          console.log("Updated " + pkgPath + " files: " + JSON.stringify(pkg.files));
+        ' "${platform_dir}"
+        ls -la "${platform_dir}"
+
     - name: Pack Node tarball (legacy)
       if: inputs.pack-tarball == 'true'
       id: pack
