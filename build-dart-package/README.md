@@ -61,5 +61,12 @@ Skip the Flutter setup if the workflow already installed it:
   `xberg_dart.dll`).
 - `dev`/`debug` profiles map to `target/debug/`; everything else maps to
   `target/<profile>/`.
+- The crate builds via `cargo build --manifest-path <package-dir>/Cargo.toml`,
+  which works whether the crate is a member of a root `[workspace]` or
+  deliberately excluded from one (e.g. a standalone cdylib with its own path
+  deps). The artifact's target directory is resolved via `cargo metadata`
+  (`target_directory`) rather than assumed to be `$GITHUB_WORKSPACE/target`,
+  since an excluded crate builds into its own `target/` next to its
+  `Cargo.toml`.
 - `flutter_rust_bridge_codegen` is installed with `--locked` and skipped if
   the requested version is already on `PATH`.

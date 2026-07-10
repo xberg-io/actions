@@ -14,6 +14,8 @@ CRATE_NAME="${INPUT_CRATE_NAME:-xberg-dart}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 DRY_RUN="${INPUT_DRY_RUN:-false}"
 
+MANIFEST_PATH="$PACKAGE_DIR/Cargo.toml"
+
 # `cargo build --profile dev` is rejected; cargo's dev profile lives under
 # target/debug. Map it the same way cargo does.
 case "$BUILD_PROFILE" in
@@ -41,13 +43,34 @@ Windows | MINGW* | MSYS* | CYGWIN*) lib_filename="${lib_basename}.dll" ;;
 *) lib_filename="lib${lib_basename}.so" ;;
 esac
 
-workspace="${GITHUB_WORKSPACE:-$PWD}"
-target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
-library_path="$target_dir/$target_subdir/$lib_filename"
+# The crate may or may not be a member of a root workspace. Some binding
+# crates are deliberately EXCLUDED from the consumer's root [workspace]
+# (e.g. a standalone cdylib with its own path deps), in which case `cargo
+# build -p <crate>` from the repo root fails with "package ID specification
+# ... did not match any packages". Building via --manifest-path works in
+# both cases: cargo resolves the crate's actual workspace (root or itself)
+# from the manifest, so this is safe whether or not the crate is a member.
+#
+# Likewise, the build's actual target directory depends on which workspace
+# (if any) the manifest resolves into: a workspace member builds into the
+# root target/, while an excluded/standalone crate builds into its own
+# target/ next to its Cargo.toml. Ask cargo directly via `cargo metadata`
+# instead of assuming $GITHUB_WORKSPACE/target.
+resolve_target_dir() {
+	if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+		echo "$CARGO_TARGET_DIR"
+		return
+	fi
+	cargo metadata --manifest-path "$MANIFEST_PATH" --format-version 1 --no-deps 2>/dev/null |
+		jq -r '.target_directory'
+}
 
 if [[ "$DRY_RUN" == "true" ]]; then
 	echo "[dry-run] cd $PACKAGE_DIR && flutter_rust_bridge_codegen generate"
-	echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag"
+	echo "[dry-run] cargo build --locked --manifest-path $MANIFEST_PATH $profile_flag"
+	workspace="${GITHUB_WORKSPACE:-$PWD}"
+	target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
+	library_path="$target_dir/$target_subdir/$lib_filename"
 	echo "[dry-run] expected library: $library_path"
 	if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
 		echo "library-path=$library_path" >>"$GITHUB_OUTPUT"
@@ -68,7 +91,15 @@ echo "=== Running flutter_rust_bridge codegen in $PACKAGE_DIR ==="
 
 echo "=== Building cargo crate $CRATE_NAME (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
-cargo build --locked -p "$CRATE_NAME" $profile_flag
+cargo build --locked --manifest-path "$MANIFEST_PATH" $profile_flag
+
+target_dir="$(resolve_target_dir)"
+if [[ -z "$target_dir" ]]; then
+	echo "Error: could not resolve cargo target directory for $MANIFEST_PATH" >&2
+	exit 1
+fi
+
+library_path="$target_dir/$target_subdir/$lib_filename"
 
 if [[ ! -f "$library_path" ]]; then
 	echo "Warning: expected library not found at $library_path" >&2
