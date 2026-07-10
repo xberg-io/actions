@@ -14,11 +14,6 @@ def _import_script(name: str, path: Path):
 rubygems_mod = _import_script("publish_rubygems", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# is_already_published
-# ---------------------------------------------------------------------------
-
-
 def test_is_already_published_repushing():
     assert rubygems_mod.is_already_published("Repushing of gem versions is not allowed") is True
 
@@ -29,11 +24,6 @@ def test_is_already_published_already_pushed():
 
 def test_is_already_published_false():
     assert rubygems_mod.is_already_published("Error: SSL certificate verification failed") is False
-
-
-# ---------------------------------------------------------------------------
-# find_gem_files
-# ---------------------------------------------------------------------------
 
 
 def test_find_gem_files(tmp_path: Path):
@@ -52,11 +42,6 @@ def test_find_gem_files(tmp_path: Path):
 def test_find_gem_files_empty(tmp_path: Path):
     results = rubygems_mod.find_gem_files(tmp_path)
     assert results == []
-
-
-# ---------------------------------------------------------------------------
-# validate_gem_structure
-# ---------------------------------------------------------------------------
 
 
 def test_validate_gem_structure_not_readable(tmp_path: Path):

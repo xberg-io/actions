@@ -10,11 +10,6 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
-# ---------------------------------------------------------------------------
-# find_dist_files
-# ---------------------------------------------------------------------------
-
-
 def test_find_dist_files(tmp_path):
     (tmp_path / "package-1.0.0-py3-none-any.whl").write_text("fake")
     (tmp_path / "package-1.0.0.tar.gz").write_text("fake")
@@ -38,11 +33,6 @@ def test_find_dist_files_no_whl(tmp_path):
 
     assert len(result) == 1
     assert result[0].name == "package-1.0.0.tar.gz"
-
-
-# ---------------------------------------------------------------------------
-# validate_dist_dir
-# ---------------------------------------------------------------------------
 
 
 def test_validate_dist_dir_missing(tmp_path):

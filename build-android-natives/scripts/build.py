@@ -88,12 +88,10 @@ def main() -> None:
         write_github_output("output-dir", str(output_dir.resolve() if output_dir.exists() else output_dir))
         return
 
-    # Add all targets needed
     unique_targets = list(dict.fromkeys(rust_targets))
     for target in unique_targets:
         run_command(["rustup", "target", "add", target])
 
-    # Check if cargo-ndk is already installed
     try:
         subprocess.run(["which", "cargo-ndk"], check=True, capture_output=True)
         print("[build-android-natives] cargo-ndk already installed")
@@ -101,10 +99,6 @@ def main() -> None:
         print("[build-android-natives] Installing cargo-ndk...")
         run_command(["cargo", "install", "cargo-ndk", "--locked"])
 
-    # Build for each ABI.
-    # `--locked` enforces the committed Cargo.lock so transitive deps cannot
-    # silently re-resolve at NDK cross-compile time (e.g. broken upstream
-    # `brotli-decompressor 5.0.1` over the pinned `5.0.0`).
     for abi, _target in zip(abis, rust_targets, strict=True):
         cmd = [
             "cargo",

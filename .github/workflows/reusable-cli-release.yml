@@ -1,15 +1,5 @@
 name: Build & Release CLI Binaries
 
-# Centralized CLI binary build + release for Rust polyglot repos.
-#
-# Builds a standalone Rust CLI for a reliable cross-platform target set, then
-# uploads the archives to the repo's GitHub Release. The reliable matrix
-# (x64+arm64 linux-gnu, arm64 macOS, x64 Windows) is the set whose runners are
-# consistently available; the more scarce runners (x64 macOS, arm64 Windows)
-# are intentionally excluded so a single starved/failed leg can never block the
-# whole release. musl is built as a separate best-effort job so its failure
-# never fails the workflow or blocks the core uploads.
-
 on:
   workflow_call:
     inputs:
@@ -123,8 +113,6 @@ jobs:
           extra-cargo-args: ${{ inputs.extra-cargo-args }}
 
       - name: Package CLI artifact
-        # Archive layout (.tar.gz on Unix, .zip on Windows) varies per OS in a
-        # way no shared composite covers; tiny and self-contained.
         env:
           BINARY_PATH: ${{ steps.build.outputs.binary-path }}
           TARGET: ${{ matrix.platform.target }}
@@ -157,8 +145,6 @@ jobs:
   cli-binaries-extra:
     name: Build CLI binary (best-effort ${{ matrix.platform.target }})
     if: ${{ inputs.extra-targets != '[]' }}
-    # Best-effort: scarcer/flaky runners a repo wants to ship but which must
-    # never block the release. The `upload` job gates only on `cli-binaries`.
     continue-on-error: true
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 180
@@ -223,8 +209,6 @@ jobs:
   cli-binaries-musl:
     name: Build CLI binary (x86_64-unknown-linux-musl)
     if: ${{ inputs.build-musl }}
-    # Best-effort: a musl failure must not fail the workflow or block the core
-    # uploads (the `upload` job gates only on `cli-binaries`).
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -279,8 +263,6 @@ jobs:
   upload:
     name: Upload CLI binaries to GitHub Release
     needs: [cli-binaries, cli-binaries-extra, cli-binaries-musl]
-    # Run whenever the core matrix succeeded, even if the best-effort musl job
-    # failed or was skipped (so partial-but-complete core sets always ship).
     if: ${{ !cancelled() && needs.cli-binaries.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
@@ -310,9 +292,6 @@ jobs:
           cat "${ASSET_PREFIX}SHA256SUMS"
 
       - name: Ensure release is published (un-draft)
-        # Idempotent: PATCHes an existing draft to published; no-op when already
-        # published. Prevents CLI binaries from being stranded in a draft when a
-        # repo's release-finalize is gated on the whole publish matrix.
         uses: xberg-io/actions/publish-github-release@v1
         with:
           tag: ${{ inputs.tag }}

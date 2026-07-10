@@ -15,9 +15,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macos-latest is Apple Silicon (arm64). PHP 8.5 on Apple Silicon is the
-        # case that could not be provisioned while 8.5 was pre-release; it is GA +
-        # arm64-bottled now, so this matrix guards against that regression.
         os: [ubuntu-latest, macos-latest]
         php-version: ["8.4", "8.5"]
     runs-on: ${{ matrix.os }}

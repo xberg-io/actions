@@ -19,16 +19,12 @@ fi
 
 rustup target list | grep "$target"
 
-# Install musl-tools and configure cc-rs env vars for musl targets on Linux
 if [[ "$target" == *"-unknown-linux-musl" ]] && [[ "$RUNNER_OS" == "Linux" ]]; then
 	echo "Installing musl-tools for target: $target"
 	sudo apt-get update && sudo apt-get install -y musl-tools
 
-	# Convert target triple to cc-rs environment variable format
-	# e.g., aarch64-unknown-linux-musl -> aarch64_unknown_linux_musl
 	cc_rs_var=$(echo "$target" | tr '-' '_')
 
-	# Export environment variables for cc-rs
 	echo "Configuring cc-rs environment variables for musl target"
 	{
 		echo "CC_${cc_rs_var}=musl-gcc"

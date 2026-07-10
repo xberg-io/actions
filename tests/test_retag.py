@@ -8,11 +8,6 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
-# ---------------------------------------------------------------------------
-# build_delete_url
-# ---------------------------------------------------------------------------
-
-
 def test_build_delete_url():
     result = mod.build_delete_url("org/repo", "v1.2.3")
     assert result == "repos/org/repo/git/refs/tags/v1.2.3"
@@ -26,11 +21,6 @@ def test_build_delete_url_nested_repo():
 def test_build_delete_url_starts_with_repos():
     result = mod.build_delete_url("org/repo", "v1.0.0")
     assert result.startswith("repos/")
-
-
-# ---------------------------------------------------------------------------
-# build_create_payload
-# ---------------------------------------------------------------------------
 
 
 def test_build_create_payload():

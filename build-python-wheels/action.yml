@@ -33,10 +33,6 @@ inputs:
   cibw-environment:
     description: CIBW_ENVIRONMENT (Linux default)
     required: false
-    # CARGO_BUILD_LOCKED=true forces the nested `cargo build` (invoked by maturin
-    # inside the manylinux container) to honour the committed Cargo.lock, so
-    # broken upstream releases (e.g. `brotli-decompressor 5.0.1`/`5.0.2`) cannot
-    # quietly substitute themselves for the pinned `5.0.0`.
     default: 'MATURIN_BUILD_ARGS="--compatibility linux" CARGO_BUILD_LOCKED=true'
   cibw-environment-windows:
     description: CIBW_ENVIRONMENT_WINDOWS
@@ -107,9 +103,6 @@ runs:
       run: python -m cibuildwheel --output-dir wheelhouse "${{ inputs.package-dir }}"
       env:
         CIBW_BUILD: ${{ inputs.cibw-build }}
-        # libheif is built only when `build-libheif` is opt-in (libheif-sys consumers
-        # such as xberg). Consumers that do not link libheif skip it entirely and
-        # avoid coupling to codec system deps that are unavailable on some manylinux bases.
         CIBW_BEFORE_ALL_LINUX: >
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
           source ~/.cargo/env &&
@@ -128,19 +121,6 @@ runs:
           cd - &&
           rm -rf /tmp/libheif*;
           fi
-        # macos-latest runner images preinstall a Rust toolchain whose
-        # `bin/cargo-clippy` is not tracked by rustup's component manifest, so a
-        # lazy `clippy` component install (triggered by a consumer's
-        # rust-toolchain.toml) aborts with `detected conflict: 'bin/cargo-clippy'`.
-        # Wiping ~/.cargo and ~/.rustup gives the in-cibw rustup sole ownership of
-        # toolchain state. We then install rustup WITHOUT a default toolchain and
-        # explicitly materialise the consumer's pinned channel (read from
-        # rust-toolchain.toml at $GITHUB_WORKSPACE) with the full `default` profile —
-        # so `cargo` is present and clippy/rustfmt are already satisfied before
-        # maturin runs `cargo metadata`. Relying on the lazy, toolchain-file-driven
-        # install instead left the pinned toolchain without a `cargo` proxy
-        # (`error: 'cargo' is not installed for the toolchain '1.95-aarch64-apple-darwin'`),
-        # failing the wheel build. Channel parse falls back to `stable`.
         CIBW_BEFORE_ALL_MACOS: >
           rm -rf ~/.cargo ~/.rustup &&
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile default &&

@@ -61,7 +61,6 @@ def collect_dirs_mode(dirs: list[str]) -> list[str]:
         for candidate in sorted(directory.rglob("*")):
             if not candidate.is_file():
                 continue
-            # Check relative path components for exclusions (hidden dirs + excluded dirs)
             try:
                 rel = candidate.relative_to(directory)
             except ValueError:
@@ -91,7 +90,7 @@ def _collect_recursive_glob(pattern: str) -> list[str]:
     double_star_idx = pattern.index("**")
     raw_base = pattern[:double_star_idx].rstrip("/")
     base_dir = Path(raw_base) if raw_base else Path.cwd()
-    after_stars = pattern[double_star_idx + 2 :]  # skip "**"
+    after_stars = pattern[double_star_idx + 2 :]
     suffix = after_stars.lstrip("/") or "*"
 
     if not base_dir.is_dir():

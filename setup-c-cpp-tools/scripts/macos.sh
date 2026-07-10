@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Install cppcheck, clang-format, shellcheck via Homebrew.
 set -euo pipefail
 
 CPPCHECK_VERSION="${CPPCHECK_VERSION:-2.20.0}"

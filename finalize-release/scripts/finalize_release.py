@@ -123,7 +123,6 @@ def gh_create_tag(repo: str, tag: str, sha: str) -> bool:
         return True
     if "Reference already exists" in result.stderr or "422" in result.stderr:
         return False
-    # Check for permission errors (403 Forbidden)
     if "403" in result.stderr or "Resource not accessible" in result.stderr:
         raise RuntimeError(
             f"failed to create tag {tag}: insufficient permissions. "
@@ -195,15 +194,6 @@ def main() -> None:
     if go_module_path and repo:
         try:
             sha = gh_get_tag_sha(tag)
-            # Go module tag convention depends on where go.mod actually lives.
-            # Default (go_strip_major=True): strip trailing /vN (N>=2) from the path —
-            # for layouts where go.mod is at the stripped parent (e.g. `packages/go/go.mod`
-            # with module path ending in `/v3`), tagging at the parent yields the form
-            # Go's module proxy expects (`packages/go/v3.5.0`).
-            # Opt-out (go_strip_major=False): tag at the verbatim path — required when
-            # go.mod sits inside the major-version subdirectory itself
-            # (e.g. `packages/go/v5/go.mod`), in which case the tag is
-            # `packages/go/v5/v5.0.0` and the proxy resolves go.mod from that subtree.
             module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", go_module_path) if go_strip_major else go_module_path
             module_tag = f"{module_subdir}/{tag}"
             created = gh_create_tag(repo, module_tag, sha)

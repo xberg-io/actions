@@ -51,9 +51,6 @@ jobs:
           }
           JSON
 
-      # On the integration test we exercise the dry-run path so we don't need
-      # a real release to download from. The render step substitutes the
-      # zero-SHA placeholder for each missing asset (covered by unit tests too).
       - name: Render formulas via the action (dry-run)
         id: render
         uses: ./publish-homebrew-source-formulas

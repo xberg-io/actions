@@ -64,16 +64,6 @@ runs:
         cd "$PACKAGE_DIR"
         dart pub get
 
-    # No manual OIDC step: `dart pub publish` performs pub.dev's native trusted-
-    # publishing exchange itself (requires `permissions: id-token: write`, set by
-    # the calling workflow). It requests an OIDC token with the correct
-    # `https://pub.dev` audience and exchanges it for a short-lived credential at
-    # publish time. The previous hand-rolled step minted a raw GitHub OIDC JWT up
-    # front and wrote it as a long-lived pub credential (no audience,
-    # expiration:null); that token expired mid-publish on large multi-native
-    # packages (e.g. xberg, ~10 min publish) -> "invalid timestamps". Small
-    # packages beat the clock and hid the bug. Let the native flow handle it.
-
     - name: Validate with pub publish --dry-run
       shell: bash
       env:

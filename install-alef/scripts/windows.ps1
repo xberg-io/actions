@@ -1,9 +1,5 @@
 $ErrorActionPreference = "Stop"
 
-# Install alef under %USERPROFILE%\AppData\Local\alef\alef.exe. The composite
-# action resolves "latest" / "main" / a tag to a concrete install ref before
-# invoking this script and handles caching + PATH wiring itself, so this script
-# only deals with the actual download + (optional) source build.
 
 $installRef = $args[0]
 if ([string]::IsNullOrWhiteSpace($installRef)) {
@@ -28,8 +24,6 @@ function Build-FromSource {
   param([string] $ref)
   Ensure-Cargo
   $env:CARGO_INSTALL_ROOT = $alefBinDir
-  # --force so the source build overwrites any alef already present on the
-  # runner; without it cargo aborts with "binary `alef` already exists".
   if ($ref -eq "main") {
     Write-Output "Building alef from main branch via cargo install..."
     cargo install --git https://github.com/xberg-io/alef --branch main --locked --force alef
@@ -41,8 +35,6 @@ function Build-FromSource {
       cargo install --git https://github.com/xberg-io/alef --branch main --locked --force alef
     }
   }
-  # cargo installs into $alefBinDir\bin; move the binary so it lives directly
-  # at $alefBinDir\alef.exe (matches the released-binary layout + cache path).
   $built = "$alefBinDir\bin\alef.exe"
   if (Test-Path $built) {
     Move-Item -Force -Path $built -Destination $alefExe

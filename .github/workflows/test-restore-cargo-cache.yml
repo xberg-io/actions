@@ -15,9 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Stage a Cargo.lock so the action's hash step has something to hash.
-      # Without one it falls back to the literal "no-lock" key — also valid
-      # but we prefer the realistic path.
       - name: Stage a Cargo.lock fixture
         shell: bash
         run: |

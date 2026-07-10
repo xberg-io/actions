@@ -34,9 +34,6 @@ jobs:
             _assets/asset-three.txt
           dry-run: "true"
 
-      # In dry-run the script writes uploaded-count=0 but still lists the
-      # would-be uploads in uploaded-paths. Both assertions below confirm
-      # the action plumbed inputs through to the script correctly.
       - name: Confirm dry-run uploaded-count is 0
         shell: bash
         env:

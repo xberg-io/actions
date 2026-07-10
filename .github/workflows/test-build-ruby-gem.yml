@@ -1,10 +1,5 @@
 name: Test build-ruby-gem
 on:
-  # Manual-only smoke. The action depends on a fully wired Magnus + rb_sys
-  # gem (gemspec + Rakefile + ext/extconf.rb + rake-compiler config) plus
-  # `bundle install` resolving rb_sys/rake-compiler-dock from a Gemfile.
-  # Faking that scaffolding inside the test is brittle; we wait for downstream
-  # repos (xberg-rb, html-to-markdown-rb) to exercise the real path.
   workflow_dispatch:
 
 jobs:
@@ -87,7 +82,6 @@ jobs:
         uses: ./build-ruby-gem
         with:
           package-dir: packages/ruby
-          # Standalone fixture crate with no alef.toml — nothing to rewrite.
           rewrite-native-deps: "false"
 
       - name: Verify native extension built

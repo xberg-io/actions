@@ -78,7 +78,6 @@ def cargo_release_dir(crate_path: Path, target: str) -> Path:
     try:
         base = cargo_target_dir(crate_path / "Cargo.toml")
     except (FileNotFoundError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
-        # Fall back to the crate-local target dir if `cargo metadata` is unavailable.
         base = crate_path / "target"
     return base / target / "release"
 
@@ -170,8 +169,6 @@ def main() -> None:
 
     run_cargo_build(nif_crate_name, nif_crate_path, target, glibc_version)
 
-    # The Rust crate produces the lib with platform-conventional name.
-    # Cargo cdylib for `<nif_crate_name>` produces `lib<nif_crate_name>.{ext}` on unix, `<nif_crate_name>.dll` on windows.
     release_dir = cargo_release_dir(nif_crate_path, target)
     source_lib = release_dir / (f"{nif_crate_name}.dll" if cargo_ext == "dll" else f"lib{nif_crate_name}.{cargo_ext}")
     if not source_lib.is_file():
@@ -180,9 +177,6 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # The tar.gz contains the library file under its renamed RustlerPrecompiled name.
-    # RustlerPrecompiled expects the archive's interior file to be the lib (not a subdir).
-    # macOS `.dylib` is renamed to `.so` for rustler_precompiled URL compatibility.
     renamed_lib_name = f"lib{nif_crate_name}-v{nif_version}-nif-{nif_api_version}-{target}.{asset_ext}"
     staging_lib = output_dir / renamed_lib_name
     shutil.copy2(source_lib, staging_lib)
@@ -195,7 +189,6 @@ def main() -> None:
     print(f"[build-elixir-natives] archive: {archive_path}")
     print(f"[build-elixir-natives] sha256:  {digest}")
 
-    # Clean up the loose lib file (the .tar.gz is the deliverable).
     staging_lib.unlink(missing_ok=True)
 
     write_github_output("archive-path", str(archive_path))

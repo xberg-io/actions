@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-# Validate cached artifacts to ensure they're not corrupted
-#
-# Usage:
-#   validate_cache.py <artifact-type> <path...>
-#
 import shutil
 import subprocess
 import sys

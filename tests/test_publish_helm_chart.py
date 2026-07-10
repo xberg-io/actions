@@ -16,11 +16,6 @@ def _import_script(name: str, path: Path):
 helm_mod = _import_script("publish_helm_chart", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# validate_version
-# ---------------------------------------------------------------------------
-
-
 def test_validate_version_accepts_basic_semver():
     helm_mod.validate_version("0.1.0")
     helm_mod.validate_version("1.2.3")
@@ -57,11 +52,6 @@ def test_validate_version_rejects_non_semver():
         assert exc_info.value.code == 1, f"expected {bad!r} to be rejected"
 
 
-# ---------------------------------------------------------------------------
-# extract_registry_host
-# ---------------------------------------------------------------------------
-
-
 def test_extract_registry_host_ghcr():
     assert helm_mod.extract_registry_host("oci://ghcr.io/xberg-io/charts") == "ghcr.io"
 
@@ -89,11 +79,6 @@ def test_extract_registry_host_rejects_empty():
     assert exc_info.value.code == 1
 
 
-# ---------------------------------------------------------------------------
-# is_already_published
-# ---------------------------------------------------------------------------
-
-
 def test_is_already_published_already_exists():
     assert helm_mod.is_already_published("Error: chart already exists in registry") is True
 
@@ -114,11 +99,6 @@ def test_is_already_published_empty():
     assert helm_mod.is_already_published("") is False
 
 
-# ---------------------------------------------------------------------------
-# stamp_chart_yaml
-# ---------------------------------------------------------------------------
-
-
 def test_stamp_chart_yaml_rewrites_version_and_app_version(tmp_path: Path):
     chart_yaml = tmp_path / "Chart.yaml"
     chart_yaml.write_text(
@@ -136,7 +116,6 @@ def test_stamp_chart_yaml_rewrites_version_and_app_version(tmp_path: Path):
     text = chart_yaml.read_text()
     assert "version: 1.2.3" in text
     assert 'appVersion: "1.2.3"' in text
-    # Dependency version must NOT be rewritten — re.MULTILINE + ^ anchor protects it.
     assert "version: 18.3.0" in text
 
 
@@ -155,11 +134,6 @@ def test_stamp_chart_yaml_missing_file(tmp_path: Path):
     with pytest.raises(SystemExit) as exc_info:
         helm_mod.stamp_chart_yaml(tmp_path / "nope.yaml", "0.1.0", "0.1.0")
     assert exc_info.value.code == 1
-
-
-# ---------------------------------------------------------------------------
-# write_outputs
-# ---------------------------------------------------------------------------
 
 
 def test_write_outputs_appends_to_github_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

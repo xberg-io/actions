@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Merge bottle JSON manifests from all platform builds into the formula files
-# inside the homebrew-tap checkout. Parses the JSONs directly with jq and
-# rewrites each formula's `bottle do` block, avoiding a brew dependency on the
-# merge runner.
-#
-# Required env:
 #   TAG, VERSION, TAP_DIR, JSON_DIR, FORMULAS (newline-separated), GITHUB_REPO
 
 tag="${TAG:?TAG is required}"
@@ -32,7 +26,6 @@ fi
 
 root_url="https://github.com/${github_repo}/releases/download/${tag}"
 
-# render_bottle_block <formula-name> writes the `bottle do ... end` lines to stdout.
 render_bottle_block() {
 	local formula_name="$1"
 	local jsons=("$json_dir"/"$formula_name"--"$version".*.bottle.json)
@@ -47,16 +40,10 @@ render_bottle_block() {
 
 	for jf in "${jsons[@]}"; do
 		local tag_key sha cellar formatted_cellar
-		# brew bottle --json keys the top-level object by the fully-qualified
-		# tap formula name (e.g. "xberg-io/tap/ts-pack"), not the bare
-		# formula name. There's exactly one key per file, so dereference via keys[0].
 		tag_key=$(jq -r '.[keys[0]].bottle.tags | keys[0]' "$jf")
 		sha=$(jq -r --arg tag "$tag_key" '.[keys[0]].bottle.tags[$tag].sha256' "$jf")
 		cellar=$(jq -r --arg tag "$tag_key" '.[keys[0]].bottle.tags[$tag].cellar // .[keys[0]].bottle.cellar' "$jf")
 
-		# brew bottle JSON stores symbol cellar values as plain strings ("any",
-		# "any_skip_relocation"); literal Cellar paths start with "/". Emit the
-		# former as Ruby symbols (:any) and the latter as quoted strings.
 		case "$cellar" in
 		any | any_skip_relocation) formatted_cellar=":$cellar" ;;
 		:*) formatted_cellar="$cellar" ;;
@@ -69,9 +56,6 @@ render_bottle_block() {
 	printf '  end\n'
 }
 
-# replace_or_insert_bottle_block <formula-file> <bottle-block-content>
-# Replaces an existing `bottle do ... end` block, or inserts after the
-# `license` line if no bottle block exists.
 replace_or_insert_bottle_block() {
 	local file="$1"
 	local block_content="$2"

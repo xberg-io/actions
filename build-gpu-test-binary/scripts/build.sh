@@ -23,9 +23,6 @@ stderr_log=$(mktemp)
 binary_path_file=$(mktemp)
 trap 'rm -f "$json_log" "$stderr_log" "$binary_path_file"' EXIT
 
-# Run cargo separately from the jq parse. Piped directly under `set -o pipefail`,
-# a compile failure aborts the script at the pipeline before the diagnostic block
-# below can print stderr, so every real error surfaced only as a bare "exit 101".
 set +e
 cargo "${cargo_args[@]}" >"$json_log" 2>"$stderr_log"
 cargo_status=$?

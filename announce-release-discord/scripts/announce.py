@@ -30,15 +30,10 @@ import urllib.request
 from pathlib import Path
 from typing import Any, cast
 
-# Asset names starting with a dot get renamed by GitHub's release-asset API
-# (e.g. `.discord-announced` becomes `default.discord-announced`), which breaks
-# dedup — so we use a plain name. The legacy dot-prefixed form is also
-# accepted by `already_announced` for backward compat with releases that were
-# marked before this fix.
 MARKER_ASSET_NAME = "discord-announced.marker"
 LEGACY_MARKER_ASSET_NAMES = frozenset({".discord-announced", "default.discord-announced"})
 DISCORD_DESCRIPTION_LIMIT = 4000
-DEFAULT_EMBED_COLOR = 0x5865F2  # Discord Blurple
+DEFAULT_EMBED_COLOR = 0x5865F2
 STABLE_TAG_PATTERN = re.compile(r"^v\d+\.\d+\.\d+$")
 ALLOWED_WEBHOOK_SCHEMES = frozenset({"https"})
 RELEASE_FIELDS = "body,name,publishedAt,targetCommitish,url"

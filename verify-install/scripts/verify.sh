@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Consumer-side install + smoke against a published binding.
-# Inputs come via INPUT_* env vars (see action.yml).
 set -euo pipefail
 
 : "${INPUT_LANGUAGE:?language is required}"
@@ -32,16 +30,9 @@ echo "::endgroup::"
 
 cd "$app_dir"
 
-# Per-language install + smoke. The smoke target name is by convention:
-# the smoke test file/class/spec is always named *smoke*. For each language,
-# `*` matches: tests/test_smoke.py, tests/smoke.test.ts, spec/smoke_spec.rb,
-# SmokeTest.java, SmokeTests.cs, tests/SmokeTest.php, test/smoke_test.exs,
-# Test_Smoke* (go), src/main.rs runs full mock-server harness (rust), or
-# test_smoke.c (c).
 case "$lang" in
 python)
 	if [[ "$INPUT_ARTIFACT_SOURCE" != "registry" && -n "$INPUT_LOCAL_PATH" ]]; then
-		# Install from local wheelhouse via uv pip
 		echo "::group::Install from local wheelhouse"
 		uv venv
 		uv pip install --find-links "$INPUT_LOCAL_PATH" "${INPUT_PACKAGE_NAME}==${INPUT_VERSION}"
@@ -131,23 +122,14 @@ csharp)
 	;;
 
 php)
-	# Step 1: install the extension via PIE. alef-generated test_apps emit an
-	# install.sh next to composer.json that calls `pie install` for the
-	# current platform; we just run it. PIE >= 1.3.7 (preferably 1.4.x)
-	# is required for array-form `php-ext.download-url-method` parsing.
 	if [[ -x "install.sh" || -f "install.sh" ]]; then
 		bash install.sh "$INPUT_VERSION"
 	else
 		echo "::warning::install.sh not found in $app_dir; assuming the extension is preinstalled"
 	fi
 
-	# Step 2: composer install for the dev deps (phpunit, guzzle). Local
-	# composer.json should require `ext-liter_llm: "*"` (platform req) — not
-	# the actual package. Composer's platform resolver satisfies it from
-	# `php -m` once PIE has installed the .so.
 	composer install --no-interaction --prefer-dist
 
-	# Step 3: smoke or full suite.
 	if [[ "$INPUT_SMOKE_ONLY" == "true" ]]; then
 		vendor/bin/phpunit tests/SmokeTest.php
 	else

@@ -1,11 +1,5 @@
 name: Validate
 
-# Single shared validation workflow for every xberg-io repo: run polylint
-# (format check + lint) over the whole tree. poly bundles its lint/format
-# engines (ruff, oxc, taplo, rumdl, …), so most repos need no toolchain. Rust
-# and Python toolchains are opt-in via inputs because poly's cargo/clippy hook
-# and pyrefly type-check delegate to the installed toolchain.
-
 on:
   workflow_call:
     inputs:
@@ -62,11 +56,6 @@ jobs:
         if: ${{ inputs.setup-python }}
         uses: astral-sh/setup-uv@v7
 
-      # Best-effort dependency install so poly's pyrefly type-check can resolve
-      # imports. Non-fatal: poly's core engines (ruff/oxc/…) are bundled and need
-      # no deps, and pyrefly missing-import findings are warnings. Repos with a
-      # non-root or workspace layout where a bare `uv sync` doesn't apply simply
-      # skip this without failing the job.
       - name: Sync Python deps (best-effort)
         if: ${{ inputs.setup-python }}
         continue-on-error: true
@@ -75,10 +64,6 @@ jobs:
       - name: Install poly
         uses: Goldziher/poly@v0
         with:
-          # Pin an explicit version: self-hosted ARC runners have no `gh` CLI, so
-          # the action's dynamic "latest release" resolution (`gh release view`)
-          # returns empty and fails. Passing a version skips that lookup. Bump on
-          # poly releases.
           version: "0.11.0"
 
       - name: Format check

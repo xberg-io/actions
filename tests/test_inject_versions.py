@@ -26,11 +26,6 @@ crates_mod = _import_script("publish_crates_inject", _SCRIPT_PATH)
 VERSION = "5.0.0-rc.19"
 
 
-# ---------------------------------------------------------------------------
-# Inline table form
-# ---------------------------------------------------------------------------
-
-
 def test_inline_table_without_version_gets_injection():
     manifest = '[dependencies]\nxberg-tesseract = { path = "../xberg-tesseract", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
@@ -50,15 +45,9 @@ def test_workspace_true_entry_is_left_alone():
 
 
 def test_workspace_true_with_path_is_left_alone():
-    # Defensive: even if both appear, workspace inheritance owns the version.
     manifest = '[dependencies]\nfoo = { workspace = true, path = "../foo", optional = true }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
-
-
-# ---------------------------------------------------------------------------
-# Dotted-table form: [dependencies.foo]
-# ---------------------------------------------------------------------------
 
 
 def test_dotted_table_without_version_gets_injection():
@@ -79,11 +68,6 @@ def test_dotted_table_with_workspace_is_left_alone():
     assert rewritten == manifest
 
 
-# ---------------------------------------------------------------------------
-# Target-conditional dependencies table
-# ---------------------------------------------------------------------------
-
-
 def test_target_conditional_table_gets_injection():
     manifest = (
         "[target.'cfg(target_arch = \"wasm32\")'.dependencies]\n"
@@ -93,7 +77,6 @@ def test_target_conditional_table_gets_injection():
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert f'version = "{VERSION}"' in rewritten
     assert 'path = "../xberg-tesseract"' in rewritten
-    # Idempotent on re-run.
     again = crates_mod.inject_path_dep_versions(rewritten, VERSION)
     assert again == rewritten
 
@@ -102,11 +85,6 @@ def test_target_conditional_table_with_version_left_alone():
     manifest = '[target.\'cfg(unix)\'.dependencies]\nfoo = { path = "../foo", version = "1.0.0" }\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
-
-
-# ---------------------------------------------------------------------------
-# Dev / build dependencies
-# ---------------------------------------------------------------------------
 
 
 def test_dev_dependencies_get_injection():
@@ -121,11 +99,6 @@ def test_build_dependencies_get_injection():
     assert f'version = "{VERSION}"' in rewritten
 
 
-# ---------------------------------------------------------------------------
-# Multi-line inline table
-# ---------------------------------------------------------------------------
-
-
 def test_multiline_inline_table_without_version_gets_injection():
     manifest = (
         "[dependencies]\n"
@@ -136,7 +109,6 @@ def test_multiline_inline_table_without_version_gets_injection():
     )
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert f'version = "{VERSION}"' in rewritten
-    # Re-running is a no-op.
     again = crates_mod.inject_path_dep_versions(rewritten, VERSION)
     assert again == rewritten
 
@@ -152,11 +124,6 @@ def test_multiline_inline_table_with_version_left_alone():
     assert rewritten == manifest
 
 
-# ---------------------------------------------------------------------------
-# Section-awareness: workspace + lib + features sections must not be touched
-# ---------------------------------------------------------------------------
-
-
 def test_non_dependency_sections_are_ignored():
     manifest = (
         "[package]\n"
@@ -169,8 +136,6 @@ def test_non_dependency_sections_are_ignored():
         'real = { path = "../real" }\n'
     )
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
-    # The [workspace.dependencies] bar entry must NOT be touched, but the
-    # [dependencies] real entry must be rewritten.
     assert 'bar = { path = "../bar" }' in rewritten
     assert f'real = {{ path = "../real", version = "{VERSION}" }}' in rewritten
 
@@ -179,11 +144,6 @@ def test_dep_without_path_is_left_alone():
     manifest = '[dependencies]\nserde = { version = "1.0" }\nthiserror = "1"\n'
     rewritten = crates_mod.inject_path_dep_versions(manifest, VERSION)
     assert rewritten == manifest
-
-
-# ---------------------------------------------------------------------------
-# Round-trip preservation through the context manager
-# ---------------------------------------------------------------------------
 
 
 def test_temporary_injection_restores_original_bytes(tmp_path):
@@ -230,8 +190,6 @@ def test_temporary_injection_no_op_when_manifest_already_correct(tmp_path):
     original_bytes = manifest_path.read_bytes()
 
     with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION) as injected:
-        # Inside the context, the manifest should be byte-identical because no
-        # injection was required, and the context must report no dirtying.
         assert injected is False
         assert manifest_path.read_bytes() == original_bytes
 
@@ -244,7 +202,6 @@ def test_temporary_injection_yields_true_when_manifest_rewritten(tmp_path):
     manifest_path.write_text(original, encoding="utf-8")
 
     with crates_mod._temporarily_inject_versions(str(manifest_path), VERSION) as injected:
-        # An injection occurred, so the context reports the tree is now dirty.
         assert injected is True
 
 
@@ -260,14 +217,12 @@ def test_temporary_injection_yields_false_for_missing_or_empty_path(tmp_path):
 
 def test_temporary_injection_silently_skips_missing_path(tmp_path):
     missing = tmp_path / "does-not-exist.toml"
-    # Must not raise.
     with crates_mod._temporarily_inject_versions(str(missing), VERSION):
         pass
     assert not missing.exists()
 
 
 def test_temporary_injection_silently_skips_empty_path():
-    # Must not raise when manifest_path is empty/None.
     with crates_mod._temporarily_inject_versions("", VERSION):
         pass
     with crates_mod._temporarily_inject_versions(None, VERSION):

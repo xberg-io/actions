@@ -51,7 +51,6 @@ runs:
         alef-version: ${{ inputs.alef-version }}
         require-registry: "true"
 
-    # --- Linux/macOS ---
     - name: Build PHP extension (Linux/macOS)
       if: runner.os != 'Windows'
       id: build-unix
@@ -67,7 +66,6 @@ runs:
         )
         echo "extension-path=$extension_path" >> "$GITHUB_OUTPUT"
 
-    # --- Windows ---
     - name: Install LLVM for libclang (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
@@ -88,12 +86,6 @@ runs:
         RUSTC_BOOTSTRAP: "1"
         CRATE_NAME: ${{ inputs.crate-name }}
         LIB_NAME: ${{ inputs.lib-name }}
-        # Force /MD CRT for cc-rs MSVC builds. esaxx-rs (via gliner → tokenizers)
-        # builds with cc-rs which defaults to /MT. xberg-tesseract uses cmake-rs
-        # which defaults to /MD. Linking both rlibs into xberg_php.dll on
-        # x86_64-pc-windows-msvc triggers LNK1319 mismatch. cc-rs honors
-        # target-suffixed env vars only when compiling for that target, so safe
-        # on non-Windows builds. See xberg commit 1ce6be9b17.
         CFLAGS_x86_64_pc_windows_msvc: "/MD"
         CXXFLAGS_x86_64_pc_windows_msvc: "/MD"
         CFLAGS_i686_pc_windows_msvc: "/MD"

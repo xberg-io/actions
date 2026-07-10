@@ -8,10 +8,6 @@ task_bin_dir="${install_dir:-${RUNNER_TEMP:-${HOME}/.local}/task-bin}"
 mkdir -p "$task_bin_dir"
 
 resolve_latest_version() {
-	# The upstream taskfile.dev/install.sh resolves "latest" via godownloader's
-	# GitHub-tag lookup which intermittently returns an empty tag
-	# ("unable to find ''" -> "Failed to install Task after 3 attempts").
-	# Pre-resolve via the GitHub API ourselves so we can pass an explicit tag.
 	local api_url="https://api.github.com/repos/go-task/task/releases/latest"
 	local auth_args=()
 	if [[ -n "${GITHUB_TOKEN:-}" ]]; then
@@ -106,7 +102,6 @@ install_from_github_release() {
 	local version="${1:-latest}"
 	echo "Attempting direct download from GitHub releases..."
 
-	# Detect OS and architecture
 	local os
 	local arch
 	case "$(uname -s)" in
@@ -135,7 +130,6 @@ install_from_github_release() {
 		;;
 	esac
 
-	# Resolve version if needed
 	local resolved_version="$version"
 	if [[ "$resolved_version" == "latest" ]]; then
 		if resolved_version=$(resolve_latest_version) && [[ -n "$resolved_version" ]]; then
@@ -146,7 +140,6 @@ install_from_github_release() {
 		fi
 	fi
 
-	# Download from GitHub release
 	local download_url="https://github.com/go-task/task/releases/download/${resolved_version}/task_${os}_${arch}.tar.gz"
 	local auth_args=()
 	if [[ -n "${GITHUB_TOKEN:-}" ]]; then

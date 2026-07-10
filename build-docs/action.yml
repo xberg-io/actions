@@ -34,10 +34,6 @@ runs:
       uses: xberg-io/actions/setup-python-env@v1
       with:
         python-version: ${{ inputs.python-version }}
-        # The default install-command only syncs the `dev` group; the docs
-        # build needs the docs group (zensical + theme + plugins) too.
-        # Include both so `task docs:build` (which uses `uv run --no-sync`)
-        # can succeed.
         install-command: "uv sync --all-extras --all-packages --group dev --group ${{ inputs.docs-group }} --no-install-project --no-install-workspace"
 
     - name: Build documentation

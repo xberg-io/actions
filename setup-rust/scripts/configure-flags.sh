@@ -41,7 +41,6 @@ fi
 
 base="${RUSTFLAGS:+$RUSTFLAGS }-D warnings"
 
-# On macOS, optionally add linker flags for undefined symbol lookup (needed for extension builds)
 if [ "$macos_dynamic_lookup" = "true" ]; then
 	if [[ "${RUNNER_OS:-}" == "macOS" ]] || [[ "$(uname)" == "Darwin" ]]; then
 		echo "Detected macOS, adding -undefined dynamic_lookup for extension builds"

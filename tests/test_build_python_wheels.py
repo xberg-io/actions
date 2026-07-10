@@ -39,17 +39,12 @@ def _macos_before_all(content: str) -> str:
 
 
 def test_macos_wipes_rustup_state_before_install():
-    # The wipe is what gives the in-cibw rustup sole ownership of the toolchain
-    # state so the pinned 1.95 install (with its clippy component) is clean.
     macos = _macos_before_all(_read())
     assert "rm -rf ~/.cargo ~/.rustup" in macos
     assert "sh.rustup.rs" in macos
 
 
 def test_macos_does_not_regress_to_non_wiping_preinstall():
-    # ac2ae06 staged the default `stable` toolchain with explicit components and
-    # dropped the wipe, leaving the stray cargo-clippy in place -> same conflict.
-    # Any component pre-install must be preceded by the wipe.
     macos = _macos_before_all(_read())
     if "--component" in macos:
         assert "rm -rf ~/.cargo ~/.rustup" in macos, (

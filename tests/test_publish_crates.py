@@ -14,11 +14,6 @@ def _import_script(name: str, path: Path):
 crates_mod = _import_script("publish_crates", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# is_already_published
-# ---------------------------------------------------------------------------
-
-
 def test_is_already_published_uploaded():
     assert crates_mod.is_already_published("error: crate version has already uploaded") is True
 
@@ -29,11 +24,6 @@ def test_is_already_published_exists():
 
 def test_is_already_published_false():
     assert crates_mod.is_already_published("error: could not find `Cargo.toml`") is False
-
-
-# ---------------------------------------------------------------------------
-# is_new_crate_trusted_publishing
-# ---------------------------------------------------------------------------
 
 
 def test_is_new_crate_trusted_publishing_true():
@@ -51,11 +41,6 @@ def test_is_new_crate_trusted_publishing_false():
     assert crates_mod.is_new_crate_trusted_publishing("error: already exists in the registry") is False
 
 
-# ---------------------------------------------------------------------------
-# build_manifest_args
-# ---------------------------------------------------------------------------
-
-
 def test_build_manifest_args_empty():
     assert crates_mod.build_manifest_args("") == []
 
@@ -63,11 +48,6 @@ def test_build_manifest_args_empty():
 def test_build_manifest_args_set():
     result = crates_mod.build_manifest_args("Cargo.toml")
     assert result == ["--manifest-path", "Cargo.toml"]
-
-
-# ---------------------------------------------------------------------------
-# parse_crate_list
-# ---------------------------------------------------------------------------
 
 
 def test_parse_crate_list():
@@ -85,11 +65,6 @@ def test_parse_crate_list_single():
     assert result == ["only-one"]
 
 
-# ---------------------------------------------------------------------------
-# publish_crate --allow-dirty handling
-# ---------------------------------------------------------------------------
-
-
 def test_publish_crate_always_passes_allow_dirty(monkeypatch):
     captured: list[list[str]] = []
 
@@ -98,8 +73,6 @@ def test_publish_crate_always_passes_allow_dirty(monkeypatch):
         return 0, "ok"
 
     monkeypatch.setattr(crates_mod, "_run", fake_run)
-    # publish_crate always appends --allow-dirty: publish-time path-dep version
-    # injection is an intentional transform that may dirty the working tree.
     exit_code, _ = crates_mod.publish_crate("xberg-tesseract", ["--manifest-path", "Cargo.toml"])
     assert exit_code == 0
     assert captured == [["cargo", "publish", "-p", "xberg-tesseract", "--manifest-path", "Cargo.toml", "--allow-dirty"]]

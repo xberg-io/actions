@@ -9,10 +9,6 @@ on:
       - "retag-for-republish/**"
       - ".github/workflows/test-retag-for-republish.yml"
 
-# IMPORTANT: retag-for-republish has no dry-run mode and would actually delete
-# and recreate a real Git tag if invoked. We do NOT run the action here —
-# instead, we statically validate the script's input contract so a smoke job
-# still proves the script is syntactically valid and accepts INPUT_TAG.
 jobs:
   test:
     runs-on: ubuntu-latest

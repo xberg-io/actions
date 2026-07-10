@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-# Add the scripts directory to the path to import render
 sys.path.insert(0, str(Path(__file__).parent))
 
 from render import _compute_sha256, _interpolate_asset_name, _render_template
@@ -79,7 +78,6 @@ class TestSHA256Computation:
 
         try:
             sha = _compute_sha256(temp_path)
-            # Known SHA256 of "test content"
             assert sha == "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"  # noqa: S101
         finally:
             temp_path.unlink()
@@ -90,12 +88,9 @@ class TestRCVersionHandling:
 
     def test_rc_version_not_filtered(self) -> None:
         """RC versions should not be filtered or skipped."""
-        # This simulates what happens in the render.py main() function
-        # We verify that an RC version string is passed through as-is
         version = "3.6.0-rc.12"
         tag = "v3.6.0-rc.12"
 
-        # Verify the version/tag don't get modified
         assert version == "3.6.0-rc.12"  # noqa: S101
         assert tag == "v3.6.0-rc.12"  # noqa: S101
         assert "-rc." in version  # noqa: S101

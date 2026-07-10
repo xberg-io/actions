@@ -19,11 +19,6 @@ ALREADY_PUBLISHED_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# npm publish --provenance produces a Sigstore transparency-log entry by
-# calling https://rekor.sigstore.dev which is occasionally unavailable. The
-# error surface from npm is `TLOG_CREATE_ENTRY_ERROR` / `error creating tlog
-# entry`. We also retry on plain network noise to absorb other transient
-# failures from the registry endpoint.
 TRANSIENT_PUBLISH_PATTERN = re.compile(
     r"TLOG_CREATE_ENTRY_ERROR|error creating tlog entry|ETIMEDOUT|ECONNRESET|"
     r"ECONNREFUSED|EAI_AGAIN|socket hang up|aborted|fetch failed|5\d\d ",
@@ -32,8 +27,6 @@ TRANSIENT_PUBLISH_PATTERN = re.compile(
 MAX_PUBLISH_RETRIES = 4
 PUBLISH_RETRY_BACKOFF_SECONDS = 5
 
-# `actions/setup-node@v6` exports NODE_AUTH_TOKEN as this 23-char placeholder
-# (hardcoded in setup-node's authutil.ts) when no real token is provided.
 SETUP_NODE_PLACEHOLDER = "XXXXX-XXXXX-XXXXX-XXXXX"
 
 
@@ -170,13 +163,6 @@ def _strip_empty_npm_auth_token() -> None:
     post-expansion `_authToken=` form.
     """
     token = os.environ.get("NODE_AUTH_TOKEN", "")
-    # `actions/setup-node@v6` exports NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'
-    # (the 23-char placeholder string, hardcoded in setup-node's authutil.ts)
-    # when the caller hasn't provided a real token, so that npm CLI doesn't
-    # complain about a missing token at .npmrc read time. But the placeholder
-    # gets sent to the registry as the actual auth credential — yielding
-    # `404 Not Found` and shadowing OIDC trusted publishing. Treat the
-    # placeholder the same as empty so OIDC can take over.
     if token.strip() and token.strip() != SETUP_NODE_PLACEHOLDER:
         print(f"NODE_AUTH_TOKEN is set ({len(token)} chars); skipping OIDC fallback strip")
         return
@@ -185,18 +171,11 @@ def _strip_empty_npm_auth_token() -> None:
         print("NODE_AUTH_TOKEN is set to setup-node@v6's placeholder; treating as unset for OIDC")
     os.environ.pop("NODE_AUTH_TOKEN", None)
 
-    # Walk candidate .npmrc paths: NPM_CONFIG_USERCONFIG (set by setup-node),
-    # $HOME/.npmrc, and the project-local .npmrc (cwd or near package.json).
     candidates: list[Path] = []
     if cfg := os.environ.get("NPM_CONFIG_USERCONFIG"):
         candidates.append(Path(cfg))
     candidates.extend([Path.home() / ".npmrc", Path.cwd() / ".npmrc"])
 
-    # Strip every line declaring an _authToken when NODE_AUTH_TOKEN is empty.
-    # Either the value is literally empty (`=` then EOL), references the now-
-    # unset NODE_AUTH_TOKEN placeholder (`=${NODE_AUTH_TOKEN}`), or any other
-    # value — we're committing to OIDC trusted publishing in this script when
-    # the env var is unset, so any leftover _authToken line would shadow OIDC.
     strip_pattern = re.compile(r"^\s*//[^:]+:_authToken\s*=")
 
     seen: set[Path] = set()
@@ -217,8 +196,6 @@ def _strip_empty_npm_auth_token() -> None:
             npmrc_path.write_text(cleaned)
             print(f"Stripped _authToken lines from {npmrc_path}; npm will use OIDC trusted publishing")
         else:
-            # Helps diagnose silent failures — log what we saw so future logs show
-            # whether the .npmrc layout drifted vs whether the file was already clean.
             print(f"No _authToken line found in {npmrc_path} (file present, no strip needed)")
 
 
@@ -273,12 +250,6 @@ def main() -> None:
     for tgz in tgz_files:
         name = tgz.name
 
-        # Skip per-platform stub packages (os/cpu pinned bindings without a
-        # prebuilt .node file) — placeholders created during bootstrap for musl
-        # variants and similar; publishing them triggers npm Sigstore validation
-        # failures on empty payloads. The pure-JS umbrella package also has no
-        # .node of its own but is NOT a stub: consumers install it and resolve
-        # binaries via its optionalDependencies, so it must still publish.
         if is_platform_package(tgz) and not has_native_binding(tgz):
             print(f"  Skipping {name} (platform stub with no .node binding)")
             skipped += 1

@@ -1,9 +1,6 @@
 name: Test setup-onnx-runtime-gpu
 on:
   workflow_dispatch:
-  # Path-triggered runs are intentionally NOT enabled — this test downloads
-  # a ~400 MB ORT GPU tarball and is too heavy for every PR. Trigger
-  # manually after touching the action.
 
 jobs:
   test:

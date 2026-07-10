@@ -16,11 +16,6 @@ def _import_script(name: str, path: Path):
 compute_hash = _import_script("compute_hash", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# hash_file
-# ---------------------------------------------------------------------------
-
-
 def test_hash_file_returns_digest_and_path(tmp_path):
     f = tmp_path / "hello.txt"
     f.write_text("hello world")
@@ -37,11 +32,6 @@ def test_hash_file_returns_none_on_missing(tmp_path):
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# is_excluded
-# ---------------------------------------------------------------------------
-
-
 def test_is_excluded_hidden_dir():
     assert compute_hash.is_excluded(Path(".git/config")) is True
 
@@ -53,11 +43,6 @@ def test_is_excluded_build_dirs():
 
 def test_is_excluded_normal_path():
     assert compute_hash.is_excluded(Path("src/main.rs")) is False
-
-
-# ---------------------------------------------------------------------------
-# collect_files_mode
-# ---------------------------------------------------------------------------
 
 
 def test_collect_files_mode(tmp_path):
@@ -75,11 +60,6 @@ def test_collect_files_mode_missing_file(tmp_path):
     results = compute_hash.collect_files_mode([str(existing), str(missing)])
     assert len(results) == 1
     assert str(existing) in results[0]
-
-
-# ---------------------------------------------------------------------------
-# collect_dirs_mode
-# ---------------------------------------------------------------------------
 
 
 def test_collect_dirs_mode(tmp_path):
@@ -105,11 +85,6 @@ def test_collect_dirs_mode_excludes_build_dirs(tmp_path):
 def test_collect_dirs_mode_missing_dir(tmp_path):
     results = compute_hash.collect_dirs_mode([str(tmp_path / "nonexistent")])
     assert results == []
-
-
-# ---------------------------------------------------------------------------
-# collect_glob_mode
-# ---------------------------------------------------------------------------
 
 
 def test_collect_glob_mode_simple(tmp_path, monkeypatch):
@@ -144,11 +119,6 @@ def test_collect_glob_mode_recursive_excludes_hidden(tmp_path, monkeypatch):
     assert any("real.rs" in p for p in paths)
 
 
-# ---------------------------------------------------------------------------
-# compute_final_hash
-# ---------------------------------------------------------------------------
-
-
 def test_compute_final_hash_deterministic():
     entries = ["aabbcc  file1.txt", "ddeeff  file2.txt", "001122  file3.txt"]
     hash_a = compute_hash.compute_final_hash(entries)
@@ -160,11 +130,6 @@ def test_compute_final_hash_length():
     result = compute_hash.compute_final_hash(["abc123  foo.txt"])
     assert len(result) == 64
     assert all(c in "0123456789abcdef" for c in result)
-
-
-# ---------------------------------------------------------------------------
-# main() via subprocess
-# ---------------------------------------------------------------------------
 
 
 def test_main_files_mode(tmp_path):

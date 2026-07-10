@@ -33,14 +33,12 @@ def get_github_api_headers(token: str) -> dict[str, str]:
 
 def expand_artifact_patterns(patterns: str) -> list[Path]:
     """Expand comma- or newline-separated glob patterns into a list of existing files."""
-    # Normalize comma separators to newlines, then split
     normalized = patterns.replace(",", "\n")
     files: list[Path] = []
     for raw in normalized.splitlines():
         pattern = raw.strip()
         if not pattern:
             continue
-        # Use Path() as the base so globs resolve relative to the current directory
         files.extend(path for path in sorted(Path().glob(pattern)) if path.is_file())
     return files
 
@@ -75,7 +73,7 @@ def delete_asset(owner: str, repo: str, asset_id: int, token: str) -> None:
 
     try:
         with urllib.request.urlopen(req):  # noqa: S310
-            pass  # 204 No Content on success
+            pass
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
         print(
@@ -93,20 +91,16 @@ def upload_asset(upload_url: str, filename: str, file_path: Path, token: str) ->
     e.g. "https://uploads.github.com/repos/owner/repo/releases/123/assets{?name,label}".
     Strip the template, append ?name=<filename>, and POST the file.
     """
-    # Strip template {?name,label}
     if "{" in upload_url:
         upload_url = upload_url[: upload_url.index("{")]
 
-    # Encode filename for query string
     query_string = urllib.parse.urlencode({"name": filename})
     url = f"{upload_url}?{query_string}"
 
-    # Determine MIME type
     mime_type, _ = mimetypes.guess_type(str(file_path))
     if mime_type is None:
         mime_type = "application/octet-stream"
 
-    # Read file and prepare request
     with file_path.open("rb") as f:
         file_data = f.read()
 
@@ -118,7 +112,7 @@ def upload_asset(upload_url: str, filename: str, file_path: Path, token: str) ->
         req = urllib.request.Request(url, data=file_data, headers=headers, method="POST")  # noqa: S310
         try:
             with urllib.request.urlopen(req):  # noqa: S310
-                return  # 201 Created on success
+                return
         except urllib.error.HTTPError as e:
             error_body = e.read().decode("utf-8")
             if 500 <= e.code < 600 and attempt < UPLOAD_MAX_ATTEMPTS:
@@ -189,7 +183,6 @@ def main() -> None:
 
     print(f"Uploading {len(files)} artifact(s) to release {tag}...")
 
-    # Get release to obtain upload_url and existing assets
     release = get_release_by_tag(owner, repo, tag, token)
     upload_url = release.get("upload_url", "")
     existing_assets = {asset["name"]: asset["id"] for asset in release.get("assets", [])}
@@ -198,7 +191,6 @@ def main() -> None:
         filename = file.name
         print(f"  Uploading {filename}...")
 
-        # If asset with same name exists, delete it first (clobber semantics)
         if filename in existing_assets:
             asset_id = existing_assets[filename]
             print(f"    Removing existing {filename}...")

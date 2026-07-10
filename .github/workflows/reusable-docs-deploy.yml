@@ -1,23 +1,5 @@
 name: Deploy Docs
 
-# Shared build + GitHub Pages deploy for Astro Starlight docs sites (the
-# `@xberg-io/docs-theme` stack). Each repo's docs live in a self-contained
-# npm project (default `docs-site/`) with its own pnpm-lock.yaml; this builds
-# it and, when `deploy` is true, publishes the static output to Pages.
-#
-# Caller must grant the Pages permissions (a reusable workflow cannot exceed
-# them):
-#
-#   permissions:
-#     contents: read
-#     pages: write
-#     id-token: write
-#   jobs:
-#     docs:
-#       uses: xberg-io/actions/.github/workflows/reusable-docs-deploy.yml@v1
-#       with:
-#         deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-
 on:
   workflow_call:
     inputs:
@@ -65,8 +47,6 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      # Install pnpm as a JS package via system Node — avoids @pnpm/exe's broken
-      # SEA binary. Lockfile 9.0 is compatible between pnpm 10 (CI) and 11 (dev).
       - name: Install pnpm
         run: npm install --global pnpm@10
 

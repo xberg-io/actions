@@ -16,11 +16,6 @@ def _import_script(name: str, path: Path):
 build_mod = _import_script("build", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# build_cargo_args
-# ---------------------------------------------------------------------------
-
-
 def test_build_cargo_args_default():
     args = build_mod.build_cargo_args(
         crate_name="mylib",
@@ -119,7 +114,6 @@ def test_build_cargo_args_with_non_gnu_target_ignores_glibc_version():
         glibc_version="2.28",
     )
     assert "--target" in args
-    # glibc_version should be ignored for non-gnu targets
     assert args[args.index("--target") + 1] == "aarch64-apple-darwin"
 
 
@@ -150,38 +144,23 @@ def test_build_cargo_args_no_verbose():
     assert "-vv" not in args
 
 
-# ---------------------------------------------------------------------------
-# assemble_cargo_cmd
-# ---------------------------------------------------------------------------
-
-
 def test_assemble_cargo_cmd_plain_build():
-    # cargo_args always begins with the "build" subcommand.
     cmd = build_mod.assemble_cargo_cmd(["build", "--locked", "--release"], use_zigbuild=False)
     assert cmd == ["cargo", "build", "--locked", "--release"]
 
 
 def test_assemble_cargo_cmd_zigbuild_drops_build_subcommand():
-    # Regression: `cargo zigbuild build ...` errors with "unexpected argument
-    # 'build'". zigbuild REPLACES the build subcommand, so the leading "build"
-    # must be dropped.
     cmd = build_mod.assemble_cargo_cmd(
         ["build", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"],
         use_zigbuild=True,
     )
     assert cmd == ["cargo", "zigbuild", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"]
-    assert "build" not in cmd  # the subcommand "build" must not survive alongside "zigbuild"
-
-
-# ---------------------------------------------------------------------------
-# validate_inputs
-# ---------------------------------------------------------------------------
+    assert "build" not in cmd
 
 
 def test_validate_inputs_with_manifest(tmp_path):
     manifest = tmp_path / "Cargo.toml"
     manifest.write_text("[package]")
-    # Should not raise
     build_mod.validate_inputs("mylib", str(manifest))
 
 
@@ -197,7 +176,6 @@ def test_validate_inputs_standard_crate(tmp_path, monkeypatch):
     crate_dir = tmp_path / "crates" / "mylib"
     crate_dir.mkdir(parents=True)
     (crate_dir / "Cargo.toml").write_text("[package]")
-    # No manifest_path, standard crates/{name}/Cargo.toml layout
     build_mod.validate_inputs("mylib", "")
 
 
@@ -206,11 +184,6 @@ def test_validate_inputs_missing_crate(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         build_mod.validate_inputs("noexist", "")
     assert exc_info.value.code == 1
-
-
-# ---------------------------------------------------------------------------
-# find_library
-# ---------------------------------------------------------------------------
 
 
 def test_find_library_exact_match(tmp_path):
@@ -232,7 +205,6 @@ def test_find_library_dll(tmp_path):
 
 
 def test_find_library_fallback(tmp_path):
-    # No canonical match; any .so should be found via fallback
     (tmp_path / "other_name.so").write_bytes(b"\x7fELF")
     result = build_mod.find_library(tmp_path, "foo")
     assert result is not None
@@ -250,11 +222,6 @@ def test_find_library_hyphens_to_underscores(tmp_path):
     assert result == tmp_path / "libmy_crate.so"
 
 
-# ---------------------------------------------------------------------------
-# diagnose_build_failure
-# ---------------------------------------------------------------------------
-
-
 def test_diagnose_build_failure_link_errors(capsys):
     log = "compiling...\nerror: linking failed\nsome other line"
     build_mod.diagnose_build_failure(log)
@@ -267,11 +234,6 @@ def test_diagnose_build_failure_missing_deps(capsys):
     build_mod.diagnose_build_failure(log)
     captured = capsys.readouterr()
     assert "Missing dependencies detected" in captured.out
-
-
-# ---------------------------------------------------------------------------
-# _full_target_dir
-# ---------------------------------------------------------------------------
 
 
 def test_full_target_dir_release():
@@ -342,11 +304,6 @@ def test_full_target_dir_custom_dir():
     assert result == Path("custom/release")
 
 
-# ---------------------------------------------------------------------------
-# _build_env
-# ---------------------------------------------------------------------------
-
-
 def test_build_env_disables_sccache(monkeypatch):
     monkeypatch.setenv("RUSTC_WRAPPER", "sccache")
     monkeypatch.setenv("CARGO_BUILD_RUSTC_WRAPPER", "sccache")
@@ -386,11 +343,6 @@ def test_build_env_keeps_sccache(monkeypatch):
     assert env.get("RUSTC_WRAPPER") == "sccache"
 
 
-# ---------------------------------------------------------------------------
-# _write_github_output
-# ---------------------------------------------------------------------------
-
-
 def test_write_github_output(tmp_path, monkeypatch):
     output_file = tmp_path / "github_output.txt"
     output_file.touch()
@@ -418,11 +370,6 @@ def test_write_github_output_no_lib(tmp_path, monkeypatch):
     content = output_file.read_text()
     assert "library-path=\n" in content
     assert f"target-dir={target_dir}" in content
-
-
-# ---------------------------------------------------------------------------
-# BuildConfig.from_env
-# ---------------------------------------------------------------------------
 
 
 def test_build_config_from_env(monkeypatch):

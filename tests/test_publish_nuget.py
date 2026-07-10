@@ -14,11 +14,6 @@ def _import_script(name, path):
 nuget_mod = _import_script("publish_nuget", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# find_nupkg_files
-# ---------------------------------------------------------------------------
-
-
 def test_find_nupkg_files(tmp_path):
     (tmp_path / "package.nupkg").write_text("fake")
     (tmp_path / "other.nupkg").write_text("fake")
@@ -34,11 +29,6 @@ def test_find_nupkg_files(tmp_path):
 def test_find_nupkg_files_empty(tmp_path):
     result = nuget_mod.find_nupkg_files(tmp_path)
     assert result == []
-
-
-# ---------------------------------------------------------------------------
-# is_publish_error
-# ---------------------------------------------------------------------------
 
 
 def test_is_publish_error_success():

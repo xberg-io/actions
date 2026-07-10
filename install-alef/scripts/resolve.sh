@@ -2,17 +2,7 @@
 set -euo pipefail
 
 # Resolve the alef version input to a concrete cache key and an install ref.
-#
-# Outputs (written to $GITHUB_OUTPUT):
 #   resolved_version  Used as the cache key suffix. For "main" this is
-#                     "main-<short-sha>" so the cache invalidates whenever the
-#                     remote main commit changes; for tags it's the bare semver
-#                     (e.g. "0.17.8").
-#   install_ref       What the platform install script should consume.
-#                     "main" for main-branch builds, otherwise the bare semver
-#                     (no leading "v").
-#   target            Host triple — included in the cache key so a Linux x86_64
-#                     binary can't be served from a macOS arm64 cache.
 
 version="${1:?version required}"
 
@@ -77,9 +67,6 @@ install_ref=""
 
 if [[ "$version" == "main" ]]; then
 	install_ref="main"
-	# Resolve a SHA-pinned cache key when possible, but tolerate API/network
-	# failures: `set -euo pipefail` would otherwise abort the pipeline before
-	# the fallback branch runs. Disable errexit/pipefail just around the lookup.
 	set +e +o pipefail
 	sha="$(curl --silent --fail "${auth_args[@]}" \
 		"https://api.github.com/repos/xberg-io/alef/commits/main" |
@@ -88,8 +75,6 @@ if [[ "$version" == "main" ]]; then
 	if [[ -n "$sha" ]]; then
 		resolved_version="main-${sha:0:12}"
 	else
-		# Fall back to a coarse key — cache will hit across all main commits
-		# until the network comes back, which is acceptable for a degraded mode.
 		resolved_version="main"
 	fi
 else
@@ -110,8 +95,6 @@ else
 			resolved_version="$tag"
 		fi
 	else
-		# Strip any leading 'v' so the cache key stays consistent regardless of
-		# whether the caller passed "0.17.8" or "v0.17.8".
 		resolved_version="${version#v}"
 	fi
 	install_ref="$resolved_version"

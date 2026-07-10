@@ -30,16 +30,11 @@ def test_action_exposes_dry_run_input():
 
 def test_action_appends_alef_dry_run_flag_when_input_is_true():
     content = _read()
-    # When dry-run is true the action must add --dry-run to the alef command so
-    # the path-dep assertion is bypassed (alef short-circuits in dry-run mode).
     assert 'if [[ "${DRY_RUN}" == "true" ]]; then' in content
     assert "cmd+=(--dry-run)" in content
 
 
 def test_action_skips_archive_check_in_dry_run():
     content = _read()
-    # In dry-run alef produces no archive, so the action stages a placeholder
-    # tgz + sha256 sidecar so downstream steps that locate a file by path
-    # still resolve, then short-circuits before the real archive-finding logic.
     assert "alef publish package short-circuited; creating placeholder outputs" in content
     assert 'touch "${dummy_archive}"' in content

@@ -32,9 +32,6 @@ import urllib.request
 from collections.abc import Iterator
 from pathlib import Path
 
-# GitHub Actions captures Python stdout; default block-buffering swallows
-# per-crate progress when the job is cancelled (e.g. on timeout-minutes).
-# Line-buffer both streams so the log reflects what actually ran.
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 sys.stderr.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 
@@ -43,20 +40,11 @@ ALREADY_PUBLISHED_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# cargo emits this when packaging a crate whose intra-workspace dependency is
-# not yet resolvable through the index — i.e. the upstream crate was published
-# but has not finished propagating. It is transient and clears on retry.
 DEPENDENCY_NOT_READY_PATTERN = re.compile(
     r"failed to select a version for",
     re.IGNORECASE,
 )
 
-# crates.io Trusted Publishing (OIDC) tokens are scoped to crates that already
-# exist on the registry — they cannot *create* a brand-new crate. The very first
-# publish of a new crate must be done once, manually, by a maintainer holding a
-# classic API token. After that one-time bootstrap, every subsequent version
-# (including all the bindings' downstream crates) publishes fine via OIDC.
-# cargo surfaces the registry's rejection verbatim; match its stable wording.
 NEW_CRATE_TRUSTED_PUBLISHING_PATTERN = re.compile(
     r"Trusted Publishing tokens do not support creating new crates",
     re.IGNORECASE,
@@ -65,10 +53,6 @@ NEW_CRATE_TRUSTED_PUBLISHING_PATTERN = re.compile(
 INDEX_POLL_TIMEOUT_SECONDS = 600
 INDEX_POLL_INTERVAL_SECONDS = 5
 
-# Retry budget for a downstream `cargo publish` that fails because an
-# upstream crate has not propagated yet. Budgets are deliberately generous —
-# on bad CDN days the sparse-index propagation can exceed 8 minutes, which
-# is what blew up alef v0.17.35 at slot 21/29.
 PUBLISH_RETRY_ATTEMPTS = 10
 PUBLISH_RETRY_DELAY_SECONDS = 60
 
@@ -139,9 +123,6 @@ def wait_for_index(crate: str, version: str) -> None:
     url = _sparse_index_url(crate)
     deadline = time.monotonic() + INDEX_POLL_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
-        # The sparse index is served through a CDN. A plain GET can keep
-        # returning a stale cached body that never shows the just-published
-        # version, so the poll must explicitly defeat any cached response.
         request = urllib.request.Request(  # noqa: S310 — fixed crates.io URL
             url,
             headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
@@ -364,7 +345,6 @@ def inject_path_dep_versions(manifest: str, version: str) -> str:
         entry_text = "".join(entry_lines)
         eq_pos = entry_text.find("=")
         brace_pos = entry_text.find("{", eq_pos)
-        # Find matching closing brace by scanning braces with the same quoting rules.
         depth = 0
         close_pos = -1
         in_single = False
@@ -395,7 +375,6 @@ def inject_path_dep_versions(manifest: str, version: str) -> str:
                     break
 
         if close_pos == -1:
-            # Malformed manifest — emit verbatim and move on.
             output.extend(entry_lines)
             index = cursor + 1
             continue
@@ -461,8 +440,6 @@ def _temporarily_inject_versions(manifest_path: str | None, version: str) -> Ite
     try:
         original_text = original_bytes.decode("utf-8")
     except UnicodeDecodeError:
-        # Cargo.toml is UTF-8 by spec; if decode fails, leave the file untouched
-        # rather than risk a corrupting rewrite.
         yield False
         return
     rewritten = inject_path_dep_versions(original_text, version)
@@ -487,8 +464,6 @@ def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     exit_code, output = 0, ""
     for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
         exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, "--allow-dirty"])
-        # Stop immediately on a new-crate OIDC rejection: retrying never grants the
-        # token create permission, so the only fix is a one-time manual publish.
         if is_new_crate_trusted_publishing(output):
             return exit_code, output
         if exit_code == 0 or is_already_published(output) or not is_dependency_not_ready(output):
@@ -522,10 +497,6 @@ def main() -> None:
     total = len(crate_list)
     crate_manifests = _discover_manifest_paths(manifest_args)
 
-    # Crates that could not be published because they don't yet exist on
-    # crates.io and the OIDC (Trusted Publishing) token cannot create them.
-    # Collected across the whole run so independent crates still get a chance
-    # to publish, then surfaced together as one actionable summary at the end.
     new_crates_needing_manual_publish: list[str] = []
 
     for index, crate in enumerate(crate_list, start=1):
@@ -549,10 +520,6 @@ def main() -> None:
             print(f"  {crate}@{version} already published, skipping")
             wait_for_index(crate, version)
         elif is_new_crate_trusted_publishing(output):
-            # First-ever publish of a brand-new crate: OIDC can't create it.
-            # Don't hard-fail the whole release here — record it and continue so
-            # already-existing crates still publish, then fail with a clear,
-            # actionable summary at the end naming the one-time manual step.
             new_crates_needing_manual_publish.append(crate)
             print(
                 f"  {crate} does not exist on crates.io and cannot be created via "

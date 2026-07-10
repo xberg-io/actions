@@ -119,8 +119,6 @@ runs:
       id: publish
       shell: bash
       env:
-        # Standard env names consumed by the vanniktech maven-publish plugin
-        # and by the vanilla maven-publish/signing plugins via project properties.
         ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ env.MAVEN_USERNAME }}
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ env.MAVEN_PASSWORD }}
         ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ env.MAVEN_GPG_PRIVATE_KEY }}

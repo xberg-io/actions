@@ -11,7 +11,6 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "build-elixir-natives" / "s
 
 
 def _import_script(name: str, path: Path):
-    # build.py does `from musl_builder import ...`, so its scripts dir must be importable.
     if str(_SCRIPTS_DIR) not in sys.path:
         sys.path.insert(0, str(_SCRIPTS_DIR))
     spec = importlib.util.spec_from_file_location(name, path)
@@ -33,7 +32,6 @@ def test_run_cargo_build_uses_provided_crate_name() -> None:
         )
 
     mock_build.assert_called_once()
-    # The first positional arg is the cargo package name passed to `cargo build -p`.
     assert mock_build.call_args.args[0] == "my_app_nif"
 
 
@@ -49,7 +47,6 @@ def test_cargo_release_dir_uses_cargo_metadata_target_directory() -> None:
             "x86_64-unknown-linux-gnu",
         )
 
-    # Resolved from cargo metadata's base, NOT assumed to be crate-local.
     assert release_dir == Path("/repo/target/x86_64-unknown-linux-gnu/release")
     assert mock_run.call_args.args[0][:2] == ["cargo", "metadata"]
 

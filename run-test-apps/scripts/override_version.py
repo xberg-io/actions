@@ -38,11 +38,9 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Parse alef.toml
     content = alef_toml_path.read_text()
     doc = tomlkit.parse(content)
 
-    # Find and update all matching version entries
     found = False
     if "crates" in doc and isinstance(doc["crates"], dict):
         for crate_name, crate_config in doc["crates"].items():
@@ -77,7 +75,6 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Write back
     alef_toml_path.write_text(tomlkit.dumps(doc))
     print("Successfully updated alef.toml")
 

@@ -1,17 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install alef under $HOME/.local/bin on Linux/macOS. The composite action
-# resolves "latest" / "main" / a tag to a concrete install ref before invoking
-# this script and handles caching + PATH wiring itself, so this script only
-# deals with the actual download + (optional) source build.
-#
-# Argument:
-#   install_ref  "main" to build the current main commit, otherwise a bare
-#                semver (e.g. "0.17.8") to install — first via the GitHub
-#                Releases tarball, then by `cargo install --git --tag` as a
-#                fallback when the release binary is missing/late.
-
 install_ref="${1:?install ref required}"
 
 alef_bin_dir="${HOME}/.local/bin"
@@ -103,11 +92,6 @@ ensure_cargo() {
 build_from_source() {
 	local ref="$1"
 	ensure_cargo
-	# --force so the source build overwrites any alef already present on the
-	# runner (cached image, prior step). Without it, cargo aborts with "binary
-	# `alef` already exists in destination", which surfaced when the release
-	# binary was missing (tag-vs-binary-upload race) and the fallback ran on a
-	# runner that already had alef installed.
 	if [[ "$ref" == "main" ]]; then
 		echo "Building alef from main branch via cargo install..."
 		CARGO_INSTALL_ROOT="$alef_bin_dir/.." \

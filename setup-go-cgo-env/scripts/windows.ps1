@@ -51,7 +51,6 @@ if (Test-Path $ffiPath) {
 $msys2FfiPath = ConvertTo-Msys2Path $ffiPath
 $msys2IncludePath = "$msys2RepoRoot/$ffiCrateDir/include"
 
-# Verify FFI header if path specified
 if (-not [string]::IsNullOrWhiteSpace($ffiHeaderPath)) {
   $headerFullPath = Join-Path $repoRoot $ffiHeaderPath
   if (-not (Test-Path $headerFullPath)) {

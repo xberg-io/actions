@@ -49,7 +49,6 @@ def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> No
     --target <triple>.<glibc_version> for glibc floor lowering. Artifacts
     are still emitted to target/<base-triple>/release.
     """
-    # Use zigbuild for linux-gnu targets with glibc floor lowering
     use_zigbuild = "linux-gnu" in target and glibc_version
     glibc_suffixed_target = f"{target}.{glibc_version}" if use_zigbuild else target
 

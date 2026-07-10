@@ -71,11 +71,6 @@ jobs:
           }
           RS
 
-      # Reproduce the macOS conflict: a consumer rust-toolchain.toml that pins a
-      # channel with the clippy component makes maturin's `cargo metadata`
-      # materialize that toolchain. On macos-latest the preinstalled stray
-      # cargo-clippy then collides unless the action wipes ~/.cargo + ~/.rustup
-      # first. This leg fails if the wipe regresses.
       - name: Pin toolchain to exercise the rustup clippy-component path (macOS)
         if: runner.os == 'macOS'
         shell: bash

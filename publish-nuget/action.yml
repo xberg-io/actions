@@ -41,11 +41,7 @@ runs:
     - name: Publish NuGet packages
       shell: bash
       env:
-        # Static-key flow (legacy); when unset, the script falls back to
-        # OIDC trusted publishing via ACTIONS_ID_TOKEN_REQUEST_*.
         NUGET_API_KEY: ${{ env.NUGET_API_KEY }}
-        # OIDC trusted publishing — these are injected by GitHub when the
-        # workflow has `permissions: id-token: write`.
         ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
         INPUT_PACKAGES_DIR: ${{ inputs.packages-dir }}

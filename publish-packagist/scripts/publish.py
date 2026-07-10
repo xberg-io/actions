@@ -143,7 +143,6 @@ def main() -> None:
         print("No PACKAGIST_API_TOKEN set, relying on automatic webhook")
 
     poll_packagist(package_name, version, max_attempts, poll_interval)
-    # Exit 0 even on timeout — package may appear after webhook processing
     sys.exit(0)
 
 

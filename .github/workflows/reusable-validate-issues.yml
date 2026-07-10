@@ -1,16 +1,5 @@
 name: Validate Issues (Reusable)
 
-# Issue title prefixes intentionally differ from PR title prefixes:
-#   - Issues use `bug:` (this workflow)
-#   - PRs use `fix:` (reusable-validate-pr.yml) because that's what lands in the changelog
-#
-# In addition to title format, this workflow:
-#   - Auto-applies the canonical label for the prefix (bug/enhancement/documentation)
-#   - Adds the issue to the org project board xberg-io/1
-#
-# The default GITHUB_TOKEN cannot edit org-level projects; callers must pass a
-# fine-grained PAT via `secrets: inherit` (org secret XBERG_DEV_PROJECT_TOKEN).
-
 on:
   workflow_call:
     secrets:
@@ -26,9 +15,6 @@ jobs:
   validate-issue-title:
     name: Issue Title
     runs-on: ubuntu-latest
-    # Skip bot-authored issues (Renovate's "Dependency Dashboard", Dependabot,
-    # etc.) — their titles are tool-controlled and don't follow our prefix
-    # convention. github.event.issue.user.type is "Bot" for app/bot accounts.
     if: |
       (github.event.action == 'opened' || github.event.action == 'edited') &&
       github.event.issue.user.type != 'Bot'

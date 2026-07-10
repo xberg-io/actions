@@ -10,11 +10,6 @@ on:
       - ".github/workflows/test-build-dart-package.yml"
 
 jobs:
-  # Smoke via dry-run only. A live invocation requires a fully wired
-  # flutter_rust_bridge config (rust_input/dart_output paths, generated
-  # bindings, pubspec) inside the package directory. We validate that the
-  # action's input-handling and command planning work; downstream binding
-  # repos exercise the real codegen + cargo build path.
   test-dry-run:
     runs-on: ubuntu-latest
     timeout-minutes: 5

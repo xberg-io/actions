@@ -15,15 +15,8 @@ def _import_script(name: str, path: Path):
 finalize_release = _import_script("finalize_release", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# Go module tag construction
-# ---------------------------------------------------------------------------
-
-
 def test_go_module_tag_strips_trailing_vn():
     """Strip trailing /vN (N >= 2) from go_module_path before combining with tag."""
-    # Input: packages/go/v3, tag: v3.5.1
-    # Expected: packages/go/v3.5.1 (not packages/go/v3/v3.5.1)
     module_path = "packages/go/v3"
     tag = "v3.5.1"
 
@@ -66,7 +59,6 @@ def test_go_module_tag_no_strip_v1():
     module_subdir = re.sub(r"/v(?:[2-9]|[1-9]\d+)$", "", module_path)
     module_tag = f"{module_subdir}/{tag}"
 
-    # v1 should NOT be stripped (regex only matches v2+)
     assert module_subdir == "packages/baz/v1"
     assert module_tag == "packages/baz/v1/v1.5.0"
 

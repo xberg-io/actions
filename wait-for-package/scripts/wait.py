@@ -84,8 +84,6 @@ def check_pypi(package: str, version: str) -> bool:
             data = json.loads(body)
         except json.JSONDecodeError:
             continue
-        # PyPI's `info.version` is always the canonical PEP 440 form, so accept
-        # either the as-given or the normalized form when matching.
         resolved = data.get("info", {}).get("version")
         if resolved in (version, normalized):
             return True

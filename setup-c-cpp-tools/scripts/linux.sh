@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Install cppcheck (built from source if needed), clang-format, shellcheck.
 set -euo pipefail
 
 CPPCHECK_VERSION="${CPPCHECK_VERSION:-2.20.0}"

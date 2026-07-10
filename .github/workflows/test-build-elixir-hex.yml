@@ -80,11 +80,6 @@ jobs:
           end
           EX
 
-      # rewrite-native-deps is disabled: the fixture is a standalone crate with
-      # no workspace/alef.toml, so there is nothing to rewrite. The rewrite
-      # path is covered by tests/test_rewrite_native_deps.py + alef's own
-      # tests; here we validate the action's mix hex.build invocation, the
-      # dry-run cargo generate-lockfile fallback, and the archive-path output.
       - name: Build Hex tarball via the action (dry-run, lockfile fallback)
         id: build
         uses: ./build-elixir-hex

@@ -66,7 +66,6 @@ def _print_dylib_info(library_path: Path) -> None:
     print("\n=== Dylib Metadata ===")
     print(f"Path: {library_path}")
 
-    # Print all load commands (current install_name is in LC_ID_DYLIB)
     result = subprocess.run(
         ["otool", "-L", str(library_path)],
         capture_output=True,
@@ -78,7 +77,6 @@ def _print_dylib_info(library_path: Path) -> None:
         for line in result.stdout.splitlines():
             print(f"  {line}")
 
-    # Print just the install_name (LC_ID_DYLIB)
     result = subprocess.run(
         ["otool", "-D", str(library_path)],
         capture_output=True,
@@ -109,7 +107,6 @@ def _fix_install_name(library_path: Path, dylib_name: str) -> None:
 
     print("Install_name successfully rewritten")
 
-    # Verify the fix was actually applied (catch cases where install_name_tool silently fails).
     verify_result = subprocess.run(
         ["otool", "-D", str(library_path)],
         capture_output=True,

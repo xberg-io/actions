@@ -16,11 +16,6 @@ def _read(action_dir: str) -> str:
     return path.read_text()
 
 
-# ---------------------------------------------------------------------------
-# rewrite-native-deps
-# ---------------------------------------------------------------------------
-
-
 def test_rewrite_action_installs_alef_then_runs_publish_prepare():
     content = _read("rewrite-native-deps")
     assert "uses: xberg-io/actions/install-alef@v1" in content
@@ -36,24 +31,17 @@ def test_rewrite_action_exposes_expected_inputs():
 
 def test_rewrite_action_require_registry_is_conditional():
     content = _read("rewrite-native-deps")
-    # --require-registry is only appended when the input is "true", not hardcoded.
     assert 'if [ "${INPUT_REQUIRE_REGISTRY}" = "true" ]; then' in content
 
 
 def test_rewrite_action_validates_lang_charset():
     content = _read("rewrite-native-deps")
-    # lang is constrained to comma-separated lowercase names before reaching alef.
     assert "=~ ^[a-z]+(,[a-z]+)*$" in content
 
 
 def test_rewrite_action_runs_at_repo_root_by_default():
     content = _read("rewrite-native-deps")
-    assert 'default: "."' in content  # working-directory defaults to repo root
-
-
-# ---------------------------------------------------------------------------
-# embedding in source-build actions
-# ---------------------------------------------------------------------------
+    assert 'default: "."' in content
 
 
 @pytest.mark.parametrize(
@@ -69,7 +57,6 @@ def test_source_build_action_embeds_rewrite(action_dir: str, lang: str):
     content = _read(action_dir)
     assert "uses: xberg-io/actions/rewrite-native-deps@v1" in content
     assert f"lang: {lang}" in content
-    # opt-out input present and defaulting on
     assert "rewrite-native-deps:" in content
     assert "if: inputs.rewrite-native-deps == 'true'" in content
 

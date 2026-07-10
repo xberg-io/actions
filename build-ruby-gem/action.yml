@@ -52,7 +52,6 @@ runs:
         alef-version: ${{ inputs.alef-version }}
         require-registry: "true"
 
-    # --- Unix (Linux/macOS) ---
     - name: Set LD_LIBRARY_PATH (Linux)
       if: runner.os == 'Linux'
       shell: bash
@@ -70,9 +69,6 @@ runs:
       working-directory: ${{ inputs.package-dir }}
       env:
         RB_SYS_CARGO_PROFILE: release
-        # Enforce committed Cargo.lock so transitive deps don't silently re-resolve
-        # to incompatible versions (e.g. time 0.3.48 vs cookie 0.18.1's 0.3.47).
-        # CARGO_NET_FROZEN requires Cargo.lock to match resolution — equivalent to --locked.
         CARGO_NET_FROZEN: "true"
       run: bundle exec rake compile
 
@@ -82,7 +78,6 @@ runs:
       working-directory: ${{ inputs.package-dir }}
       run: bundle exec rake build
 
-    # --- Windows ---
     - name: Install MSYS2 toolchain
       if: runner.os == 'Windows'
       shell: pwsh

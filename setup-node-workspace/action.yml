@@ -32,14 +32,6 @@ runs:
 
     - name: Install pnpm via npm
       shell: bash
-      # Install pnpm as a JS package via the system Node.js — avoids
-      # `@pnpm/exe`, whose SEA-built standalone binary is broken on
-      # Intel macOS (darwin-x64) and requires npm-on-PATH on ARM Linux
-      # (not present before actions/setup-node runs).
-      # Upstream: https://github.com/pnpm/pnpm/issues/11423
-      # + https://github.com/nodejs/node/issues/62893.
-      # Lockfile 9.0 is forward/backward compatible between pnpm 10
-      # and 11, so CI on 10 stays compatible with local dev on 11.5.1.
       run: npm install --global pnpm@10
 
     - name: Install dependencies

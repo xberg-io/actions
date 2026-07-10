@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Install Zig on Linux/macOS by resolving the requested version against
-# https://ziglang.org/download/index.json. The official ziglang.org server
-# is the canonical source; setup-zig third-party mirrors lag releases.
 set -euo pipefail
 
 version="${1:-latest}"

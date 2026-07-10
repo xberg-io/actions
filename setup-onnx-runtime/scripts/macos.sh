@@ -31,8 +31,6 @@ ort_root="$extract_dir/onnxruntime-osx-${ort_arch}-${ort_version}"
 
 if [ ! -d "$ort_root" ]; then
 	if [ "$ort_arch" = "x86_64" ]; then
-		# Microsoft dropped onnxruntime-osx-x86_64 after 1.23, below the 1.24+ ort
-		# needs; use Homebrew's x86_64 build instead of a download that would 404.
 		echo "Installing x86_64 macOS ONNX Runtime via Homebrew"
 		export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 		brew install --bottle-tag=sonoma onnxruntime || brew install onnxruntime

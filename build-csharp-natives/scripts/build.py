@@ -82,39 +82,23 @@ def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
             check=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # otool not available or dylib inspection failed; silently skip
         return
 
     for line in result.stdout.split("\n"):
         line = line.strip()
-        # Extract dependencies with @rpath/ prefix (e.g., @rpath/libonnxruntime.1.24.2.dylib)
         if not line.startswith("@rpath/"):
             continue
 
-        dep_filename = line.split("@rpath/")[1].split()[0]  # Extract just the filename
-        # `dylib_path.parent` is the release dir for the resolved cargo target,
-        # e.g. `target/aarch64-apple-darwin/release/`. The previous variant used
-        # `dylib_path.parent.parent` (`target/<triple>/`) and `target/release/`,
-        # neither of which is where build-script-emitted runtime deps land for
-        # cross-target builds.
+        dep_filename = line.split("@rpath/")[1].split()[0]
         release_dir = dylib_path.parent
         search_patterns: list[Path] = [
-            release_dir / dep_filename,  # cargo stages runtime deps alongside the cdylib
-            release_dir / "deps" / dep_filename,  # cdylib `deps/` subdir
+            release_dir / dep_filename,
+            release_dir / "deps" / dep_filename,
         ]
-        # Build scripts (e.g. `ort-sys`) drop the prebuilt dylib under
-        # `release/build/<crate>-<hash>/out/{lib,}` — recursively glob the
-        # build tree for the exact filename. Limit depth via specific suffixes
-        # so we don't walk the entire workspace.
         for build_root in (release_dir / "build",):
             if build_root.is_dir():
                 search_patterns.extend(build_root.rglob(dep_filename))
 
-        # `ort` (pyke prebuilt) caches the downloaded ORT bundle at
-        # `<XDG_CACHE_HOME>/ort.pyke.io/dfbin/<target>/<sha>/lib/`. cargo's
-        # build-script link search may not copy the dylib into `out/`, so
-        # search the cache as a last resort. `XDG_CACHE_HOME` defaults to
-        # `~/.cache` on Linux and `~/Library/Caches` on macOS.
         cache_roots: list[Path] = []
         xdg_cache = os.environ.get("XDG_CACHE_HOME")
         if xdg_cache:
@@ -182,7 +166,6 @@ def main() -> None:
 
     print(f"[build-csharp-natives] staged: {staged_lib.resolve()}")
 
-    # On macOS, copy runtime dependencies (@rpath/ references) into staging dir
     if "darwin" in target or "apple" in target:
         copy_macos_runtime_deps(source_lib, staging_dir)
 

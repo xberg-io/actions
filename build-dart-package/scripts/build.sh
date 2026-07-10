@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Build the Dart-side Rust binding crate, run flutter_rust_bridge codegen,
-# and emit the resulting library path on $GITHUB_OUTPUT.
-#
-# Reads (env vars set by the composite action):
-#   INPUT_PACKAGE_DIR    - directory containing pubspec.yaml (e.g. packages/dart)
-#   INPUT_CRATE_NAME     - cargo crate name (e.g. xberg-dart)
-#   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
-#   INPUT_DRY_RUN        - "true" to print commands and exit
 set -euo pipefail
 
 PACKAGE_DIR="${INPUT_PACKAGE_DIR:-packages/dart}"
@@ -16,8 +8,6 @@ DRY_RUN="${INPUT_DRY_RUN:-false}"
 
 MANIFEST_PATH="$PACKAGE_DIR/Cargo.toml"
 
-# `cargo build --profile dev` is rejected; cargo's dev profile lives under
-# target/debug. Map it the same way cargo does.
 case "$BUILD_PROFILE" in
 release)
 	profile_flag="--release"
@@ -33,7 +23,6 @@ dev | debug)
 	;;
 esac
 
-# cargo derives the lib name by replacing dashes with underscores.
 lib_basename="${CRATE_NAME//-/_}"
 
 case "${RUNNER_OS:-$(uname -s)}" in
@@ -43,19 +32,6 @@ Windows | MINGW* | MSYS* | CYGWIN*) lib_filename="${lib_basename}.dll" ;;
 *) lib_filename="lib${lib_basename}.so" ;;
 esac
 
-# The crate may or may not be a member of a root workspace. Some binding
-# crates are deliberately EXCLUDED from the consumer's root [workspace]
-# (e.g. a standalone cdylib with its own path deps), in which case `cargo
-# build -p <crate>` from the repo root fails with "package ID specification
-# ... did not match any packages". Building via --manifest-path works in
-# both cases: cargo resolves the crate's actual workspace (root or itself)
-# from the manifest, so this is safe whether or not the crate is a member.
-#
-# Likewise, the build's actual target directory depends on which workspace
-# (if any) the manifest resolves into: a workspace member builds into the
-# root target/, while an excluded/standalone crate builds into its own
-# target/ next to its Cargo.toml. Ask cargo directly via `cargo metadata`
-# instead of assuming $GITHUB_WORKSPACE/target.
 resolve_target_dir() {
 	if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
 		echo "$CARGO_TARGET_DIR"

@@ -18,15 +18,6 @@ ensure_mod = _import_script("ensure_release", _ENSURE_RELEASE_PATH)
 upload_mod = _import_script("upload_artifacts", _UPLOAD_ARTIFACTS_PATH)
 
 
-# ---------------------------------------------------------------------------
-# create_release — payload-building behaviour (replaces old build_create_flags)
-# ---------------------------------------------------------------------------
-#
-# create_release() builds a REST payload dict and passes it to github_request().
-# We monkeypatch github_request on the dynamically-imported module so the real
-# HTTP call is never made, then assert the exact payload that was sent.
-
-
 def _capture_payload(monkeypatch):
     """Return a list that will be populated with the body_dict passed to github_request."""
     captured = []
@@ -135,7 +126,6 @@ def test_create_release_notes_overrides_generate_notes(monkeypatch):
 
     payload = captured[0]
     assert payload["body"] == "Release v1.2.3"
-    # notes takes precedence — generate_release_notes must not be set
     assert "generate_release_notes" not in payload
 
 
@@ -156,11 +146,6 @@ def test_create_release_empty_notes_falls_back_to_generate(monkeypatch):
     payload = captured[0]
     assert payload["generate_release_notes"] is True
     assert "body" not in payload
-
-
-# ---------------------------------------------------------------------------
-# expand_artifact_patterns
-# ---------------------------------------------------------------------------
 
 
 def test_expand_artifact_patterns(tmp_path, monkeypatch):
@@ -197,7 +182,6 @@ def test_expand_artifact_patterns_no_match(tmp_path, monkeypatch):
 def test_expand_artifact_patterns_mixed(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "found.whl").write_text("fake")
-    # No .tar.gz files present
 
     result = upload_mod.expand_artifact_patterns("*.whl,*.tar.gz")
 

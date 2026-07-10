@@ -15,11 +15,6 @@ def _import_script(name, path):
 packagist_mod = _import_script("publish_packagist", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# check_packagist_version
-# ---------------------------------------------------------------------------
-
-
 def test_check_packagist_version_found(monkeypatch):
     body = json.dumps({"package": {"versions": {"1.2.3": {}, "1.2.2": {}}}})
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
@@ -28,7 +23,6 @@ def test_check_packagist_version_found(monkeypatch):
 
 
 def test_check_packagist_version_with_v_prefix(monkeypatch):
-    # Packagist stores keys as "v1.2.3"; target version is "1.2.3"
     body = json.dumps({"package": {"versions": {"v1.2.3": {}, "v1.2.2": {}}}})
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
 
@@ -40,11 +34,6 @@ def test_check_packagist_version_not_found(monkeypatch):
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
 
     assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is False
-
-
-# ---------------------------------------------------------------------------
-# trigger_packagist_update
-# ---------------------------------------------------------------------------
 
 
 def test_trigger_packagist_update_success(monkeypatch):
@@ -61,11 +50,6 @@ def test_trigger_packagist_update_failure(monkeypatch):
     result = packagist_mod.trigger_packagist_update("myuser", "bad-token", "https://github.com/vendor/pkg")
 
     assert result is False
-
-
-# ---------------------------------------------------------------------------
-# poll_packagist
-# ---------------------------------------------------------------------------
 
 
 def test_poll_packagist_found(monkeypatch):
@@ -89,7 +73,6 @@ def test_poll_packagist_timeout(monkeypatch):
     monkeypatch.setattr(packagist_mod, "check_packagist_version", lambda package_name, version: False)
     monkeypatch.setattr(packagist_mod.time, "sleep", lambda _: None)
 
-    # Should return False but NOT raise — caller exits 0 regardless
     result = packagist_mod.poll_packagist("vendor/pkg", "1.2.3", max_attempts=3, poll_interval=0)
 
     assert result is False

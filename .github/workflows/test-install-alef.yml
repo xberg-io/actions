@@ -26,9 +26,6 @@ jobs:
           alef --version
           which alef
 
-      # Re-install with alef already on PATH. Exercises the cargo source-build
-      # fallback's --force path (the binary-already-exists case) when the
-      # release binary is missing or the runner is warm.
       - name: Install Alef again (idempotent re-install)
         uses: ./install-alef
         with:

@@ -19,11 +19,6 @@ def _import_script(name: str, path: Path):
 npm_mod = _import_script("publish_npm", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# validate_inputs
-# ---------------------------------------------------------------------------
-
-
 def test_validate_inputs_both_set():
     with pytest.raises(SystemExit) as exc_info:
         npm_mod.validate_inputs("packages/", "package/")
@@ -44,11 +39,6 @@ def test_validate_inputs_packages_dir():
 def test_validate_inputs_package_dir():
     result = npm_mod.validate_inputs("", "package/")
     assert result == "dir"
-
-
-# ---------------------------------------------------------------------------
-# build_publish_flags
-# ---------------------------------------------------------------------------
 
 
 def test_build_publish_flags_default():
@@ -72,11 +62,6 @@ def test_build_publish_flags_dry_run():
     assert "--dry-run" in flags
 
 
-# ---------------------------------------------------------------------------
-# is_already_published
-# ---------------------------------------------------------------------------
-
-
 def test_is_already_published_true():
     assert npm_mod.is_already_published("error: previously published version") is True
 
@@ -91,11 +76,6 @@ def test_is_already_published_already_exists():
 
 def test_is_already_published_false():
     assert npm_mod.is_already_published("Error: network timeout") is False
-
-
-# ---------------------------------------------------------------------------
-# find_tgz_files
-# ---------------------------------------------------------------------------
 
 
 def test_find_tgz_files(tmp_path: Path):
@@ -116,11 +96,6 @@ def test_find_tgz_files_empty(tmp_path: Path):
     assert results == []
 
 
-# ---------------------------------------------------------------------------
-# is_platform_package / skip decision — umbrella package must publish
-# ---------------------------------------------------------------------------
-
-
 def _make_tgz(path: Path, package_json: dict, *, with_node: bool = False) -> Path:
     """Write a minimal npm-style .tgz (members under `package/`)."""
     with tarfile.open(path, "w:gz") as tar:
@@ -137,7 +112,6 @@ def _make_tgz(path: Path, package_json: dict, *, with_node: bool = False) -> Pat
 
 
 def _should_skip(tgz: Path) -> bool:
-    # Mirrors the publish loop's skip guard.
     return npm_mod.is_platform_package(tgz) and not npm_mod.has_native_binding(tgz)
 
 
@@ -152,7 +126,6 @@ def test_umbrella_package_has_no_os_or_cpu(tmp_path: Path):
 
 
 def test_umbrella_package_is_published_not_skipped(tmp_path: Path):
-    # The pure-JS umbrella package has no .node of its own but must still publish.
     tgz = _make_tgz(tmp_path / "p.tgz", {"name": "@s/p", "optionalDependencies": {"@s/p-linux-x64-gnu": "1.0.0"}})
     assert _should_skip(tgz) is False
 

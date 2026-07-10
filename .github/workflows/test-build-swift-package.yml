@@ -10,10 +10,6 @@ on:
       - ".github/workflows/test-build-swift-package.yml"
 
 jobs:
-  # Smoke via dry-run only. A live invocation requires a swift-bridge build
-  # script inside the crate that produces SwiftBridgeCore.h plus per-crate
-  # .h/.swift outputs under target/<profile>/build/<crate>-*/out/. Faking
-  # that is brittle; downstream packages/swift exercises the real path.
   test-dry-run:
     runs-on: ubuntu-latest
     timeout-minutes: 5

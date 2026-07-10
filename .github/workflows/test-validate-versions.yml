@@ -15,8 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Stage a fixture at the workspace root so alef.toml + manifests are
-      # all colocated with the action's working directory ($GITHUB_WORKSPACE).
       - name: Stage matching-version fixture at workspace root
         shell: bash
         run: |
@@ -62,8 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Stage a fixture where versions DON'T match. alef must exit non-zero
-      # and the step's outcome must be "failure".
       - name: Stage mismatch fixture
         shell: bash
         run: |

@@ -7,7 +7,6 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 import ensure_release  # type: ignore[import-not-found]
@@ -90,7 +89,6 @@ class TestGetReleaseByTag(unittest.TestCase):
         result = ensure_release.get_release_by_tag("owner", "repo", "v3.0.0", "token")
 
         assert result is None
-        # Should sleep 19 times (between 20 attempts)
         assert mock_sleep.call_count == 19
 
     @patch("ensure_release.time.sleep")
@@ -98,7 +96,6 @@ class TestGetReleaseByTag(unittest.TestCase):
     def test_release_propagation_retry_succeeds(self, mock_request, mock_sleep) -> None:
         """Test retrying on 404 (read-replica lag) until release appears."""
         release_data = {"id": 999, "tag_name": "v3.1.0", "draft": True}
-        # Simulate: first 2 attempts get 404 (read-replica lag), third succeeds
         mock_request.side_effect = [
             (404, {}),
             (404, {}),
@@ -108,24 +105,19 @@ class TestGetReleaseByTag(unittest.TestCase):
         result = ensure_release.get_release_by_tag("owner", "repo", "v3.1.0", "token")
 
         assert result == release_data
-        # Verify sleep was called twice (between attempts 1-2 and 2-3)
         assert mock_sleep.call_count == 2
-        # Verify github_request was called 3 times total
         assert mock_request.call_count == 3
 
     @patch("ensure_release.time.sleep")
     @patch("ensure_release.github_request")
     def test_release_exhausts_retries_returns_none(self, mock_request, mock_sleep) -> None:
         """Test exhausting all 20 retries on 404 returns None (Gap 1 pre-check)."""
-        # All 20 attempts return 404 (tag not propagated)
         mock_request.return_value = (404, {})
 
         result = ensure_release.get_release_by_tag("owner", "repo", "v4.0.0", "token")
 
         assert result is None
-        # Should sleep 19 times (between 20 attempts)
         assert mock_sleep.call_count == 19
-        # Should call github_request exactly 20 times
         assert mock_request.call_count == 20
 
 
@@ -152,7 +144,6 @@ class TestCreateRelease(unittest.TestCase):
 
         assert result == release_data
 
-        # Verify notes took precedence over generate_notes
         call_args = mock_request.call_args
         body = call_args[0][3]
         assert body["body"] == "Manual notes here"
@@ -178,7 +169,6 @@ class TestCreateRelease(unittest.TestCase):
 
         assert result == release_data
 
-        # Verify generate_release_notes is set
         call_args = mock_request.call_args
         body = call_args[0][3]
         assert body.get("generate_release_notes")
@@ -400,9 +390,7 @@ class TestMain(unittest.TestCase):
     )
     def test_main_release_exists_with_broken_tag_repairs(self, mock_get, mock_update) -> None:
         """Test Gap 2: existing release with broken tag_name is repaired."""
-        # get_release_by_tag returns existing release with broken tag_name
         mock_get.return_value = {"id": 456, "tag_name": "untagged-broken", "draft": False}
-        # PATCH to fix tag_name succeeds
         mock_update.return_value = {"id": 456, "tag_name": "v1.0.0", "draft": False}
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
@@ -413,7 +401,6 @@ class TestMain(unittest.TestCase):
                 assert "Repaired tag_name to v1.0.0" in output
                 assert "Warning: release has tag_name=untagged-broken" in stderr
 
-        # Verify update_release was called with correct tag_name
         mock_update.assert_called_once_with("owner", "repo", 456, tag_name="v1.0.0", token="token123")
 
     @patch("ensure_release.update_release")
@@ -435,9 +422,7 @@ class TestMain(unittest.TestCase):
     )
     def test_main_release_exists_broken_tag_patch_fails_exits_1(self, mock_get, mock_update) -> None:
         """Test Gap 2: if PATCH to fix existing release tag_name fails, exit 1."""
-        # get_release_by_tag returns existing release with broken tag_name
         mock_get.return_value = {"id": 456, "tag_name": "untagged-broken", "draft": False}
-        # PATCH to fix tag_name fails (response still has wrong tag_name)
         mock_update.return_value = {"id": 456, "tag_name": "untagged-still-broken", "draft": False}
 
         with pytest.raises(SystemExit) as ctx:
@@ -551,14 +536,13 @@ class TestMain(unittest.TestCase):
         self, mock_get, mock_tag_exists, mock_list, mock_sleep
     ) -> None:
         """Test Gap 1: pre-creation polling exhausted, tag missing on git refs → exit 1."""
-        mock_get.return_value = None  # Retries exhausted
-        mock_tag_exists.return_value = False  # Tag doesn't exist on git (fails all polling attempts)
+        mock_get.return_value = None
+        mock_tag_exists.return_value = False
 
         with pytest.raises(SystemExit) as ctx:
             ensure_release.main()
 
         assert ctx.value.code == 1
-        # Should poll 12 times (max_tag_wait_attempts)
         assert mock_tag_exists.call_count == 12
 
     @patch("ensure_release.update_release")
@@ -585,12 +569,10 @@ class TestMain(unittest.TestCase):
         self, mock_get, mock_tag_exists, mock_list, mock_create, mock_update
     ) -> None:
         """Test Gap 2: create_release returns untagged-..., script PATCHes it."""
-        mock_get.return_value = None  # No existing release
-        mock_tag_exists.return_value = True  # Tag exists on git
-        mock_list.return_value = []  # No pre-existing broken drafts
-        # create_release returns wrong tag_name
+        mock_get.return_value = None
+        mock_tag_exists.return_value = True
+        mock_list.return_value = []
         mock_create.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
-        # PATCH to fix it succeeds
         mock_update.return_value = {"id": 123, "tag_name": "v1.0.0", "draft": False}
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
@@ -598,7 +580,6 @@ class TestMain(unittest.TestCase):
             output = mock_stdout.getvalue()
             assert "Repaired tag_name to v1.0.0" in output
 
-        # Verify update_release was called to fix tag_name
         mock_update.assert_called()
         call_kwargs = [call[1] for call in mock_update.call_args_list if "tag_name" in call[1]]
         assert any(call.get("tag_name") == "v1.0.0" for call in call_kwargs)
@@ -627,11 +608,9 @@ class TestMain(unittest.TestCase):
         self, mock_get, mock_tag_exists, mock_list, mock_create, mock_update
     ) -> None:
         """Test Gap 3: pre-existing broken draft found and PATCHead in-place."""
-        mock_get.return_value = None  # No release via tag lookup
-        mock_tag_exists.return_value = True  # Tag exists on git
-        # list_releases finds a pre-existing broken draft
+        mock_get.return_value = None
+        mock_tag_exists.return_value = True
         mock_list.return_value = [{"id": 999, "tag_name": "untagged-broken", "name": "v1.0.0", "draft": True}]
-        # PATCH to fix it
         mock_update.return_value = {"id": 999, "tag_name": "v1.0.0", "draft": True}
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
@@ -640,9 +619,7 @@ class TestMain(unittest.TestCase):
             assert "Found pre-existing broken draft" in output
             assert "Repaired broken draft" in output
 
-        # Verify create_release was NOT called (broken draft was fixed instead)
         mock_create.assert_not_called()
-        # Verify update_release was called to fix the broken draft
         mock_update.assert_called_once()
 
     @patch("ensure_release.update_release")
@@ -672,9 +649,7 @@ class TestMain(unittest.TestCase):
         mock_get.return_value = None
         mock_tag_exists.return_value = True
         mock_list.return_value = []
-        # create_release returns wrong tag_name
         mock_create.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
-        # PATCH to fix fails (still returns wrong tag_name)
         mock_update.return_value = {"id": 123, "tag_name": "untagged-xyz", "draft": False}
 
         with pytest.raises(SystemExit) as ctx:
@@ -706,8 +681,7 @@ class TestMain(unittest.TestCase):
         self, mock_get, mock_tag_exists, mock_list, mock_create, mock_sleep
     ) -> None:
         """Test pre-creation tag-existence polling: tag appears on retry, create succeeds."""
-        mock_get.return_value = None  # No existing release
-        # Simulate tag not visible on first attempt, then visible
+        mock_get.return_value = None
         mock_tag_exists.side_effect = [False, True]
         mock_list.return_value = []
         mock_create.return_value = {"id": 123, "tag_name": "v1.0.0", "draft": False}
@@ -718,9 +692,7 @@ class TestMain(unittest.TestCase):
             assert "Creating release v1.0.0" in output
             assert "Release v1.0.0 ready" in output
 
-        # Verify tag_exists_on_git was called twice (first returns False, second True)
         assert mock_tag_exists.call_count == 2
-        # Verify sleep was called once (between the two attempts)
         mock_sleep.assert_called_once()
 
     @patch("ensure_release.time.sleep")
@@ -747,17 +719,15 @@ class TestMain(unittest.TestCase):
         self, mock_get, mock_tag_exists, mock_list, mock_create, mock_sleep
     ) -> None:
         """Test pre-creation tag-existence polling: tag never appears, exit 1."""
-        mock_get.return_value = None  # No existing release
-        mock_tag_exists.return_value = False  # Tag never becomes visible
+        mock_get.return_value = None
+        mock_tag_exists.return_value = False
         mock_list.return_value = []
 
         with pytest.raises(SystemExit) as ctx:
             ensure_release.main()
 
         assert ctx.value.code == 1
-        # Verify tag_exists_on_git was called 12 times (max_tag_wait_attempts)
         assert mock_tag_exists.call_count == 12
-        # Verify sleep was called 11 times (between attempts, not after final one)
         assert mock_sleep.call_count == 11
 
 

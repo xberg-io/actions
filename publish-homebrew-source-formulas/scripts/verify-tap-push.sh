@@ -1,8 +1,5 @@
 #!/bin/bash
-# Verify that Homebrew formulas were successfully pushed to the tap.
 # Usage: verify-tap-push.sh <tap-repo> <formulas> <version>
-#
-# Fetches the tap repository and verifies that each formula file
 # contains the expected version string, proving the push succeeded
 # and RC versions are properly accessible.
 
@@ -21,15 +18,12 @@ echo "Verifying Homebrew tap push for $VERSION..."
 echo "Tap repo: $TAP_REPO"
 echo "Formulas: $FORMULAS"
 
-# Create a temporary directory for tap verification
 VERIFY_DIR=$(mktemp -d)
 trap 'rm -rf "$VERIFY_DIR"' EXIT
 
-# Clone the tap repository to verify the push
 echo "Cloning tap repository for verification..."
 git clone --depth=1 "https://github.com/${TAP_REPO}.git" "$VERIFY_DIR" 2>&1 | grep -v "warning:"
 
-# Verify each formula contains the expected version
 while IFS= read -r formula_name; do
 	[[ -z "$formula_name" ]] && continue
 	formula_file="$VERIFY_DIR/Formula/${formula_name}.rb"

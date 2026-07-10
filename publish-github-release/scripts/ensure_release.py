@@ -44,10 +44,8 @@ def github_request(method: str, url: str, token: str, data: dict[str, Any] | Non
             response_data = json.loads(response.read().decode("utf-8"))
             return response.status, response_data
     except urllib.error.HTTPError as e:
-        # For GET requests checking existence (404), return gracefully
         if method == "GET" and e.code == 404:
             return 404, {}
-        # For all other errors, print and exit
         error_body = e.read().decode("utf-8")
         print(
             f"Error: HTTP {e.code} {e.reason} from {url}",
@@ -119,7 +117,6 @@ def create_release(
         "prerelease": prerelease,
     }
 
-    # notes takes precedence over generate_notes
     if notes:
         body_dict["body"] = notes
     elif generate_notes:
@@ -155,7 +152,6 @@ def list_releases(owner: str, repo: str, token: str, per_page: int = 30) -> list
     """List all releases for a repo via GET /repos/{owner}/{repo}/releases."""
     url = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page={per_page}"
     _status, data = github_request("GET", url, token)
-    # data could be dict (error) or list (releases); ensure we return list
     return data if isinstance(data, list) else []
 
 
@@ -198,14 +194,12 @@ def main() -> None:
             print(f"  Target: {target}")
         sys.exit(0)
 
-    # Check if release already exists
     existing = get_release_by_tag(owner, repo, tag, token)
 
     if existing:
         print(f"Release {tag} already exists")
         is_draft = existing.get("draft", False)
 
-        # Gap 2: Validate tag_name; if broken (untagged-...), repair it
         actual_tag_name = existing.get("tag_name", "")
         if actual_tag_name != tag:
             print(
@@ -227,8 +221,6 @@ def main() -> None:
             release_id = int(existing.get("id", 0))
             update_release(owner, repo, release_id, draft=False, token=token)
     else:
-        # Pre-creation check: ensure tag exists on remote via exponential backoff polling
-        # workflow_dispatch pattern: tag push → dispatch → publish should see tag within seconds
         max_tag_wait_attempts = 12
         tag_wait_interval = 5
         tag_confirmed = False
@@ -253,7 +245,6 @@ def main() -> None:
             )
             sys.exit(1)
 
-        # Gap 3: Before creating, check for pre-existing broken drafts by name
         all_releases = list_releases(owner, repo, token)
         broken_draft = None
         for rel in all_releases:
@@ -287,7 +278,6 @@ def main() -> None:
                 token=token,
             )
 
-            # Gap 2: Validate create_release response has correct tag_name
             if created.get("tag_name") != tag:
                 print(
                     f"Warning: created release has tag_name={created.get('tag_name')}, expected {tag}; repairing...",

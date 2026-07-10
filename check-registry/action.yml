@@ -56,12 +56,6 @@ runs:
   using: composite
   steps:
     - name: Fetch alef.toml so install-alef can read the pin
-      # Many publish jobs reach this action without first running
-      # actions/checkout. Without alef.toml in cwd, install-alef falls
-      # back to the GitHub "latest" release tag — which 404s during the
-      # window between an alef release being tagged and its publish
-      # workflow finishing the binary upload. Pull just alef.toml from
-      # the calling repo's HEAD so install-alef sees the pinned version.
       if: inputs.alef-version == 'latest'
       shell: bash
       run: |

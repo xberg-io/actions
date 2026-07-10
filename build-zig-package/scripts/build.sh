@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Build the workspace FFI crate Zig links against, then run `zig build`
-# (plus `zig build test` if defined in build.zig) as a smoke check.
-#
-# Reads (env vars set by the composite action):
-#   INPUT_FFI_CRATE      - cargo crate name (e.g. xberg-ffi)
-#   INPUT_PACKAGE_DIR    - directory containing build.zig
-#   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
-#   INPUT_DRY_RUN        - "true" to print the plan and exit
 set -euo pipefail
 
 FFI_CRATE="${INPUT_FFI_CRATE:-xberg-ffi}"
@@ -81,8 +73,6 @@ echo "=== Running zig build in $PACKAGE_DIR (-Dffi_path=$ffi_dir) ==="
 (
 	cd "$PACKAGE_DIR"
 	zig build -Dffi_path="$ffi_dir"
-	# If build.zig declares a `test` step, run it. We grep loosely; users may
-	# write either `b.step("test", ...)` or surrounding whitespace variants.
 	if [[ -f build.zig ]] && grep -Eq 'b\.step\(\s*"test"' build.zig; then
 		echo "=== Running zig build test ==="
 		zig build test -Dffi_path="$ffi_dir"

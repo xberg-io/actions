@@ -1,22 +1,4 @@
 #!/usr/bin/env bash
-# Build the Swift-side Rust binding crate and sync swift-bridge generated
-# files into the Swift package's Sources/RustBridgeC/ and Sources/RustBridge/.
-#
-# Layout (per packages/swift/BUILDING.md):
-#   target/<profile>/build/<crate>-*/out/SwiftBridgeCore.h
-#   target/<profile>/build/<crate>-*/out/SwiftBridgeCore.swift
-#   target/<profile>/build/<crate>-*/out/<crate>/<crate>.h
-#   target/<profile>/build/<crate>-*/out/<crate>/<crate>.swift
-#
-# Sync rules (mirrors BUILDING.md):
-#   - Concatenate SwiftBridgeCore.h + <crate>/<crate>.h -> RustBridgeC/RustBridgeC.h
-#   - Prepend `import RustBridgeC\n` to each .swift file -> Sources/RustBridge/<file>.swift
-#
-# Reads (env vars set by the composite action):
-#   INPUT_PACKAGE_DIR    - directory containing Package.swift
-#   INPUT_CRATE_NAME     - cargo crate name (e.g. xberg-swift)
-#   INPUT_BUILD_PROFILE  - cargo profile name (release, dev, ...)
-#   INPUT_DRY_RUN        - "true" to print the plan and exit
 set -euo pipefail
 
 PACKAGE_DIR="${INPUT_PACKAGE_DIR:-packages/swift}"
@@ -83,7 +65,6 @@ echo "=== Building cargo crate $CRATE_NAME (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
 cargo build --locked -p "$CRATE_NAME" $profile_flag
 
-# Resolve the most recent out/ directory; cargo can keep multiple build hashes.
 shopt -s nullglob
 candidates=("$build_root/$CRATE_NAME"-*/out)
 shopt -u nullglob
@@ -92,7 +73,6 @@ if [[ ${#candidates[@]} -eq 0 ]]; then
 	exit 1
 fi
 
-# Pick the most recently modified candidate (matches BUILDING.md `ls -dt | head -1`).
 out_dir=""
 out_mtime=0
 for candidate in "${candidates[@]}"; do
@@ -113,7 +93,6 @@ echo "Resolved swift-bridge out/: $out_dir"
 
 mkdir -p "$bridge_c_dst" "$bridge_swift_dst"
 
-# Combined C header — concatenate the core header with the per-crate header.
 core_h="$out_dir/SwiftBridgeCore.h"
 crate_h="$out_dir/$CRATE_NAME/$CRATE_NAME.h"
 combined_h="$bridge_c_dst/RustBridgeC.h"
@@ -131,8 +110,6 @@ else
 fi
 echo "Wrote $combined_h"
 
-# Swift bridge files: prepend `import RustBridgeC` to each .swift in out/ and
-# in out/<crate>/.
 copy_swift_with_import() {
 	local src="$1"
 	local dst

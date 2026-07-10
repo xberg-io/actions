@@ -41,7 +41,6 @@ def main() -> None:
     )
     sha = sha_result.stdout.strip()
 
-    # Delete existing tag — ignore failure (tag may not exist yet)
     delete_url = build_delete_url(repo, tag)
     subprocess.run(
         ["gh", "api", "--method", "DELETE", delete_url],
@@ -49,7 +48,6 @@ def main() -> None:
         check=False,
     )
 
-    # Recreate tag on HEAD
     payload = build_create_payload(tag, sha)
     subprocess.run(
         ["gh", "api", "--method", "POST", f"repos/{repo}/git/refs", "--input", "-"],
@@ -58,7 +56,6 @@ def main() -> None:
         check=True,
     )
 
-    # Update local tag
     subprocess.run(["git", "tag", "-d", tag], capture_output=True, check=False)
     subprocess.run(["git", "tag", tag], check=True)
 

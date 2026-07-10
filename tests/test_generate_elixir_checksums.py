@@ -9,20 +9,12 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
-# ---------------------------------------------------------------------------
-# build_nif_artifact_name
-# ---------------------------------------------------------------------------
-
-
 def test_build_nif_artifact_name_linux():
     result = mod.build_nif_artifact_name("xberg", "1.2.3", "2.17", "x86_64-unknown-linux-gnu")
     assert result == "libxberg-v1.2.3-nif-2.17-x86_64-unknown-linux-gnu.so.tar.gz"
 
 
 def test_build_nif_artifact_name_darwin():
-    # Darwin/apple targets ship as .so (not .dylib) because rustler_precompiled
-    # 0.9.0 (the latest on Hex; no .dylib support exists) hardcodes .so for
-    # every non-Windows consumer download URL in lib_name_with_ext/2.
     result = mod.build_nif_artifact_name("xberg", "1.2.3", "2.16", "aarch64-apple-darwin")
     assert result == "libxberg-v1.2.3-nif-2.16-aarch64-apple-darwin.so.tar.gz"
 
@@ -30,11 +22,6 @@ def test_build_nif_artifact_name_darwin():
 def test_build_nif_artifact_name_windows():
     result = mod.build_nif_artifact_name("mylib", "0.5.0", "2.17", "x86_64-pc-windows-msvc")
     assert result == "libmylib-v0.5.0-nif-2.17-x86_64-pc-windows-msvc.dll.tar.gz"
-
-
-# ---------------------------------------------------------------------------
-# format_checksum_file
-# ---------------------------------------------------------------------------
 
 
 def test_format_checksum_file_single():
@@ -74,11 +61,6 @@ def test_format_checksum_file_sorted():
 
     keys = [ln.split('"')[1] for ln in lines]
     assert keys == sorted(keys)
-
-
-# ---------------------------------------------------------------------------
-# compute_sha256_hex
-# ---------------------------------------------------------------------------
 
 
 def test_compute_sha256_hex():

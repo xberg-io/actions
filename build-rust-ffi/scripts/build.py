@@ -9,9 +9,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Cargo and rustc emit utf-8 (build-script author names, diagnostics with non-ascii
-# identifiers, etc.). On Windows runners sys.stdout/stderr default to cp1252 which
-# crashes on the first non-latin1 byte we forward via print().
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
@@ -112,7 +109,6 @@ def build_cargo_args(
     if features:
         args += ["--features", features]
 
-    # Use zigbuild for linux-gnu targets with glibc floor lowering
     use_zigbuild = bool(target and "linux-gnu" in target and glibc_version)
 
     if target:
@@ -150,7 +146,6 @@ def find_library(target_dir: Path, crate_name: str) -> Path | None:
         if candidate.is_file():
             return candidate
 
-    # Fallback: first library file of any known extension
     for extension in [".so", ".dylib", ".dll", ".a"]:
         matches = list(target_dir.glob(f"*{extension}"))
         if matches:
@@ -273,14 +268,11 @@ def _full_target_dir(config: BuildConfig) -> Path:
     is provided, anchor the target dir at manifest_path.parent / target.
     Otherwise, use ./target as the base.
     """
-    # Explicit CARGO_TARGET_DIR env var always wins
     if config.cargo_target_dir:
         base = config.cargo_target_dir
-    # If manifest_path is provided (not at repo root), anchor to its parent
     elif config.manifest_path:
         manifest = Path(config.manifest_path)
         base = str(manifest.parent / "target")
-    # Default: ./target at repo root
     else:
         base = "target"
 
@@ -354,7 +346,6 @@ def main() -> None:
         glibc_version=config.glibc_version,
     )
 
-    # Use zigbuild for linux-gnu targets with glibc floor lowering
     use_zigbuild = bool("linux-gnu" in config.target and config.glibc_version)
     if use_zigbuild:
         print(f"[build-rust-ffi] glibc floor: {config.glibc_version}")

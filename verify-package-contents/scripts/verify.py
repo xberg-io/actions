@@ -23,10 +23,6 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-# Per-language allowlists. Each list contains fnmatch patterns; for a binding
-# to pass, every pattern must match at least one file in the artifact.
-# Patterns intentionally use broad wildcards so they survive minor layout shifts
-# (e.g. different native-extension filenames per platform).
 ALLOWLISTS: dict[str, list[str]] = {
     "python": [
         "*.dist-info/METADATA",
@@ -35,7 +31,6 @@ ALLOWLISTS: dict[str, list[str]] = {
         "*/py.typed",
         "*/_internal_bindings.pyi",
         "*/__init__.py",
-        # native lib — exact name varies by platform/arch
         "*.so",
         "*.dist-info/licenses/LICENSE*",
     ],
@@ -52,7 +47,6 @@ ALLOWLISTS: dict[str, list[str]] = {
         "package/LICENSE*",
     ],
     "node-platform": [
-        # platform-specific NAPI prebuild package (one .node binary)
         "package/package.json",
         "package/*.node",
     ],
@@ -68,7 +62,6 @@ ALLOWLISTS: dict[str, list[str]] = {
         "metadata.gz",
         "checksums.yaml.gz",
     ],
-    # When iterating inside data.tar.gz of a gem, these must be present.
     "ruby-data": [
         "lib/liter_llm.rb",
         "lib/liter_llm/version.rb",
@@ -80,11 +73,9 @@ ALLOWLISTS: dict[str, list[str]] = {
         "META-INF/MANIFEST.MF",
         "META-INF/maven/*/*/pom.properties",
         "META-INF/maven/*/*/pom.xml",
-        # at least one .class
         "*.class",
     ],
     "java-natives": [
-        # JNI native lib jar — one platform per artifact
         "natives/*",
     ],
     "csharp": [
@@ -94,7 +85,6 @@ ALLOWLISTS: dict[str, list[str]] = {
         "README*",
     ],
     "csharp-runtime": [
-        # NuGet package shipping per-RID native binaries
         "runtimes/*/native/*",
     ],
     "php": [
@@ -107,32 +97,25 @@ ALLOWLISTS: dict[str, list[str]] = {
         "contents.tar.gz",
     ],
     "elixir-contents": [
-        # inside contents.tar.gz of a hex package
         "lib/liter_llm*.ex",
         "mix.exs",
         "checksum-*.exs",
     ],
     "go": [
-        # Go modules are source-only; we publish the package by tagging the
-        # repo. A go.mod + at least one .go file in the package path is the
-        # bare minimum.
         "*/go.mod",
         "*/*.go",
     ],
     "rust": [
-        # crates.io .crate is a tar.gz of source
         "*/Cargo.toml",
         "*/Cargo.toml.orig",
         "*/src/*.rs",
         "*/LICENSE*",
     ],
     "c": [
-        # FFI release artifact (tarball of headers + libs)
         "*/include/*.h",
         "*/lib/lib*",
     ],
     "homebrew": [
-        # bottle tarball: <formula>/<version>/bin/<binary>
         "*/bin/*",
     ],
 }
@@ -148,7 +131,6 @@ def list_archive(path: Path) -> list[str]:
         with tarfile.open(path, "r:gz") as tf:
             return list(tf.getnames())
     if name.endswith((".gem", ".tar")):
-        # gem files are uncompressed tar archives containing data.tar.gz + metadata.gz
         with tarfile.open(path, "r:") as tf:
             return list(tf.getnames())
     msg = f"Unsupported artifact extension: {path.name}"
@@ -225,12 +207,9 @@ def main() -> int:
         print(f"::error::Artifact not found: {artifact}")
         return 2
 
-    # Determine if artifact is a file or directory
     if artifact.is_file():
-        # Single file mode: verify the single archive
         archives = [artifact]
     elif artifact.is_dir():
-        # Directory mode: find all supported archive files inside (recursive)
         archives = find_archives_in_directory(artifact)
         if not archives:
             print(f"::error::No archive files found in {artifact}")
@@ -239,7 +218,6 @@ def main() -> int:
         print(f"::error::Artifact is neither a file nor a directory: {artifact}")
         return 2
 
-    # Verify each archive
     patterns = [*ALLOWLISTS[language], *extras]
     total_files = 0
     total_matched = 0
@@ -253,7 +231,6 @@ def main() -> int:
         all_missing.update(missing)
         had_error = had_error or archive_error
 
-    # Aggregate output
     print(f"::group::Verification summary — {language}")
     print(f"Archives verified: {len(archives)}")
     print(f"Total files: {total_files}")

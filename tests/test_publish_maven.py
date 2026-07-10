@@ -14,11 +14,6 @@ def _import_script(name, path):
 maven_mod = _import_script("deploy_maven", _SCRIPT_PATH)
 
 
-# ---------------------------------------------------------------------------
-# build_mvn_args
-# ---------------------------------------------------------------------------
-
-
 def test_build_mvn_args_default():
     args = maven_mod.build_mvn_args("pom.xml", "publish", "")
 
@@ -35,14 +30,8 @@ def test_build_mvn_args_with_extras():
 
     assert "-Dgpg.skip=true" in args
     assert "-DstagingProgressTimeoutMinutes=10" in args
-    # Base args are still present
     assert "-B" in args
     assert "--no-transfer-progress" in args
-
-
-# ---------------------------------------------------------------------------
-# is_already_published
-# ---------------------------------------------------------------------------
 
 
 def test_is_already_published_true():
@@ -58,22 +47,16 @@ def test_is_already_published_false():
     assert maven_mod.is_already_published(log) is False
 
 
-# ---------------------------------------------------------------------------
-# Classifier remapping (matrix label → NativeLib RID)
-# ---------------------------------------------------------------------------
-
-
 def test_classifier_remap_osx_to_macos():
     """Verify osx-* classifiers are remapped to macos-* for NativeLib resolution."""
     cases = [
         ("osx-aarch64", "macos-aarch64"),
         ("osx-x86_64", "macos-x86_64"),
-        ("linux-aarch64", "linux-aarch64"),  # No change
-        ("linux-x86_64", "linux-x86_64"),  # No change
-        ("windows-aarch64", "windows-aarch64"),  # No change
-        ("windows-x86_64", "windows-x86_64"),  # No change
+        ("linux-aarch64", "linux-aarch64"),
+        ("linux-x86_64", "linux-x86_64"),
+        ("windows-aarch64", "windows-aarch64"),
+        ("windows-x86_64", "windows-x86_64"),
     ]
     for classifier, expected_rid in cases:
-        # Bash parameter substitution: ${classifier/osx-/macos-}
         rid = classifier.replace("osx-", "macos-")
         assert rid == expected_rid, f"Failed to remap {classifier} → {expected_rid}"

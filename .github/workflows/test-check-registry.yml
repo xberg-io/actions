@@ -15,7 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Known-good public PyPI version: assert exists=true.
       - name: Query an existing PyPI version
         id: hit
         uses: ./check-registry
@@ -35,7 +34,6 @@ jobs:
             exit 1
           fi
 
-      # Known-bad version: assert exists=false.
       - name: Query a non-existent PyPI version
         id: miss
         uses: ./check-registry

@@ -47,11 +47,6 @@ runs:
         FORMULAS: ${{ inputs.formulas }}
         OUT_DIR: ${{ inputs.out-dir }}
         GITHUB_REPO: ${{ inputs.github-repo }}
-        # Force git-tap installs so the formula is read from the just-tapped
-        # clone instead of the JSON API. Tap-trust is handled inside the
-        # script via `brew trust` after the tap is cloned.
         HOMEBREW_NO_INSTALL_FROM_API: "1"
-        # Disable Homebrew's Linux sandbox (bubblewrap cannot create a
-        # rootless sandbox on GitHub-hosted Linux runners).
         HOMEBREW_NO_SANDBOX_LINUX: "1"
       run: "${{ github.action_path }}/scripts/build-bottles.sh"

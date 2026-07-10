@@ -37,9 +37,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # The action expects an alef.toml in the working directory so it can
-      # resolve target metadata. Stage a minimal fixture here (the action only
-      # cares that the file exists and can be parsed).
       - name: Stage minimal alef.toml
         shell: bash
         run: |
@@ -52,17 +49,10 @@ jobs:
           python = true
           TOML
 
-      # Default fixture inputs come from workflow_dispatch defaults; for
-      # push/PR runs we synthesize equivalents via the env block below so the
-      # action's "github.event.inputs.*" references resolve to non-empty
-      # values across all event types.
       - name: Resolve metadata via the action
         id: prepare
         uses: ./prepare-release-metadata
         env:
-          # The action reads github.event.inputs.* for tag/dry_run/etc.; on
-          # push/pull_request these are empty, so we emulate the dispatch
-          # defaults via env vars consumed inside the composite step.
           GITHUB_REF_NAME: v0.0.0-fixture
         with:
           available-targets: "python,node,ruby"

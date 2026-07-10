@@ -56,8 +56,6 @@ def stamp_chart_yaml(chart_yaml: Path, version: str, app_version: str) -> None:
         sys.exit(1)
 
     text = chart_yaml.read_text()
-    # The leading anchor `^` plus re.MULTILINE keeps us from matching nested
-    # `version:` fields inside the dependencies block.
     text = re.sub(r"^version:.*$", f"version: {version}", text, count=1, flags=re.MULTILINE)
     text = re.sub(
         r"^appVersion:.*$",
@@ -94,7 +92,6 @@ def write_outputs(**outputs: str) -> None:
     """Append key=value pairs to GITHUB_OUTPUT."""
     output_path = os.environ.get("GITHUB_OUTPUT")
     if not output_path:
-        # Test environments may not set GITHUB_OUTPUT — print and continue.
         for key, value in outputs.items():
             print(f"::set-output name={key}::{value}")
         return
@@ -142,8 +139,6 @@ def main() -> None:
         print(output, file=sys.stderr)
         sys.exit(1)
 
-    # `helm package` writes <chart-name>-<version>.tgz in cwd. Find it by globbing
-    # for the version we just stamped.
     cwd = Path.cwd()
     matches = sorted(cwd.glob(f"*-{version}.tgz"))
     if not matches:

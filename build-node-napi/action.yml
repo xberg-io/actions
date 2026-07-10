@@ -161,17 +161,6 @@ runs:
         echo "Verified: ${platform_name} platform package contains $(basename "${node_file}")"
 
     - name: Vendor dynamically-linked ONNX Runtime lib beside the .node
-      # When the crate links ONNX Runtime dynamically, setup-onnx-runtime stages
-      # libonnxruntime into the crate dir and the build bakes an
-      # @loader_path (macOS) / $ORIGIN (Linux) / own-dir (Windows) rpath into the
-      # .node. `napi artifacts` copies ONLY the .node into npm/<platform>/, so the
-      # ORT shared lib is absent from the published platform package and consumers
-      # hit ERR_DLOPEN_FAILED ("cannot find libonnxruntime") at require() time.
-      # Copy the staged ORT lib(s) alongside the .node and add every shippable
-      # binary to that package's `files` (npm publish honours `files`, dropping
-      # anything not listed). Auto-scoped: no-op when no ORT lib was staged
-      # (statically linked or non-ORT crates), so this stays safe for callers
-      # that don't use ONNX Runtime.
       if: inputs.target != '' && inputs.collect-artifacts == 'true'
       shell: bash
       working-directory: ${{ inputs.crate-dir }}

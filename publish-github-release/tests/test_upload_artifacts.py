@@ -8,7 +8,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
-# Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 import pytest
@@ -21,11 +20,9 @@ class TestExpandArtifactPatterns(unittest.TestCase):
     def test_expand_single_pattern(self) -> None:
         """Test expanding a single glob pattern."""
         with TemporaryDirectory() as tmpdir:
-            # Create test files
             (Path(tmpdir) / "test1.txt").touch()
             (Path(tmpdir) / "test2.txt").touch()
 
-            # Change to temp directory
             import os
 
             old_cwd = Path.cwd()
@@ -110,7 +107,6 @@ class TestDeleteAsset(unittest.TestCase):
 
         mock_urlopen.return_value = mock_response
 
-        # Should not raise
         upload_artifacts.delete_asset("owner", "repo", 456, "token")
 
     @patch("upload_artifacts.urllib.request.urlopen")
@@ -147,10 +143,8 @@ class TestUploadAsset(unittest.TestCase):
 
             upload_url = "https://uploads.github.com/repos/owner/repo/releases/123/assets{?name,label}"
 
-            # Should not raise
             upload_artifacts.upload_asset(upload_url, "test.whl", test_file, "token")
 
-            # Verify URL stripping and query encoding
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
             assert "https://uploads.github.com/repos/owner/repo/releases/123/assets" in request.full_url
@@ -174,7 +168,6 @@ class TestUploadAsset(unittest.TestCase):
 
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            # URL should not contain the template part
             assert "{?name,label}" not in request.full_url
             assert "name=file.tar.gz" in request.full_url
 
@@ -196,7 +189,6 @@ class TestUploadAsset(unittest.TestCase):
 
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            # tar.gz typically maps to application/x-tar in mimetypes
             assert request.headers.get("Content-type") in [
                 "application/x-tar",
                 "application/gzip",
@@ -207,7 +199,6 @@ class TestUploadAsset(unittest.TestCase):
     def test_upload_asset_unknown_mime_type(self, mock_urlopen) -> None:
         """Test unknown MIME type defaults to application/octet-stream."""
         with TemporaryDirectory() as tmpdir:
-            # Use a truly uncommon extension unlikely to be in mimetypes db
             test_file = Path(tmpdir) / "file.unknown_ext_12345"
             test_file.write_bytes(b"unknown")
 
@@ -265,7 +256,6 @@ class TestMain(unittest.TestCase):
                     assert "Uploading package.whl" in output
                     assert "All artifacts uploaded" in output
 
-                # Verify upload was called
                 assert mock_upload.called
             finally:
                 os.chdir(old_cwd)
@@ -292,7 +282,7 @@ class TestMain(unittest.TestCase):
             mock_get_release.return_value = {
                 "id": 123,
                 "upload_url": "https://uploads.github.com/repos/owner/repo/releases/123/assets",
-                "assets": [{"id": 999, "name": "package.whl"}],  # Asset exists
+                "assets": [{"id": 999, "name": "package.whl"}],
             }
 
             import os
@@ -306,7 +296,6 @@ class TestMain(unittest.TestCase):
                     output = mock_stdout.getvalue()
                     assert "Removing existing package.whl" in output
 
-                # Verify delete was called before upload
                 mock_delete.assert_called_once()
                 mock_upload.assert_called_once()
             finally:
@@ -331,7 +320,6 @@ class TestMain(unittest.TestCase):
             output = mock_stdout.getvalue()
             assert "No artifact files matched" in output
 
-        # Verify get_release was not called
         mock_get_release.assert_not_called()
 
     @patch.dict("os.environ", {}, clear=True)

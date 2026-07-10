@@ -67,10 +67,6 @@ jobs:
           }
           RS
 
-      # rewrite-native-deps is disabled: the fixture is a standalone crate with no
-      # workspace/alef.toml, so there is nothing to rewrite. The rewrite path is
-      # covered by the tests/test_rewrite_native_deps.py unit tests + alef's own tests; here we validate the
-      # action's maturin-sdist invocation, mode selection, and output resolution.
       - name: Build sdist via the action (package-dir mode)
         uses: ./build-python-sdist
         with:

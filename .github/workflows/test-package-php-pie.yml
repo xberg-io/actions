@@ -9,21 +9,12 @@ on:
       - "package-php-pie/**"
       - ".github/workflows/test-package-php-pie.yml"
 
-# package-php-pie shells out to `alef publish package --lang php` against a
-# real built .so/.dylib/.dll produced by build-php-extension. Reproducing that
-# end-to-end on a fixture would require a full Rust build of a PHP extension
-# crate plus the matching PHP toolchain — out of scope for a smoke test. We
-# instead validate the action surface (yaml + input validation branch) so a
-# break in the action wrapper still surfaces here.
 jobs:
   validate-input-branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
 
-      # The action's first step rejects windows targets without a
-      # windows-compiler input. This is a pure-bash branch with no external
-      # dependencies — perfect for a smoke check.
       - name: Run with a windows target but no windows-compiler (expect failure)
         id: missing-compiler
         uses: ./package-php-pie
@@ -32,7 +23,6 @@ jobs:
           php-version: "8.5"
           php-ts: "nts"
           target: x86_64-pc-windows-msvc
-          # windows-compiler intentionally omitted
 
       - name: Confirm action failed validation
         shell: bash

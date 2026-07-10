@@ -44,18 +44,11 @@ def build_in_docker(
     if not is_musl_target(target):
         raise ValueError(f"Docker build is only for musl targets, got {target}")
 
-    get_alpine_arch(target)  # Validates architecture is supported
-    # rust:1-alpine3.21 ships with rustup + cargo pre-installed; plain
-    # alpine:3.21 does not, so `rustup target add` fails with exit 127.
+    get_alpine_arch(target)
     image = "rust:1-alpine3.21"
 
-    # Prepare build environment
     cwd = Path.cwd().resolve()
 
-    # Build command inside container.
-    # `--locked` enforces the committed Cargo.lock so transitive deps cannot
-    # silently re-resolve to incompatible versions (e.g. broken upstream
-    # `brotli-decompressor 5.0.1` over the pinned `5.0.0`).
     build_cmd = [
         "cargo",
         "build",
@@ -67,11 +60,6 @@ def build_in_docker(
         target,
     ]
 
-    # Merge caller-supplied env vars with the cdylib-on-musl default. musl rust
-    # toolchains ship with `+crt-static` enabled by default, which silently drops
-    # the `cdylib` crate type ("dropping unsupported crate type cdylib for target
-    # *-linux-musl") and leaves no `.so` for the staging step to find. Disabling
-    # crt-static restores cdylib output while keeping bin/staticlib builds working.
     merged_env: dict[str, str] = {"RUSTFLAGS": "-C target-feature=-crt-static"}
     if env_vars:
         merged_env.update(env_vars)
@@ -79,9 +67,6 @@ def build_in_docker(
     for key, val in merged_env.items():
         env_flags.extend(["-e", f"{key}={val}"])
 
-    # Docker command: mount repo, install toolchain, build
-    # rust:1-alpine3.21 is itself musl-based, so plain gcc produces musl binaries.
-    # Set target-specific linker env var to point rustc at gcc instead of musl-gcc.
     linker_env_var = f"CARGO_TARGET_{target.upper().replace('-', '_')}_LINKER=gcc"
     docker_cmd = [
         "docker",
@@ -132,8 +117,6 @@ def build_or_fallback(
     if is_musl_target(target):
         build_in_docker(crate_name, target, env_vars)
     else:
-        # Native build or zigbuild for gnu targets.
-        # `--locked` enforces the committed Cargo.lock; see `build_in_docker` for the rationale.
         use_zigbuild = "linux-gnu" in target and glibc_version
         glibc_suffixed_target = f"{target}.{glibc_version}" if use_zigbuild else target
 

@@ -18,8 +18,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# Wheel filename: {dist}-{ver}(-{build})?-{python}-{abi}-{platform}.whl
-# sdist filename: {dist}-{ver}.tar.gz
 _WHEEL_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.\-]+?)-(?P<ver>[^-]+)(-\d.*)?-[^-]+-[^-]+-[^-]+\.whl$")
 _SDIST_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.\-]+?)-(?P<ver>[^-]+)\.tar\.gz$")
 
@@ -68,7 +66,6 @@ def _upload_url_to_json_base(upload_url: str) -> str:
     Anything else: best-effort by stripping leading `upload.` and trailing `/legacy/`.
     """
     base = upload_url.rstrip("/").removesuffix("/legacy")
-    # Strip leading `upload.` from the host portion: scheme://upload.host -> scheme://host
     return re.sub(r"^([a-z]+://)upload\.", r"\1", base)
 
 
@@ -116,7 +113,6 @@ def main() -> None:
         _emit_output("version_published", "false")
         return
 
-    # All dist files for a single release share the same (name, version).
     versions: set[tuple[str, str]] = set()
     for f in files:
         if parsed := parse_name_version(f.name):

@@ -54,7 +54,6 @@ def expand_patterns(patterns: list[str], base: Path) -> list[Path]:
                 seen.add(resolved)
                 files.append(candidate)
             continue
-        # Treat as a glob relative to base.
         for match in sorted(base.glob(pattern)):
             if not match.is_file():
                 continue
@@ -82,11 +81,6 @@ def upload_one(tag: str, file: Path, clobber: bool) -> None:
     cmd = ["gh", "release", "upload", tag, str(file)]
     if clobber:
         cmd.append("--clobber")
-    # `gh` reads its token from `GH_TOKEN` (preferred) or `GITHUB_TOKEN`. In a
-    # GitHub Actions step the workflow sets `GITHUB_TOKEN` automatically but does
-    # NOT alias it to `GH_TOKEN`, so a subprocess invocation of `gh` falls back
-    # to its keyring (empty on hosted runners) and the API call returns
-    # `HTTP 401: Bad credentials`. Forward the available token explicitly.
     env = os.environ.copy()
     if not env.get("GH_TOKEN"):
         token = env.get("GITHUB_TOKEN") or env.get("INPUT_TOKEN") or ""
