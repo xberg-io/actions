@@ -86,7 +86,7 @@ cargo generate-lockfile
 
 cargo update -p time --precise 0.3.47 || true
 
-cargo build --locked --release
+cargo build --locked --release ${CARGO_FEATURES:+--features "$CARGO_FEATURES"}
 
 mkdir -p "$WORKSPACE_ROOT/target/release"
 

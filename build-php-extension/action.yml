@@ -34,6 +34,14 @@ inputs:
       hard-fail on a chicken-and-egg version lookup.
     required: false
     default: "false"
+  cargo-features:
+    description: >
+      Comma-separated Cargo features to enable for the extension build (passed to
+      `cargo build --features`). Required when the crate gates its `get_module`
+      entrypoint behind a feature (e.g. `extension-module`); an unfeatured build
+      then produces an empty cdylib with no PHP module symbol.
+    required: false
+    default: ""
 
 outputs:
   extension-path:
@@ -58,6 +66,7 @@ runs:
       env:
         CRATE_NAME: ${{ inputs.crate-name }}
         LIB_NAME: ${{ inputs.lib-name }}
+        CARGO_FEATURES: ${{ inputs.cargo-features }}
       run: |
         set -euo pipefail
         extension_path=$( \
@@ -86,6 +95,7 @@ runs:
         RUSTC_BOOTSTRAP: "1"
         CRATE_NAME: ${{ inputs.crate-name }}
         LIB_NAME: ${{ inputs.lib-name }}
+        CARGO_FEATURES: ${{ inputs.cargo-features }}
         CFLAGS_x86_64_pc_windows_msvc: "/MD"
         CXXFLAGS_x86_64_pc_windows_msvc: "/MD"
         CFLAGS_i686_pc_windows_msvc: "/MD"
@@ -121,7 +131,11 @@ runs:
         # Pin `time` to 0.3.47 to avoid the trait-impl conflict between `time` 0.3.48
         # and `cookie` 0.18.1 (E0119 in cookie 0.18.1). Tolerate absence in the graph.
         try { cargo update -p time --precise 0.3.47 } catch { Write-Host "time crate not in dep graph; skipping pin" }
-        cargo build --locked --release
+        if ($env:CARGO_FEATURES) {
+          cargo build --locked --release --features $env:CARGO_FEATURES
+        } else {
+          cargo build --locked --release
+        }
 
         $dllPath = Join-Path $workspaceRoot "target\release\$($env:LIB_NAME).dll"
         New-Item -ItemType Directory -Force -Path (Split-Path $dllPath) > $null
