@@ -84,11 +84,19 @@ runs:
         HEX_API_KEY: ${{ env.HEX_API_KEY }}
         REPLACE: ${{ inputs.replace }}
         TARBALL_PATH: ${{ inputs.tarball-path }}
+        PACKAGE_DIR: ${{ inputs.package-dir }}
       run: |
         if [[ ! -f "$TARBALL_PATH" ]]; then
           echo "Error: tarball not found at $TARBALL_PATH" >&2
           exit 1
         fi
+        # `mix hex.publish` is a Mix task and needs a Mix.Project in the working
+        # directory; without cd it runs at the repo root and fails with "Could
+        # not find a Mix.Project". Resolve the tarball to an absolute path first
+        # (it may be relative to the caller's cwd) before switching into the
+        # package directory.
+        TARBALL_PATH="$(cd "$(dirname "$TARBALL_PATH")" && pwd)/$(basename "$TARBALL_PATH")"
+        cd "$PACKAGE_DIR"
         PUBLISH_FLAGS="package ${TARBALL_PATH} --yes"
         if [[ "$REPLACE" == "true" ]]; then
           PUBLISH_FLAGS="${PUBLISH_FLAGS} --replace"
