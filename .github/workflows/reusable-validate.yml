@@ -76,13 +76,15 @@ jobs:
           # Goldziher/poly@v0 resolves "latest" with `gh`, which is absent on
           # self-hosted ARC runners. Resolve the tag via the REST API (curl) so
           # latest works everywhere, then pass it to the action as an explicit
-          # version (skipping the action's own gh-based path).
-          tag="$(curl -fsSL \
+          # version (skipping the action's own gh-based path). Capture the full
+          # response first — piping curl straight into `grep -m1` makes grep
+          # close the pipe early, so curl dies with a write error (exit 23).
+          response="$(curl -fsSL \
             -H 'Accept: application/vnd.github+json' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            https://api.github.com/repos/Goldziher/poly/releases/latest \
-            | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+            https://api.github.com/repos/Goldziher/poly/releases/latest)"
+          tag="$(printf '%s\n' "$response" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
           if [ -z "$tag" ]; then
             echo "::error::failed to resolve latest poly release from the GitHub API" >&2
             exit 1
