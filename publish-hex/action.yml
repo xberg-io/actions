@@ -90,14 +90,17 @@ runs:
           echo "Error: tarball not found at $TARBALL_PATH" >&2
           exit 1
         fi
-        # `mix hex.publish` is a Mix task and needs a Mix.Project in the working
-        # directory; without cd it runs at the repo root and fails with "Could
-        # not find a Mix.Project". Resolve the tarball to an absolute path first
-        # (it may be relative to the caller's cwd) before switching into the
-        # package directory.
-        TARBALL_PATH="$(cd "$(dirname "$TARBALL_PATH")" && pwd)/$(basename "$TARBALL_PATH")"
+        # Hex has no CLI to publish a pre-built .tar: `mix hex.publish` always
+        # (re)builds the package from the Mix project in the working directory —
+        # passing the tarball as a positional makes hex reject the invocation
+        # with "** (Mix) Invalid arguments". The upstream build-elixir-hex step
+        # already rewrote workspace path-deps to registry deps *in place* in
+        # $PACKAGE_DIR and ran `mix hex.build`, so publishing from that same
+        # directory reproduces a byte-identical package. The tarball-path input
+        # is retained purely as a build-success guard (verified above).
+        # `mix hex.publish` needs a Mix.Project in cwd, so cd into the package dir.
         cd "$PACKAGE_DIR"
-        PUBLISH_FLAGS="package ${TARBALL_PATH} --yes"
+        PUBLISH_FLAGS="package --yes"
         if [[ "$REPLACE" == "true" ]]; then
           PUBLISH_FLAGS="${PUBLISH_FLAGS} --replace"
         fi
