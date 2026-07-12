@@ -66,15 +66,34 @@ jobs:
         continue-on-error: true
         run: uv sync || echo "uv sync skipped — non-fatal for poly lint"
 
-      - name: Install poly (latest)
+      - name: Resolve latest poly version
+        id: poly-latest
         if: ${{ inputs.poly-version == '' }}
-        uses: Goldziher/poly@v0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Goldziher/poly@v0 resolves "latest" with `gh`, which is absent on
+          # self-hosted ARC runners. Resolve the tag via the REST API (curl) so
+          # latest works everywhere, then pass it to the action as an explicit
+          # version (skipping the action's own gh-based path).
+          tag="$(curl -fsSL \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            https://api.github.com/repos/Goldziher/poly/releases/latest \
+            | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+          if [ -z "$tag" ]; then
+            echo "::error::failed to resolve latest poly release from the GitHub API" >&2
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "Resolved latest poly: $tag"
 
-      - name: Install poly (pinned)
-        if: ${{ inputs.poly-version != '' }}
+      - name: Install poly
         uses: Goldziher/poly@v0
         with:
-          version: ${{ inputs.poly-version }}
+          version: ${{ inputs.poly-version != '' && inputs.poly-version || steps.poly-latest.outputs.version }}
 
       - name: Format check
         run: poly fmt --check .
