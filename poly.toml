@@ -197,3 +197,8 @@ files = "**/*.py"
 exclude = ["tests/**", "**/tests/**"]
 workspace = true
 cache = { inputs = ["**/*.py", "pyproject.toml"] }
+[[hooks.sources]]
+id = "ai-rulez"
+git = "https://github.com/Goldziher/ai-rulez.git"
+revision = "v4.9.1"
+hooks = ["ai-rulez-validate"]
