@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      poly-version:
+        description: "poly version to install. Empty (default) installs the latest release; set to pin a specific version."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -61,10 +66,15 @@ jobs:
         continue-on-error: true
         run: uv sync || echo "uv sync skipped — non-fatal for poly lint"
 
-      - name: Install poly
+      - name: Install poly (latest)
+        if: ${{ inputs.poly-version == '' }}
+        uses: Goldziher/poly@v0
+
+      - name: Install poly (pinned)
+        if: ${{ inputs.poly-version != '' }}
         uses: Goldziher/poly@v0
         with:
-          version: "0.11.0"
+          version: ${{ inputs.poly-version }}
 
       - name: Format check
         run: poly fmt --check .
