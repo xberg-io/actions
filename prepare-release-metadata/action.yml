@@ -12,6 +12,26 @@ inputs:
     description: "Alef CLI version to install (semver, 'latest', or 'main')."
     required: false
     default: "latest"
+  tag:
+    description: "Release tag override (e.g. v1.2.3). Falls back to the triggering event when empty."
+    required: false
+    default: ""
+  ref:
+    description: "Git ref to build override. Falls back to the triggering event when empty."
+    required: false
+    default: ""
+  targets:
+    description: "Comma-separated targets to resolve (e.g. 'docker'). Falls back to the triggering event when empty."
+    required: false
+    default: ""
+  dry-run:
+    description: "Force a dry run. Falls back to the triggering event when empty."
+    required: false
+    default: ""
+  force-republish:
+    description: "Force re-publish even if artifacts exist. Falls back to the triggering event when empty."
+    required: false
+    default: ""
 outputs:
   tag:
     description: "Git tag (e.g., v4.3.6)"
