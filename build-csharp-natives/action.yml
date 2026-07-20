@@ -44,6 +44,17 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Ensure patchelf (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        # build.py bundles the FFI library's vendored ELF deps (libonnxruntime.so.N,
+        # codecs) and sets RUNPATH=$ORIGIN so .NET's loader can resolve them at
+        # runtime; both operations require patchelf.
+        if ! command -v patchelf >/dev/null 2>&1; then
+          sudo apt-get update && sudo apt-get install -y patchelf
+        fi
+
     - name: Build C# natives
       id: build
       shell: bash

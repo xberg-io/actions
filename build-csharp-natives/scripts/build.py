@@ -127,6 +127,90 @@ def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
             print(f"[build-csharp-natives] warning: runtime dep not found: {dep_filename}", file=sys.stderr)
 
 
+def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
+    """Bundle a Linux .so's vendored deps and point its RUNPATH at ``$ORIGIN``.
+
+    The FFI library is dynamically linked against the vendored ONNX Runtime
+    (``libonnxruntime.so.N``) and, with imaging features, codec libraries. .NET's
+    P/Invoke resolver locates the *directly* imported library under
+    ``runtimes/{rid}/native/``, but the ELF loader then resolves that library's
+    own ``NEEDED`` entries via its ``RUNPATH`` — which .NET does not augment. So
+    each vendored dependency must sit beside the FFI library and the library must
+    carry ``RUNPATH=$ORIGIN``. Mirrors :func:`copy_macos_runtime_deps` for ELF and
+    fixes ``DllNotFoundException`` in containers where ``libonnxruntime.so.N`` is
+    otherwise unresolved (xberg issue #1280).
+
+    Args:
+        source_lib: Path to the built ``.so`` in the cargo release dir.
+        staging_dir: The ``runtimes/{rid}/native/`` directory holding the staged copy.
+    """
+    if not source_lib.name.endswith(".so"):
+        return
+
+    needed = subprocess.run(
+        ["patchelf", "--print-needed", str(source_lib)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if needed.returncode != 0:
+        print(
+            "[build-csharp-natives] error: patchelf unavailable or failed; cannot "
+            f"bundle Linux runtime deps or set RUNPATH: {needed.stderr}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    release_dir = source_lib.parent
+    search_roots: list[Path] = [release_dir, release_dir / "deps"]
+    build_root = release_dir / "build"
+    if build_root.is_dir():
+        search_roots.append(build_root)
+
+    xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache:
+        search_roots.append(Path(xdg_cache) / "ort.pyke.io" / "dfbin")
+    search_roots.append(Path.home() / ".cache" / "ort.pyke.io" / "dfbin")
+
+    for soname in (line.strip() for line in needed.stdout.splitlines() if line.strip()):
+        # Only bundle vendored deps we actually produced or downloaded. Genuine
+        # system libraries (libc, libm, libstdc++, libgcc_s, ...) never live in the
+        # build output or the ORT cache, so they are left to the base image.
+        candidate = None
+        for root in search_roots:
+            if not root.is_dir():
+                continue
+            for match in root.rglob(soname):
+                if match.is_file():
+                    candidate = match
+                    break
+            if candidate is not None:
+                break
+
+        if candidate is None:
+            continue
+
+        dest = staging_dir / soname
+        if not dest.exists():
+            shutil.copy2(candidate, dest)
+            print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
+
+    staged_lib = staging_dir / source_lib.name
+    rpath = subprocess.run(
+        ["patchelf", "--set-rpath", "$ORIGIN", str(staged_lib)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if rpath.returncode != 0:
+        print(
+            f"[build-csharp-natives] error: patchelf --set-rpath failed: {rpath.stderr}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(f"[build-csharp-natives] set RUNPATH=$ORIGIN on {staged_lib.resolve()}")
+
+
 def main() -> None:
     target = ensure_input("INPUT_TARGET", os.environ.get("INPUT_TARGET", ""))
     rid = ensure_input("INPUT_RID", os.environ.get("INPUT_RID", ""))
@@ -168,6 +252,8 @@ def main() -> None:
 
     if "darwin" in target or "apple" in target:
         copy_macos_runtime_deps(source_lib, staging_dir)
+    elif "linux" in target:
+        copy_linux_runtime_deps(source_lib, staging_dir)
 
     write_github_output("library-path", str(staged_lib.resolve()))
     write_github_output("staging-dir", str(staging_dir.resolve()))
