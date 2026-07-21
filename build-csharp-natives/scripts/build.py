@@ -60,71 +60,170 @@ def ensure_input(name: str, value: str) -> str:
     return value
 
 
-def copy_macos_runtime_deps(dylib_path: Path, staging_dir: Path) -> None:
-    """Copy runtime dependencies of a macOS dylib into the staging directory.
+def _macho_deps(binary: Path) -> list[str]:
+    """Return a Mach-O's dylib load commands, excluding the header and its own id."""
+    try:
+        listing = subprocess.run(["otool", "-L", str(binary)], capture_output=True, text=True, check=True).stdout
+        id_out = subprocess.run(["otool", "-D", str(binary)], capture_output=True, text=True, check=True).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
 
-    Uses otool -L to extract dependencies with @rpath/ prefix and copies them
-    from the build output directory to the staging directory so they can be
-    bundled in the NuGet package alongside the main dylib.
+    # otool -D: line 0 is the "<path>:" header, line 1 (if present) is LC_ID_DYLIB.
+    id_lines = [ln.strip() for ln in id_out.splitlines()[1:] if ln.strip()]
+    own_id = id_lines[0] if id_lines else ""
+
+    deps: list[str] = []
+    for line in listing.splitlines()[1:]:  # skip the "<path>:" header line
+        entry = line.strip().split(" (")[0].strip()
+        if entry and entry != own_id:
+            deps.append(entry)
+    return deps
+
+
+def _is_vendorable(dep: str) -> bool:
+    """True for load commands that must be bundled beside the FFI dylib.
+
+    System libraries and already-relocatable ``@loader_path``/``@executable_path``
+    refs are left untouched; ``@rpath`` refs (ONNX Runtime) and absolute non-system
+    paths (the libheif codec closure) are vendored.
+    """
+    if dep.startswith(("/usr/lib/", "/System/")):
+        return False
+    if dep.startswith(("@loader_path/", "@executable_path/")):
+        return False
+    if dep.startswith("@rpath/"):
+        return True
+    return dep.startswith("/")
+
+
+def _resign(binary: Path) -> None:
+    """Ad-hoc re-sign after rewriting load commands (invalidates the signature)."""
+    subprocess.run(["codesign", "--remove-signature", str(binary)], capture_output=True, text=True, check=False)
+    subprocess.run(["codesign", "-f", "-s", "-", str(binary)], capture_output=True, text=True, check=False)
+
+
+def _locate_dep(dep: str, basename: str, search_roots: list[Path]) -> Path | None:
+    """Resolve a load-command reference to an on-disk source file."""
+    if dep.startswith("/"):  # absolute refs (libheif closure) carry their own path
+        absolute = Path(dep)
+        if absolute.is_file():
+            return absolute.resolve()
+    for root in search_roots:  # @rpath refs are basename-only; search known roots
+        if not root.is_dir():
+            continue
+        direct = root / basename
+        if direct.is_file():
+            return direct.resolve()
+        for match in root.rglob(basename):
+            if match.is_file():
+                return match.resolve()
+    return None
+
+
+def copy_macos_runtime_deps(staged_lib: Path, staging_dir: Path) -> None:
+    """Vendor a macOS dylib's non-system closure beside it and rewrite load commands.
+
+    The staged FFI dylib links ONNX Runtime via ``@rpath`` (setup-onnx-runtime's
+    ``system`` strategy exports ``ORT_LIB_LOCATION``) and the libheif codec closure
+    via absolute ``/tmp/xberg-heif/lib`` install names. .NET's P/Invoke resolver
+    locates the directly-imported ``libxberg_ffi.dylib`` under
+    ``runtimes/{rid}/native/`` but does not resolve *its* dependencies, so each
+    vendored dep must sit beside it and be referenced via ``@loader_path``. Mirrors
+    the Linux ``$ORIGIN`` handling and scripts/ci/vendor-macos-node-dylibs.sh
+    (xberg #1280 / C# HEIF-on-macOS).
 
     Args:
-        dylib_path: Path to the built .dylib file
-        staging_dir: Destination directory for dependencies
+        staged_lib: The staged ``.dylib`` in ``runtimes/{rid}/native/`` to fix up.
+        staging_dir: The directory holding the staged copy (dest for its deps).
     """
-    if dylib_path.suffix != ".dylib":
+    if staged_lib.suffix != ".dylib" or not staged_lib.is_file():
         return
-
-    try:
-        result = subprocess.run(
-            ["otool", "-L", str(dylib_path)],
-            capture_output=True,
-            text=True,
-            check=True,
+    if not (shutil.which("otool") and shutil.which("install_name_tool")):
+        print(
+            "[build-csharp-natives] warning: otool/install_name_tool unavailable; skipping macOS dep vendoring",
+            file=sys.stderr,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
         return
 
-    for line in result.stdout.split("\n"):
-        line = line.strip()
-        if not line.startswith("@rpath/"):
-            continue
-
-        dep_filename = line.split("@rpath/")[1].split()[0]
-        release_dir = dylib_path.parent
-        search_patterns: list[Path] = [
-            release_dir / dep_filename,
-            release_dir / "deps" / dep_filename,
+    # @rpath refs are basename-only, so search where the toolchain stages them:
+    # ORT_LIB_LOCATION (setup-onnx-runtime), the macOS heif prefix, the ORT cache.
+    search_roots: list[Path] = []
+    ort_lib_location = os.environ.get("ORT_LIB_LOCATION")
+    if ort_lib_location:
+        search_roots.append(Path(ort_lib_location))
+    search_roots.append(Path("/tmp/xberg-heif/lib"))  # noqa: S108 — fixed CI prefix from build-macos-heif-deps.sh
+    xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache:
+        search_roots.append(Path(xdg_cache) / "ort.pyke.io" / "dfbin")
+    home = Path.home()
+    search_roots.extend(
+        [
+            home / ".cache" / "ort.pyke.io" / "dfbin",
+            home / "Library" / "Caches" / "ort.pyke.io" / "dfbin",
         ]
-        for build_root in (release_dir / "build",):
-            if build_root.is_dir():
-                search_patterns.extend(build_root.rglob(dep_filename))
+    )
 
-        cache_roots: list[Path] = []
-        xdg_cache = os.environ.get("XDG_CACHE_HOME")
-        if xdg_cache:
-            cache_roots.append(Path(xdg_cache) / "ort.pyke.io" / "dfbin")
-        home = Path.home()
-        cache_roots.extend(
-            [
-                home / ".cache" / "ort.pyke.io" / "dfbin",
-                home / "Library" / "Caches" / "ort.pyke.io" / "dfbin",
-            ]
-        )
-        for cache_root in cache_roots:
-            if cache_root.is_dir():
-                search_patterns.extend(cache_root.rglob(dep_filename))
-
-        found = False
-        for candidate in search_patterns:
-            if candidate.is_file():
-                dest = staging_dir / dep_filename
-                shutil.copy2(candidate, dest)
+    seen: set[str] = {staged_lib.name}
+    queue: list[Path] = [staged_lib]
+    while queue:
+        binary = queue.pop(0)
+        if not binary.is_file():
+            continue
+        changed = False
+        for dep in _macho_deps(binary):
+            if not _is_vendorable(dep):
+                continue
+            basename = dep.rsplit("/", 1)[-1]
+            dest = staging_dir / basename
+            if not dest.exists():
+                source = _locate_dep(dep, basename, search_roots)
+                if source is None:
+                    print(
+                        f"[build-csharp-natives] error: could not locate runtime dep {dep} for {binary.name}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                if str(source).startswith(("/opt/homebrew/", "/usr/local/")):
+                    print(
+                        f"[build-csharp-natives] error: refusing to vendor Homebrew dylib {source} "
+                        "(would raise the macOS floor); build the closure from source at the "
+                        "deployment target instead",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                shutil.copy2(source, dest)
+                dest.chmod(dest.stat().st_mode | 0o200)
                 print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
-                found = True
-                break
+            subprocess.run(
+                ["install_name_tool", "-change", dep, f"@loader_path/{basename}", str(binary)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            changed = True
+            if basename not in seen:
+                seen.add(basename)
+                queue.append(dest)
+        if binary != staged_lib and binary.suffix == ".dylib":
+            subprocess.run(
+                ["install_name_tool", "-id", f"@loader_path/{binary.name}", str(binary)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            changed = True
+        if changed:
+            _resign(binary)
 
-        if not found:
-            print(f"[build-csharp-natives] warning: runtime dep not found: {dep_filename}", file=sys.stderr)
+    # Guard: fail loudly if any vendorable dep still leaks anywhere in the closure.
+    leaks = 0
+    for dylib in sorted(staging_dir.glob("*.dylib")):
+        for dep in _macho_deps(dylib):
+            if _is_vendorable(dep):
+                print(f"[build-csharp-natives] error: unvendored dep {dylib.name} -> {dep}", file=sys.stderr)
+                leaks += 1
+    if leaks:
+        sys.exit(1)
 
 
 def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
@@ -251,7 +350,7 @@ def main() -> None:
     print(f"[build-csharp-natives] staged: {staged_lib.resolve()}")
 
     if "darwin" in target or "apple" in target:
-        copy_macos_runtime_deps(source_lib, staging_dir)
+        copy_macos_runtime_deps(staged_lib, staging_dir)
     elif "linux" in target:
         copy_linux_runtime_deps(source_lib, staging_dir)
 
