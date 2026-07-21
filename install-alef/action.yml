@@ -27,14 +27,6 @@ runs:
         path: ~/.local/bin/alef
         key: alef-${{ steps.meta.outputs.target }}-${{ steps.meta.outputs.resolved_version }}
 
-    - name: Cache alef binary (Windows)
-      id: cache-windows
-      if: runner.os == 'Windows'
-      uses: actions/cache@v4
-      with:
-        path: ~\AppData\Local\alef\alef.exe
-        key: alef-${{ steps.meta.outputs.target }}-${{ steps.meta.outputs.resolved_version }}
-
     - name: Install Alef (Unix)
       if: runner.os != 'Windows' && steps.cache-unix.outputs.cache-hit != 'true'
       shell: bash
@@ -43,8 +35,10 @@ runs:
       run: |
         "${{ github.action_path }}/scripts/unix.sh" "${{ steps.meta.outputs.install_ref }}"
 
+    # No Windows cache: actions/cache misplaces home-dir paths on restore, so
+    # cache-hit jobs failed with "alef command not found". Always install fresh.
     - name: Install Alef (Windows)
-      if: runner.os == 'Windows' && steps.cache-windows.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows'
       shell: pwsh
       env:
         GITHUB_TOKEN: ${{ github.token }}
