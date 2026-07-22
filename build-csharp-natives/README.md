@@ -70,3 +70,18 @@ steps:
 - The `runtimes/{rid}/native/` layout is the standard NuGet Runtime
   Identifier (RID) graph layout. dotnet automatically selects the right
   asset at consumer build time.
+- When the FFI library dynamically links ONNX Runtime (or other non-system
+  shared libraries), the action vendors the runtime closure beside the
+  staged library so .NET's loader can resolve it — .NET does not extend
+  the native search path to sibling files in `runtimes/{rid}/native/`
+  beyond the directly P/Invoked library:
+  - **Linux**: walks `ldd` (honoring `LD_LIBRARY_PATH`/`ORT_LIB_LOCATION`
+    as already exported by `setup-onnx-runtime`), copies every non-base
+    dependency beside the library, and sets `RUNPATH=$ORIGIN` via
+    `patchelf`. Fails the build if a dependency can't be resolved.
+  - **macOS**: walks `otool -L`, vendors every `@rpath`/absolute
+    non-system dependency, and rewrites load commands to `@loader_path`.
+  - **Windows**: copies `onnxruntime.dll` beside the staged `.dll` (via
+    `ORT_DYLIB_PATH`, `ORT_LIB_LOCATION`, or a `PATH` scan) — Windows
+    resolves sibling DLL imports from the loading module's directory, so
+    no linker rewrite is needed.

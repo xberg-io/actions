@@ -18,6 +18,7 @@ Inputs (env vars):
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -226,6 +227,53 @@ def copy_macos_runtime_deps(staged_lib: Path, staging_dir: Path) -> None:
         sys.exit(1)
 
 
+def _is_base_linux_lib(basename: str) -> bool:
+    """True for libc/toolchain libs the base image always provides — never vendor these."""
+    prefixes = (
+        "ld-linux",
+        "ld-musl",
+        "libc.so",
+        "libc.musl",
+        "libc-",
+        "libm.so",
+        "libmvec.so",
+        "libdl.so",
+        "librt.so",
+        "libpthread.so",
+        "libresolv.so",
+        "libgcc_s.so",
+        "libstdc++.so",
+        "libssl.so",
+        "libcrypto.so",
+    )
+    return basename.startswith(prefixes)
+
+
+def _ldd_deps(binary: Path) -> list[str]:
+    """Return a binary's ``ldd``-resolved dependency references.
+
+    Each entry is an absolute path, or the bare soname when ``ldd`` reports it as
+    unresolved.
+    """
+    result = subprocess.run(["ldd", str(binary)], capture_output=True, text=True, check=False)
+    deps: list[str] = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line or "linux-vdso" in line:
+            continue
+        match = re.search(r"=>\s*(/\S+)", line)
+        if match:
+            deps.append(match.group(1))
+            continue
+        match = re.match(r"^(/\S+)\s+\(0x", line)
+        if match:
+            deps.append(match.group(1))
+            continue
+        if "=> not found" in line:
+            deps.append(line.split("=>", 1)[0].strip())
+    return deps
+
+
 def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
     """Bundle a Linux .so's vendored deps and point its RUNPATH at ``$ORIGIN``.
 
@@ -235,9 +283,16 @@ def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
     ``runtimes/{rid}/native/``, but the ELF loader then resolves that library's
     own ``NEEDED`` entries via its ``RUNPATH`` — which .NET does not augment. So
     each vendored dependency must sit beside the FFI library and the library must
-    carry ``RUNPATH=$ORIGIN``. Mirrors :func:`copy_macos_runtime_deps` for ELF and
-    fixes ``DllNotFoundException`` in containers where ``libonnxruntime.so.N`` is
-    otherwise unresolved (xberg issue #1280).
+    carry ``RUNPATH=$ORIGIN``.
+
+    Resolution walks ``ldd`` (which honors the ``LD_LIBRARY_PATH``/``ORT_LIB_LOCATION``
+    already exported by ``setup-onnx-runtime``) rather than guessing at cache
+    directories — a prior fixed-search-root implementation silently shipped the FFI
+    library alone whenever ONNX Runtime lived somewhere it didn't expect (e.g. the
+    ``system``-strategy download directory), reproducing ``DllNotFoundException`` in
+    containers. Mirrors xberg's own ``scripts/ci/vendor-native-closure.sh`` (used for
+    its node/FFI/NIF artifacts) and :func:`copy_macos_runtime_deps` for Mach-O
+    (xberg issue #1280).
 
     Args:
         source_lib: Path to the built ``.so`` in the cargo release dir.
@@ -245,54 +300,47 @@ def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
     """
     if not source_lib.name.endswith(".so"):
         return
-
-    needed = subprocess.run(
-        ["patchelf", "--print-needed", str(source_lib)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if needed.returncode != 0:
+    if not shutil.which("patchelf"):
         print(
-            "[build-csharp-natives] error: patchelf unavailable or failed; cannot "
-            f"bundle Linux runtime deps or set RUNPATH: {needed.stderr}",
+            "[build-csharp-natives] error: patchelf unavailable; cannot set RUNPATH",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not shutil.which("ldd"):
+        print(
+            "[build-csharp-natives] error: ldd unavailable; cannot resolve runtime deps",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    release_dir = source_lib.parent
-    search_roots: list[Path] = [release_dir, release_dir / "deps"]
-    build_root = release_dir / "build"
-    if build_root.is_dir():
-        search_roots.append(build_root)
-
-    xdg_cache = os.environ.get("XDG_CACHE_HOME")
-    if xdg_cache:
-        search_roots.append(Path(xdg_cache) / "ort.pyke.io" / "dfbin")
-    search_roots.append(Path.home() / ".cache" / "ort.pyke.io" / "dfbin")
-
-    for soname in (line.strip() for line in needed.stdout.splitlines() if line.strip()):
-        # Only bundle vendored deps we actually produced or downloaded. Genuine
-        # system libraries (libc, libm, libstdc++, libgcc_s, ...) never live in the
-        # build output or the ORT cache, so they are left to the base image.
-        candidate = None
-        for root in search_roots:
-            if not root.is_dir():
+    seen: set[str] = {source_lib.name}
+    unresolved: set[str] = set()
+    queue: list[Path] = [source_lib]
+    while queue:
+        current = queue.pop(0)
+        for dep in _ldd_deps(current):
+            basename = Path(dep).name
+            if basename in seen or _is_base_linux_lib(basename):
                 continue
-            for match in root.rglob(soname):
-                if match.is_file():
-                    candidate = match
-                    break
-            if candidate is not None:
-                break
+            seen.add(basename)
+            source = Path(dep)
+            if not source.is_file():
+                unresolved.add(dep)
+                continue
+            dest = staging_dir / basename
+            if not dest.exists():
+                shutil.copy2(source, dest)
+                dest.chmod(dest.stat().st_mode | 0o200)
+                print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
+            queue.append(source)
 
-        if candidate is None:
-            continue
-
-        dest = staging_dir / soname
-        if not dest.exists():
-            shutil.copy2(candidate, dest)
-            print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
+    if unresolved:
+        for dep in sorted(unresolved):
+            print(
+                f"[build-csharp-natives] error: could not resolve runtime dep '{dep}' required by {source_lib.name}",
+                file=sys.stderr,
+            )
+        sys.exit(1)
 
     staged_lib = staging_dir / source_lib.name
     rpath = subprocess.run(
@@ -308,6 +356,53 @@ def copy_linux_runtime_deps(source_lib: Path, staging_dir: Path) -> None:
         )
         sys.exit(1)
     print(f"[build-csharp-natives] set RUNPATH=$ORIGIN on {staged_lib.resolve()}")
+
+
+def copy_windows_runtime_deps(staged_lib: Path, staging_dir: Path) -> None:
+    """Vendor ``onnxruntime.dll`` beside the staged FFI DLL.
+
+    The FFI library dynamically links ONNX Runtime, but Windows has no rpath
+    concept — the loader resolves sibling DLL imports from the directory the
+    importing module lives in, so ``onnxruntime.dll`` need only sit beside
+    ``xberg_ffi.dll`` in ``runtimes/{rid}/native/`` (no linker rewrite needed,
+    unlike the Linux ``$ORIGIN``/macOS ``@loader_path`` cases). ``setup-onnx-runtime``'s
+    Windows script exports ``ORT_DYLIB_PATH`` pointing at the staged DLL and also
+    copies it onto ``PATH``; fall back to a ``PATH`` scan if the env var is absent.
+    Fixes ``DllNotFoundException`` in .NET apps consuming the ``win-x64`` NuGet
+    native (xberg issue #1280).
+
+    Args:
+        staged_lib: The staged ``.dll`` in ``runtimes/{rid}/native/`` to vendor beside.
+        staging_dir: The directory holding the staged copy (destination for the dep).
+    """
+    if staged_lib.suffix.lower() != ".dll" or not staged_lib.is_file():
+        return
+
+    dll_name = "onnxruntime.dll"
+    candidates: list[Path] = []
+    ort_dylib_path = os.environ.get("ORT_DYLIB_PATH")
+    if ort_dylib_path:
+        candidates.append(Path(ort_dylib_path))
+    ort_lib_location = os.environ.get("ORT_LIB_LOCATION")
+    if ort_lib_location:
+        candidates.append(Path(ort_lib_location) / dll_name)
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if entry:
+            candidates.append(Path(entry) / dll_name)
+
+    source = next((candidate for candidate in candidates if candidate.is_file()), None)
+    if source is None:
+        print(
+            f"[build-csharp-natives] error: could not locate {dll_name} to bundle beside "
+            f"{staged_lib.name} (checked ORT_DYLIB_PATH, ORT_LIB_LOCATION, PATH)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    dest = staging_dir / dll_name
+    if not dest.exists():
+        shutil.copy2(source.resolve(), dest)
+        print(f"[build-csharp-natives] staged runtime dep: {dest.resolve()}")
 
 
 def main() -> None:
@@ -353,6 +448,8 @@ def main() -> None:
         copy_macos_runtime_deps(staged_lib, staging_dir)
     elif "linux" in target:
         copy_linux_runtime_deps(source_lib, staging_dir)
+    elif "windows" in target:
+        copy_windows_runtime_deps(staged_lib, staging_dir)
 
     write_github_output("library-path", str(staged_lib.resolve()))
     write_github_output("staging-dir", str(staging_dir.resolve()))
