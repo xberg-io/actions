@@ -53,11 +53,23 @@ runs:
         PACKAGES_DIR: ${{ inputs.packages-dir }}
       run: |
         set -euo pipefail
+        # Derive the simple-index URL from the upload URL so `--check-url` can skip
+        # files already on the registry (e.g. https://upload.pypi.org/legacy/ ->
+        # https://pypi.org/simple/). Without it, uploading a directory that spans
+        # multiple packages (the integrations dist: crewai/txtai/surrealdb/...) fails
+        # the moment one package's version already exists from an earlier partial run.
+        # The coarse version-level idempotency check in publish.py bails on multi-package
+        # dirs, so this per-file skip is what makes those re-runs succeed.
+        base="${UV_PUBLISH_URL%/}"
+        base="${base%/legacy}"
+        base="$(printf '%s' "$base" | sed -E 's#^([a-z]+://)upload\.#\1#')"
+        check_url="$base/simple/"
         # uv discovers the GHA OIDC token via ACTIONS_ID_TOKEN_REQUEST_{URL,TOKEN}
         # and exchanges it with PyPI's mint-token endpoint automatically.
         uv publish \
           --trusted-publishing automatic \
           --publish-url "$UV_PUBLISH_URL" \
+          --check-url "$check_url" \
           "$PACKAGES_DIR"/*
 
     - name: Set output
