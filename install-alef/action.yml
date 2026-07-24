@@ -22,7 +22,7 @@ runs:
     - name: Cache alef binary (Unix)
       id: cache-unix
       if: runner.os != 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.local/bin/alef
         key: alef-${{ steps.meta.outputs.target }}-${{ steps.meta.outputs.resolved_version }}

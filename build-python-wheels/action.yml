@@ -76,7 +76,7 @@ runs:
   using: composite
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ inputs.python-version }}
 
@@ -155,7 +155,7 @@ runs:
 
     - name: Upload wheels
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.artifact.outputs.name }}
         path: ./wheelhouse/*.whl

@@ -15,9 +15,9 @@ jobs:
   test-publish-npm-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -38,7 +38,7 @@ jobs:
   test-publish-pypi-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Create dummy dist directory
         run: |
@@ -54,7 +54,7 @@ jobs:
   test-publish-rubygems-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Create dummy gem
         run: |
@@ -78,7 +78,7 @@ jobs:
   test-publish-github-release-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Test publish-github-release (dry-run)
         uses: ./publish-github-release
@@ -90,7 +90,7 @@ jobs:
   test-publish-nuget-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Create dummy nupkg
         run: |
@@ -106,7 +106,7 @@ jobs:
   test-publish-packagist-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Test publish-packagist (dry-run)
         uses: ./publish-packagist
@@ -120,7 +120,7 @@ jobs:
   test-publish-crates-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -143,9 +143,9 @@ jobs:
   test-wait-for-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -176,7 +176,7 @@ jobs:
   test-publish-gleam-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
@@ -196,7 +196,7 @@ jobs:
   test-publish-hex-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
@@ -215,7 +215,7 @@ jobs:
   test-publish-maven-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
@@ -246,7 +246,7 @@ jobs:
   test-publish-maven-gradle-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Stage a minimal Gradle project dir
         run: |
@@ -264,7 +264,7 @@ jobs:
   test-publish-pub-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: dart-lang/setup-dart@v1
         with:
@@ -283,7 +283,7 @@ jobs:
   test-publish-zig-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -310,7 +310,7 @@ jobs:
   test-publish-zig-multi-platform-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -384,7 +384,7 @@ jobs:
   test-publish-helm-chart-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Stage a minimal helm chart
         run: |

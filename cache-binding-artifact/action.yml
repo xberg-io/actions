@@ -46,7 +46,7 @@ runs:
     - name: Restore cache
       id: cache-restore
       if: inputs.operation == 'restore'
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         key: ${{ inputs.cache-key }}
         restore-keys: ${{ inputs.cache-restore-keys }}
@@ -71,7 +71,7 @@ runs:
     - name: Save cache
       id: cache-save
       if: inputs.operation == 'save'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         key: ${{ inputs.cache-key }}
         path: ${{ inputs.cache-paths }}

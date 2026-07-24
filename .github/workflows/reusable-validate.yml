@@ -53,13 +53,13 @@ jobs:
 
       - name: Set up Python
         if: ${{ inputs.setup-python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Set up uv
         if: ${{ inputs.setup-python }}
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v9.0.0
 
       - name: Sync Python deps (best-effort)
         if: ${{ inputs.setup-python }}
