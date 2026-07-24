@@ -1,6 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "enabled": true,
+  "extends": ["config:recommended", ":semanticCommits", ":dependencyDashboard"],
+  "rebaseWhen": "behind-base-branch",
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Group GitHub Actions referenced by the composite actions and reusable workflows",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "description": "Group Python dependencies",
+      "matchManagers": ["pep621"],
+      "groupName": "python deps"
+    }
   ]
 }
