@@ -33,6 +33,13 @@ inputs:
     description: "GitHub token with contents:write for `gh release upload`"
     required: false
     default: ${{ github.token }}
+  upload:
+    description: >
+      When "true" (default) this action uploads the bottle tarball to the release.
+      Set "false" to only build+stage the tarball in out-dir so the caller can upload
+      it with a freshly minted token (avoids the 1h App-token TTL 401 on slow builds).
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -47,6 +54,7 @@ runs:
         FORMULAS: ${{ inputs.formulas }}
         OUT_DIR: ${{ inputs.out-dir }}
         GITHUB_REPO: ${{ inputs.github-repo }}
+        UPLOAD: ${{ inputs.upload }}
         HOMEBREW_NO_INSTALL_FROM_API: "1"
         HOMEBREW_NO_SANDBOX_LINUX: "1"
       run: "${{ github.action_path }}/scripts/build-bottles.sh"

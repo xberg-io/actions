@@ -7,6 +7,12 @@ tap="${TAP:?TAP is required (e.g. xberg-io/tap)}"
 formulas_raw="${FORMULAS:?FORMULAS is required (newline-separated list)}"
 out_dir="${OUT_DIR:?OUT_DIR is required}"
 github_repo="${GITHUB_REPO:?GITHUB_REPO is required (e.g. xberg-io/foo)}"
+# When "false", stage the renamed tarball into OUT_DIR instead of uploading it here.
+# A from-source bottle build can outlast the 1h GitHub App token TTL, so the caller
+# uploads afterwards with a freshly minted token rather than the one this build started
+# with (that stale-token 401 is what failed the rc.36 sequoia leg). Default "true" keeps
+# the self-contained behavior for other callers. ~keep
+upload="${UPLOAD:-true}"
 
 mkdir -p "$out_dir"
 work_dir="$(mktemp -d)"
@@ -115,8 +121,16 @@ build_one_bottle() {
 		cp "$jf" "$out_dir/"
 	done
 
-	echo "Uploading ${renamed_tarball} to release ${tag}"
-	retry gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
+	# Always stage the tarball so the caller can upload it (with a fresh token) even
+	# when we don't upload here.
+	cp "$renamed_tarball" "$out_dir/"
+
+	if [[ "$upload" == "true" ]]; then
+		echo "Uploading ${renamed_tarball} to release ${tag}"
+		retry gh release upload "$tag" "$renamed_tarball" --clobber --repo "$github_repo" </dev/null
+	else
+		echo "UPLOAD=false: staged ${renamed_tarball} in ${out_dir} for caller-side upload"
+	fi
 
 	echo "::endgroup::"
 }
