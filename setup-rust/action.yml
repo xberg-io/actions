@@ -170,7 +170,7 @@ runs:
     - name: Cache Rust build artifacts
       id: cache-rust
       if: inputs.disable-cache != 'true'
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           ~/.cargo/registry/index
