@@ -23,7 +23,7 @@ runs:
   steps:
     - name: Configure RubyGems trusted publishing (OIDC)
       if: ${{ env.GEM_HOST_API_KEY == '' && inputs.dry-run != 'true' }}
-      uses: rubygems/configure-rubygems-credentials@v2.0.0
+      uses: rubygems/configure-rubygems-credentials@v2.1.0
 
     - name: Publish gems
       shell: bash
