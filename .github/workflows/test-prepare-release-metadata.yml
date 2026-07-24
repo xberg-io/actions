@@ -52,9 +52,8 @@ jobs:
       - name: Resolve metadata via the action
         id: prepare
         uses: ./prepare-release-metadata
-        env:
-          GITHUB_REF_NAME: v0.0.0-fixture
         with:
+          tag: v0.0.0-fixture
           available-targets: "python,node,ruby"
           alef-version: latest
 

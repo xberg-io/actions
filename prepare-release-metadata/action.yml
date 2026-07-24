@@ -199,6 +199,13 @@ runs:
           ;;
         esac
 
+        # An explicit tag input always wins, regardless of event type. The
+        # `tag` input is documented as a release-tag override; the per-event
+        # cases above only seed the default from the triggering event.
+        if [[ -n "${INPUT_TAG}" ]]; then
+          tag="${INPUT_TAG}"
+        fi
+
         # When dry-running without an explicit tag, synthesize one from the
         # repo's canonical version so the publish pipeline can dry-build
         # against HEAD without a real release. Read alef.toml or Cargo.toml
