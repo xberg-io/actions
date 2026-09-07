@@ -24,6 +24,17 @@ from typing import Any
 MAX_LOOKUP_ATTEMPTS = 20
 LOOKUP_SLEEP_SECONDS = 10
 
+# Assets are uploaded by many jobs in parallel, and the release replica can still serve a
+# partial asset list seconds after the last upload job reports success. Retrying only the
+# *lookup* does not cover that: a release found holding 1 of 68 assets is indistinguishable
+# from a complete one, so a single evaluation fails every pattern whose asset is still in
+# flight -- a false negative on an otherwise good release. Re-evaluate until every pattern
+# matches or the budget is spent. Observed on html-to-markdown v3.12.1, where this ran three
+# seconds after the final upload job, saw one asset, and reported 21 missing patterns that
+# were all present moments later. ~keep
+MAX_SETTLE_ATTEMPTS = 15
+SETTLE_SLEEP_SECONDS = 20
+
 
 def env_str(key: str, default: str = "") -> str:
     value = os.environ.get(key, default) or default
@@ -165,6 +176,49 @@ def fetch_release_assets(tag: str) -> list[dict[str, Any]]:
     sys.exit(1)
 
 
+def match_patterns(
+    assets: list[dict[str, Any]], patterns: list[str], min_size: int
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Match every pattern against `assets`, preserving the caller's pattern order.
+
+    Returns `(pattern, matching_assets)` pairs; a pair with an empty list is a miss.
+    """
+    results: list[tuple[str, list[dict[str, Any]]]] = []
+    for pattern in patterns:
+        matches = [a for a in assets if fnmatch.fnmatch(str(a.get("name", "")), pattern)]
+        if min_size > 0:
+            matches = [a for a in matches if int(a.get("size", 0)) >= min_size]
+        results.append((pattern, matches))
+    return results
+
+
+def settle_assets(
+    tag: str, patterns: list[str], min_size: int, single_pass: bool = False
+) -> tuple[list[dict[str, Any]], list[tuple[str, list[dict[str, Any]]]]]:
+    """Fetch and re-evaluate until every pattern matches or the retry budget is spent.
+
+    Returns the final `(assets, results)`. `single_pass` evaluates once, for dry runs, which
+    are informational and should not spend the whole settle budget.
+    """
+    assets: list[dict[str, Any]] = []
+    results: list[tuple[str, list[dict[str, Any]]]] = []
+    attempts = 1 if single_pass else MAX_SETTLE_ATTEMPTS
+    for attempt in range(1, attempts + 1):
+        assets = fetch_release_assets(tag)
+        results = match_patterns(assets, patterns, min_size)
+        missing = [pattern for pattern, matches in results if not matches]
+        if not missing or attempt == attempts:
+            return assets, results
+        print(
+            f"settle attempt {attempt}/{attempts}: {len(assets)} asset(s) present, "
+            f"{len(missing)} pattern(s) still unmatched -- uploads may be in flight, "
+            f"retrying in {SETTLE_SLEEP_SECONDS}s...",
+            file=sys.stderr,
+        )
+        time.sleep(SETTLE_SLEEP_SECONDS)
+    return assets, results
+
+
 def write_output(name: str, value: str) -> None:
     output_path = os.environ.get("GITHUB_OUTPUT", "")
     if not output_path:
@@ -195,22 +249,17 @@ def main() -> None:
         print("Error: INPUT_EXPECTED_ASSETS contained no patterns after parsing", file=sys.stderr)
         sys.exit(1)
 
-    assets = fetch_release_assets(tag)
+    assets, results = settle_assets(tag, patterns, min_size, single_pass=dry_run)
     print(f"Release {tag} has {len(assets)} asset(s):")
     for asset in assets:
         print(f"  {asset.get('name')} ({asset.get('size', 0)} bytes)")
 
-    missing: list[str] = []
-    verified = 0
-    for pattern in patterns:
-        matches = [a for a in assets if fnmatch.fnmatch(str(a.get("name", "")), pattern)]
-        if min_size > 0:
-            matches = [a for a in matches if int(a.get("size", 0)) >= min_size]
+    missing = [pattern for pattern, matches in results if not matches]
+    verified = len(results) - len(missing)
+    for pattern, matches in results:
         if matches:
-            verified += 1
             print(f"  ✓ pattern matched: {pattern} ({len(matches)} asset(s))")
         else:
-            missing.append(pattern)
             size_note = f" (size >= {min_size} bytes)" if min_size > 0 else ""
             print(f"  ✗ pattern NOT matched{size_note}: {pattern}", file=sys.stderr)
 

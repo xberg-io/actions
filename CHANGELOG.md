@@ -4,6 +4,22 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`verify-release-assets` no longer fails on uploads that are still in flight.** The action
+  retried only the release *lookup*, so a 404 right after `gh release create` was covered but a
+  release found holding a partial asset list was taken as final. Assets arrive from many jobs in
+  parallel and the release replica can serve a stale list seconds after the last upload job
+  reports success, so a single evaluation failed every pattern whose asset had not landed yet.
+  It now re-fetches and re-evaluates until every pattern matches or a ~5 minute budget is spent,
+  logging the asset count each round so a genuine absence is distinguishable from propagation.
+  A dry run still evaluates once.
+
+  Observed on html-to-markdown v3.12.1: the job ran three seconds after the final upload job
+  completed, saw 1 asset, and reported 21 missing patterns — all of which were present on the
+  release moments later. Every publish target had succeeded, so the run was marked failed on a
+  release that was in fact complete. A release gate that cries wolf is one people stop reading.
+
 ### Added
 
 - **`retract-incomplete-release` action.** A publish run creates its release as a draft,

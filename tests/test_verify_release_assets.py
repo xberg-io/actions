@@ -160,3 +160,68 @@ def test_parse_expected_drops_blanks_and_comments() -> None:
     module = _load_module()
     raw = "a.tar.gz\n\n# a comment\n  b.zip  \n"
     assert module.parse_expected(raw) == ["a.tar.gz", "b.zip"]
+
+
+def test_match_patterns_reports_hits_and_misses_in_order() -> None:
+    module = _load_module()
+    assets = [{"name": "cli-linux.tar.gz", "size": 100}, {"name": "cli-mac.tar.gz", "size": 100}]
+    results = module.match_patterns(assets, ["cli-*.tar.gz", "cli-*.zip"], 0)
+    assert [pattern for pattern, _ in results] == ["cli-*.tar.gz", "cli-*.zip"]
+    assert len(results[0][1]) == 2
+    assert results[1][1] == []
+
+
+def test_match_patterns_honours_min_size() -> None:
+    module = _load_module()
+    assets = [{"name": "empty.tar.gz", "size": 0}]
+    assert module.match_patterns(assets, ["*.tar.gz"], 0)[0][1] != []
+    assert module.match_patterns(assets, ["*.tar.gz"], 1)[0][1] == []
+
+
+def test_settle_assets_retries_until_in_flight_uploads_appear(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The regression this action shipped with: a release found holding a partial asset list
+    was accepted as final, so patterns whose uploads were still in flight failed outright."""
+    module = _load_module()
+    pages = [
+        [{"name": "r-source.tar.gz", "size": 10}],
+        [{"name": "r-source.tar.gz", "size": 10}, {"name": "cli-linux.tar.gz", "size": 10}],
+    ]
+    calls = {"n": 0}
+
+    def fake_fetch(_tag: str) -> list[dict[str, Any]]:
+        page = pages[min(calls["n"], len(pages) - 1)]
+        calls["n"] += 1
+        return page
+
+    monkeypatch.setattr(module, "fetch_release_assets", fake_fetch)
+    monkeypatch.setattr(module.time, "sleep", lambda _s: None)
+
+    assets, results = module.settle_assets("v1", ["r-source.tar.gz", "cli-*.tar.gz"], 0)
+    assert calls["n"] == 2, "should have re-fetched once the first pass came up short"
+    assert len(assets) == 2
+    assert [pattern for pattern, matches in results if not matches] == []
+
+
+def test_settle_assets_gives_up_and_reports_genuinely_absent_assets(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "MAX_SETTLE_ATTEMPTS", 3)
+    monkeypatch.setattr(module, "fetch_release_assets", lambda _tag: [{"name": "only.tar.gz", "size": 10}])
+    monkeypatch.setattr(module.time, "sleep", lambda _s: None)
+
+    _assets, results = module.settle_assets("v1", ["only.tar.gz", "never-uploaded-*.zip"], 0)
+    assert [pattern for pattern, matches in results if not matches] == ["never-uploaded-*.zip"]
+
+
+def test_settle_assets_does_not_burn_the_budget_on_a_dry_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+    calls = {"n": 0}
+
+    def fake_fetch(_tag: str) -> list[dict[str, Any]]:
+        calls["n"] += 1
+        return []
+
+    monkeypatch.setattr(module, "fetch_release_assets", fake_fetch)
+    monkeypatch.setattr(module.time, "sleep", lambda _s: pytest.fail("dry run must not sleep"))
+
+    module.settle_assets("v1", ["missing-*.zip"], 0, single_pass=True)
+    assert calls["n"] == 1
