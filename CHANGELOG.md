@@ -6,6 +6,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Allow the reusable docs workflow to install prose dependencies from a standalone directory while retaining root-relative configuration and frozen installation (#62).
+
 - **`verify-release-assets` no longer fails on uploads that are still in flight.** The action
   retried only the release *lookup*, so a 404 right after `gh release create` was covered but a
   release found holding a partial asset list was taken as final. Assets arrive from many jobs in

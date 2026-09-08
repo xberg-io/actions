@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: "docs-site"
+      prose-dependency-directory:
+        description: "Directory holding textlint dependencies and a frozen pnpm lockfile; config and document paths stay root-relative."
+        required: false
+        type: string
+        default: "."
       node-version:
         description: "Node.js version."
         required: false
@@ -58,16 +63,18 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: ${{ inputs.build-command }}
 
-      # Prose lint is opt-in by presence: a repo gets it as soon as it has a
-      # .textlintrc.json, and repos without one (sceptre) are skipped. The
-      # install and the run are both root-relative because every consumer
-      # declares textlint in its root package.json, and because the config and
-      # .textlintignore paths are written relative to the repo root.
+      # ~keep Binding workspaces may require compiled artifacts; prose can use an independent dependency directory.
       - name: Lint prose
         if: ${{ hashFiles('.textlintrc.json') != '' }}
+        env:
+          PROSE_DEPENDENCY_DIRECTORY: ${{ inputs.prose-dependency-directory }}
+          DOCS_DIRECTORY: ${{ inputs.working-directory }}
         run: |
-          pnpm install --frozen-lockfile
-          npx textlint '${{ inputs.working-directory }}/src/content/docs/**/*.{md,mdx}'
+          pnpm --dir "$PROSE_DEPENDENCY_DIRECTORY" install --frozen-lockfile
+          PROSE_DEPENDENCY_DIRECTORY="$(cd -- "$PROSE_DEPENDENCY_DIRECTORY" && pwd)"
+          "$PROSE_DEPENDENCY_DIRECTORY/node_modules/.bin/textlint" \
+            --rules-base-directory "$PROSE_DEPENDENCY_DIRECTORY/node_modules" \
+            "$DOCS_DIRECTORY/src/content/docs/**/*.{md,mdx}"
 
       - name: Upload Pages artifact
         if: ${{ inputs.deploy }}
