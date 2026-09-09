@@ -6,6 +6,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `build-php-extension` now builds within the existing Cargo workspace when
+  `rewrite-native-deps` is false or `dry-run` is true, preserving unpublished sibling
+  dependencies and enforcing the workspace lockfile on Linux, macOS, and Windows.
+
 - **`verify-release-assets` no longer fails on uploads that are still in flight.** The action
   retried only the release *lookup*, so a 404 right after `gh release create` was covered but a
   release found holding a partial asset list was taken as final. Assets arrive from many jobs in
