@@ -455,8 +455,13 @@ def _run_local_extension(workspace: Path, features: str = "") -> subprocess.Comp
         "RUNNER_OS": "macOS" if sys.platform == "darwin" else "Windows" if sys.platform == "win32" else "Linux",
     }
     env.pop("RUSTC_WRAPPER", None)
+    bash = "bash"
+    if sys.platform == "win32":
+        bash_path = Path(os.environ["ProgramFiles"]) / "Git" / "bin" / "bash.exe"
+        assert bash_path.is_file(), f"Git Bash is required, not the Windows WSL launcher: {bash_path}"
+        bash = str(bash_path)
     return subprocess.run(
-        ["bash", str(script), _CRATE_NAME, _LIB_NAME, str(workspace)],
+        [bash, str(script), _CRATE_NAME, _LIB_NAME, str(workspace)],
         cwd=workspace.parent,
         capture_output=True,
         text=True,
