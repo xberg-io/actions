@@ -40,7 +40,10 @@ if [[ "$target" == *"-unknown-linux-musl" ]] && [[ "$RUNNER_OS" == "Linux" ]]; t
 	fi
 
 	echo "Installing musl-tools for target: $target"
-	sudo apt-get update && sudo apt-get install -y musl-tools
+	if ! sudo apt-get update; then
+		echo "::warning::Some package indexes could not be refreshed; attempting musl-tools installation with available indexes."
+	fi
+	sudo apt-get install -y musl-tools
 
 	cc_rs_var=$(echo "$target" | tr '-' '_')
 

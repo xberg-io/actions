@@ -6,6 +6,9 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `setup-rust` attempts required package installation when an unrelated apt index
+  fails to refresh, while still failing if protobuf or musl-tools cannot be installed.
+
 - `build-php-extension` now builds within the existing Cargo workspace when
   `rewrite-native-deps` is false or `dry-run` is true, preserving unpublished sibling
   dependencies and enforcing the workspace lockfile on Linux, macOS, and Windows.
