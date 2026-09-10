@@ -4,6 +4,26 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **`setup-node-workspace` and `reusable-docs-deploy` now bootstrap pnpm 12** instead of pnpm 10.
+  The pin is only a bootstrap: pnpm self-manages down (or up) to whatever a repo's
+  `packageManager` field names, so consumers still on pnpm 10 or 11 are unaffected and can migrate
+  on their own schedule. What changes is the floor for repos that pin pnpm 12, whose lockfiles the
+  old pnpm 10 bootstrap could not read.
+
+  A pnpm 12 lockfile is a **two-document YAML**. The first document pins the package manager
+  itself -- a `packageManagerDependencies` entry naming pnpm, plus `@pnpm/exe.<platform>` packages
+  for all eight platforms -- and the second is the ordinary project lockfile, `settings:` block and
+  all. `lockfileVersion` stays `'9.0'` in both. That is why the bootstrap version matters: pnpm 12
+  reads a single-document pnpm 9/11 lockfile and upgrades it in place, but an older pnpm reading a
+  two-document file sees only the package-manager document and no project dependencies.
+
+  `test-build-node-napi` also drops `corepack enable && corepack prepare` in favour of the same
+  `npm install --global pnpm@12` the real action uses. Homebrew's pnpm formula declares an
+  explicit conflict with corepack, so the corepack path was both untested against the action's own
+  behaviour and unreproducible on a common developer setup.
+
 ### Fixed
 
 - `setup-rust` attempts required package installation when an unrelated apt index
