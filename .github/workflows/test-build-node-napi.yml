@@ -145,6 +145,13 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
           command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
 
+      # A real matrix leg starts with no .node at the crate root; this job has
+      # already run two builds, and the staging loop globs `*.node` there, so
+      # without this the musl leg also re-stages the earlier gnu binary. ~keep
+      - name: Clear artifacts from the earlier legs
+        shell: bash
+        run: rm -f packages/node/*.node
+
       - name: Build with cross-compile (-x / cargo-zigbuild)
         uses: ./build-node-napi
         with:
