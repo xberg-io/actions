@@ -151,6 +151,8 @@ not step outputs: a composite action propagates only the outputs it declares, so
 | `reusable-python-lint.yml` | Python linting via uv + prek |
 | `reusable-docs-deploy.yml` | Build an Astro Starlight docs site and deploy it to GitHub Pages |
 
+For repositories with compiled binding workspaces, set `prose-dependency-directory: docs-site` on the docs workflow and declare textlint and its rules in that standalone package. The default remains `.`; configuration, ignore files, and document paths stay relative to the repository root. Both setups use frozen installation and fail when prose lint fails.
+
 ## Repository Workflows
 
 | Workflow | Description |

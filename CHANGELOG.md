@@ -26,6 +26,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Allow the reusable docs workflow to install prose dependencies from a standalone directory while retaining root-relative configuration and frozen installation (#62).
 - `setup-rust` attempts required package installation when an unrelated apt index
   fails to refresh, while still failing if protobuf or musl-tools cannot be installed.
 
