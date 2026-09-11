@@ -242,9 +242,6 @@ file_safety = { exclude = [
 [tools.shfmt]
 enabled = true
 
-[tools.shellcheck]
-enabled = true
-
 [tools.actionlint]
 enabled = true
 

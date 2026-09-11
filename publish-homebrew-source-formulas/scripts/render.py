@@ -112,7 +112,7 @@ def _render_one(
     """Render a single formula. Returns the written path, or None on failure."""
     name = entry.get("name")
     template = entry.get("template")
-    assets = entry.get("assets") or {}
+    assets = entry.get("assets")
     if not (isinstance(name, str) and isinstance(template, str) and isinstance(assets, dict) and assets):
         print(f"::error::formula entry missing name/template/assets: {entry!r}", file=sys.stderr)
         return None

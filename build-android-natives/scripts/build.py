@@ -74,7 +74,7 @@ def verify_staged_libs(output_dir: Path, abis: list[str], lib_name: str) -> None
         )
         for abi, lib_path in missing:
             abi_dir = lib_path.parent
-            found = sorted(p.name for p in abi_dir.glob("*.so")) if abi_dir.is_dir() else []
+            found: list[str] = sorted(p.name for p in abi_dir.glob("*.so")) if abi_dir.is_dir() else []
             print(
                 f"  {abi}: missing {lib_path} (found in {abi_dir}: {found or 'nothing'})",
                 file=sys.stderr,
