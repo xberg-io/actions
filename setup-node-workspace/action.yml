@@ -32,7 +32,7 @@ runs:
 
     - name: Install pnpm via npm
       shell: bash
-      run: npm install --global pnpm@10
+      run: npm install --global pnpm@12
 
     - name: Install dependencies
       shell: bash

@@ -3,16 +3,25 @@ on:
   push:
     paths:
       - "build-php-extension/**"
+      - "tests/test_build_php_extension.py"
       - ".github/workflows/test-build-php-extension.yml"
   pull_request:
     paths:
       - "build-php-extension/**"
+      - "tests/test_build_php_extension.py"
       - ".github/workflows/test-build-php-extension.yml"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      matrix:
+        include:
+          - rewrite: "false"
+            dry-run: "false"
+          - rewrite: "true"
+            dry-run: "true"
     steps:
       - uses: actions/checkout@v7
 
@@ -29,7 +38,7 @@ jobs:
           cat >Cargo.toml <<'TOML'
           [workspace]
           resolver = "2"
-          members = ["packages/fixture-phpext"]
+          members = ["packages/fixture-phpext", "packages/unpublished-php-sibling"]
 
           [workspace.package]
           version = "0.0.1"
@@ -46,10 +55,8 @@ jobs:
           unused_imports = "warn"
           TOML
           mkdir -p packages/fixture-phpext/src
-          # ~keep Every inheritance spelling alef emits is exercised here: dotted,
-          # inline-table, bare `[lints]`, and an inherited dependency. A manifest that
-          # keeps any of them once copied out of the workspace fails to parse with
-          # "failed to find a workspace root".
+          # ~keep Local builds must preserve inheritance and unpublished path dependencies
+          # for both the explicit workspace option and a release dry run.
           cat >packages/fixture-phpext/Cargo.toml <<'TOML'
           # This comment mentions workspace = true and must survive verbatim.
           [package]
@@ -68,6 +75,7 @@ jobs:
 
           [dependencies]
           ext-php-rs.workspace = true
+          unpublished-php-sibling = { version = "=0.0.0-unpublished", path = "../unpublished-php-sibling" }
 
           [lints]
           workspace = true
@@ -76,11 +84,24 @@ jobs:
           use ext_php_rs::prelude::*;
 
           #[php_function]
-          pub fn fixture_add(a: i64, b: i64) -> i64 { a + b }
+          pub fn fixture_add(a: i64, b: i64) -> i64 { unpublished_php_sibling::add(a, b) }
 
           #[php_module]
           pub fn module(module: ModuleBuilder) -> ModuleBuilder { module }
           RS
+
+          mkdir -p packages/unpublished-php-sibling/src
+          cat >packages/unpublished-php-sibling/Cargo.toml <<'TOML'
+          [package]
+          name = "unpublished-php-sibling"
+          version = "0.0.0-unpublished"
+          edition = "2021"
+          publish = false
+          TOML
+          echo 'pub fn add(a: i64, b: i64) -> i64 { a + b }' >packages/unpublished-php-sibling/src/lib.rs
+
+      - name: Resolve fixture workspace lock
+        run: cargo generate-lockfile
 
       - name: Build PHP extension via the action
         id: build
@@ -88,7 +109,8 @@ jobs:
         with:
           crate-name: fixture-phpext
           lib-name: fixture_phpext
-          rewrite-native-deps: "false"
+          rewrite-native-deps: ${{ matrix.rewrite }}
+          dry-run: ${{ matrix.dry-run }}
 
       - name: Verify extension produced
         shell: bash
@@ -96,6 +118,21 @@ jobs:
           [ -n "${{ steps.build.outputs.extension-path }}" ]
           test -f "${{ steps.build.outputs.extension-path }}"
           file "${{ steps.build.outputs.extension-path }}"
+          php -n -d "extension=${{ steps.build.outputs.extension-path }}" \
+            -r 'exit(fixture_add(19, 23) === 42 ? 0 : 1);'
+
+  test-workspace-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test unpublished workspace dependency and locked build
+        run: uv run pytest tests/test_build_php_extension.py -k workspace_build -v
 
   test-manifest-rewrites-windows:
     runs-on: windows-latest

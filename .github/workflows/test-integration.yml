@@ -36,7 +36,7 @@ jobs:
           {
             "name": "test-workspace",
             "private": true,
-            "packageManager": "pnpm@10.0.0"
+            "packageManager": "pnpm@12.3.4"
           }
           JSON
           cat > pnpm-lock.yaml << 'YAML'

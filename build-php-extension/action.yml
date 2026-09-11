@@ -46,7 +46,7 @@ inputs:
 outputs:
   extension-path:
     description: Path to the built extension file (.so on Linux, .dll on Windows)
-    value: ${{ steps.build-unix.outputs.extension-path || steps.build-windows.outputs.dll }}
+    value: ${{ steps.build-workspace.outputs.extension-path || steps.build-unix.outputs.extension-path || steps.build-windows.outputs.dll }}
 
 runs:
   using: composite
@@ -60,7 +60,7 @@ runs:
         require-registry: "true"
 
     - name: Build PHP extension (Linux/macOS)
-      if: runner.os != 'Windows'
+      if: runner.os != 'Windows' && inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
       id: build-unix
       shell: bash
       env:
@@ -103,8 +103,26 @@ runs:
         "LIBCLANG_PATH=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "PATH=$llvmPath;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+    - name: Build PHP extension from workspace
+      if: inputs.rewrite-native-deps != 'true' || inputs.dry-run == 'true'
+      id: build-workspace
+      shell: bash
+      env:
+        CRATE_NAME: ${{ inputs.crate-name }}
+        LIB_NAME: ${{ inputs.lib-name }}
+        CARGO_FEATURES: ${{ inputs.cargo-features }}
+      run: |
+        set -euo pipefail
+        extension_path=$(bash "${{ github.action_path }}/scripts/build-in-workspace.sh" \
+          "$CRATE_NAME" "$LIB_NAME" "$GITHUB_WORKSPACE")
+        {
+          echo "extension-path<<GHA_EXTENSION_PATH_EOF"
+          echo "$extension_path"
+          echo "GHA_EXTENSION_PATH_EOF"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Build PHP extension (Windows)
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
       id: build-windows
       shell: pwsh
       env:

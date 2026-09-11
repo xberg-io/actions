@@ -6,9 +6,11 @@ nothing else. A progress line leaking onto stdout made the runner reject the who
 `$GITHUB_OUTPUT` write with "Unable to process file command 'output' successfully".
 """
 
+import ctypes
 import os
 import pathlib
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -408,3 +410,99 @@ def test_the_windows_branch_strips_internal_path_deps_as_well():
     assert "strip-internal-paths.ps1" in _ACTION.read_text(), (
         "action.yml never invokes the Windows path-stripping script"
     )
+
+
+@pytest.fixture
+def local_extension_workspace(tmp_path: Path) -> Path:
+    """An offline cdylib inheriting metadata and depending on an unpublished sibling."""
+    root = tmp_path / "local workspace"
+    extension = root / "crates" / _CRATE_NAME
+    sibling = root / "crates" / "unpublished-sibling"
+    for crate in (extension, sibling):
+        (crate / "src").mkdir(parents=True)
+    (root / "Cargo.toml").write_text(
+        '[workspace]\nresolver = "2"\nmembers = ["crates/*"]\n'
+        '[workspace.package]\nversion = "0.0.0-unpublished"\nedition = "2021"\n'
+    )
+    (extension / "Cargo.toml").write_text(
+        '[package]\nname = "demo-ext"\nversion.workspace = true\nedition.workspace = true\n'
+        '[lib]\nname = "demo_ext"\ncrate-type = ["cdylib"]\n'
+        "[features]\nextra = []\n"
+        '[dependencies]\nunpublished-sibling = { path = "../unpublished-sibling", version = "=0.0.0-unpublished" }\n'
+    )
+    (sibling / "Cargo.toml").write_text(
+        '[package]\nname = "unpublished-sibling"\nversion.workspace = true\nedition.workspace = true\n'
+    )
+    (sibling / "src" / "lib.rs").write_text("pub fn value() -> i32 { 37 }\n")
+    (extension / "src" / "lib.rs").write_text(
+        '#[no_mangle]\npub extern "C" fn workspace_value() -> i32 {\n'
+        '    unpublished_sibling::value() + if cfg!(feature = "extra") { 5 } else { 0 }\n}\n'
+    )
+    result = subprocess.run(
+        ["cargo", "generate-lockfile", "--offline"], cwd=root, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    return root
+
+
+def _run_local_extension(workspace: Path, features: str = "") -> subprocess.CompletedProcess[str]:
+    script = _ROOT / "build-php-extension" / "scripts" / "build-in-workspace.sh"
+    env = {
+        **os.environ,
+        "CARGO_FEATURES": features,
+        "CARGO_NET_OFFLINE": "true",
+        "CARGO_TARGET_DIR": str(workspace / "target"),
+        "RUNNER_OS": "macOS" if sys.platform == "darwin" else "Windows" if sys.platform == "win32" else "Linux",
+    }
+    env.pop("RUSTC_WRAPPER", None)
+    bash = "bash"
+    if sys.platform == "win32":
+        bash_path = Path(os.environ["PROGRAMFILES"]) / "Git" / "bin" / "bash.exe"
+        assert bash_path.is_file(), f"Git Bash is required, not the Windows WSL launcher: {bash_path}"
+        bash = str(bash_path)
+    return subprocess.run(
+        [bash, str(script), _CRATE_NAME, _LIB_NAME, str(workspace)],
+        cwd=workspace.parent,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+
+@pytest.mark.parametrize(("features", "expected"), [("", 37), ("extra", 42)])
+def test_workspace_build_preserves_unpublished_dependencies_and_features(
+    local_extension_workspace: Path, features: str, expected: int
+):
+    workspace = local_extension_workspace
+    manifests = {path: path.read_bytes() for path in workspace.rglob("Cargo.toml")}
+    lock = (workspace / "Cargo.lock").read_bytes()
+
+    result = _run_local_extension(workspace, features)
+
+    assert result.returncode == 0, result.stderr
+    assert len(result.stdout.splitlines()) == 1, result.stdout
+    artifact = Path(result.stdout.strip())
+    assert artifact.is_absolute()
+    assert artifact.is_file(), artifact
+    suffix = ".dylib" if sys.platform == "darwin" else ".dll" if sys.platform == "win32" else ".so"
+    assert artifact.suffix == suffix
+    library = ctypes.CDLL(str(artifact))
+    library.workspace_value.restype = ctypes.c_int
+    assert library.workspace_value() == expected
+    assert (workspace / "Cargo.lock").read_bytes() == lock
+    assert {path: path.read_bytes() for path in manifests} == manifests
+
+
+def test_workspace_build_rejects_an_outdated_lockfile(local_extension_workspace: Path):
+    workspace = local_extension_workspace
+    lock_path = workspace / "Cargo.lock"
+    stale_lock = lock_path.read_text().replace('version = "0.0.0-unpublished"', 'version = "0.0.0-stale"')
+    lock_path.write_text(stale_lock)
+
+    result = _run_local_extension(workspace)
+
+    assert result.returncode != 0
+    assert "lock" in result.stderr.lower(), result.stderr
+    assert result.stdout == ""
+    assert lock_path.read_text() == stale_lock

@@ -111,7 +111,9 @@ runs:
         fi
         case "$RUNNER_OS" in
           Linux)
-            sudo apt-get update -y
+            if ! sudo apt-get update -y; then
+              echo "::warning::Some package indexes could not be refreshed; attempting protobuf-compiler installation with available indexes."
+            fi
             sudo apt-get install -y --no-install-recommends protobuf-compiler
             ;;
           macOS)
