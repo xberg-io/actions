@@ -129,7 +129,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.1.0
       - uses: dtolnay/rust-toolchain@stable
       - name: Test unpublished workspace dependency and locked build
         run: uv run pytest tests/test_build_php_extension.py -k workspace_build -v
