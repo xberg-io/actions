@@ -26,6 +26,15 @@ inputs:
     description: Pass `--use-napi-cross` to napi build for cross-compilation (only used when `target` is set).
     required: false
     default: "false"
+  cross-compile:
+    description: >
+      Pass `-x` (napi's experimental cross-compile mode) to napi build, which
+      swaps the cargo subcommand for `cargo-zigbuild` on non-Windows targets —
+      the only way to produce a musl cdylib for another architecture. The
+      caller must put `zig` and `cargo-zigbuild` on PATH first; this action
+      does not install them. Mutually exclusive with `use-napi-cross`.
+    required: false
+    default: "false"
   release:
     description: Build in release mode (only used when `target` is set).
     required: false
@@ -101,6 +110,7 @@ runs:
       env:
         TARGET: ${{ inputs.target }}
         USE_NAPI_CROSS: ${{ inputs.use-napi-cross }}
+        CROSS_COMPILE: ${{ inputs.cross-compile }}
         RELEASE: ${{ inputs.release }}
         JS_NAME: ${{ inputs.js-name }}
         DTS_NAME: ${{ inputs.dts-name }}
@@ -108,6 +118,25 @@ runs:
         COLLECT_ARTIFACTS: ${{ inputs.collect-artifacts }}
       run: |
         set -euo pipefail
+        # napi rejects `-x` combined with `--use-napi-cross`, but only after the
+        # build has already started; catching it here names the misconfigured
+        # input instead of surfacing a cargo subcommand error. ~keep
+        if [ "${CROSS_COMPILE}" = "true" ] && [ "${USE_NAPI_CROSS}" = "true" ]; then
+          echo "::error::build-node-napi: cross-compile and use-napi-cross are mutually exclusive; set at most one."
+          exit 1
+        fi
+        if [ "${CROSS_COMPILE}" = "true" ]; then
+          # `napi build -x` shells out to cargo-zigbuild for non-Windows targets.
+          # Neither it nor zig is installed here -- the caller owns that, because
+          # the zig version is a per-repo pin. Fail with the missing tool named
+          # rather than letting napi auto-install a version nobody chose. ~keep
+          for tool in zig cargo-zigbuild; do
+            command -v "${tool}" >/dev/null 2>&1 || {
+              echo "::error::build-node-napi: cross-compile requires ${tool} on PATH; install it before this step."
+              exit 1
+            }
+          done
+        fi
         rm -rf "${NPM_DIR}"
         pnpm exec napi create-npm-dirs
         napi_args=(napi build --platform --target "${TARGET}" --js "${JS_NAME}" --dts "${DTS_NAME}")
@@ -116,6 +145,9 @@ runs:
         fi
         if [ "${USE_NAPI_CROSS}" = "true" ]; then
           napi_args+=(--use-napi-cross)
+        fi
+        if [ "${CROSS_COMPILE}" = "true" ]; then
+          napi_args+=(-x)
         fi
         pnpm exec "${napi_args[@]}"
         if [ "${COLLECT_ARTIFACTS}" = "true" ]; then
