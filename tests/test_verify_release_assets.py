@@ -74,6 +74,43 @@ def test_assets_for_tag_skips_non_dict_entries() -> None:
     assert module._assets_for_tag(releases, "v1") == [{"name": "a.zip"}]
 
 
+def test_assets_for_tag_prefers_the_published_release_over_an_orphaned_draft() -> None:
+    """Deleting a tag turns its release into a draft; the republished one is the real one."""
+    module = _load_module()
+    releases = [
+        {"id": 1, "tag_name": "v1.1.3", "draft": True, "assets": [{"name": "stale.zip"}]},
+        {"id": 2, "tag_name": "v1.1.3", "draft": False, "assets": [{"name": "a.zip"}, {"name": "b.zip"}]},
+    ]
+    assert module._assets_for_tag(releases, "v1.1.3") == [{"name": "a.zip"}, {"name": "b.zip"}]
+
+
+def test_assets_for_tag_still_resolves_a_tag_that_only_has_a_draft() -> None:
+    module = _load_module()
+    releases = [{"id": 1, "tag_name": "v1", "draft": True, "assets": [{"name": "a.zip"}]}]
+    assert module._assets_for_tag(releases, "v1") == [{"name": "a.zip"}]
+
+
+def test_assets_for_tag_names_the_ambiguity_when_several_releases_share_a_tag(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_module()
+    releases = [
+        {"id": 384891430, "tag_name": "v1.1.3", "draft": True, "assets": [{"name": "stale.zip"}]},
+        {"id": 385223868, "tag_name": "v1.1.3", "draft": False, "assets": [{"name": "a.zip"}]},
+    ]
+    module._assets_for_tag(releases, "v1.1.3")
+    err = capsys.readouterr().err
+    assert "2 releases match tag v1.1.3" in err
+    assert "id=384891430 draft 1 asset(s)" in err
+    assert "-> id=385223868 published 1 asset(s)" in err
+
+
+def test_assets_for_tag_stays_quiet_for_the_single_release_case(capsys: pytest.CaptureFixture[str]) -> None:
+    module = _load_module()
+    module._assets_for_tag([{"id": 1, "tag_name": "v1", "assets": []}], "v1")
+    assert capsys.readouterr().err == ""
+
+
 def test_lookup_via_api_reports_gh_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     module = _load_module()
     monkeypatch.setattr(module, "_run_gh", lambda _argv: _completed(stderr="boom", returncode=1))

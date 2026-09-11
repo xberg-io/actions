@@ -99,12 +99,50 @@ def _parse_release_list(payload_raw: str) -> list[Any]:
     return parsed
 
 
+def _describe_release(release: dict[str, Any]) -> str:
+    state = "draft" if release.get("draft") else "published"
+    asset_count = len(_only_dicts(release.get("assets") or []))
+    return f"id={release.get('id')} {state} {asset_count} asset(s)"
+
+
+def _select_release_for_tag(releases: list[Any], tag: str) -> dict[str, Any] | None:
+    """Return the release `tag` resolves to, preferring a published one over a draft.
+
+    Deleting a Git tag converts its release into a draft, so a tag that was deleted and
+    re-created -- what `retag-for-republish` does -- can carry two releases: the orphaned
+    draft holding the failed attempt's asset list, and the live release holding the real
+    one. Matching on `tag_name` alone returned whichever the API listed first, and a stale
+    draft made every asset uploaded by the republish look missing while it was provably on
+    the release, with no way to tell that apart from uploads still in flight. Prefer the
+    published release and name the ambiguity when more than one matches. See #64. ~keep
+    """
+    matches = [release for release in _only_dicts(releases) if release.get("tag_name") == tag]
+    if not matches:
+        return None
+    chosen = next((release for release in matches if not release.get("draft")), matches[0])
+    if len(matches) > 1:
+        print(
+            f"Warning: {len(matches)} releases match tag {tag}; verifying the "
+            f"{'published' if not chosen.get('draft') else 'draft'} one.",
+            file=sys.stderr,
+        )
+        for release in matches:
+            marker = "->" if release is chosen else "  "
+            print(f"  {marker} {_describe_release(release)}", file=sys.stderr)
+        print(
+            "Deleting a tag turns its release into a draft; an orphaned draft on this tag makes "
+            "republished assets look missing. Delete it once the published release is a superset.",
+            file=sys.stderr,
+        )
+    return chosen
+
+
 def _assets_for_tag(releases: list[Any], tag: str) -> list[dict[str, Any]] | None:
-    """Return the assets of the release whose `tag_name` is `tag`, else None."""
-    for release in _only_dicts(releases):
-        if release.get("tag_name") == tag:
-            return _only_dicts(release.get("assets") or [])
-    return None
+    """Return the assets of the release `tag` resolves to, else None."""
+    release = _select_release_for_tag(releases, tag)
+    if release is None:
+        return None
+    return _only_dicts(release.get("assets") or [])
 
 
 def _lookup_via_api(repo: str, tag: str) -> tuple[list[dict[str, Any]] | None, str]:
