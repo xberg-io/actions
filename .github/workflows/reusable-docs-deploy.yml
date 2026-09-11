@@ -72,9 +72,15 @@ jobs:
         run: |
           pnpm --dir "$PROSE_DEPENDENCY_DIRECTORY" install --frozen-lockfile
           PROSE_DEPENDENCY_DIRECTORY="$(cd -- "$PROSE_DEPENDENCY_DIRECTORY" && pwd)"
-          "$PROSE_DEPENDENCY_DIRECTORY/node_modules/.bin/textlint" \
-            --rules-base-directory "$PROSE_DEPENDENCY_DIRECTORY/node_modules" \
-            "$DOCS_DIRECTORY/src/content/docs/**/*.{md,mdx}"
+          # ~keep textlint's --rules-base-directory is an experimental flag that resolves no
+          # rule modules at all on 15.x: the run ends in "No rules found" and exits 1, so this
+          # gate has never linted a document. NODE_PATH reaches the same dependency directory
+          # through node's own resolver while the working directory stays at the repository
+          # root, which is what keeps `.textlintrc.json` discovery and the document glob
+          # root-relative.
+          NODE_PATH="$PROSE_DEPENDENCY_DIRECTORY/node_modules" \
+            "$PROSE_DEPENDENCY_DIRECTORY/node_modules/.bin/textlint" \
+              "$DOCS_DIRECTORY/src/content/docs/**/*.{md,mdx}"
 
       - name: Upload Pages artifact
         if: ${{ inputs.deploy }}

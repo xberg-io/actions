@@ -29,7 +29,7 @@ def test_prose_install_and_lint_preserve_root_and_failures(tmp_path, directory, 
     binaries.mkdir()
     dependency = tmp_path / directory / "node_modules/.bin"
     dependency.mkdir(parents=True)
-    recorder = "#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\nwith open(os.environ['CALLS'],'a') as f: f.write(json.dumps([Path(sys.argv[0]).name,os.getcwd(),sys.argv[1:]])+'\\n')\nsys.exit(int(os.environ['INSTALL_STATUS' if Path(sys.argv[0]).name=='pnpm' else 'LINT_STATUS']))\n"
+    recorder = "#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\nwith open(os.environ['CALLS'],'a') as f: f.write(json.dumps([Path(sys.argv[0]).name,os.getcwd(),sys.argv[1:],os.environ.get('NODE_PATH')])+'\\n')\nsys.exit(int(os.environ['INSTALL_STATUS' if Path(sys.argv[0]).name=='pnpm' else 'LINT_STATUS']))\n"
     for executable in [binaries / "pnpm", dependency / "textlint"]:
         executable.write_text(recorder)
         executable.chmod(0o700)
@@ -52,16 +52,16 @@ def test_prose_install_and_lint_preserve_root_and_failures(tmp_path, directory, 
     )
     assert result.returncode == (install_status or lint_status), result.stderr
     calls = [json.loads(line) for line in log.read_text().splitlines()]
-    assert calls[0] == ["pnpm", str(tmp_path), ["--dir", directory, "install", "--frozen-lockfile"]]
+    assert calls[0] == ["pnpm", str(tmp_path), ["--dir", directory, "install", "--frozen-lockfile"], None]
     assert len(calls) == (1 if install_status else 2)
     if not install_status:
+        # ~keep NODE_PATH is the assertion that matters: --rules-base-directory produced this
+        # exact argv while loading zero rules, so an argv-only check cannot tell a working
+        # gate from one that lints nothing.
         assert calls[1] == [
             "textlint",
             str(tmp_path),
-            [
-                "--rules-base-directory",
-                str(tmp_path / directory / "node_modules"),
-                "docs content/src/content/docs/**/*.{md,mdx}",
-            ],
+            ["docs content/src/content/docs/**/*.{md,mdx}"],
+            str(tmp_path / directory / "node_modules"),
         ]
     assert not (tmp_path / "INJECTED").exists()

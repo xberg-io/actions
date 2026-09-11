@@ -4,6 +4,19 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`reusable-docs-deploy` now loads textlint's rules**, so `Lint prose` actually lints. The step
+  passed `--rules-base-directory`, an experimental flag that resolves no rule modules at all on
+  textlint 15.x: every run ended in "No rules found, textlint hasn't done anything" and exited 1,
+  so the gate had never checked a document. `NODE_PATH` reaches the same dependency directory
+  through node's own resolver while the working directory stays at the repository root, which is
+  what keeps `.textlintrc.json` discovery and the document glob root-relative.
+
+  The accompanying test asserted the recorded argv only, which the broken flag satisfied exactly,
+  so it could not tell a working gate from one that linted nothing. It now asserts the environment
+  the linter is invoked with.
+
 ## [1.14.0] - 2026-09-11
 
 ### Changed
