@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-09-11
+
 ### Fixed
 
 - **`reusable-docs-deploy` now loads textlint's rules**, so `Lint prose` actually lints. The step
