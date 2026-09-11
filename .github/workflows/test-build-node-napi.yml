@@ -83,10 +83,14 @@ jobs:
             "files": ["index.js", "index.d.ts", "*.node"],
             "napi": {
               "binaryName": "fixture-napi",
-              "targets": ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+              "targets": [
+                "x86_64-unknown-linux-gnu",
+                "aarch64-unknown-linux-gnu",
+                "x86_64-unknown-linux-musl"
+              ]
             },
             "devDependencies": {
-              "@napi-rs/cli": "3.7.2"
+              "@napi-rs/cli": "^3.9.1"
             }
           }
           JSON
@@ -114,7 +118,81 @@ jobs:
       - name: Verify platform subdirectory structure
         shell: bash
         run: |
-          # After the above build with target, npm/ should contain platform subdirs
-          # The verification step in build-node-napi should have validated the .node file
-          echo "npm/ directory structure:"
-          find packages/node/npm -type f 2>/dev/null | head -20 || echo "npm/ not present or empty"
+          set -euo pipefail
+          # This step used to `find | head` and echo a fallback message, so it passed
+          # whether or not anything was staged. Assert on the count instead. ~keep
+          staged=$(find packages/node/npm -name '*.node' -type f | wc -l | tr -d ' ')
+          find packages/node/npm -type f
+          if [ "${staged}" != "1" ]; then
+            echo "::error::expected exactly 1 staged .node under npm/, found ${staged}"
+            exit 1
+          fi
+
+      # The musl leg is the one that regressed: @napi-rs/cli 3.9.1 made `napi
+      # artifacts` abort unless every target in `napi.targets` has a binary, which
+      # no single matrix leg can satisfy. The fixture above declares three targets
+      # and this job builds one, so a reintroduction fails here instead of in a
+      # consumer's publish run. ~keep
+      - name: Setup Zig
+        uses: ./setup-zig
+        with:
+          version: "0.16.0"
+
+      - name: Install musl target and cargo-zigbuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add x86_64-unknown-linux-musl
+          command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
+
+      # A real matrix leg starts with no .node at the crate root; this job has
+      # already run two builds, and the staging loop globs `*.node` there, so
+      # without this the musl leg also re-stages the earlier gnu binary. ~keep
+      - name: Clear artifacts from the earlier legs
+        shell: bash
+        run: rm -f packages/node/*.node
+
+      - name: Build with cross-compile (-x / cargo-zigbuild)
+        uses: ./build-node-napi
+        with:
+          crate-dir: packages/node
+          target: x86_64-unknown-linux-musl
+          cross-compile: "true"
+          install-deps: "false"
+
+      - name: Verify the musl platform package holds a native module
+        shell: bash
+        run: |
+          set -euo pipefail
+          staged=$(find packages/node/npm -name '*.node' -type f | wc -l | tr -d ' ')
+          find packages/node/npm -type f
+          if [ "${staged}" != "1" ]; then
+            echo "::error::expected exactly 1 staged .node after the musl build, found ${staged}"
+            exit 1
+          fi
+          test -f packages/node/npm/linux-x64-musl/fixture-napi.linux-x64-musl.node
+
+      # Negative control. A guard that never fires looks identical to one that is
+      # wired up, so drive the invalid combination and assert the step FAILED. ~keep
+      - name: Drive the rejected input combination
+        id: bad-inputs
+        continue-on-error: true
+        uses: ./build-node-napi
+        with:
+          crate-dir: packages/node
+          target: x86_64-unknown-linux-musl
+          cross-compile: "true"
+          use-napi-cross: "true"
+          install-deps: "false"
+
+      - name: Assert cross-compile + use-napi-cross was rejected
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.bad-inputs.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "${OUTCOME}" != "failure" ]; then
+            echo "::error::expected the mutually-exclusive input guard to fail the step, got '${OUTCOME}'"
+            exit 1
+          fi
+          echo "guard rejected the combination as expected"
