@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-11
+
 ### Changed
 
 - **`setup-node-workspace` and `reusable-docs-deploy` now bootstrap pnpm 12** instead of pnpm 10.
@@ -26,7 +28,22 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- **`verify-release-assets` resolves a tag to its *published* release.** Deleting a Git tag
+  converts its release into a draft, so a tag that has been deleted and re-created -- what
+  `retag-for-republish` does -- carries two releases: the orphaned draft holding the failed
+  attempt's asset list, and the live one. The action matched on `tag_name` and took whichever
+  the API listed first, so a stale draft made every asset uploaded by the republish look
+  missing while it was provably on the release. It now prefers the published release, and
+  lists every release sharing the tag when more than one does, so the ambiguity names itself
+  instead of reading as uploads still in flight (#64).
+
+- **`retag-for-republish` reports the draft release it orphans.** Deleting the tag turns its
+  release into a draft that stays invisible until something resolves the tag by name. The
+  action now warns, naming the draft's id and asset count. It does not delete it: the draft
+  can hold assets the published release does not (#64).
+
 - Allow the reusable docs workflow to install prose dependencies from a standalone directory while retaining root-relative configuration and frozen installation (#62).
+
 - `setup-rust` attempts required package installation when an unrelated apt index
   fails to refresh, while still failing if protobuf or musl-tools cannot be installed.
 
@@ -50,6 +67,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Added
 
+- **`build-node-napi`: `cross-compile` input.** `napi build -x` swaps the cargo subcommand for
+  cargo-zigbuild, the only way to produce a musl cdylib for another architecture. Without an
+  input for it consumers hand-rolled the step, and those copies predate the switch from
+  `napi artifacts` to per-leg staging, so `@napi-rs/cli` 3.9.1's all-targets-present check
+  broke every zig-cross leg it touched. The action's own test fixture pinned `@napi-rs/cli`
+  3.7.2, which has no such check, so the suite could not have caught it; it now tracks ^3.9.1,
+  covers a musl cross-compile leg, and asserts on the staged artifact count (#66).
 - **`retract-incomplete-release` action.** A publish run creates its release as a draft,
   promotes it out of draft early so cargo-binstall and the bottle builders have resolvable
   assets, then publishes the registry targets; when one fails, `release-report` put the
