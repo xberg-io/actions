@@ -4,6 +4,24 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.14.2] - 2026-09-12
+
+### Fixed
+
+- **`publish-github-release` can find the draft releases it creates.**
+  `GET /repos/{owner}/{repo}/releases/tags/{tag}` resolves only *published* releases -- a draft
+  has no published git tag, so the endpoint 404s for one no matter how long the caller retries.
+  The action creates releases as drafts so the caller can promote them once its asset checks
+  pass, which meant every by-tag lookup failed against the release the action had just created:
+  `upload_artifacts` exited on the 404 so no asset could ever upload, and `ensure_release` spent
+  its full 20-attempt retry budget before creating a *second* release for the same tag. Both now
+  resolve the release by paging `GET /releases` and matching `tag_name`, which returns drafts for
+  a token with push access, and fall back to the by-tag lookup for tokens that only see published
+  releases. `verify-release-assets` already resolved releases this way.
+
+  This blocked `tree-sitter-language-pack` v1.19.0: its parser-sources bundle failed to upload,
+  and the release only completed after the draft was published by hand.
+
 ## [1.14.1] - 2026-09-11
 
 ### Fixed
