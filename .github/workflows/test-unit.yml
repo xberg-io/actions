@@ -62,6 +62,7 @@ jobs:
             --search-path build-csharp-natives/scripts \
             --search-path build-elixir-natives/scripts \
             --search-path build-java-natives/scripts \
+            --search-path publish-github-release/scripts \
             --search-path publish-homebrew-source-formulas/scripts \
             --search-path publish-scoop-manifests/scripts
 

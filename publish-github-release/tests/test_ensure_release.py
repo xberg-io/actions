@@ -91,29 +91,43 @@ def test_github_request_post_exits_on_server_error(mocker: MockerFixture) -> Non
 
 def test_get_release_by_tag_returns_existing_release(mocker: MockerFixture) -> None:
     release = {"id": 456, "tag_name": "v2.0.0", "draft": False}
-    request = mocker.patch.object(ensure_release, "github_request", return_value=(200, release))
+    lookup = mocker.patch.object(ensure_release, "find_release_by_tag", return_value=release)
 
     assert ensure_release.get_release_by_tag("owner", "repo", "v2.0.0", "token") == release
-    request.assert_called_once_with("GET", "https://api.github.com/repos/owner/repo/releases/tags/v2.0.0", "token")
+    lookup.assert_called_once_with("owner", "repo", "v2.0.0", "token")
+
+
+def test_get_release_by_tag_finds_a_draft_release_without_retrying(mocker: MockerFixture) -> None:
+    """Regression: a draft has no published tag, so a by-tag-only lookup never resolved it.
+
+    That cost the full retry budget and then created a second release for the same tag.
+    """
+    draft = {"id": 999, "tag_name": "v3.1.0", "draft": True}
+    lookup = mocker.patch.object(ensure_release, "find_release_by_tag", return_value=draft)
+    sleep = mocker.patch.object(ensure_release.time, "sleep")
+
+    assert ensure_release.get_release_by_tag("owner", "repo", "v3.1.0", "token") == draft
+    assert lookup.call_count == 1
+    assert sleep.call_count == 0
 
 
 def test_get_release_by_tag_retries_until_the_replica_catches_up(mocker: MockerFixture) -> None:
-    """A freshly created release can 404 on the read replica for a beat."""
+    """A freshly created release can be missing from the read replica for a beat."""
     release = {"id": 999, "tag_name": "v3.1.0", "draft": True}
-    request = mocker.patch.object(ensure_release, "github_request", side_effect=[(404, {}), (404, {}), (200, release)])
+    lookup = mocker.patch.object(ensure_release, "find_release_by_tag", side_effect=[None, None, release])
     sleep = mocker.patch.object(ensure_release.time, "sleep")
 
     assert ensure_release.get_release_by_tag("owner", "repo", "v3.1.0", "token") == release
-    assert request.call_count == 3
+    assert lookup.call_count == 3
     assert sleep.call_count == 2
 
 
 def test_get_release_by_tag_returns_none_after_exhausting_retries(mocker: MockerFixture) -> None:
-    request = mocker.patch.object(ensure_release, "github_request", return_value=(404, {}))
+    lookup = mocker.patch.object(ensure_release, "find_release_by_tag", return_value=None)
     sleep = mocker.patch.object(ensure_release.time, "sleep")
 
     assert ensure_release.get_release_by_tag("owner", "repo", "v4.0.0", "token") is None
-    assert request.call_count == 20
+    assert lookup.call_count == 20
     assert sleep.call_count == 19
 
 

@@ -12,7 +12,15 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
+
+# ~keep Import the sibling helper by path. Direct execution puts this directory on sys.path,
+# but the test suite loads these scripts through importlib.util.spec_from_file_location, which
+# does not -- so the bare import resolves only in production and fails under test.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from release_lookup import find_release_by_tag
 
 # A freshly pushed tag is not immediately visible to the releases API, so creation
 # waits up to a minute for it rather than failing the release outright. ~keep
@@ -61,29 +69,28 @@ def github_request(method: str, url: str, token: str, data: dict[str, Any] | Non
 
 
 def get_release_by_tag(owner: str, repo: str, tag: str, token: str) -> dict[str, Any] | None:
-    """Get release info for a tag. Returns dict if found, None if 404.
+    """Get release info for a tag, drafts included. Returns dict if found, None otherwise.
 
-    Retries on 404 with exponential backoff (20 attempts, 10s interval) to absorb
-    GitHub API read-replica propagation delays after tag push.
+    Retries (20 attempts, 10s interval) to absorb GitHub API read-replica propagation delays
+    after tag push. The lookup is draft-aware: this action creates releases as drafts, and a
+    by-tag-only lookup could never see one, so a re-run would spend the full retry budget and
+    then create a *second* release for the same tag. See release_lookup for the details.
     """
-    url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
     max_attempts = 20
     sleep_seconds = 10
 
     for attempt in range(1, max_attempts + 1):
-        status, data = github_request("GET", url, token)
-        if status == 200:
-            return data
+        release = find_release_by_tag(owner, repo, tag, token)
+        if release is not None:
+            return release
 
-        if status == 404 and attempt < max_attempts:
+        if attempt < max_attempts:
             print(
                 f"Release lookup attempt {attempt}/{max_attempts} did not find {tag}; "
                 f"tag may not be propagated yet, retrying in {sleep_seconds}s...",
                 file=sys.stderr,
             )
             time.sleep(sleep_seconds)
-        elif status != 200:
-            return None
 
     return None
 

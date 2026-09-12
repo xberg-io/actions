@@ -8,7 +8,6 @@ Usage (GitHub Actions via env vars):
     (default true).
 """
 
-import json
 import mimetypes
 import os
 import ssl
@@ -19,6 +18,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+# ~keep Import the sibling helper by path. Direct execution puts this directory on sys.path,
+# but the test suite loads these scripts through importlib.util.spec_from_file_location, which
+# does not -- so the bare import resolves only in production and fails under test.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from release_lookup import find_release_by_tag
 
 UPLOAD_MAX_ATTEMPTS = 5
 UPLOAD_BACKOFF_BASE_SECONDS = 2.0
@@ -55,24 +61,17 @@ def expand_artifact_patterns(patterns: str) -> list[Path]:
 
 
 def get_release_by_tag(owner: str, repo: str, tag: str, token: str) -> dict[str, Any]:
-    """Get release info for a tag. Exits on error."""
-    url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
-    headers = get_github_api_headers(token)
+    """Get release info for a tag, drafts included. Exits when the release does not exist.
 
-    req = urllib.request.Request(url, headers=headers, method="GET")
-
-    try:
-        with urllib.request.urlopen(req) as response:  # noqa: S310
-            data: dict[str, Any] = json.loads(response.read().decode("utf-8"))
-            return data
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        print(
-            f"Error: HTTP {e.code} {e.reason} from {url}",
-            file=sys.stderr,
-        )
-        print(error_body, file=sys.stderr)
+    Uses the draft-aware lookup: this action creates releases as drafts, and the plain
+    `GET /releases/tags/{tag}` endpoint never resolves one, so uploading to a release this
+    action had just created used to fail with a 404. See release_lookup for the details.
+    """
+    release = find_release_by_tag(owner, repo, tag, token)
+    if release is None:
+        print(f"Error: release {tag} not found in {owner}/{repo} (checked drafts and published)", file=sys.stderr)
         sys.exit(1)
+    return release
 
 
 def delete_asset(owner: str, repo: str, asset_id: int, token: str) -> None:

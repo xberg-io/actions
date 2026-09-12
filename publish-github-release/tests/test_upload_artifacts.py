@@ -93,17 +93,28 @@ def test_get_release_by_tag_returns_the_release(mocker: MockerFixture) -> None:
         "upload_url": f"{_UPLOAD_URL}{{?name,label}}",
         "assets": [{"id": 456, "name": "old_file.whl"}],
     }
-    _urlopen_response(mocker, release)
+    mocker.patch.object(upload_artifacts, "find_release_by_tag", return_value=release)
 
     assert upload_artifacts.get_release_by_tag("owner", "repo", "v1.0.0", "token") == release
 
 
-def test_get_release_by_tag_exits_on_404(mocker: MockerFixture) -> None:
-    mocker.patch.object(
-        upload_artifacts.urllib.request,
-        "urlopen",
-        side_effect=_http_error(404, b'{"message": "Not Found"}'),
-    )
+def test_get_release_by_tag_uploads_to_a_draft_release(mocker: MockerFixture) -> None:
+    """Regression: this action creates releases as drafts, and `GET /releases/tags/{tag}`
+    never resolves a draft -- so every upload 404'd against the release just created."""
+    draft = {
+        "id": 321,
+        "tag_name": "v1.0.0",
+        "draft": True,
+        "upload_url": f"{_UPLOAD_URL}{{?name,label}}",
+        "assets": [],
+    }
+    mocker.patch.object(upload_artifacts, "find_release_by_tag", return_value=draft)
+
+    assert upload_artifacts.get_release_by_tag("owner", "repo", "v1.0.0", "token") == draft
+
+
+def test_get_release_by_tag_exits_when_the_release_does_not_exist(mocker: MockerFixture) -> None:
+    mocker.patch.object(upload_artifacts, "find_release_by_tag", return_value=None)
 
     with pytest.raises(SystemExit) as excinfo:
         upload_artifacts.get_release_by_tag("owner", "repo", "v1.0.0", "token")
