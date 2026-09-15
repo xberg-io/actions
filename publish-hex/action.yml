@@ -43,7 +43,7 @@ runs:
       uses: erlef/setup-beam@v1
       with:
         elixir-version: "1.19"
-        otp-version: "28"
+        otp-version: "29.0.6"
 
     - name: Verify mix.exs carries the release version
       shell: bash
