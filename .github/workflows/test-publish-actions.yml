@@ -237,7 +237,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "27"
-          elixir-version: "1.17"
+          elixir-version: "v1.20.4"
 
       - name: Scaffold an Elixir mix project
         run: mix new pkg
@@ -256,7 +256,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "21.0.12+101.0.LTS"
 
       - name: Stage a minimal pom.xml
         shell: bash

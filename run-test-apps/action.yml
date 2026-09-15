@@ -90,7 +90,7 @@ runs:
       uses: actions/setup-java@v6
       with:
         distribution: "temurin"
-        java-version: "25"
+        java-version: "25.0.4+101.0.LTS"
 
     - name: Setup .NET
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
@@ -102,7 +102,7 @@ runs:
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'elixir' }}
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: "1.16"
+        elixir-version: "v1.20.4"
         otp-version: "27"
 
     - name: Setup Dart

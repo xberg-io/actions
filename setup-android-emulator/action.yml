@@ -56,7 +56,7 @@ runs:
       uses: actions/setup-java@v6
       with:
         distribution: temurin
-        java-version: "25"
+        java-version: "25.0.4+101.0.LTS"
 
     # Google removed the legacy `tools` SDK package, but setup-android's `packages` input still
     # defaults to `tools platform-tools`, so the bare invocation now dies on
