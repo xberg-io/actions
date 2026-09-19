@@ -4,6 +4,19 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.22.2] - 2026-09-19
+
+### Fixed
+
+- `publish-pypi` no longer reports success for a partially published version. The idempotency
+  check asked the PyPI JSON API whether the *version* existed and skipped the whole publish on a
+  hit. xberg 1.2.5 uploaded two macOS wheels before PyPI's project size limit returned 400; the
+  re-run after the limit was raised found the version on the registry, skipped `uv publish` and
+  went green with six wheels and the sdist still missing (xberg GH#1699). The check now reads
+  the registry's file list for the version and skips only when every local dist file is already
+  there; otherwise it names the missing files and publishes, and `--check-url` skips the ones
+  present. A 200 that lists no files falls through to publishing rather than skipping.
+
 ## [1.22.1] - 2026-09-16
 
 ### Fixed
