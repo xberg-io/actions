@@ -24,7 +24,7 @@ runs:
       # field for assets uploaded from ~2025-07 onward and never backfills older ones, so
       # every wasi-sdk release <= 25 fails here with:
       #   Release asset 'wasi-sdk-25.0-x86_64-linux.tar.gz' does not have a valid SHA-256 digest
-      uses: bytecodealliance/setup-wasi-sdk-action@77d09f3df1e8da344d8403cf8631af8977938b4c
+      uses: bytecodealliance/setup-wasi-sdk-action@v1
       with:
         version: ${{ inputs.version }}
         github-token: ${{ github.token }}
