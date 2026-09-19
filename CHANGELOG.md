@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `publish-zig` rendered the Zig fetch block with literal `\n` and `\"` after the package
+  name: the one-line body builder closed its `$'...'` quoting at the first variable, so
+  everything after it was appended verbatim. Visible on every published Zig block.
+
 ## [1.22.1] - 2026-09-16
 
 ### Fixed
