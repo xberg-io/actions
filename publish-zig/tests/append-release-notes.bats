@@ -18,12 +18,18 @@ run_script() {
 		bash "$BATS_TEST_DIRNAME/../scripts/append-release-notes.sh"
 }
 
-@test "should_append_a_rendered_zig_fetch_block_to_the_existing_notes" {
+# ~keep The PATCH must carry tag_name even though only the body changes. PATCH /releases/{id}
+# on a release that is a draft before and after the request resets tag_name to untagged-*
+# when the body omits it (reproduced against the live API; gh's own `release edit` re-sends
+# it for the same reason). The release was resolved by this tag, so re-sending it is a no-op
+# on a healthy release and what keeps a draft attached to its tag (xberg-io/actions#68).
+@test "should_append_the_zig_fetch_block_and_resend_tag_name_so_a_draft_keeps_its_tag" {
 	run_script "Existing notes"
 
 	xberg_assert_status 0
 	xberg_assert_output "Release notes updated with Zig fetch block"
-	xberg_assert_trace api -X PATCH repos/example/project/releases/4242 -f 'body=Existing notes
+	xberg_assert_trace api -X PATCH repos/example/project/releases/4242 -f tag_name=v1.2.3 \
+		-f 'body=Existing notes
 
 <!-- zig-fetch -->
 ## Zig
@@ -56,5 +62,15 @@ Add to your `build.zig.zon`:
 
 	xberg_assert_status 0
 	xberg_assert_output "GH_TOKEN not set; skipping release-notes update"
+	xberg_assert_trace_empty
+}
+
+@test "should_return_error_without_calling_gh_when_tag_is_empty" {
+	run env GH_TOKEN=token GITHUB_REPOSITORY=example/project RELEASE_ID=4242 TAG= \
+		PKG_NAME=demo URL=https://example.invalid/demo.tar.gz HASH=1220abc XBERG_TRACE="$XBERG_TRACE" \
+		bash "$BATS_TEST_DIRNAME/../scripts/append-release-notes.sh"
+
+	xberg_assert_status 1
+	xberg_assert_output "Error: TAG is required"
 	xberg_assert_trace_empty
 }

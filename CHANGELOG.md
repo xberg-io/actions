@@ -6,6 +6,16 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `publish-zig` no longer detaches a draft release from its tag. Its `Append to release notes`
+  step PATCHed `/repos/{owner}/{repo}/releases/{id}` with only `body`, and on a release that
+  is a draft before and after the request GitHub answers that by resetting `tag_name` to a
+  placeholder `untagged-*` -- reproduced against the live API, and the reason gh's own
+  `release edit` re-sends `tag_name` on every edit (cli/cli#5422). Every publish workflow runs
+  this step against the draft `prepare` created, so each release that reached it lost its
+  tag: all twelve orphaned `untagged-*` drafts across crawlberg and liter-llm carry the Zig
+  block. The PATCH now carries the tag the release was resolved by,
+  which is a no-op on a healthy release and the repair on one already detached. The step
+  moved into `scripts/append-release-notes.sh` so Bats can pin the request body. Closes #68.
 - `publish-zig` rendered the Zig fetch block with literal `\n` and `\"` after the package
   name: the one-line body builder closed its `$'...'` quoting at the first variable, so
   everything after it was appended verbatim. Visible on every published Zig block.
