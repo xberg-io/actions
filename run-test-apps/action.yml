@@ -96,14 +96,14 @@ runs:
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: "8"
+        dotnet-version: "10"
 
     - name: Setup Elixir
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'elixir' }}
       uses: erlef/setup-beam@v1
       with:
         elixir-version: "v1.20.4"
-        otp-version: "27"
+        otp-version: "29.1"
 
     - name: Setup Dart
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'dart' }}

@@ -18,8 +18,8 @@ mkdir -p "$objects_dir"
 dest="${objects_dir}/${sha}"
 
 if [[ -f "$dest" ]] && [[ "$(sha256_of "$dest")" == "$sha" ]]; then
-	echo "cached: ${sha}"
-	exit 0
+  echo "cached: ${sha}"
+  exit 0
 fi
 
 url="https://storage.googleapis.com/${bucket}/objects/${sha}"
@@ -28,22 +28,23 @@ trap 'rm -f "$tmp"' EXIT
 
 echo "downloading: ${url}"
 curl --proto '=https' \
-	--tlsv1.2 \
-	--fail \
-	--silent \
-	--show-error \
-	--location \
-	--connect-timeout 10 \
-	--max-time 300 \
-	--retry 3 \
-	--retry-delay 2 \
-	"$url" \
-	--output "$tmp"
+  --tlsv1.2 \
+  --fail \
+  --silent \
+  --show-error \
+  --location \
+  --connect-timeout 10 \
+  --max-time 300 \
+  --retry 3 \
+  --retry-delay 2 \
+  --retry-all-errors \
+  "$url" \
+  --output "$tmp"
 
 actual="$(sha256_of "$tmp")"
 if [[ "$actual" != "$sha" ]]; then
-	echo "::error::checksum mismatch downloading ${url}: expected ${sha}, got ${actual}" >&2
-	exit 1
+  echo "::error::checksum mismatch downloading ${url}: expected ${sha}, got ${actual}" >&2
+  exit 1
 fi
 
 mv "$tmp" "$dest"

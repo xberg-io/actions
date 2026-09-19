@@ -214,7 +214,7 @@ jobs:
 
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27"
+          otp-version: "29.1"
           # ~keep `gleam new` resolves gleam_stdlib at its latest release, which now requires a
           # newer compiler than 1.6 — `gleam build` failed with "Incompatible Gleam version".
           gleam-version: "1.18"
@@ -236,7 +236,7 @@ jobs:
 
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27"
+          otp-version: "29.1"
           elixir-version: "v1.20.4"
 
       - name: Scaffold an Elixir mix project
@@ -256,7 +256,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21.0.12+101.0.LTS"
+          java-version: "25.0.4+101.0.LTS"
 
       - name: Stage a minimal pom.xml
         shell: bash

@@ -26,7 +26,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "v1.20.4"
-          otp-version: "28"
+          otp-version: "29.1"
 
       - name: Stage a tiny Rustler NIF + mix package
         shell: bash

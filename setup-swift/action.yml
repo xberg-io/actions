@@ -35,6 +35,6 @@ runs:
     # points at the commit pinned below. Re-audit when bumping.
     - name: Install Swift via SwiftyLab/setup-swift
       if: steps.existing.outputs.installed != 'true'
-      uses: SwiftyLab/setup-swift@38f54a76b70d989321de9dc7c840618c08cf56e9 # v1.14.0
+      uses: SwiftyLab/setup-swift@v1
       with:
         swift-version: ${{ inputs.swift-version }}

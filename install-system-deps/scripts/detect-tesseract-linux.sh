@@ -2,15 +2,15 @@
 set -euo pipefail
 
 version="$(
-	apt-cache policy tesseract-ocr 2>/dev/null |
-		grep 'Candidate:' |
-		grep -Eo '[0-9]+\.[0-9]+' |
-		head -1 ||
-		true
+  apt-cache policy tesseract-ocr 2>/dev/null |
+    grep 'Candidate:' |
+    grep -Eo '[0-9]+\.[0-9]+' |
+    head -1 ||
+    true
 )"
 
 if [[ -z "${version}" ]]; then
-	version="unknown"
+  version="unknown"
 fi
 
 echo "version=${version}" >>"${GITHUB_OUTPUT}"

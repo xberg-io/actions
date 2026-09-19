@@ -16,6 +16,22 @@ All notable changes to xberg-io/actions are documented in this file.
   the registry's file list for the version and skips only when every local dist file is already
   there; otherwise it names the missing files and publishes, and `--check-url` skips the ones
   present. A 200 that lists no files falls through to publishing rather than skipping.
+- `fetch-test-documents` retries a GCS download on every transport error, not only on the HTTP
+  codes curl's `--retry` covers by default. A reset connection (`curl: (35)`) failed the whole
+  `cargo install (tract, windows-latest)` leg in sceptre on 2026-09-15 after a single attempt.
+- `publish-zig` no longer detaches a draft release from its tag. Its `Append to release notes`
+  step PATCHed `/repos/{owner}/{repo}/releases/{id}` with only `body`, and on a release that
+  is a draft before and after the request GitHub answers that by resetting `tag_name` to a
+  placeholder `untagged-*` -- reproduced against the live API, and the reason gh's own
+  `release edit` re-sends `tag_name` on every edit (cli/cli#5422). Every publish workflow runs
+  this step against the draft `prepare` created, so each release that reached it lost its
+  tag: all twelve orphaned `untagged-*` drafts across crawlberg and liter-llm carry the Zig
+  block. The PATCH now carries the tag the release was resolved by,
+  which is a no-op on a healthy release and the repair on one already detached. The step
+  moved into `scripts/append-release-notes.sh` so Bats can pin the request body. Closes #68.
+- `publish-zig` rendered the Zig fetch block with literal `\n` and `\"` after the package
+  name: the one-line body builder closed its `$'...'` quoting at the first variable, so
+  everything after it was appended verbatim. Visible on every published Zig block.
 
 ## [1.22.1] - 2026-09-16
 
