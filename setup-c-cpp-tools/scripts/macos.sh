@@ -12,24 +12,24 @@ brew_packages=()
 [[ "$INSTALL_SHELLCHECK" == "true" ]] && brew_packages+=(shellcheck)
 
 if ((${#brew_packages[@]} > 0)); then
-	brew install "${brew_packages[@]}" || brew upgrade "${brew_packages[@]}"
+  brew install "${brew_packages[@]}" || brew upgrade "${brew_packages[@]}"
 fi
 
 if [[ "$INSTALL_CLANG_FORMAT" == "true" ]]; then
-	"$(dirname "${BASH_SOURCE[0]}")/clang-format.sh"
+  "$(dirname "${BASH_SOURCE[0]}")/clang-format.sh"
 fi
 
 if [[ "$INSTALL_SHFMT" == "true" ]]; then
-	"$(dirname "${BASH_SOURCE[0]}")/shfmt.sh"
+  "$(dirname "${BASH_SOURCE[0]}")/shfmt.sh"
 fi
 
 if [[ "$INSTALL_CPPCHECK" != "true" ]]; then
-	exit 0
+  exit 0
 fi
 
 installed_version="$(cppcheck --version | awk '{print $2}')"
 if [[ "$installed_version" != "$CPPCHECK_VERSION" ]]; then
-	echo "Warning: brew installed cppcheck $installed_version, expected $CPPCHECK_VERSION" >&2
+  echo "Warning: brew installed cppcheck $installed_version, expected $CPPCHECK_VERSION" >&2
 fi
 
 cppcheck --version

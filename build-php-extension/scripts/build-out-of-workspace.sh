@@ -8,19 +8,19 @@ WORKSPACE_ROOT="$3"
 
 CRATE_DIR="${WORKSPACE_ROOT}/crates/${CRATE_NAME}"
 if [ ! -d "$CRATE_DIR" ]; then
-	CRATE_DIR="${WORKSPACE_ROOT}/packages/${CRATE_NAME}"
+  CRATE_DIR="${WORKSPACE_ROOT}/packages/${CRATE_NAME}"
 fi
 
 if [ ! -d "$CRATE_DIR" ]; then
-	echo "Error: crate directory not found at $CRATE_DIR" >&2
-	exit 1
+  echo "Error: crate directory not found at $CRATE_DIR" >&2
+  exit 1
 fi
 
 BUILD_TEMP=$(mktemp -d)
 trap 'rm -rf "$BUILD_TEMP"' EXIT
 
 strip_internal_paths() {
-	python3 - "$1" <<'PY'
+  python3 - "$1" <<'PY'
 import re, sys
 p = sys.argv[1]
 lines = open(p).read().splitlines(keepends=True)
@@ -49,7 +49,7 @@ PY
 # (`version = { workspace = true }`), and the bare form under a table such as `[lints]`,
 # which has no key to resolve and is dropped.
 deinherit_workspace() {
-	python3 - "$1" "$2" <<'PY'
+  python3 - "$1" "$2" <<'PY'
 import os, re, sys
 
 crate_manifest, workspace_manifest = sys.argv[1], sys.argv[2]
@@ -160,9 +160,9 @@ strip_internal_paths Cargo.toml
 # this manifest and `--locked` would hard-fail. (It was vacuous before anyway, sitting
 # directly after a `generate-lockfile` that had just made the lock match by construction.)
 if [ -f "$WORKSPACE_ROOT/Cargo.lock" ]; then
-	cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
+  cp "$WORKSPACE_ROOT/Cargo.lock" Cargo.lock
 else
-	cargo generate-lockfile >&2
+  cargo generate-lockfile >&2
 fi
 
 cargo update -p time --precise 0.3.47 >&2 || true
@@ -174,9 +174,9 @@ cargo build --release ${CARGO_FEATURES:+--features "$CARGO_FEATURES"} >&2
 mkdir -p "$WORKSPACE_ROOT/target/release"
 
 if [[ "${RUNNER_OS:-}" == "macOS" ]] || [[ "$(uname)" == "Darwin" ]]; then
-	cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.dylib" "$WORKSPACE_ROOT/target/release/"
-	echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.dylib"
+  cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.dylib" "$WORKSPACE_ROOT/target/release/"
+  echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.dylib"
 else
-	cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.so" "$WORKSPACE_ROOT/target/release/"
-	echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.so"
+  cp "$BUILD_TEMP/crate/target/release/lib${LIB_NAME}.so" "$WORKSPACE_ROOT/target/release/"
+  echo "$WORKSPACE_ROOT/target/release/lib${LIB_NAME}.so"
 fi
