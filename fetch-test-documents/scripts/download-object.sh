@@ -37,6 +37,7 @@ curl --proto '=https' \
 	--max-time 300 \
 	--retry 3 \
 	--retry-delay 2 \
+	--retry-all-errors \
 	"$url" \
 	--output "$tmp"
 

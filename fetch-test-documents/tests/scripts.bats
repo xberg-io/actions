@@ -41,6 +41,22 @@ teardown() {
 	[ "$(cat "$cache_dir/objects/$sha")" = "shared" ]
 }
 
+@test "should_retry_curl_on_every_transport_error" {
+	# curl's --retry only covers transient HTTP codes and timeouts; a reset connection (exit 35)
+	# is retried only with --retry-all-errors, which is what a GCS download needs on a flaky runner.
+	sha="cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4"
+	cache_dir="$TEST_ROOT/cache"
+	printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$@" > "$TEST_ROOT/curl-args"' 'exit 35' >"$STUB_BIN/curl"
+	chmod +x "$STUB_BIN/curl"
+
+	run env PATH="$STUB_BIN:$ORIGINAL_PATH" TEST_ROOT="$TEST_ROOT" \
+		bash "$ACTION_DIR/scripts/download-object.sh" "$sha" fixtures "$cache_dir"
+
+	[ "$status" -eq 35 ]
+	grep -qx -- '--retry-all-errors' "$TEST_ROOT/curl-args"
+	grep -qx -- '--retry' "$TEST_ROOT/curl-args"
+}
+
 @test "should_return_checksum_error_when_downloaded_object_is_corrupt" {
 	expected_sha="cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4"
 	cache_dir="$TEST_ROOT/cache"

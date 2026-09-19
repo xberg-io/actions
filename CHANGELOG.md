@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `fetch-test-documents` retries a GCS download on every transport error, not only on the HTTP
+  codes curl's `--retry` covers by default. A reset connection (`curl: (35)`) failed the whole
+  `cargo install (tract, windows-latest)` leg in sceptre on 2026-09-15 after a single attempt.
+
 ## [1.22.1] - 2026-09-16
 
 ### Fixed
