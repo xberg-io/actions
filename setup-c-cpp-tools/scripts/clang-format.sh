@@ -8,11 +8,11 @@ set -euo pipefail
 CLANG_FORMAT_VERSION="${CLANG_FORMAT_VERSION:?clang-format version required}"
 
 if command -v clang-format >/dev/null 2>&1; then
-	installed="$(clang-format --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-	if [[ "$installed" == "$CLANG_FORMAT_VERSION" ]]; then
-		echo "clang-format $CLANG_FORMAT_VERSION already installed."
-		exit 0
-	fi
+  installed="$(clang-format --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  if [[ "$installed" == "$CLANG_FORMAT_VERSION" ]]; then
+    echo "clang-format $CLANG_FORMAT_VERSION already installed."
+    exit 0
+  fi
 fi
 
 venv_dir="${RUNNER_TEMP:-/tmp}/clang-format-venv"
@@ -26,11 +26,11 @@ venv_dir="${RUNNER_TEMP:-/tmp}/clang-format-venv"
 # the venv without ensurepip and fetches its own interpreter if none is suitable. action.yml
 # installs uv, so the fallback only applies when the script is run directly.
 if command -v uv >/dev/null 2>&1; then
-	uv venv --quiet "$venv_dir"
-	uv pip install --quiet --python "$venv_dir/bin/python" "clang-format==${CLANG_FORMAT_VERSION}"
+  uv venv --quiet "$venv_dir"
+  uv pip install --quiet --python "$venv_dir/bin/python" "clang-format==${CLANG_FORMAT_VERSION}"
 else
-	python3 -m venv "$venv_dir"
-	"$venv_dir/bin/pip" install --quiet --disable-pip-version-check "clang-format==${CLANG_FORMAT_VERSION}"
+  python3 -m venv "$venv_dir"
+  "$venv_dir/bin/pip" install --quiet --disable-pip-version-check "clang-format==${CLANG_FORMAT_VERSION}"
 fi
 
 echo "$venv_dir/bin" >>"$GITHUB_PATH"

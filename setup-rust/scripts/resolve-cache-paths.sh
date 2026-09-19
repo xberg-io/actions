@@ -25,21 +25,21 @@ set -euo pipefail
 # per-platform expansion. Substituting $HOME here would emit a POSIX path on
 # Windows runners, where the cache action expects a Windows one.
 paths=(
-	"~/.cargo/registry/index"
-	"~/.cargo/registry/cache"
-	"~/.cargo/git/db"
+  "~/.cargo/registry/index"
+  "~/.cargo/registry/cache"
+  "~/.cargo/git/db"
 )
 
 if [ "${RUNNER_OS:-}" = "macOS" ]; then
-	echo "macOS: excluding target/ from the build cache (see resolve-cache-paths.sh)"
+  echo "macOS: excluding target/ from the build cache (see resolve-cache-paths.sh)"
 else
-	paths+=("target/")
+  paths+=("target/")
 fi
 
 {
-	echo "RUST_CACHE_PATHS<<__XBERG_CACHE_PATHS__"
-	printf '%s\n' "${paths[@]}"
-	echo "__XBERG_CACHE_PATHS__"
+  echo "RUST_CACHE_PATHS<<__XBERG_CACHE_PATHS__"
+  printf '%s\n' "${paths[@]}"
+  echo "__XBERG_CACHE_PATHS__"
 } >>"$GITHUB_ENV"
 
 echo "Rust cache paths:"
