@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Find and validate dist files for PyPI publishing, with version-level idempotency.
+"""Find and validate dist files for PyPI publishing, with file-level idempotency.
 
 Usage (GitHub Actions via env vars):
     INPUT_PACKAGES_DIR=dist INPUT_DRY_RUN=false python3 publish.py
 
-Outputs `version_published=true` to `$GITHUB_OUTPUT` when the discovered
-version is already on the configured index, so the calling action can skip
-the `uv publish` invocation (which would otherwise 400 with "File already
-exists").
+Outputs `version_published=true` to `$GITHUB_OUTPUT` only when every local dist
+file is already on the configured index, so the calling action can skip the
+`uv publish` invocation. A partially published version falls through to
+`uv publish --check-url`, which skips the files that are present.
 """
 
 import json
@@ -69,25 +69,39 @@ def _upload_url_to_json_base(upload_url: str) -> str:
     return re.sub(r"^([a-z]+://)upload\.", r"\1", base)
 
 
-def version_already_published(name: str, version: str, upload_url: str) -> bool:
-    """Return True when the project+version is already on the registry's JSON API.
+def published_filenames(name: str, version: str, upload_url: str) -> set[str] | None:
+    """Return the dist filenames the registry already holds for project+version.
 
-    Best-effort: any network failure or non-200/404 response returns False so we
-    fall through to the publish attempt rather than skipping incorrectly.
+    `None` means the version is not on the registry at all (404). A 200 whose body lists no
+    files yields an empty set, so the caller falls through to publishing.
+
+    ~keep Presence is decided per FILE, never per version. xberg v1.2.5 uploaded 2 of 8 wheels
+    before PyPI's project quota returned 400; the rerun found the version on the registry,
+    skipped the whole publish and reported success having uploaded nothing (xberg GH#1699).
+    `uv publish --check-url` skips the files that are present, so publishing a partial set is
+    safe and the skip is only ever legitimate when nothing at all is left to upload.
+
+    Best-effort: any network failure or non-200/404 response returns `None` so we fall through
+    to the publish attempt rather than skipping incorrectly.
     """
     base = _upload_url_to_json_base(upload_url)
     url = f"{base}/pypi/{name}/{version}/json"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
-            return resp.status == 200 and bool(json.loads(resp.read().decode()))
+            if resp.status != 200:
+                return None
+            body = json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            return False
+            return None
         print(f"Warning: PyPI index check returned HTTP {exc.code} for {url}", file=sys.stderr)
-        return False
+        return None
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         print(f"Warning: PyPI index check failed for {url}: {exc}", file=sys.stderr)
-        return False
+        return None
+    if not isinstance(body, dict):
+        return None
+    return {entry["filename"] for entry in body.get("urls", []) if isinstance(entry, dict) and "filename" in entry}
 
 
 def _emit_output(key: str, value: str) -> None:
@@ -199,11 +213,21 @@ def main() -> None:
         return
 
     name, version = next(iter(versions))
-    if version_already_published(name, version, upload_url):
-        print(f"Skipping publish: {name} {version} is already on the registry")
+    on_registry = published_filenames(name, version, upload_url)
+    local_names = {f.name for f in files}
+    missing = sorted(local_names - (on_registry or set()))
+    if on_registry is not None and not missing:
+        print(f"Skipping publish: every dist file of {name} {version} is already on the registry")
         _emit_output("version_published", "true")
         return
 
+    if on_registry:
+        print(
+            f"{name} {version} is on the registry with {len(on_registry)} file(s); "
+            f"{len(missing)} of {len(local_names)} local file(s) still missing:"
+        )
+        for filename in missing:
+            print(f"  {filename}")
     print(f"Ready to publish {name} {version}")
     _emit_output("version_published", "false")
 

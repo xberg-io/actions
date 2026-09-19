@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -83,6 +84,11 @@ def _urlopen_returning(status: int, payload: bytes = b'{"info": {}}'):
     return _fake
 
 
+def _registry_payload(filenames):
+    """A PyPI `/pypi/<name>/<version>/json` body listing exactly these files."""
+    return json.dumps({"info": {}, "urls": [{"filename": name} for name in filenames]}).encode()
+
+
 def _run_main(monkeypatch, tmp_path, dist_files, expected_version, github_output):
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
@@ -143,12 +149,65 @@ def test_main_fails_on_stale_wheel_even_when_already_on_the_registry(monkeypatch
 
 def test_main_still_skips_an_idempotent_rerun_of_the_release_version(monkeypatch, tmp_path):
     """Re-running a publish for the version being released stays a success-with-skip."""
-    monkeypatch.setattr(mod.urllib.request, "urlopen", _urlopen_returning(200))
+    monkeypatch.setattr(
+        mod.urllib.request,
+        "urlopen",
+        _urlopen_returning(200, _registry_payload(["liter_llm-1.19.0-py3-none-any.whl"])),
+    )
     output = tmp_path / "gh_output"
 
     result = _run_main(monkeypatch, tmp_path, ["liter_llm-1.19.0-py3-none-any.whl"], "1.19.0", output)
 
     assert "version_published=true" in result
+
+
+def test_main_publishes_when_the_registry_holds_only_part_of_the_release(monkeypatch, tmp_path):
+    """The xberg v1.2.5 failure: 2 of 8 wheels uploaded before PyPI's quota returned 400.
+
+    The rerun found the version on the registry and reported success having uploaded nothing.
+    A version-level check cannot tell a partial upload from a complete one; only a file-level
+    comparison can, and `uv publish --check-url` then skips the files already present.
+    """
+    local = [
+        "xberg-1.2.5-cp310-abi3-macosx_11_0_arm64.whl",
+        "xberg-1.2.5-cp310-abi3-macosx_11_0_x86_64.whl",
+        "xberg-1.2.5-cp310-abi3-manylinux_2_28_aarch64.whl",
+        "xberg-1.2.5-cp310-abi3-manylinux_2_28_x86_64.whl",
+        "xberg-1.2.5.tar.gz",
+    ]
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _urlopen_returning(200, _registry_payload(local[:2])))
+    output = tmp_path / "gh_output"
+
+    result = _run_main(monkeypatch, tmp_path, local, "1.2.5", output)
+
+    assert "version_published=false" in result
+    assert "version_published=true" not in result
+
+
+def test_main_publishes_when_the_registry_response_lists_no_files(monkeypatch, tmp_path):
+    """A 200 with no `urls` is not evidence the files are there; fall through to publish."""
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _urlopen_returning(200, b'{"info": {}}'))
+    output = tmp_path / "gh_output"
+
+    result = _run_main(monkeypatch, tmp_path, ["liter_llm-1.19.0-py3-none-any.whl"], "1.19.0", output)
+
+    assert "version_published=false" in result
+
+
+def test_published_filenames_returns_none_when_the_version_is_absent(monkeypatch):
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _urlopen_returning(404))
+
+    assert mod.published_filenames("xberg", "1.2.5", "https://upload.pypi.org/legacy/") is None
+
+
+def test_published_filenames_reads_the_registry_file_list(monkeypatch):
+    payload = _registry_payload(["xberg-1.2.5.tar.gz", "xberg-1.2.5-cp310-abi3-macosx_11_0_arm64.whl"])
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _urlopen_returning(200, payload))
+
+    assert mod.published_filenames("xberg", "1.2.5", "https://upload.pypi.org/legacy/") == {
+        "xberg-1.2.5.tar.gz",
+        "xberg-1.2.5-cp310-abi3-macosx_11_0_arm64.whl",
+    }
 
 
 def test_main_publishes_when_version_matches_and_is_absent(monkeypatch, tmp_path):

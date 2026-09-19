@@ -31,7 +31,7 @@ outputs:
     description: "Whether packages were published"
     value: ${{ steps.publish.outputs.published }}
   skipped:
-    description: "Whether the publish was skipped because the version was already on the registry"
+    description: "Whether the publish was skipped because every dist file was already on the registry"
     value: ${{ steps.validate.outputs.version_published }}
 
 runs:
@@ -66,8 +66,9 @@ runs:
         # https://pypi.org/simple/). Without it, uploading a directory that spans
         # multiple packages (the integrations dist: crewai/txtai/surrealdb/...) fails
         # the moment one package's version already exists from an earlier partial run.
-        # The coarse version-level idempotency check in publish.py bails on multi-package
-        # dirs, so this per-file skip is what makes those re-runs succeed.
+        # publish.py's idempotency check bails on multi-package dirs and only skips when
+        # every local file is already present, so this per-file skip is what lets a
+        # partial upload (xberg 1.2.5: 2 of 8 wheels before a quota 400) finish on re-run.
         base="${UV_PUBLISH_URL%/}"
         base="${base%/legacy}"
         base="$(printf '%s' "$base" | sed -E 's#^([a-z]+://)upload\.#\1#')"
