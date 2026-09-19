@@ -757,30 +757,11 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token }}
         RELEASE_ID: ${{ steps.release.outputs.release-id }}
+        TAG: ${{ steps.tag.outputs.tag }}
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}
         HASH: ${{ steps.resolve.outputs.zig-hash }}
-      run: |
-        set -euo pipefail
-        if [[ -z "${GH_TOKEN:-}" ]]; then
-          echo "GH_TOKEN not set; skipping release-notes update"
-          exit 0
-        fi
-        # Address the release by id, not tag — `gh release view <tag>` and
-        # `gh release edit <tag>` resolve via /releases/tags/<tag>, which
-        # 404s on drafts. The Resolve-release-id step ran first and gave us
-        # an id that works for both draft and published releases.
-        body=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
-          --jq '.body // ""' 2>/dev/null || echo "")
-        # Append a Zig fetch block (idempotent: only append once).
-        if ! echo "$body" | grep -q "<!-- zig-fetch -->"; then
-          new_body="$body"$'\n\n<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .'"$PKG_NAME"' = .{\n        .url = \"'"$URL"'\",\n        .hash = \"'"$HASH"'\",\n    },\n},\n```\n'
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
-            -f body="$new_body" > /dev/null
-          echo "Release notes updated with Zig fetch block"
-        else
-          echo "Zig fetch block already present in release notes"
-        fi
+      run: "${{ github.action_path }}/scripts/append-release-notes.sh"
 
     - name: Dry-run summary
       if: inputs.dry-run == 'true'
