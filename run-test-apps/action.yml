@@ -103,7 +103,7 @@ runs:
       uses: erlef/setup-beam@v1
       with:
         elixir-version: "v1.20.4"
-        otp-version: "29.1"
+        otp-version: "29.1.1"
 
     - name: Setup Dart
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'dart' }}
