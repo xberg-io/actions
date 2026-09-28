@@ -57,6 +57,64 @@ teardown() {
 	grep -qx -- '--retry' "$TEST_ROOT/curl-args"
 }
 
+@test "should_retry_a_curl_that_dies_by_signal_and_succeed_on_a_later_attempt" {
+	# The windows-latest corpus fetch failed because one of 190 parallel Git-for-Windows curl
+	# processes took a SIGSEGV. curl's own --retry runs inside curl and cannot survive that, so
+	# the retry has to be at the process level -- this is the case that turned one crashed child
+	# into an exit-123 job failure.
+	sha="a4d26868017c0ccffe2efe50944ef4211834660cca834c6e9f86dec6a88246fa"
+	cache_dir="$TEST_ROOT/cache"
+	printf '%s\n' '#!/usr/bin/env bash' \
+		'count_file="$TEST_ROOT/curl-count"' \
+		'printf x >>"$count_file"' \
+		'if [ "$(wc -c <"$count_file")" -lt 2 ]; then kill -s SEGV $$; fi' \
+		'printf shared > "${@: -1}"' \
+		>"$STUB_BIN/curl"
+	chmod +x "$STUB_BIN/curl"
+
+	run env PATH="$STUB_BIN:$ORIGINAL_PATH" TEST_ROOT="$TEST_ROOT" \
+		bash "$ACTION_DIR/scripts/download-object.sh" "$sha" fixtures "$cache_dir"
+
+	[ "$status" -eq 0 ]
+	[ "$(wc -c <"$TEST_ROOT/curl-count")" -eq 2 ]
+	[ "$(cat "$cache_dir/objects/$sha")" = "shared" ]
+}
+
+@test "should_stop_retrying_a_crashing_curl_after_three_attempts" {
+	sha="cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4"
+	cache_dir="$TEST_ROOT/cache"
+	printf '%s\n' '#!/usr/bin/env bash' \
+		'printf x >>"$TEST_ROOT/curl-count"' \
+		'kill -s SEGV $$' \
+		>"$STUB_BIN/curl"
+	chmod +x "$STUB_BIN/curl"
+
+	run env PATH="$STUB_BIN:$ORIGINAL_PATH" TEST_ROOT="$TEST_ROOT" \
+		bash "$ACTION_DIR/scripts/download-object.sh" "$sha" fixtures "$cache_dir"
+
+	[ "$status" -eq 139 ]
+	[ "$(wc -c <"$TEST_ROOT/curl-count")" -eq 3 ]
+	[ ! -e "$cache_dir/objects/$sha" ]
+}
+
+@test "should_not_retry_a_curl_that_exits_nonzero_without_dying" {
+	# An ordinary nonzero exit means curl ran and already applied --retry-all-errors itself, so a
+	# second process would only slow a genuinely missing object down. One invocation, not three.
+	sha="cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4"
+	cache_dir="$TEST_ROOT/cache"
+	printf '%s\n' '#!/usr/bin/env bash' \
+		'printf x >>"$TEST_ROOT/curl-count"' \
+		'exit 22' \
+		>"$STUB_BIN/curl"
+	chmod +x "$STUB_BIN/curl"
+
+	run env PATH="$STUB_BIN:$ORIGINAL_PATH" TEST_ROOT="$TEST_ROOT" \
+		bash "$ACTION_DIR/scripts/download-object.sh" "$sha" fixtures "$cache_dir"
+
+	[ "$status" -eq 22 ]
+	[ "$(wc -c <"$TEST_ROOT/curl-count")" -eq 1 ]
+}
+
 @test "should_return_checksum_error_when_downloaded_object_is_corrupt" {
 	expected_sha="cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4"
 	cache_dir="$TEST_ROOT/cache"
