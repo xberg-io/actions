@@ -217,7 +217,7 @@ jobs:
           otp-version: "29.1.1"
           # ~keep `gleam new` resolves gleam_stdlib at its latest release, which now requires a
           # newer compiler than 1.6 — `gleam build` failed with "Incompatible Gleam version".
-          gleam-version: "1.18"
+          gleam-version: "1.19"
 
       - name: Scaffold a Gleam package
         run: gleam new pkg
