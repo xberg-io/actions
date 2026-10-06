@@ -27,7 +27,7 @@ rather than producing an upload artifact. Pair with
 | `package-dir` | no | `packages/zig` | Directory containing `build.zig` and `build.zig.zon`. |
 | `build-profile` | no | `release` | Cargo profile for the FFI crate (`release`, `dev`, or custom). |
 | `setup-zig` | no | `true` | Install Zig via `mlugg/setup-zig`. |
-| `zig-version` | no | `0.16.0` | Zig version, passed to `mlugg/setup-zig`. |
+| `zig-version` | no | `0.17.0` | Zig version, passed to `mlugg/setup-zig`. |
 | `dry-run` | no | `false` | Print the planned commands and exit without building. |
 
 ## Outputs

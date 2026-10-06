@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-10-06
+
+### Changed
+
+- `build-zig-package` and `publish-zig` default `zig-version` moves from `0.16.0` to `0.17.0`; the `build-node-napi` and `publish-actions` tests exercise 0.17.0. `setup-zig`'s `latest` already resolves to the newest tag in ziglang.org's index, which is now 0.17.0. Callers that need the previous toolchain must pass `zig-version: "0.16.0"`.
+
 ## [1.22.2] - 2026-09-19
 
 ### Fixed

@@ -3,7 +3,7 @@ description: Install the Zig toolchain by resolving the official ziglang.org dow
 inputs:
   version:
     description: >
-      Zig version to install. Accepts a tagged release ("0.16.0"), "master" for
+      Zig version to install. Accepts a tagged release ("0.17.0"), "master" for
       the latest nightly, or "latest" to resolve the most recent tagged release
       from ziglang.org/download/index.json.
     required: false

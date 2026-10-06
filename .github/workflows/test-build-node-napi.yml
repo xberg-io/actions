@@ -140,7 +140,7 @@ jobs:
       - name: Setup Zig
         uses: ./setup-zig
         with:
-          version: "0.16.0"
+          version: "0.17.0"
 
       - name: Install musl target and cargo-zigbuild
         shell: bash

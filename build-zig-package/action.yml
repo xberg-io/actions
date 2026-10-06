@@ -28,7 +28,7 @@ inputs:
   zig-version:
     description: "Zig version (passed to mlugg/setup-zig)"
     required: false
-    default: "0.16.0"
+    default: "0.17.0"
   dry-run:
     description: "Print the planned commands and exit without building"
     required: false

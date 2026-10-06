@@ -53,7 +53,7 @@ can copy-paste the URL + hash into their own `build.zig.zon`.
 | `working-directory` | no | `.` | Path to `build.zig.zon`. |
 | `package-name` | no | (parsed from `.name` in `build.zig.zon`) | Package name for the tarball; overrides auto-detection. |
 | `tag` | no | `${GITHUB_REF_NAME}` (when on a tag) | Git tag to publish. |
-| `zig-version` | no | `0.16.0` | Zig version (`mlugg/setup-zig`). |
+| `zig-version` | no | `0.17.0` | Zig version (`mlugg/setup-zig`). |
 | `setup-zig` | no | `true` | Install Zig if not present. |
 | `update-release-notes` | no | `false` | Append fetch snippet to GH release body. Requires `GH_TOKEN`. |
 | `update-existing` | no | `false` | Pass `--clobber` to `gh release upload` (overwrite existing asset). |
