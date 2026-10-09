@@ -69,4 +69,6 @@ jobs:
           [ -n "${{ steps.build.outputs.archive-sha256 }}" ]
           tar -tzf "${{ steps.build.outputs.archive-path }}" | tee /tmp/contents.txt
           grep -q '\.so' /tmp/contents.txt
+          grep -q '\.a' /tmp/contents.txt
           grep -q '\.h' /tmp/contents.txt
+          grep -q 'native-static-libs.txt' /tmp/contents.txt

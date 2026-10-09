@@ -2,10 +2,10 @@
 """Build a Rust FFI crate for one target and package it for the Go cgo binding.
 
 Reads inputs from INPUT_* environment variables (GitHub Actions composite-action
-convention), invokes ``cargo build`` for the requested Rust target triple,
-locates the resulting shared library, copies it together with the C header into
-a staging directory, and emits a deterministic tar.gz archive plus its SHA256
-digest.
+convention), invokes ``cargo rustc`` for the requested Rust target triple,
+locates the resulting shared and static libraries, copies them together with
+the static library's native-link metadata and C header into a staging
+directory, and emits a tar.gz archive plus its SHA256 digest.
 
 Usage (GitHub Actions via env vars):
     INPUT_TARGET=x86_64-unknown-linux-gnu \
@@ -26,6 +26,8 @@ import tarfile
 from pathlib import Path
 
 CHUNK_SIZE = 1 << 20
+NATIVE_STATIC_LIBS_FILENAME = "native-static-libs.txt"
+NATIVE_STATIC_LIBS_MARKER = "native-static-libs:"
 
 
 def library_filename(lib_name: str, target: str) -> str:
@@ -37,29 +39,81 @@ def library_filename(lib_name: str, target: str) -> str:
     return f"lib{lib_name}.so"
 
 
+def static_library_filename(lib_name: str, target: str) -> str:
+    """Return the platform-conventional static library filename for ``target``."""
+    if "windows" in target:
+        return f"{lib_name}.lib"
+    return f"lib{lib_name}.a"
+
+
 def cargo_release_dir(target: str) -> Path:
     """Return ``target/<triple>/release`` for the requested target triple."""
     return Path("target") / target / "release"
 
 
-def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> None:
-    """Invoke cargo build (or cargo zigbuild for linux-gnu with glibc floor).
+def parse_native_static_libs(output: str) -> str | None:
+    """Extract the last non-empty native-static-libs record from rustc output."""
+    found = None
+    for line in output.splitlines():
+        if NATIVE_STATIC_LIBS_MARKER not in line:
+            continue
+        flags = line.split(NATIVE_STATIC_LIBS_MARKER, 1)[1].strip()
+        if flags:
+            found = flags
+    return found
+
+
+def run_cargo_build(crate_name: str, target: str, glibc_version: str = "") -> str | None:
+    """Invoke cargo rustc (or cargo zigbuild for linux-gnu with glibc floor).
 
     For linux-gnu targets with glibc_version set, uses cargo zigbuild with
     --target <triple>.<glibc_version> for glibc floor lowering. Artifacts
-    are still emitted to target/<base-triple>/release.
+    are still emitted to target/<base-triple>/release. Plain cargo builds ask
+    rustc for the native libraries required by the static archive.
     """
     use_zigbuild = "linux-gnu" in target and glibc_version
     glibc_suffixed_target = f"{target}.{glibc_version}" if use_zigbuild else target
 
     if use_zigbuild:
-        cmd = ["cargo", "zigbuild", "--locked", "-p", crate_name, "--release", "--target", glibc_suffixed_target]
+        cmd = [
+            "cargo",
+            "zigbuild",
+            "--locked",
+            "-p",
+            crate_name,
+            "--release",
+            "--lib",
+            "--target",
+            glibc_suffixed_target,
+        ]
         print(f"[build-go-ffi] glibc floor: {glibc_version} (target: {glibc_suffixed_target})")
     else:
-        cmd = ["cargo", "build", "--locked", "-p", crate_name, "--release", "--target", target]
+        cmd = [
+            "cargo",
+            "rustc",
+            "--locked",
+            "-p",
+            crate_name,
+            "--release",
+            "--lib",
+            "--target",
+            target,
+            "--",
+            "--print",
+            "native-static-libs",
+        ]
 
     print(f"[build-go-ffi] Running: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    stdout = result.stdout or ""
+    stderr = result.stderr or ""
+    if stdout:
+        sys.stdout.write(stdout)
+    if stderr:
+        sys.stderr.write(stderr)
+    if use_zigbuild:
+        return None
+    return parse_native_static_libs(f"{stdout}\n{stderr}")
 
 
 def compute_sha256(path: Path) -> str:
@@ -90,12 +144,20 @@ def ensure_input(name: str, value: str) -> str:
     return value
 
 
-def stage_artifacts(library: Path, header: Path, staging_dir: Path) -> None:
-    """Copy the library and header into ``staging_dir`` (created fresh)."""
+def stage_artifacts(
+    library: Path | None,
+    static_library: Path | None,
+    native_static_libs: Path | None,
+    header: Path,
+    staging_dir: Path,
+) -> None:
+    """Copy the available FFI artifacts into ``staging_dir`` (created fresh)."""
     if staging_dir.exists():
         shutil.rmtree(staging_dir)
     staging_dir.mkdir(parents=True)
-    shutil.copy2(library, staging_dir / library.name)
+    for artifact in (library, static_library, native_static_libs):
+        if artifact is not None:
+            shutil.copy2(artifact, staging_dir / artifact.name)
     shutil.copy2(header, staging_dir / header.name)
 
 
@@ -136,15 +198,31 @@ def main() -> None:
         print(f"Error: header not found at {header_path}", file=sys.stderr)
         sys.exit(1)
 
-    run_cargo_build(crate_name, target, glibc_version)
+    native_flags = run_cargo_build(crate_name, target, glibc_version)
 
     release_dir = cargo_release_dir(target)
     library = release_dir / library_filename(lib_name, target)
-    if not library.is_file():
+    static_library = release_dir / static_library_filename(lib_name, target)
+    static_only = "-musl" in target
+    if not library.is_file() and not static_only:
         print(f"Error: built library not found at {library}", file=sys.stderr)
         sys.exit(1)
+    if not static_library.is_file() and static_only:
+        print(f"Error: built static library not found at {static_library}", file=sys.stderr)
+        sys.exit(1)
 
-    stage_artifacts(library, header_path, staging_dir)
+    native_static_libs = release_dir / NATIVE_STATIC_LIBS_FILENAME
+    native_static_libs.unlink(missing_ok=True)
+    if static_library.is_file() and native_flags:
+        native_static_libs.write_text(f"{native_flags}\n", encoding="utf-8")
+
+    stage_artifacts(
+        library if library.is_file() else None,
+        static_library if static_library.is_file() else None,
+        native_static_libs if native_static_libs.is_file() else None,
+        header_path,
+        staging_dir,
+    )
     create_archive(archive_path, staging_dir)
     digest = compute_sha256(archive_path)
 

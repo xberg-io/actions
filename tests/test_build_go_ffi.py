@@ -61,7 +61,9 @@ def recorded_commands(monkeypatch) -> list[list[str]]:
 
     def fake_run(cmd, **_kwargs):
         calls.append(list(cmd))
-        return subprocess.CompletedProcess(list(cmd), 0)
+        return subprocess.CompletedProcess(
+            list(cmd), 0, stdout="", stderr="note: native-static-libs: -lpthread -ldl -lm\n"
+        )
 
     monkeypatch.setattr(go_mod.subprocess, "run", fake_run)
     return calls
@@ -72,18 +74,29 @@ def _install_runner(monkeypatch, calls: list[list[str]], on_build: Callable[[], 
         calls.append(list(cmd))
         if on_build is not None:
             on_build()
-        return subprocess.CompletedProcess(list(cmd), 0)
+        return subprocess.CompletedProcess(
+            list(cmd), 0, stdout="", stderr="note: native-static-libs: -lpthread -ldl -lm\n"
+        )
 
     monkeypatch.setattr(go_mod.subprocess, "run", fake_run)
 
 
-def _emit_library(root: Path, target: str, filename: str, payload: bytes = b"\x7fELF" + b"\x00" * 60):
-    """Return a callback that drops the library cargo would have produced for ``target``."""
+def _emit_libraries(
+    root: Path,
+    target: str,
+    shared_filename: str | None,
+    static_filename: str | None = None,
+    payload: bytes = b"\x7fELF" + b"\x00" * 60,
+):
+    """Return a callback that drops the libraries cargo would have produced for ``target``."""
 
     def build() -> None:
         release_dir = root / "target" / target / "release"
         release_dir.mkdir(parents=True, exist_ok=True)
-        (release_dir / filename).write_bytes(payload)
+        if shared_filename is not None:
+            (release_dir / shared_filename).write_bytes(payload)
+        if static_filename is not None:
+            (release_dir / static_filename).write_bytes(b"!<arch>\n")
 
     return build
 
@@ -98,6 +111,23 @@ def _write_header(root: Path, name: str = "xberg.h") -> Path:
     header.parent.mkdir(parents=True, exist_ok=True)
     header.write_text("#pragma once\n", encoding="utf-8")
     return header
+
+
+def _cargo_rustc_command(crate_name: str, target: str) -> list[str]:
+    return [
+        "cargo",
+        "rustc",
+        "--locked",
+        "-p",
+        crate_name,
+        "--release",
+        "--lib",
+        "--target",
+        target,
+        "--",
+        "--print",
+        "native-static-libs",
+    ]
 
 
 def test_should_use_a_dll_name_when_the_target_is_windows():
@@ -116,23 +146,45 @@ def test_should_use_an_so_name_when_the_target_is_linux_musl():
     assert go_mod.library_filename("xberg_ffi", "aarch64-unknown-linux-musl") == "libxberg_ffi.so"
 
 
+def test_should_use_an_archive_name_for_unix_static_libraries():
+    assert go_mod.static_library_filename("xberg_ffi", LINUX_TARGET) == "libxberg_ffi.a"
+
+
+def test_should_use_a_lib_name_for_windows_static_libraries():
+    assert go_mod.static_library_filename("xberg_ffi", "x86_64-pc-windows-msvc") == "xberg_ffi.lib"
+
+
 def test_should_place_artifacts_under_target_triple_release():
     assert go_mod.cargo_release_dir(LINUX_TARGET) == Path("target") / LINUX_TARGET / "release"
+
+
+def test_should_parse_the_last_native_static_libs_record():
+    output = "noise\nnote: native-static-libs: -lold\nnote: native-static-libs: -lpthread -ldl -lm\n"
+
+    assert go_mod.parse_native_static_libs(output) == "-lpthread -ldl -lm"
 
 
 def test_should_run_plain_cargo_build_when_no_glibc_floor_is_requested(recorded_commands):
     go_mod.run_cargo_build("xberg-ffi", LINUX_TARGET)
 
-    assert recorded_commands == [
-        ["cargo", "build", "--locked", "-p", "xberg-ffi", "--release", "--target", LINUX_TARGET]
-    ]
+    assert recorded_commands == [_cargo_rustc_command("xberg-ffi", LINUX_TARGET)]
 
 
 def test_should_run_zigbuild_with_a_suffixed_triple_when_a_glibc_floor_is_requested(recorded_commands):
     go_mod.run_cargo_build("xberg-ffi", LINUX_TARGET, "2.28")
 
     assert recorded_commands == [
-        ["cargo", "zigbuild", "--locked", "-p", "xberg-ffi", "--release", "--target", f"{LINUX_TARGET}.2.28"]
+        [
+            "cargo",
+            "zigbuild",
+            "--locked",
+            "-p",
+            "xberg-ffi",
+            "--release",
+            "--lib",
+            "--target",
+            f"{LINUX_TARGET}.2.28",
+        ]
     ]
 
 
@@ -143,13 +195,17 @@ def test_should_ignore_the_glibc_floor_when_the_target_is_not_linux_gnu(recorded
     assert recorded_commands == [
         [
             "cargo",
-            "build",
+            "rustc",
             "--locked",
             "-p",
             "xberg-ffi",
             "--release",
+            "--lib",
             "--target",
             "aarch64-unknown-linux-musl",
+            "--",
+            "--print",
+            "native-static-libs",
         ]
     ]
 
@@ -199,16 +255,27 @@ def test_should_exit_one_when_a_required_input_is_empty(capsys):
     assert capsys.readouterr().err == "Error: INPUT_TARGET is required\n"
 
 
-def test_should_copy_the_library_and_header_into_the_staging_directory(tmp_path):
+def test_should_copy_the_libraries_link_metadata_and_header_into_the_staging_directory(tmp_path):
     library = tmp_path / "libxberg_ffi.so"
     library.write_bytes(b"\x7fELF")
+    static_library = tmp_path / "libxberg_ffi.a"
+    static_library.write_bytes(b"!<arch>\n")
+    native_static_libs = tmp_path / "native-static-libs.txt"
+    native_static_libs.write_text("-lpthread -ldl -lm\n", encoding="utf-8")
     header = _write_header(tmp_path)
     staging = tmp_path / "stage"
 
-    go_mod.stage_artifacts(library, header, staging)
+    go_mod.stage_artifacts(library, static_library, native_static_libs, header, staging)
 
-    assert sorted(p.name for p in staging.iterdir()) == ["libxberg_ffi.so", "xberg.h"]
+    assert sorted(p.name for p in staging.iterdir()) == [
+        "libxberg_ffi.a",
+        "libxberg_ffi.so",
+        "native-static-libs.txt",
+        "xberg.h",
+    ]
     assert (staging / "libxberg_ffi.so").read_bytes() == b"\x7fELF"
+    assert (staging / "libxberg_ffi.a").read_bytes() == b"!<arch>\n"
+    assert (staging / "native-static-libs.txt").read_text(encoding="utf-8") == "-lpthread -ldl -lm\n"
     assert (staging / "xberg.h").read_text(encoding="utf-8") == "#pragma once\n"
 
 
@@ -221,7 +288,7 @@ def test_should_discard_stale_contents_when_the_staging_directory_already_exists
     staging.mkdir()
     (staging / "libstale.so").write_bytes(b"stale")
 
-    go_mod.stage_artifacts(library, header, staging)
+    go_mod.stage_artifacts(library, None, None, header, staging)
 
     assert sorted(p.name for p in staging.iterdir()) == ["libxberg_ffi.so", "xberg.h"]
 
@@ -309,15 +376,19 @@ def test_should_exit_one_when_cargo_produced_no_library(isolated_env, output_sin
 
     assert exc_info.value.code == 1
     expected = Path("target") / LINUX_TARGET / "release" / "libxberg_ffi.so"
-    assert capsys.readouterr().err == f"Error: built library not found at {expected}\n"
+    assert capsys.readouterr().err.endswith(f"Error: built library not found at {expected}\n")
     assert len(calls) == 1
     assert output_sink.read_text(encoding="utf-8") == ""
 
 
-def test_should_package_the_library_and_header_and_emit_a_matching_digest(isolated_env, output_sink, monkeypatch):
+def test_should_package_shared_and_static_libraries_and_emit_a_matching_digest(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so", "libxberg_ffi.a"),
+    )
     _set_inputs(monkeypatch, target=LINUX_TARGET, header_path="include/xberg.h")
 
     go_mod.main()
@@ -329,7 +400,9 @@ def test_should_package_the_library_and_header_and_emit_a_matching_digest(isolat
     with tarfile.open(archive) as tar:
         assert sorted(tar.getnames()) == [
             f"xberg_ffi-{LINUX_TARGET}",
+            f"xberg_ffi-{LINUX_TARGET}/libxberg_ffi.a",
             f"xberg_ffi-{LINUX_TARGET}/libxberg_ffi.so",
+            f"xberg_ffi-{LINUX_TARGET}/native-static-libs.txt",
             f"xberg_ffi-{LINUX_TARGET}/xberg.h",
         ]
 
@@ -339,19 +412,19 @@ def test_should_derive_the_library_name_from_the_crate_name_when_lib_name_is_uns
 ):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, LINUX_TARGET, "libcrawlberg_ffi.so"))
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libcrawlberg_ffi.so"))
     _set_inputs(monkeypatch, target=LINUX_TARGET, crate_name="crawlberg-ffi", header_path="include/xberg.h")
 
     go_mod.main()
 
-    assert calls == [["cargo", "build", "--locked", "-p", "crawlberg-ffi", "--release", "--target", LINUX_TARGET]]
+    assert calls == [_cargo_rustc_command("crawlberg-ffi", LINUX_TARGET)]
     assert (isolated_env / "dist" / "go-ffi" / f"crawlberg_ffi-{LINUX_TARGET}.tar.gz").is_file()
 
 
 def test_should_prefer_an_explicit_lib_name_over_the_crate_name(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, LINUX_TARGET, "libxberg.so"))
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg.so"))
     _set_inputs(
         monkeypatch,
         target=LINUX_TARGET,
@@ -369,7 +442,7 @@ def test_should_prefer_an_explicit_lib_name_over_the_crate_name(isolated_env, ou
 def test_should_honour_an_explicit_archive_name(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
     _set_inputs(
         monkeypatch,
         target=LINUX_TARGET,
@@ -390,7 +463,7 @@ def test_should_package_a_dylib_when_the_target_is_apple(isolated_env, output_si
     apple_target = "aarch64-apple-darwin"
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, apple_target, "libxberg_ffi.dylib"))
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, apple_target, "libxberg_ffi.dylib"))
     _set_inputs(monkeypatch, target=apple_target, header_path="include/xberg.h")
 
     go_mod.main()
@@ -399,19 +472,45 @@ def test_should_package_a_dylib_when_the_target_is_apple(isolated_env, output_si
         assert f"xberg_ffi-{apple_target}/libxberg_ffi.dylib" in tar.getnames()
 
 
+def test_should_package_a_static_only_musl_archive(isolated_env, output_sink, monkeypatch):
+    musl_target = "x86_64-unknown-linux-musl"
+    _write_header(isolated_env)
+    calls: list[list[str]] = []
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, musl_target, None, "libxberg_ffi.a"))
+    _set_inputs(monkeypatch, target=musl_target, header_path="include/xberg.h")
+
+    go_mod.main()
+
+    with tarfile.open(isolated_env / "dist" / "go-ffi" / f"xberg_ffi-{musl_target}.tar.gz") as tar:
+        names = tar.getnames()
+        assert f"xberg_ffi-{musl_target}/libxberg_ffi.a" in names
+        assert f"xberg_ffi-{musl_target}/libxberg_ffi.so" not in names
+        assert f"xberg_ffi-{musl_target}/native-static-libs.txt" in names
+
+
 def test_should_use_zigbuild_for_a_glibc_floor_but_read_the_unsuffixed_release_dir(
     isolated_env, output_sink, monkeypatch
 ):
     """zigbuild takes triple.glibc but still emits into target/<base-triple>/release."""
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_library(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
+    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
     _set_inputs(monkeypatch, target=LINUX_TARGET, header_path="include/xberg.h", glibc_version="2.28")
 
     go_mod.main()
 
     assert calls == [
-        ["cargo", "zigbuild", "--locked", "-p", "xberg-ffi", "--release", "--target", f"{LINUX_TARGET}.2.28"]
+        [
+            "cargo",
+            "zigbuild",
+            "--locked",
+            "-p",
+            "xberg-ffi",
+            "--release",
+            "--lib",
+            "--target",
+            f"{LINUX_TARGET}.2.28",
+        ]
     ]
     assert (isolated_env / "dist" / "go-ffi" / f"xberg_ffi-{LINUX_TARGET}.tar.gz").is_file()
 

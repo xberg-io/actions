@@ -1,8 +1,8 @@
 name: Build Go FFI Library
 description: >
   Build a Rust FFI crate for one Rust target and bundle the resulting
-  shared library together with its C header into a tar.gz suitable for
-  consumption by the Go cgo binding.
+  shared and static libraries, native static-link metadata, and C header
+  into a tar.gz suitable for consumption by the Go cgo binding.
 
 inputs:
   target:

@@ -1,8 +1,9 @@
 # build-go-ffi
 
 Build a Rust FFI crate for one Rust target triple and bundle the resulting
-shared library together with the C header into a tar.gz that the Go cgo
-binding can unpack at install time.
+shared and static libraries, the static archive's native linker requirements,
+and the C header into a tar.gz that the Go cgo binding can unpack at install
+time.
 
 The action expects the caller to have already checked out the repository and
 run `xberg-io/actions/setup-rust@v1` (with the right target installed).
@@ -16,6 +17,8 @@ Archives produced by this action have a standardized layout for consumption by
 1. Archive filename: `{lib-name}-{rust-target}.tar.gz` (e.g., `html_to_markdown_ffi-aarch64-apple-darwin.tar.gz`)
 2. Archive expands to: `{lib-name}-{rust-target}/` containing:
    - `lib{lib-name}.{ext}` (Unix: `.dylib`/`.so`, Windows: `.dll`)
+   - `lib{lib-name}.a` (Unix) or `{lib-name}.lib` (Windows), when the crate emits a `staticlib`
+   - `native-static-libs.txt`, when rustc reports native dependencies for the static archive
    - `{lib-name}.h` (C header)
 3. Go `go generate` scripts should:
    - Download the archive from a GitHub Release for the current `GOOS`/`GOARCH`
@@ -89,11 +92,15 @@ a GitHub Release for the alef Go backend to download during `go generate`.
 
 ## Notes
 
-- The action invokes `cargo build -p <crate> --release --target <triple>`. It
-  does not pass any features — set `CARGO_*` env or rely on the crate's default
-  features.
+- The action invokes `cargo rustc -p <crate> --release --lib --target <triple>
+  -- --print native-static-libs`. It does not pass any features — set `CARGO_*`
+  env or rely on the crate's default features.
+- GNU builds using the optional `glibc-version` input run through
+  `cargo zigbuild`; cargo-zigbuild cannot forward `rustc --print`, so those
+  archives include the static library without `native-static-libs.txt`.
 - The library extension is selected from the target triple: `.dll` for Windows,
   `.dylib` for Apple, `.so` otherwise. The library name is `lib{lib-name}` for
   Unix-like targets and `{lib-name}` for Windows.
 - The archive expands to a single top-level directory `{lib-name}-{target}/`
-  containing the library and the header.
+  containing the available shared and static libraries, native-link metadata,
+  and the header. A musl target may be static-only.

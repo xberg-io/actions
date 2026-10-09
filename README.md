@@ -40,7 +40,7 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 | `build-php-extension` | PHP extensions |
 | `build-wasm-package` | WebAssembly packages |
 | `build-rust-cli` | Rust CLI binaries |
-| `build-go-ffi` | Build the FFI crate for one Rust target and bundle lib + header into a tar.gz for Go cgo |
+| `build-go-ffi` | Build the FFI crate for one Rust target and bundle shared/static libs, native-link metadata, and the header for Go cgo |
 | `build-java-natives` | Build the FFI crate for one Rust target, stage at Panama FFM `native/{classifier}/` layout |
 | `build-csharp-natives` | Build the FFI crate for one Rust target, stage at NuGet `runtimes/{rid}/native/` layout |
 | `build-elixir-natives` | Cross-compile a Rustler NIF for one Rust target, package as RustlerPrecompiled tar.gz |
