@@ -1,5 +1,11 @@
 ---
-priority: critical
+type: Decision
+title: Test Coverage By Language
+x-ai-rulez:
+  kind: rule
+  id: test-coverage-by-language
+  metadata:
+    priority: critical
 ---
 
 Every executable script in this repository carries tests in the framework for its language. There is no untested script and no untested language.
