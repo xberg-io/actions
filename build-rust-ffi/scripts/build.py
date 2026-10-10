@@ -14,6 +14,8 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 _TAIL_LINES = 50
+_NATIVE_STATIC_LIBS_FILENAME = "native-static-libs.txt"
+_NATIVE_STATIC_LIBS_MARKER = "native-static-libs:"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -30,6 +32,7 @@ class BuildConfig:
     disable_sccache: bool
     cargo_target_dir: str
     glibc_version: str
+    require_static: bool = False
 
     @classmethod
     def from_env(cls) -> "BuildConfig":
@@ -46,6 +49,7 @@ class BuildConfig:
             disable_sccache=env.get("DISABLE_SCCACHE", "true").lower() == "true",
             cargo_target_dir=env.get("CARGO_TARGET_DIR", ""),
             glibc_version=env.get("GLIBC_VERSION", ""),
+            require_static=env.get("REQUIRE_STATIC", "false").lower() == "true",
         )
 
 
@@ -127,31 +131,69 @@ def build_cargo_args(
     return args
 
 
-def find_library(target_dir: Path, crate_name: str) -> Path | None:
-    """Search for the compiled library artifact in target_dir.
-
-    Returns the Path of the first match against the canonical naming patterns,
-    or falls back to any .so/.dylib/.dll/.a file present. Returns None if nothing
-    is found.
-    """
+def find_shared_library(target_dir: Path, crate_name: str) -> Path | None:
+    """Search for the compiled shared-library artifact in ``target_dir``."""
     lib_stem = crate_name.replace("-", "_")
     candidates = [
         target_dir / f"lib{lib_stem}.so",
         target_dir / f"lib{lib_stem}.dylib",
         target_dir / f"{lib_stem}.dll",
-        target_dir / f"lib{lib_stem}.a",
+        target_dir / f"lib{lib_stem}.dll",
     ]
 
     for candidate in candidates:
         if candidate.is_file():
             return candidate
 
-    for extension in [".so", ".dylib", ".dll", ".a"]:
-        matches = list(target_dir.glob(f"*{extension}"))
+    for extension in [".so", ".dylib", ".dll"]:
+        matches = [path for path in target_dir.glob(f"*{extension}") if not path.name.endswith(".dll.lib")]
         if matches:
             return matches[0]
 
     return None
+
+
+def find_static_library(target_dir: Path, crate_name: str) -> Path | None:
+    """Search for the compiled static-library artifact in ``target_dir``."""
+    lib_stem = crate_name.replace("-", "_")
+    candidates = [
+        target_dir / f"lib{lib_stem}.a",
+        target_dir / f"{lib_stem}.lib",
+    ]
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+
+    return None
+
+
+def find_library(target_dir: Path, crate_name: str) -> Path | None:
+    """Search for the preferred backward-compatible library artifact.
+
+    Shared libraries remain preferred so the long-standing ``library-path``
+    output retains its meaning. Static-only targets fall back to the archive.
+    """
+    return find_shared_library(target_dir, crate_name) or find_static_library(target_dir, crate_name)
+
+
+def parse_native_static_libs(output: str) -> str | None:
+    """Extract the final native-static-libs record from cargo/rustc output."""
+    found = None
+    for line in output.splitlines():
+        if _NATIVE_STATIC_LIBS_MARKER not in line:
+            continue
+        flags = line.split(_NATIVE_STATIC_LIBS_MARKER, 1)[1].strip()
+        if flags:
+            found = flags
+    return found
+
+
+def write_native_static_libs(target_dir: Path, flags: str) -> Path:
+    """Write the native libraries needed when linking the static archive."""
+    path = target_dir / _NATIVE_STATIC_LIBS_FILENAME
+    path.write_text(f"{flags}\n", encoding="utf-8")
+    return path
 
 
 def diagnose_build_failure(log_content: str) -> None:
@@ -208,7 +250,11 @@ def _build_env(config: BuildConfig) -> dict[str, str]:
     return env
 
 
-def assemble_cargo_cmd(cargo_args: list[str], use_zigbuild: bool) -> list[str]:
+def assemble_cargo_cmd(
+    cargo_args: list[str],
+    use_zigbuild: bool,
+    capture_static_metadata: bool = False,
+) -> list[str]:
     """Build the argv list for the cargo invocation.
 
     `cargo zigbuild` REPLACES the `build` subcommand, so the leading "build"
@@ -217,10 +263,25 @@ def assemble_cargo_cmd(cargo_args: list[str], use_zigbuild: bool) -> list[str]:
     """
     if use_zigbuild:
         return ["cargo", "zigbuild", *cargo_args[1:]]
+    if capture_static_metadata:
+        return [
+            "cargo",
+            "rustc",
+            *cargo_args[1:],
+            "--lib",
+            "--",
+            "--print",
+            "native-static-libs",
+        ]
     return ["cargo", *cargo_args]
 
 
-def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str], use_zigbuild: bool = False) -> None:
+def _run_cargo_build(
+    cargo_args: list[str],
+    build_env: dict[str, str],
+    use_zigbuild: bool = False,
+    capture_static_metadata: bool = False,
+) -> str:
     """Run cargo (or cargo zigbuild) with the given args, streaming output to stdout.
 
     Raises SystemExit(1) on build failure.
@@ -231,7 +292,7 @@ def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str], use_zigbu
         log_path = Path(log_file.name)
 
     try:
-        cmd = assemble_cargo_cmd(cargo_args, use_zigbuild)
+        cmd = assemble_cargo_cmd(cargo_args, use_zigbuild, capture_static_metadata)
 
         with subprocess.Popen(
             cmd,
@@ -259,6 +320,8 @@ def _run_cargo_build(cargo_args: list[str], build_env: dict[str, str], use_zigbu
         print()
         diagnose_build_failure(log_content)
         raise SystemExit(1)
+
+    return log_content
 
 
 def _full_target_dir(config: BuildConfig) -> Path:
@@ -305,17 +368,28 @@ def _report_library(found_lib: Path | None, target_dir: Path) -> None:
         print(f"No library files found in {target_dir}")
 
 
-def _write_github_output(found_lib: Path | None, target_dir: Path) -> None:
-    """Write library-path and target-dir to GITHUB_OUTPUT (or stdout if unset)."""
-    lib_str = str(found_lib) if found_lib is not None else ""
+def _write_github_output(
+    shared_library: Path | None,
+    static_library: Path | None,
+    native_static_libs: Path | None,
+    target_dir: Path,
+) -> None:
+    """Write all artifact paths to GITHUB_OUTPUT (or stdout if unset)."""
+    preferred_library = shared_library or static_library
+    outputs = {
+        "library-path": str(preferred_library) if preferred_library is not None else "",
+        "shared-library-path": str(shared_library) if shared_library is not None else "",
+        "static-library-path": str(static_library) if static_library is not None else "",
+        "native-static-libs-path": str(native_static_libs) if native_static_libs is not None else "",
+        "target-dir": str(target_dir),
+    }
     github_output = os.environ.get("GITHUB_OUTPUT", "")
     if github_output:
         with Path(github_output).open("a") as output_file:
-            output_file.write(f"library-path={lib_str}\n")
-            output_file.write(f"target-dir={target_dir}\n")
+            output_file.writelines(f"{name}={value}\n" for name, value in outputs.items())
     else:
-        print(f"library-path={lib_str}")
-        print(f"target-dir={target_dir}")
+        for name, value in outputs.items():
+            print(f"{name}={value}")
 
 
 def main() -> None:
@@ -350,24 +424,49 @@ def main() -> None:
     if use_zigbuild:
         print(f"[build-rust-ffi] glibc floor: {config.glibc_version}")
 
-    print(f"Build command: {' '.join(assemble_cargo_cmd(cargo_args, use_zigbuild))}")
+    capture_static_metadata = config.require_static and not use_zigbuild
+    target_dir = _full_target_dir(config)
+    (target_dir / _NATIVE_STATIC_LIBS_FILENAME).unlink(missing_ok=True)
+    print(f"Build command: {' '.join(assemble_cargo_cmd(cargo_args, use_zigbuild, capture_static_metadata))}")
     print()
     print("=== Build Environment ===")
     _print_build_environment(config)
     print()
 
-    _run_cargo_build(cargo_args, _build_env(config), use_zigbuild=use_zigbuild)
-
-    target_dir = _full_target_dir(config)
+    build_log = _run_cargo_build(
+        cargo_args,
+        _build_env(config),
+        use_zigbuild=use_zigbuild,
+        capture_static_metadata=capture_static_metadata,
+    )
 
     print()
     print("=== Build Successful ===")
     print(f"Target directory: {target_dir}")
     print()
 
-    found_lib = find_library(target_dir, config.crate_name)
-    _report_library(found_lib, target_dir)
-    _write_github_output(found_lib, target_dir)
+    shared_library = find_shared_library(target_dir, config.crate_name)
+    static_library = find_static_library(target_dir, config.crate_name)
+    if config.require_static and static_library is None:
+        print(f"Error: required static library not found in {target_dir}", file=sys.stderr)
+        raise SystemExit(1)
+
+    native_static_libs = None
+    if capture_static_metadata:
+        native_flags = parse_native_static_libs(build_log)
+        if native_flags is None:
+            print("Error: rustc did not report native-static-libs", file=sys.stderr)
+            raise SystemExit(1)
+        native_static_libs = write_native_static_libs(target_dir, native_flags)
+
+    _report_library(shared_library or static_library, target_dir)
+    if static_library is not None:
+        print(f"Static library: {static_library}")
+    if native_static_libs is not None:
+        print(f"Native static-link metadata: {native_static_libs}")
+    elif config.require_static and use_zigbuild:
+        print("Native static-link metadata unavailable: cargo-zigbuild cannot forward rustc --print")
+    _write_github_output(shared_library, static_library, native_static_libs, target_dir)
 
     print()
     print("=== FFI Build Complete ===")

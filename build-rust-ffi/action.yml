@@ -1,5 +1,5 @@
 name: Build Rust FFI Library
-description: Build a Rust FFI crate with cargo, with proper flags, error diagnostics, and artifact verification
+description: Build shared and static Rust FFI libraries with native static-link metadata and artifact verification
 
 inputs:
   crate-name:
@@ -37,6 +37,10 @@ inputs:
     description: "glibc version for gnu targets (e.g. '2.28') to enable zigbuild; empty = native cargo build"
     required: false
     default: ""
+  require-static:
+    description: "Require a static archive and capture its native linker requirements when supported"
+    required: false
+    default: "false"
 
 outputs:
   library-path:
@@ -45,6 +49,15 @@ outputs:
   target-dir:
     description: "Cargo target directory with profile"
     value: ${{ steps.build.outputs.target-dir }}
+  shared-library-path:
+    description: "Path to the built shared library, or empty for static-only targets"
+    value: ${{ steps.build.outputs.shared-library-path }}
+  static-library-path:
+    description: "Path to the built static library, or empty when not produced"
+    value: ${{ steps.build.outputs.static-library-path }}
+  native-static-libs-path:
+    description: "Path to native-static-libs.txt, or empty when metadata capture is unavailable"
+    value: ${{ steps.build.outputs.native-static-libs-path }}
 
 runs:
   using: composite
@@ -70,6 +83,7 @@ runs:
         MANIFEST_PATH: ${{ inputs.manifest-path }}
         DISABLE_SCCACHE: ${{ inputs.disable-sccache }}
         GLIBC_VERSION: ${{ inputs.glibc-version }}
+        REQUIRE_STATIC: ${{ inputs.require-static }}
       run: |
         python3 "$GITHUB_ACTION_PATH/scripts/build.py"
 

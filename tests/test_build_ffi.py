@@ -149,6 +149,26 @@ def test_assemble_cargo_cmd_plain_build():
     assert cmd == ["cargo", "build", "--locked", "--release"]
 
 
+def test_assemble_cargo_cmd_static_metadata_build():
+    cmd = build_mod.assemble_cargo_cmd(
+        ["build", "--locked", "--package", "mylib", "--release"],
+        use_zigbuild=False,
+        capture_static_metadata=True,
+    )
+    assert cmd == [
+        "cargo",
+        "rustc",
+        "--locked",
+        "--package",
+        "mylib",
+        "--release",
+        "--lib",
+        "--",
+        "--print",
+        "native-static-libs",
+    ]
+
+
 def test_assemble_cargo_cmd_zigbuild_drops_build_subcommand():
     cmd = build_mod.assemble_cargo_cmd(
         ["build", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"],
@@ -156,6 +176,19 @@ def test_assemble_cargo_cmd_zigbuild_drops_build_subcommand():
     )
     assert cmd == ["cargo", "zigbuild", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu.2.28"]
     assert "build" not in cmd
+
+
+def test_parse_native_static_libs_uses_last_record():
+    output = "note: native-static-libs: -lold\nwarning: x\nnative-static-libs: -lpthread -ldl -lm\n"
+    assert build_mod.parse_native_static_libs(output) == "-lpthread -ldl -lm"
+
+
+def test_parse_native_static_libs_returns_none_without_record():
+    assert build_mod.parse_native_static_libs("Compiling mylib") is None
+
+
+def test_parse_native_static_libs_rejects_empty_record():
+    assert build_mod.parse_native_static_libs("native-static-libs:   ") is None
 
 
 def test_validate_inputs_with_manifest(tmp_path):
@@ -220,6 +253,24 @@ def test_find_library_hyphens_to_underscores(tmp_path):
     (tmp_path / "libmy_crate.so").write_bytes(b"\x7fELF")
     result = build_mod.find_library(tmp_path, "my-crate")
     assert result == tmp_path / "libmy_crate.so"
+
+
+def test_find_static_library_unix(tmp_path):
+    expected = tmp_path / "libmy_crate.a"
+    expected.write_bytes(b"!<arch>\n")
+    assert build_mod.find_static_library(tmp_path, "my-crate") == expected
+
+
+def test_find_static_library_windows(tmp_path):
+    expected = tmp_path / "my_crate.lib"
+    expected.write_bytes(b"archive")
+    assert build_mod.find_static_library(tmp_path, "my-crate") == expected
+
+
+def test_write_native_static_libs(tmp_path):
+    result = build_mod.write_native_static_libs(tmp_path, "-lpthread -ldl")
+    assert result == tmp_path / "native-static-libs.txt"
+    assert result.read_text() == "-lpthread -ldl\n"
 
 
 def test_diagnose_build_failure_link_errors(capsys):
@@ -352,10 +403,18 @@ def test_write_github_output(tmp_path, monkeypatch):
     lib_path.write_bytes(b"\x7fELF")
     target_dir = tmp_path / "target" / "release"
 
-    build_mod._write_github_output(lib_path, target_dir)
+    static_path = tmp_path / "libmylib.a"
+    static_path.write_bytes(b"!<arch>\n")
+    metadata_path = tmp_path / "native-static-libs.txt"
+    metadata_path.write_text("-lpthread\n")
+
+    build_mod._write_github_output(lib_path, static_path, metadata_path, target_dir)
 
     content = output_file.read_text()
     assert f"library-path={lib_path}" in content
+    assert f"shared-library-path={lib_path}" in content
+    assert f"static-library-path={static_path}" in content
+    assert f"native-static-libs-path={metadata_path}" in content
     assert f"target-dir={target_dir}" in content
 
 
@@ -365,10 +424,13 @@ def test_write_github_output_no_lib(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
 
     target_dir = tmp_path / "target" / "release"
-    build_mod._write_github_output(None, target_dir)
+    build_mod._write_github_output(None, None, None, target_dir)
 
     content = output_file.read_text()
     assert "library-path=\n" in content
+    assert "shared-library-path=\n" in content
+    assert "static-library-path=\n" in content
+    assert "native-static-libs-path=\n" in content
     assert f"target-dir={target_dir}" in content
 
 
@@ -382,6 +444,7 @@ def test_build_config_from_env(monkeypatch):
     monkeypatch.setenv("MANIFEST_PATH", "/some/Cargo.toml")
     monkeypatch.setenv("DISABLE_SCCACHE", "false")
     monkeypatch.setenv("CARGO_TARGET_DIR", "/tmp/cargo")
+    monkeypatch.setenv("REQUIRE_STATIC", "true")
     config = build_mod.BuildConfig.from_env()
 
     assert config.crate_name == "my-ffi"
@@ -393,3 +456,4 @@ def test_build_config_from_env(monkeypatch):
     assert config.manifest_path == "/some/Cargo.toml"
     assert config.disable_sccache is False
     assert config.cargo_target_dir == "/tmp/cargo"
+    assert config.require_static is True

@@ -199,6 +199,7 @@ def main() -> None:
         sys.exit(1)
 
     native_flags = run_cargo_build(crate_name, target, glibc_version)
+    use_zigbuild = bool("linux-gnu" in target and glibc_version)
 
     release_dir = cargo_release_dir(target)
     library = release_dir / library_filename(lib_name, target)
@@ -207,13 +208,16 @@ def main() -> None:
     if not library.is_file() and not static_only:
         print(f"Error: built library not found at {library}", file=sys.stderr)
         sys.exit(1)
-    if not static_library.is_file() and static_only:
+    if not static_library.is_file():
         print(f"Error: built static library not found at {static_library}", file=sys.stderr)
         sys.exit(1)
 
     native_static_libs = release_dir / NATIVE_STATIC_LIBS_FILENAME
     native_static_libs.unlink(missing_ok=True)
-    if static_library.is_file() and native_flags:
+    if not use_zigbuild and not native_flags:
+        print("Error: rustc did not report native-static-libs", file=sys.stderr)
+        sys.exit(1)
+    if native_flags:
         native_static_libs.write_text(f"{native_flags}\n", encoding="utf-8")
 
     stage_artifacts(

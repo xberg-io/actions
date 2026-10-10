@@ -37,7 +37,7 @@ jobs:
           publish = false
 
           [lib]
-          crate-type = ["cdylib", "rlib"]
+          crate-type = ["cdylib", "staticlib", "rlib"]
           TOML
           cat >fixture/src/lib.rs <<'RS'
           #[unsafe(no_mangle)]
@@ -52,6 +52,7 @@ jobs:
           crate-name: fixture-ffi
           manifest-path: fixture/Cargo.toml
           verbose: "false"
+          require-static: "true"
 
       - name: Verify shared library was produced
         shell: bash
@@ -61,6 +62,13 @@ jobs:
           # macOS `file` outputs `Mach-O 64-bit dynamically linked shared library`,
           # Linux outputs `ELF 64-bit LSB shared object`, Windows outputs PE32+ DLL.
           file "${{ steps.build.outputs.library-path }}" | grep -Ei 'shared object|shared library|dynamic library|dll|dylib'
+
+      - name: Verify static library and native-link metadata were produced
+        shell: bash
+        run: |
+          test -f "${{ steps.build.outputs.static-library-path }}"
+          test -f "${{ steps.build.outputs.native-static-libs-path }}"
+          test -s "${{ steps.build.outputs.native-static-libs-path }}"
 
       - name: Verify macOS dylib install_name uses @rpath
         if: runner.os == 'macOS'

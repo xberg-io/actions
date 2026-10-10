@@ -4,6 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `build-rust-ffi` can require the FFI crate's static archive, exposes separate shared/static
+  artifact outputs, and records Rust's `native-static-libs` linker requirements for downstream C
+  and cgo consumers. Existing callers retain the original `library-path` and `target-dir` outputs;
+  the stricter static requirement is opt-in.
+- `build-go-ffi` now treats the static archive and, for plain Cargo builds, native-link metadata as
+  required outputs instead of silently publishing a shared-only archive.
+
 ### Changed
 
 - GitHub Action dependencies are refreshed with `gau`; `astral-sh/setup-uv` moves to `v10.3.0`.

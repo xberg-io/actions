@@ -31,7 +31,7 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 
 | Action | Description |
 |--------|-------------|
-| `build-rust-ffi` | Rust FFI library (cdylib) with error diagnostics |
+| `build-rust-ffi` | Shared/static Rust FFI libraries with native static-link metadata and error diagnostics |
 | `build-and-cache-binding` | Language binding build with intelligent caching |
 | `build-python-wheels` | Python wheels via cibuildwheel/maturin |
 | `build-python-sdist` | Python sdist via maturin, with baked-in path-dep → registry rewrite for source installs |

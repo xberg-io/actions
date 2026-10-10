@@ -381,6 +381,25 @@ def test_should_exit_one_when_cargo_produced_no_library(isolated_env, output_sin
     assert output_sink.read_text(encoding="utf-8") == ""
 
 
+def test_should_exit_one_when_cargo_produced_no_static_library(isolated_env, output_sink, monkeypatch, capsys):
+    _write_header(isolated_env)
+    calls: list[list[str]] = []
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so"),
+    )
+    _set_inputs(monkeypatch, target=LINUX_TARGET, header_path="include/xberg.h")
+
+    with pytest.raises(SystemExit) as exc_info:
+        go_mod.main()
+
+    assert exc_info.value.code == 1
+    expected = Path("target") / LINUX_TARGET / "release" / "libxberg_ffi.a"
+    assert capsys.readouterr().err.endswith(f"Error: built static library not found at {expected}\n")
+    assert output_sink.read_text(encoding="utf-8") == ""
+
+
 def test_should_package_shared_and_static_libraries_and_emit_a_matching_digest(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
@@ -412,7 +431,11 @@ def test_should_derive_the_library_name_from_the_crate_name_when_lib_name_is_uns
 ):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libcrawlberg_ffi.so"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libcrawlberg_ffi.so", "libcrawlberg_ffi.a"),
+    )
     _set_inputs(monkeypatch, target=LINUX_TARGET, crate_name="crawlberg-ffi", header_path="include/xberg.h")
 
     go_mod.main()
@@ -424,7 +447,11 @@ def test_should_derive_the_library_name_from_the_crate_name_when_lib_name_is_uns
 def test_should_prefer_an_explicit_lib_name_over_the_crate_name(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg.so"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libxberg.so", "libxberg.a"),
+    )
     _set_inputs(
         monkeypatch,
         target=LINUX_TARGET,
@@ -442,7 +469,11 @@ def test_should_prefer_an_explicit_lib_name_over_the_crate_name(isolated_env, ou
 def test_should_honour_an_explicit_archive_name(isolated_env, output_sink, monkeypatch):
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so", "libxberg_ffi.a"),
+    )
     _set_inputs(
         monkeypatch,
         target=LINUX_TARGET,
@@ -463,7 +494,11 @@ def test_should_package_a_dylib_when_the_target_is_apple(isolated_env, output_si
     apple_target = "aarch64-apple-darwin"
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, apple_target, "libxberg_ffi.dylib"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, apple_target, "libxberg_ffi.dylib", "libxberg_ffi.a"),
+    )
     _set_inputs(monkeypatch, target=apple_target, header_path="include/xberg.h")
 
     go_mod.main()
@@ -494,7 +529,11 @@ def test_should_use_zigbuild_for_a_glibc_floor_but_read_the_unsuffixed_release_d
     """zigbuild takes triple.glibc but still emits into target/<base-triple>/release."""
     _write_header(isolated_env)
     calls: list[list[str]] = []
-    _install_runner(monkeypatch, calls, _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so"))
+    _install_runner(
+        monkeypatch,
+        calls,
+        _emit_libraries(isolated_env, LINUX_TARGET, "libxberg_ffi.so", "libxberg_ffi.a"),
+    )
     _set_inputs(monkeypatch, target=LINUX_TARGET, header_path="include/xberg.h", glibc_version="2.28")
 
     go_mod.main()
