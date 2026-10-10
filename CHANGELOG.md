@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-10-10
+
 ### Added
 
 - `build-rust-ffi` can require the FFI crate's static archive, exposes separate shared/static
