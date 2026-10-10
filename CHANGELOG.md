@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- GitHub Action dependencies are refreshed with `gau`; `astral-sh/setup-uv` moves to `v10.3.0`.
+
 ## [1.23.0] - 2026-10-06
 
 ### Changed
