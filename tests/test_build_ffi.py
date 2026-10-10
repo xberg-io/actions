@@ -131,6 +131,19 @@ def test_build_cargo_args_with_additional_flags():
     assert "feature=foobar" in args
 
 
+def test_build_cargo_args_deduplicates_locked_additional_flag():
+    args = build_mod.build_cargo_args(
+        crate_name="mylib",
+        manifest_path="",
+        build_profile="release",
+        features="",
+        target="",
+        verbose=False,
+        additional_flags="--locked --locked",
+    )
+    assert args.count("--locked") == 1
+
+
 def test_build_cargo_args_no_verbose():
     args = build_mod.build_cargo_args(
         crate_name="mylib",

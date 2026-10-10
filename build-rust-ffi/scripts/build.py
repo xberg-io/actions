@@ -126,7 +126,8 @@ def build_cargo_args(
         args.append("-vv")
 
     if additional_flags:
-        args += shlex.split(additional_flags)
+        additional_args = shlex.split(additional_flags)
+        args += [argument for argument in additional_args if argument != "--locked"]
 
     return args
 
