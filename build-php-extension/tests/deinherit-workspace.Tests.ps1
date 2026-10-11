@@ -71,6 +71,31 @@ Describe 'deinherit-workspace.ps1' {
         )
     }
 
+    It 'should_preserve_multiline_workspace_package_values' {
+        $script:Fixture = New-Manifest -Crate @(
+            '[package]'
+            'name = "xberg-php"'
+            'authors.workspace = true'
+        ) -Workspace @(
+            '[workspace.package]'
+            'authors = ['
+            '  "One Maintainer <one@example.com>",'
+            '  "Two Maintainers <two@example.com>",'
+            ']'
+        )
+
+        & $script:Script -CrateManifest $script:Fixture.Crate -WorkspaceManifest $script:Fixture.Workspace
+
+        Get-Content -LiteralPath $script:Fixture.Crate | Should -BeExactly @(
+            '[package]'
+            'name = "xberg-php"'
+            'authors = ['
+            '  "One Maintainer <one@example.com>",'
+            '  "Two Maintainers <two@example.com>",'
+            ']'
+        )
+    }
+
     It 'should_drop_bare_workspace_inheritance_that_has_no_key_to_resolve' {
         $script:Fixture = New-Manifest -Crate @(
             '[lints]'

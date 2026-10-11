@@ -69,23 +69,57 @@ ANY_INHERIT = re.compile(r'workspace\s*=\s*true')
 DEPENDENCY_TABLE = re.compile(r'(^|\.)(build-|dev-)?dependencies$')
 
 
+def value_complete(value):
+    square_depth = 0
+    curly_depth = 0
+    quote = None
+    escaped = False
+    for character in value:
+        if quote is not None:
+            if quote == '"' and not escaped and character == '\\':
+                escaped = True
+                continue
+            if not escaped and character == quote:
+                quote = None
+            escaped = False
+            continue
+        if character in ('"', "'"):
+            quote = character
+        elif character == '[':
+            square_depth += 1
+        elif character == ']':
+            square_depth -= 1
+        elif character == '{':
+            curly_depth += 1
+        elif character == '}':
+            curly_depth -= 1
+    return quote is None and square_depth == 0 and curly_depth == 0
+
+
 def read_table(path, name):
     values = {}
     if not os.path.exists(path):
         return values
-    in_table = False
     with open(path, encoding='utf-8') as handle:
-        for raw in handle:
-            line = raw.rstrip('\n')
-            header = HEADER.match(line)
-            if header:
-                in_table = header.group(1).strip() == name
-                continue
-            if not in_table or COMMENT.match(line):
-                continue
+        lines = handle.read().splitlines()
+    in_table = False
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        header = HEADER.match(line)
+        if header:
+            in_table = header.group(1).strip() == name
+        elif in_table and not COMMENT.match(line):
             assignment = ASSIGNMENT.match(line)
             if assignment:
-                values[assignment.group(1)] = assignment.group(2)
+                key, value = assignment.groups()
+                while not value_complete(value):
+                    index += 1
+                    if index >= len(lines):
+                        sys.exit("error: unterminated TOML value for '%s' in %s" % (key, path))
+                    value += '\n' + lines[index]
+                values[key] = value
+        index += 1
     return values
 
 

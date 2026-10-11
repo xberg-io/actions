@@ -48,8 +48,44 @@ function Read-TomlTable {
         return $values
     }
 
+    function Test-TomlValueComplete {
+        param([Parameter(Mandatory = $true)][string]$Value)
+
+        $squareDepth = 0
+        $curlyDepth = 0
+        $quote = [char]0
+        $escaped = $false
+        foreach ($character in $Value.ToCharArray()) {
+            if ($quote -ne [char]0) {
+                if ($quote -eq '"' -and -not $escaped -and $character -eq '\') {
+                    $escaped = $true
+                    continue
+                }
+                if (-not $escaped -and $character -eq $quote) {
+                    $quote = [char]0
+                }
+                $escaped = $false
+                continue
+            }
+            if ($character -eq '"' -or $character -eq "'") {
+                $quote = $character
+            } elseif ($character -eq '[') {
+                $squareDepth++
+            } elseif ($character -eq ']') {
+                $squareDepth--
+            } elseif ($character -eq '{') {
+                $curlyDepth++
+            } elseif ($character -eq '}') {
+                $curlyDepth--
+            }
+        }
+        return $quote -eq [char]0 -and $squareDepth -eq 0 -and $curlyDepth -eq 0
+    }
+
+    $lines = Get-Content -LiteralPath $ManifestPath
     $inTable = $false
-    foreach ($line in (Get-Content -LiteralPath $ManifestPath)) {
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        $line = $lines[$index]
         if ($line -match $TableHeader) {
             $inTable = $Matches[1].Trim() -eq $TableName
             continue
@@ -58,7 +94,16 @@ function Read-TomlTable {
             continue
         }
         if ($line -match $Assignment) {
-            $values[$Matches[1]] = $Matches[2]
+            $key = $Matches[1]
+            $value = $Matches[2]
+            while (-not (Test-TomlValueComplete -Value $value)) {
+                $index++
+                if ($index -ge $lines.Count) {
+                    throw "Unterminated TOML value for '$key' in $ManifestPath"
+                }
+                $value += "`n$($lines[$index])"
+            }
+            $values[$key] = $value
         }
     }
 

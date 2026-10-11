@@ -178,6 +178,7 @@ name = "demo-ext"
 version.workspace = true
 edition = { workspace = true }
 license.workspace = true
+authors.workspace = true
 readme.workspace = true
 keywords.workspace = true
 homepage.workspace = true
@@ -204,6 +205,10 @@ edition = "2024"
 license = "MIT"
 readme = "README.md"
 keywords = ["demo", "fixture"]
+authors = [
+  "One Maintainer <one@example.com>",
+  "Two Maintainers <two@example.com>",
+]
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -237,6 +242,10 @@ def test_dotted_and_inline_inheritance_resolve_to_the_workspace_values(
     assert package["edition"] == "2024"
     assert package["license"] == "MIT"
     assert package["keywords"] == ["demo", "fixture"]
+    assert package["authors"] == [
+        "One Maintainer <one@example.com>",
+        "Two Maintainers <two@example.com>",
+    ]
 
 
 def test_inherited_dependencies_resolve_from_workspace_dependencies(
