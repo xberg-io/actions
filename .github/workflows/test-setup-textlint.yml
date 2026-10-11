@@ -25,14 +25,14 @@ jobs:
       - name: Verify textlint is on PATH
         shell: bash
         run: |
-          npx textlint --version
-          npx textlint --help | head -5
+          textlint --version
+          textlint --help | head -5
 
       - name: Verify a representative rule is installed
         shell: bash
         run: |
-          # setup-textlint installs globally; resolve via NODE_PATH=$(npm root -g)
-          NODE_PATH="$(npm root -g)"
+          # setup-textlint installs globally; resolve via NODE_PATH=$(pnpm root -g)
+          NODE_PATH="$(pnpm root -g)"
           export NODE_PATH
           node -e "require('textlint-rule-terminology')"
           node -e "require('textlint-rule-alex')"

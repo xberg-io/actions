@@ -48,7 +48,7 @@ runs:
       run: |
         set -euo pipefail
         pushd "${CRATE_DIR}" >/dev/null
-        WASM_TGZ=$(npm pack | tail -1)
+        WASM_TGZ=$(pnpm pack | tail -1)
         mv "$WASM_TGZ" "$GITHUB_WORKSPACE/$WASM_TGZ"
         popd >/dev/null
         echo "tarball=$GITHUB_WORKSPACE/$WASM_TGZ" >> "$GITHUB_OUTPUT"

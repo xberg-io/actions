@@ -29,7 +29,7 @@ jobs:
 
       - name: Install pnpm
         shell: bash
-        run: npm install --global pnpm@12
+        run: npm install --global pnpm@12.11.2
 
       - name: Stage a tiny NAPI-RS crate
         shell: bash
@@ -42,7 +42,7 @@ jobs:
           cat >package.json <<'JSON'
           {
             "private": true,
-            "packageManager": "pnpm@12.3.4"
+            "packageManager": "pnpm@12.11.2"
           }
           JSON
           cat >packages/node/Cargo.toml <<'TOML'

@@ -5,8 +5,8 @@ description: >
   or direct publish from a package directory (package-dir).
   Handles already-published versions idempotently.
 
-  Authentication: OIDC-first. When NODE_AUTH_TOKEN is empty/unset, npm
-  CLI v11+ exchanges the GHA OIDC token (audience: npm) for a short-lived
+  Authentication: OIDC-first. When NODE_AUTH_TOKEN is empty/unset, pnpm 12
+  CLI exchanges the GHA OIDC token (audience: npm) for a short-lived
   npm credential via npmjs.org's trusted publishing flow — the caller's
   job only needs `permissions: id-token: write`. Classic NPM_TOKEN auth
   is still supported by setting NODE_AUTH_TOKEN in the caller's env.
@@ -17,7 +17,7 @@ inputs:
     required: false
     default: ""
   package-dir:
-    description: "Package directory to publish from directly via npm publish (mutually exclusive with packages-dir)"
+    description: "Package directory to publish from directly via pnpm publish (mutually exclusive with packages-dir)"
     required: false
     default: ""
   npm-tag:
@@ -48,21 +48,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Ensure npm supports OIDC trusted publishing
+    - name: Install pnpm 12
       shell: bash
-      run: |
-        # OIDC trusted publishing requires npm CLI v11.5.1+. Node 22 ships
-        # npm 10.x, which falls through to classic-token auth and yields
-        # `ENEEDAUTH` when no static token is provided. Upgrade in place.
-        # See https://docs.npmjs.com/trusted-publishers for the exact CLI
-        # version cutoff.
-        npm_major=$(npm --version | cut -d. -f1)
-        if [[ "${npm_major}" -lt 11 ]]; then
-          echo "npm $(npm --version) does not support OIDC trusted publishing; upgrading to latest"
-          npm install -g npm@latest
-        else
-          echo "npm $(npm --version) already supports OIDC trusted publishing"
-        fi
+      run: npm install --global pnpm@12.11.2
 
     - name: Publish npm packages
       shell: bash

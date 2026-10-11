@@ -74,7 +74,7 @@ inputs:
 
 outputs:
   tarball:
-    description: Path to the legacy `npm pack` tarball (when `pack-tarball=true`).
+    description: Path to the legacy `pnpm pack` tarball (when `pack-tarball=true`).
     value: ${{ steps.pack.outputs.tarball }}
   target-tarball:
     description: Path to the per-target tarball (when `pack-target-tarball` is set).
@@ -291,7 +291,7 @@ runs:
       run: |
         set -euo pipefail
         pushd "${CRATE_DIR}" >/dev/null
-        NODE_TGZ=$(npm pack | tail -1)
+        NODE_TGZ=$(pnpm pack | tail -1)
         mv "${NODE_TGZ}" "${GITHUB_WORKSPACE}/${NODE_TGZ}"
         popd >/dev/null
         echo "tarball=${GITHUB_WORKSPACE}/${NODE_TGZ}" >> "${GITHUB_OUTPUT}"

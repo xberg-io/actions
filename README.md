@@ -23,7 +23,7 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 | `install-alef` | Alef CLI installation. `version` takes a semver tag, `latest` (reads the `alef.toml` pin), or `main`. A pinned version with no release archive and no buildable tag fails the job; set `allow-unreleased: true` to opt in to an unpinned `main` build instead |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 | `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
-| `setup-textlint` | textlint + the xberg-io standard rule set in one batched npm install |
+| `setup-textlint` | textlint + the xberg-io standard rule set in one batched pnpm add |
 | `setup-onnx-runtime-gpu` | Download and stage the GPU/CUDA build of ONNX Runtime; exports `ORT_DYLIB_PATH` + `LD_LIBRARY_PATH` |
 | `configure-maven-gpg` | Prefer `gpg2` (shimmed as `gpg`) and patch legacy `--pinentry-mode loopback` two-arg form in `pom.xml` |
 

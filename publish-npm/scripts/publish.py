@@ -67,13 +67,13 @@ def validate_inputs(packages_dir: str, package_dir: str) -> str:
 
 
 def build_publish_flags(access: str, npm_tag: str, provenance: bool, dry_run: bool) -> list[str]:
-    """Build the list of flags to pass to `npm publish`.
+    """Build the list of flags to pass to `pnpm publish`.
 
     Note: --force bypasses npm's pre-publish validation for new scoped packages.
     This is required for platform-specific subpackages (e.g. @xberg-io/node-linux-arm64-musl)
     on their first publish, as npm CLI cannot validate the package exists before creation.
     """
-    flags: list[str] = ["--access", access, "--tag", npm_tag, "--ignore-scripts", "--force"]
+    flags: list[str] = ["--access", access, "--tag", npm_tag, "--ignore-scripts", "--force", "--no-git-checks"]
     if provenance:
         flags.append("--provenance")
     if dry_run:
@@ -298,7 +298,7 @@ def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
 
 
 def _run_publish_with_retry(cmd: list[str], cwd: Path | None = None) -> tuple[int, str]:
-    """Run an `npm publish` command, retrying on Sigstore Rekor / transient network errors.
+    """Run an `pnpm publish` command, retrying on Sigstore Rekor / transient network errors.
 
     Returns the final `(exit_code, output)` of the last attempt.
     Non-transient failures (auth, schema, already-published, etc.) return immediately.
@@ -390,7 +390,7 @@ def publish_package_directory(package_dir: str, flags: list[str], *, dry_run: bo
         assert_artifacts_match_release([(package_dir, manifest.get("version"))], expected_version)
 
     print(f"Publishing from directory: {package_dir}")
-    exit_code, output = _run_publish_with_retry(["npm", "publish", ".", *flags], cwd=pkg_path)
+    exit_code, output = _run_publish_with_retry(["pnpm", "publish", ".", *flags], cwd=pkg_path)
 
     if exit_code == 0:
         print("Published successfully")
@@ -451,7 +451,7 @@ def publish_tgz_directory(
             continue
 
         print(f"Publishing {name}...")
-        exit_code, output = _run_publish_with_retry(["npm", "publish", str(tgz.resolve()), *flags])
+        exit_code, output = _run_publish_with_retry(["pnpm", "publish", str(tgz.resolve()), *flags])
 
         if exit_code == 0:
             print(f"  Published {name}")
