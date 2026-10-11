@@ -33,13 +33,13 @@ runs:
         EOF
 
         # Install the standalone playwright runtime (no test framework needed)
-        npm install --no-audit --no-fund --silent playwright@^1.49.0
+        pnpm add --no-audit --no-fund --silent playwright@^1.49.0
 
         # Download Chromium browser binaries
         if [ "${RUNNER_OS:-}" = "Linux" ]; then
-          npx --no-install playwright install --with-deps chromium
+          pnpm dlx --no-install playwright install --with-deps chromium
         else
-          npx --no-install playwright install chromium
+          pnpm dlx --no-install playwright install chromium
         fi
 
         # Resolve the executable path via Playwright's own API

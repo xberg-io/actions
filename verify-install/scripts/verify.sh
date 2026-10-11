@@ -56,7 +56,7 @@ node | wasm)
       echo "::error::no .tgz found in $INPUT_LOCAL_PATH"
       exit 1
     }
-    pnpm add "$tarball"
+    pnpm install "$tarball"
     pnpm install
     echo "::endgroup::"
   else

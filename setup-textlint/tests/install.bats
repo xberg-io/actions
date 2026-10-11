@@ -7,19 +7,19 @@ setup() {
 	export PATH="$BIN:$PATH"
 }
 
-@test "should_install_standard_and_extra_textlint_packages_with_safe_npm_flags" {
-	printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$*" >"$NPM_CALL"' >"$BIN/npm"
-	chmod +x "$BIN/npm"
+@test "should_install_standard_and_extra_textlint_packages_with_safe_pnpm_flags" {
+	printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$*" >"$NPM_CALL"' >"$BIN/pnpm"
+	chmod +x "$BIN/pnpm"
 	export NPM_CALL="$BATS_TEST_TMPDIR/npm-call"
 	export INPUT_EXTRA_PACKAGES="textlint-rule-prh @scope/rule"
 	run "$SCRIPT"
 	[ "$status" -eq 0 ]
-	[ "$(cat "$NPM_CALL")" = "install -g --ignore-scripts --legacy-peer-deps textlint textlint-rule-no-todo textlint-rule-no-start-duplicated-conjunction textlint-rule-no-empty-section textlint-rule-terminology textlint-rule-no-zero-width-spaces @textlint-rule/textlint-rule-no-invalid-control-character textlint-rule-no-surrogate-pair @textlint-rule/textlint-rule-no-unmatched-pair textlint-rule-alex textlint-rule-write-good textlint-rule-common-misspellings textlint-rule-stop-words textlint-rule-en-capitalization textlint-filter-rule-comments textlint-filter-rule-node-types textlint-rule-prh @scope/rule" ]
+	[ "$(cat "$NPM_CALL")" = "add -g --ignore-scripts --config.strict-peer-dependencies=false textlint textlint-rule-no-todo textlint-rule-no-start-duplicated-conjunction textlint-rule-no-empty-section textlint-rule-terminology textlint-rule-no-zero-width-spaces @textlint-rule/textlint-rule-no-invalid-control-character textlint-rule-no-surrogate-pair @textlint-rule/textlint-rule-no-unmatched-pair textlint-rule-alex textlint-rule-write-good textlint-rule-common-misspellings textlint-rule-stop-words textlint-rule-en-capitalization textlint-filter-rule-comments textlint-filter-rule-node-types textlint-rule-prh @scope/rule" ]
 }
 
-@test "should_return_npm_failure_when_package_install_fails" {
-	printf '%s\n' '#!/usr/bin/env bash' 'exit 23' >"$BIN/npm"
-	chmod +x "$BIN/npm"
+@test "should_return_pnpm_failure_when_package_install_fails" {
+	printf '%s\n' '#!/usr/bin/env bash' 'exit 23' >"$BIN/pnpm"
+	chmod +x "$BIN/pnpm"
 	run "$SCRIPT"
 	[ "$status" -eq 23 ]
 	[ "$output" = "" ]

@@ -25,12 +25,16 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Install pnpm 12
+        shell: bash
+        run: |
+          npm install --global pnpm@12.11.2
       - name: Create dummy npm package
         run: |
           mkdir -p dist
           mkdir -p pkg && cd pkg
-          npm init -y
-          npm pack --pack-destination ../dist
+          pnpm init -y
+          pnpm pack --pack-destination ../dist
 
       - name: Test publish-npm (dry-run)
         uses: ./publish-npm

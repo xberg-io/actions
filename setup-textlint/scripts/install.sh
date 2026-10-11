@@ -25,4 +25,4 @@ if [[ -n "${INPUT_EXTRA_PACKAGES:-}" ]]; then
   packages+=("${extras[@]}")
 fi
 
-npm install -g --ignore-scripts --legacy-peer-deps "${packages[@]}"
+pnpm add -g --ignore-scripts --config.strict-peer-dependencies=false "${packages[@]}"
