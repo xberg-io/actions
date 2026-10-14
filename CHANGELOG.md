@@ -4,6 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.25.1] - 2026-10-14
+
+### Changed
+
+- `setup-ai-rulez` defaults to 5.3.0; governance CI uses the reviewed source revision
+  containing plugin validation and cache-locking fixes absent from the stock release.
+- Setup Go moves to v7. The release skill checks dereferenced commits and uses an
+  explicit lease when updating the floating major tag.
+
 ## [1.25.0] - 2026-10-14
 
 ### Added

@@ -15,7 +15,7 @@ This repo publishes reusable composite actions and workflows consumed by every o
 
 ### Tag scheme
 
-- **Immutable version tags** — `vX.Y.Z` (annotated). Never re-pointed once pushed. Latest at time of writing: `v1.10.2`.
+- **Immutable version tags** — `vX.Y.Z` (annotated). Never re-pointed once pushed. Determine the latest version with `git tag --list 'v1.*' --sort=-version:refname`.
 - **Floating major tag** — `v1` (annotated). Deliberately force-updated on every release to point at the newest release commit. This is the ref consumers pin.
 
 Both are annotated tag objects (`git cat-file -t v1` → `tag`), so create/move them with `-a`.
@@ -71,23 +71,27 @@ git push origin vX.Y.Z
 
 ### 3. Move the floating major tag `v1` to the new release
 
-Force-update `v1` to point at the same commit/tag, then force-push the `v1` ref so `@v1` consumers pick up the release:
+Record the current remote tag object using `git ls-remote origin refs/tags/v1`.
+Use that exact object as `<previous-remote-tag-object>` in the lease below.
+Update `v1` to point at the same commit/tag, then force-push the `v1` ref so `@v1` consumers pick up the release:
 
 ```bash
 git tag -f -a v1 -m "v1 -> vX.Y.Z" vX.Y.Z   # re-point annotated v1 at the new version tag
-git push origin v1 --force
+git push origin v1 --force-with-lease=refs/tags/v1:<previous-remote-tag-object>
 ```
 
-`git tag -f v1 <ref>` + `git push origin v1 --force` is the established method for advancing the floating major. `<ref>` can be the new version tag (`vX.Y.Z`) or the release commit SHA — both resolve to the same commit.
+`git tag -f v1 <ref>` + `git push origin v1 --force-with-lease=refs/tags/v1:<previous-remote-tag-object>` is the established method for advancing the floating major. `<ref>` can be the new version tag (`vX.Y.Z`) or the release commit SHA — both resolve to the same commit.
 
-> This force-update is a **deliberate, expected tag move**, not a branch force-push — it is the one sanctioned exception to the repo's "never force-push" rule, and it only ever touches the `v1` tag ref (never a branch). If you prefer the lease-guarded variant, `git push origin v1 --force-with-lease` also works for the tag ref. Never force-move any `vX.Y.Z` immutable tag.
+> This tag move is the sanctioned exception to the shared-branch force-push rule.
+> The explicit lease rejects a concurrent update to `v1`. Never force-move an immutable
+> `vX.Y.Z` tag or a shared branch.
 
 ### 4. Verify
 
 ```bash
 git fetch origin --tags --force
-git rev-parse v1                  # must equal:
-git rev-parse vX.Y.Z              # ... the new version tag / release commit
+git rev-parse 'v1^{}'             # target commit must equal:
+git rev-parse 'vX.Y.Z^{}'         # target commit of the new version tag
 ```
 
 Both must resolve to the release commit. Consumers pinning `@v1` now resolve to `vX.Y.Z`.

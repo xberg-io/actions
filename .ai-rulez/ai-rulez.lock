@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.3.0'
 scope = 'all'
-tree = 'sha256:55bdfed9d37d258d0c5af4cd44cc15459789bfc76e86fdfbb414c20abe11d8d3'
+tree = 'sha256:81cc78dc1f035d3856d0b3f98939f74f36265bdf9578e7422c674be4db988b90'
 
 [[include]]
 name = 'xberg-cicd'
@@ -134,7 +134,7 @@ digest = 'sha256:32105dacbfd782273d5b9292b01bf888b673fccb491f87f8ff12b7061e71551
 name = 'release-workflow'
 source = '.ai-rulez/skills/release-workflow/SKILL.md'
 commit = ''
-digest = 'sha256:8d6de3740c7c8dd245b85a4e01607423f2e48f128a700172cf50dae8d9bcc089'
+digest = 'sha256:3b6153308e6928491dd0ed2047bb4fd443b4249c9e7d8d28dc5e3a2f70848f56'
 
 [[served]]
 name = 'scoop-distribution'
@@ -193,7 +193,7 @@ digest = 'sha256:81bb42246d1c22113883a04cedb34f4d9e1ba31930ed3a2921dce10505ab1b6
 kind = 'skill'
 id = 'release-workflow'
 path = 'skills/release-workflow'
-digest = 'sha256:4921015d843824e57ee16d28aad3d3886f4b9c61f33872ef6a4bbf1dbf8477a7'
+digest = 'sha256:0e0d7539044c4a95b413cf75a090aa7d3eefc14347b2ae431b445b86649def9f'
 
 [[item]]
 kind = 'skill'
