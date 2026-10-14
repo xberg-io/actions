@@ -19,6 +19,11 @@ All notable changes to xberg-io/actions are documented in this file.
 - Setup Go moves to v7. The release skill checks dereferenced commits and uses an
   explicit lease when updating the floating major tag.
 
+### Fixed
+
+- The general Linux and macOS unit-test jobs install the pinned ai-rulez CLI before
+  running governance and plugin integration tests.
+
 ## [1.25.0] - 2026-10-14
 
 ### Added
