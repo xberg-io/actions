@@ -4,7 +4,7 @@ inputs:
   ai-rulez-version:
     description: AI-Rulez release version to install when source-revision is empty.
     required: false
-    default: "5.2.1"
+    default: "5.3.0"
   source-revision:
     description: Optional full 40-character Goldziher/ai-rulez commit SHA to build instead of installing a release.
     required: false

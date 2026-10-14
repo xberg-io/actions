@@ -239,7 +239,7 @@ jobs:
 
 | Action | Purpose |
 | --- | --- |
-| [`setup-ai-rulez`](setup-ai-rulez/action.yml) | Install ai-rulez 5.2.1 or build a full immutable source revision |
+| [`setup-ai-rulez`](setup-ai-rulez/action.yml) | Install ai-rulez 5.3.0 or build a full immutable source revision |
 | [`validate-ai-rulez`](validate-ai-rulez/action.yml) | Lint authored governance, verify locks and public skills, and reject tracked output drift |
 | [`verify-ai-rulez-plugin`](verify-ai-rulez-plugin/action.yml) | Check product version synchronization, strict source validation, generated bundle freshness and provenance |
 | [`package-ai-rulez-plugin`](package-ai-rulez-plugin/action.yml) | Package verified release archives, checksums and pinned marketplace indexes |
