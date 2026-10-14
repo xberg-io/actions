@@ -31,7 +31,7 @@ jobs:
       - uses: ./setup-ai-rulez
         with:
           ai-rulez-version: "5.3.0"
-          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+          source-revision: "bdabc8a6e9211de60ca1e4ad76225ac92fcf218f"
       - uses: ./install-task
       - name: Test real generation and release artifacts
         run: task test:ai-rulez-plugin test:ai-rulez-validation
