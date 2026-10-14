@@ -4,6 +4,22 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-10-14
+
+### Added
+
+- `setup-ai-rulez` installs a versioned CLI or builds an explicitly pinned source revision.
+- `validate-ai-rulez` checks native configuration formats, strict validation, locks, generated
+  output freshness, public skill exports, and explicit configuration counts.
+- `verify-ai-rulez-plugin` verifies generated plugin resources and marketplace ownership without
+  modifying the checkout.
+- `package-ai-rulez-plugin` produces verified plugin archives, checksums, SBOMs, release plans,
+  and marketplace metadata from a clean committed release tree.
+
+### Changed
+
+- AI governance uses layered plugin configuration and immutable shared convention references.
+
 ## [1.24.0] - 2026-10-10
 
 ### Added
