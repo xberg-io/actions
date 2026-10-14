@@ -250,6 +250,9 @@ marketplace configuration; it composes `config.plugins.toml` and product member 
 Product sources remain under `plugin/.ai-rulez/`. Set `working-directory` for monorepo callers.
 Packaging requires a release tag and a clean committed release tree; its outputs can be uploaded
 as release assets without regenerating the checkout.
+Set `cursor-marketplace: "true"` when every product member includes the Cursor runtime.
+This adds a verified `emit/cursor-team-marketplace/` tree, containing its marketplace
+index and plugin resources, alongside the native archives and Agent Plugins export.
 
 The plugin test workflow exercises packaging and invalid-source failures. Repository governance
 validation also lints authored skills, commands and configuration. Local Poly hooks validate

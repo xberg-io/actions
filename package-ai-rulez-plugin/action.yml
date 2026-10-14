@@ -13,6 +13,10 @@ inputs:
     description: Plugin authoring configuration directory relative to working-directory.
     required: false
     default: ".ai-rulez"
+  cursor-marketplace:
+    description: Also export a Cursor team marketplace; every bundled plugin must include the Cursor runtime.
+    required: false
+    default: "false"
   working-directory:
     description: Working directory containing a clean committed release tree.
     required: false
@@ -41,9 +45,16 @@ runs:
         CONFIG_DIRECTORY: ${{ inputs.config-directory }}
         DIST_DIRECTORY: ${{ inputs.dist-directory }}
         RELEASE_TAG: ${{ inputs.tag }}
+        CURSOR_MARKETPLACE: ${{ inputs.cursor-marketplace }}
       run: |
         test -n "$CONFIG_DIRECTORY"
         test -n "$DIST_DIRECTORY"
         test -n "$RELEASE_TAG"
-        ai-rulez -C "$CONFIG_DIRECTORY" publish --dist "$DIST_DIRECTORY" --tag "$RELEASE_TAG" --marketplace --sbom --emit agent-plugins
+        emit_args=(--emit agent-plugins)
+        case "${CURSOR_MARKETPLACE:-false}" in
+          true) emit_args+=(--emit cursor-team-marketplace) ;;
+          false) ;;
+          *) echo 'cursor-marketplace must be true or false' >&2; exit 1 ;;
+        esac
+        ai-rulez -C "$CONFIG_DIRECTORY" publish --dist "$DIST_DIRECTORY" --tag "$RELEASE_TAG" --marketplace --sbom "${emit_args[@]}"
         ai-rulez publish verify "$DIST_DIRECTORY"

@@ -4,7 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
-## [1.25.1] - 2026-10-14
+## [1.26.0] - 2026-10-14
+
+### Added
+
+- `package-ai-rulez-plugin` can export a verified Cursor team marketplace with
+  `cursor-marketplace: "true"`; callers without the Cursor runtime retain the existing
+  archive and Agent Plugins outputs.
 
 ### Changed
 

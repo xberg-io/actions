@@ -95,7 +95,12 @@ def test_package_verifies_deterministic_artifacts_and_rejects_tampering(plugin):
         cwd=plugin,
         check=True,
     )
-    environment = {"CONFIG_DIRECTORY": "plugin/.ai-rulez", "DIST_DIRECTORY": "dist/plugin", "RELEASE_TAG": "v1.0.0"}
+    environment = {
+        "CONFIG_DIRECTORY": "plugin/.ai-rulez",
+        "DIST_DIRECTORY": "dist/plugin",
+        "RELEASE_TAG": "v1.0.0",
+        "CURSOR_MARKETPLACE": "true",
+    }
     first = run_step("package-ai-rulez-plugin", "Package and verify release artifacts", plugin, environment)
     assert first.returncode == 0, first.stderr
     archive = next((plugin / "dist/plugin").glob("*.tar.gz"))
@@ -134,9 +139,29 @@ def test_package_verifies_deterministic_artifacts_and_rejects_tampering(plugin):
     assert archive.read_bytes() == original
     assert (plugin / "dist/plugin/marketplace").is_dir()
     assert (plugin / "dist/plugin/emit").is_dir()
+    cursor_root = plugin / "dist/plugin/emit/cursor-team-marketplace"
+    cursor_index = json.loads((cursor_root / ".cursor-plugin/marketplace.json").read_text())
+    assert cursor_index["plugins"][0]["name"] == "fixture"
+    assert (cursor_root / "plugins/fixture/.cursor-plugin/plugin.json").is_file()
     archive.write_bytes(original + b"tampered")
     result = subprocess.run(["ai-rulez", "publish", "verify", "dist/plugin"], cwd=plugin, check=False)
     assert result.returncode != 0
+
+
+def test_package_rejects_an_invalid_cursor_marketplace_value(plugin):
+    result = run_step(
+        "package-ai-rulez-plugin",
+        "Package and verify release artifacts",
+        plugin,
+        {
+            "CONFIG_DIRECTORY": "plugin/.ai-rulez",
+            "DIST_DIRECTORY": "dist/plugin",
+            "RELEASE_TAG": "v1.0.0",
+            "CURSOR_MARKETPLACE": "invalid",
+        },
+    )
+    assert result.returncode == 1
+    assert "cursor-marketplace must be true or false" in result.stderr
 
 
 def test_source_setup_rejects_unpinned_revision(tmp_path):
