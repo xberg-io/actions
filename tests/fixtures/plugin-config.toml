@@ -1,0 +1,35 @@
+version = "5.0"
+name = "fixture"
+description = "A fixture for checking release artifacts"
+[plugin]
+name = "fixture"
+version = "1.0.0"
+description = "A fixture for checking release artifacts"
+runtimes = [
+  "claude",
+  "cursor",
+  "codex",
+  "gemini",
+  "kimi",
+  "opencode",
+  "factory",
+  "hermes",
+  "pi",
+  "copilot",
+  "agent-plugins",
+]
+repository = "https://github.com/xberg-io/fixture"
+license = "MIT"
+[plugin.author]
+name = "xberg"
+[plugin.interface]
+display_name = "Fixture"
+short_description = "Check deterministic release artifacts"
+long_description = "A fixture for testing deterministic publishing and freshness gates."
+developer_name = "xberg"
+category = "developer-tools"
+capabilities = ["Read"]
+website_url = "https://xberg.io"
+privacy_policy_url = "https://xberg.io/privacy"
+terms_of_service_url = "https://xberg.io/terms"
+default_prompt = ["Check this release"]

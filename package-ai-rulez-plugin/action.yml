@@ -1,0 +1,49 @@
+name: Package AI-Rulez Plugin
+description: Build deterministic verified plugin archives, checksums and marketplace indexes using an installed AI-Rulez CLI.
+inputs:
+  tag:
+    description: Release tag required to pin a marketplace to this commit.
+    required: true
+    default: ${{ github.ref_name }}
+  version-sync-script:
+    description: Plugin version sync script supporting a read-only --check flag.
+    required: false
+    default: "scripts/sync_plugin_version.py"
+  config-directory:
+    description: Plugin authoring configuration directory relative to working-directory.
+    required: false
+    default: ".ai-rulez"
+  working-directory:
+    description: Working directory containing a clean committed release tree.
+    required: false
+    default: "."
+  dist-directory:
+    description: Release artifact directory relative to working-directory.
+    required: false
+    default: "dist/plugin"
+outputs:
+  dist-directory:
+    description: Release artifact directory relative to working-directory.
+    value: ${{ inputs.dist-directory }}
+runs:
+  using: composite
+  steps:
+    - name: Verify plugin version tracks core
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        VERSION_SYNC_SCRIPT: ${{ inputs.version-sync-script }}
+      run: python3 "$VERSION_SYNC_SCRIPT" --check
+    - name: Package and verify release artifacts
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        CONFIG_DIRECTORY: ${{ inputs.config-directory }}
+        DIST_DIRECTORY: ${{ inputs.dist-directory }}
+        RELEASE_TAG: ${{ inputs.tag }}
+      run: |
+        test -n "$CONFIG_DIRECTORY"
+        test -n "$DIST_DIRECTORY"
+        test -n "$RELEASE_TAG"
+        ai-rulez -C "$CONFIG_DIRECTORY" publish --dist "$DIST_DIRECTORY" --tag "$RELEASE_TAG" --marketplace --sbom --emit agent-plugins
+        ai-rulez publish verify "$DIST_DIRECTORY"

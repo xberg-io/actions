@@ -235,6 +235,27 @@ jobs:
       package-name: my-package
 ```
 
+## AI governance and plugin releases
+
+| Action | Purpose |
+| --- | --- |
+| [`setup-ai-rulez`](setup-ai-rulez/action.yml) | Install ai-rulez 5.2.1 or build a full immutable source revision |
+| [`validate-ai-rulez`](validate-ai-rulez/action.yml) | Lint authored governance, verify locks and public skills, and reject tracked output drift |
+| [`verify-ai-rulez-plugin`](verify-ai-rulez-plugin/action.yml) | Check product version synchronization, strict source validation, generated bundle freshness and provenance |
+| [`package-ai-rulez-plugin`](package-ai-rulez-plugin/action.yml) | Package verified release archives, checksums and pinned marketplace indexes |
+
+Install the reviewed CLI once with `setup-ai-rulez`, then run the verification and packaging
+steps with that same executable. Use `config-directory: .ai-rulez` for the repository's
+marketplace configuration; it composes `config.plugins.toml` and product member configurations.
+Product sources remain under `plugin/.ai-rulez/`. Set `working-directory` for monorepo callers.
+Packaging requires a release tag and a clean committed release tree; its outputs can be uploaded
+as release assets without regenerating the checkout.
+
+The plugin test workflow exercises packaging and invalid-source failures. Repository governance
+validation also lints authored skills, commands and configuration. Local Poly hooks validate
+staged sources and shipped plugin artifacts; `task governance:check` checks ignored runtime
+files in the live checkout.
+
 ## Development
 
 ```bash

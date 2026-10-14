@@ -3,9 +3,10 @@ version = "5.0"
 name = 'actions'
 description = 'Shared GitHub Actions composite actions for xberg-io CI/CD pipelines'
 gitignore = true
-presets = ["claude", "codex", "opencode", "pi"]
-builtins = ['cicd', 'default-commands']
+presets = ["claude", "codex", "opencode", "pi", "hermes"]
+builtins = ['!git-workflow', 'cicd', 'default-commands']
 
+default_layers = ["plugins"]
 compact = true
 [[includes]]
 name = 'xberg-core'
@@ -19,24 +20,15 @@ source = 'https://github.com/xberg-io/agent-conventions.git'
 path = 'modules/cicd'
 merge_strategy = 'local-override'
 
-[[marketplaces]]
-name = "basemind"
-source = "Goldziher/basemind"
-type = "github"
-
-[[plugins]]
-marketplace = "basemind"
-name = "basemind"
-scope = "project"
-enabled = true
-
-# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
-[header]
-text = """AI-RULEZ :: GENERATED FILE - DO NOT EDIT
-Source: .ai-rulez/config.toml
-Modify .ai-rulez/ content and regenerate with pnpm dlx ai-rulez@5.0.1 generate
-MCP server: pnpm dlx ai-rulez@5.0.1 mcp"""
-hashes = "full"
-
 [mcp]
-self_server_command = ["pnpm", "dlx", "ai-rulez@5.0.1", "mcp"]
+self_server_command = ["ai-rulez", "mcp"]
+[[mcp_servers]]
+name = "playwright"
+command = "npx"
+args = ["-y", "@playwright/mcp@0.0.83"]
+
+[lint]
+allow_overrides = ["testing-conventions"]
+
+[lock]
+include_outputs = false

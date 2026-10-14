@@ -71,6 +71,7 @@
     ".codex/agents/rust-core-engineer.toml",
     ".codex/agents/security-auditor.toml",
     ".codex/agents/test-writer.toml",
+    ".codex/config.toml",
     ".opencode/agents/code-reviewer.md",
     ".opencode/agents/devops-engineer.md",
     ".opencode/agents/docs-writer.md",
@@ -93,6 +94,7 @@
     ".pi/agents/rust-core-engineer.md",
     ".pi/agents/security-auditor.md",
     ".pi/agents/test-writer.md",
+    ".pi/mcp.json",
     ".pi/prompts/iterate.md",
     ".pi/prompts/parallelize.md",
     "AGENTS.md",
@@ -100,6 +102,38 @@
     "opencode.json"
   ],
   "merged": {
+    ".codex/config.toml": [],
+    ".pi/mcp.json": [],
     "opencode.json": []
+  },
+  "servers": {
+    ".codex/config.toml": [
+      [
+        "mcp_servers",
+        "playwright"
+      ]
+    ],
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "playwright"
+      ]
+    ],
+    ".pi/mcp.json": [
+      [
+        "mcpServers",
+        "playwright"
+      ]
+    ],
+    "opencode.json": [
+      [
+        "mcp",
+        "playwright"
+      ]
+    ]
   }
 }

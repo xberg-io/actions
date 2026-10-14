@@ -53,9 +53,11 @@ poly.local.toml
 .claude/agents/
 .claude/skills/
 .codex/agents/
+.codex/config.toml
 .opencode/agents/
 .opencode/commands/
 .pi/agents/
+.pi/mcp.json
 .pi/prompts/
 opencode.json
 # END ai-rulez
