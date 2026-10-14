@@ -18,7 +18,7 @@ existing publish-github-release/scripts/ensure_release.py convention.
 
 from __future__ import annotations
 
-import datetime as _dt
+import datetime as dt
 import json
 import os
 import re
@@ -299,11 +299,11 @@ def main() -> None:
 
     if notes_override:
         description = normalize_notes(notes_override, tag)
-        timestamp = _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
+        timestamp = dt.datetime.now(tz=dt.timezone.utc).isoformat()
     else:
         release = fetch_release(tag, repo)
         description = normalize_notes(release_log_for_announcement(release, tag, repo), tag)
-        timestamp = release.get("publishedAt") or _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
+        timestamp = release.get("publishedAt") or dt.datetime.now(tz=dt.timezone.utc).isoformat()
 
     payload = build_payload(
         tag=tag,
