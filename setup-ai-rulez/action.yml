@@ -42,7 +42,7 @@ runs:
         echo "source-directory=$source_directory" >> "$GITHUB_OUTPUT"
     - name: Set up Go for source build
       if: inputs.source-revision != ''
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version-file: ${{ steps.source.outputs.source-directory }}/go.mod
         cache-dependency-path: ${{ steps.source.outputs.source-directory }}/go.sum
