@@ -9,18 +9,18 @@ x-ai-rulez:
     name: release-workflow
 ---
 
-# Release workflow (xberg-io/actions)
+## Release workflow (xberg-io/actions)
 
 This repo publishes reusable composite actions and workflows consumed by every other xberg-io repo as `uses: xberg-io/actions/<action>@v1` and `uses: xberg-io/actions/.github/workflows/<wf>.yml@v1`. Consumers pin the **floating major tag `v1`**, so a release is only visible to them once `v1` is moved to the new commit.
 
-## Tag scheme
+### Tag scheme
 
 - **Immutable version tags** — `vX.Y.Z` (annotated). Never re-pointed once pushed. Latest at time of writing: `v1.10.2`.
 - **Floating major tag** — `v1` (annotated). Deliberately force-updated on every release to point at the newest release commit. This is the ref consumers pin.
 
 Both are annotated tag objects (`git cat-file -t v1` → `tag`), so create/move them with `-a`.
 
-## Preconditions (must pass before releasing)
+### Preconditions (must pass before releasing)
 
 Run from a clean checkout of `main`:
 
@@ -37,7 +37,7 @@ task test                         # unit tests — runs `uv run pytest -v` acros
 
 Do not proceed if the tree is dirty or any check fails. `task validate` (== `task lint`) runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
 
-## 1. Roll the CHANGELOG and commit
+### 1. Roll the CHANGELOG and commit
 
 `CHANGELOG.md` is hand-maintained with a `## [Unreleased]` section. Move the accumulated `Unreleased` entries under a new dated version heading:
 
@@ -60,7 +60,7 @@ git push origin main
 
 Re-run `git fetch origin && git log --oneline origin/main -1` and make sure local `main` is exactly the commit you just pushed — the tags below must point at the **pushed** release commit.
 
-## 2. Create the new immutable version tag (AFTER pushing)
+### 2. Create the new immutable version tag (AFTER pushing)
 
 Pick the next version by bumping the latest `v1.Y.Z` (patch for fixes, minor for new actions/inputs). Create it at the release commit and push it:
 
@@ -69,7 +69,7 @@ git tag -a vX.Y.Z -m "vX.Y.Z"   # tags current HEAD (the pushed release commit)
 git push origin vX.Y.Z
 ```
 
-## 3. Move the floating major tag `v1` to the new release
+### 3. Move the floating major tag `v1` to the new release
 
 Force-update `v1` to point at the same commit/tag, then force-push the `v1` ref so `@v1` consumers pick up the release:
 
@@ -82,7 +82,7 @@ git push origin v1 --force
 
 > This force-update is a **deliberate, expected tag move**, not a branch force-push — it is the one sanctioned exception to the repo's "never force-push" rule, and it only ever touches the `v1` tag ref (never a branch). If you prefer the lease-guarded variant, `git push origin v1 --force-with-lease` also works for the tag ref. Never force-move any `vX.Y.Z` immutable tag.
 
-## 4. Verify
+### 4. Verify
 
 ```bash
 git fetch origin --tags --force

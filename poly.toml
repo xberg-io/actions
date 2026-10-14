@@ -16,6 +16,7 @@ exclude = [
   "**/uv.lock",
   "crates/*-ffi/include/*.h",
   "packages/go/include/*.h",
+  "/.ai-rulez/.generated-manifest.json",
 ]
 
 [per-file-ignores]
@@ -207,6 +208,7 @@ preserve_patterns = [
 ]
 [hooks]
 stages = ["pre-commit"]
+snapshot_include = [".venv"]
 
 [hooks.builtin]
 lint = { exclude = [
@@ -218,6 +220,7 @@ lint = { exclude = [
   "**/uv.lock",
   "crates/*-ffi/include/*.h",
   "packages/go/include/*.h",
+  "/.ai-rulez/.generated-manifest.json",
 ] }
 fmt = { exclude = [
   "**/*.lock",
@@ -228,6 +231,7 @@ fmt = { exclude = [
   "**/uv.lock",
   "crates/*-ffi/include/*.h",
   "packages/go/include/*.h",
+  "/.ai-rulez/.generated-manifest.json",
 ] }
 commit = { stages = ["commit-msg"] }
 file_safety = { exclude = [
@@ -252,6 +256,7 @@ file_safety = { exclude = [
   "install-bats/scripts/install.sh",
   "publish-maven/action.yml",
   "run-bats/scripts/run.sh",
+  "/.ai-rulez/.generated-manifest.json",
 ] }
 
 [tools.shfmt]
@@ -269,5 +274,5 @@ cache = { inputs = ["**/*.py", "pyproject.toml"] }
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.9.3"
+revision = "ee42eef34f2922e4e75b75f25b1215b9492bb1aa"
 hooks = ["ai-rulez-validate"]

@@ -1,0 +1,46 @@
+name: Validate AI-Rulez
+description: Native OKF format, strict content and schema validation, source locks, plugin freshness and tracked output checks.
+inputs:
+  config-directory:
+    description: Root governance configuration directory relative to working-directory.
+    required: false
+    default: ".ai-rulez"
+  additional-config-directories:
+    description: Newline-separated module configuration directories to validate explicitly without recursive discovery.
+    required: false
+    default: ""
+  expected-config-count:
+    description: Expected number of root and module configurations. Must be positive and match the supplied paths.
+    required: false
+    default: "1"
+  verify-plugin:
+    description: Verify committed plugin outputs, version synchronization and public skills before materialization.
+    required: false
+    default: "false"
+  version-sync-script:
+    description: Plugin version script supporting read-only --check.
+    required: false
+    default: "scripts/sync_plugin_version.py"
+  public-skills-check-script:
+    description: Public skill export script supporting read-only --check.
+    required: false
+    default: "scripts/sync_public_skills.py"
+  working-directory:
+    description: Repository root. Requires an installed pinned AI-Rulez CLI and a clean committed checkout.
+    required: false
+    default: "."
+runs:
+  using: composite
+  steps:
+    - name: Validate governance and committed artifacts
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        CONFIG_DIRECTORY: ${{ inputs.config-directory }}
+        ADDITIONAL_CONFIG_DIRECTORIES: ${{ inputs.additional-config-directories }}
+        EXPECTED_CONFIG_COUNT: ${{ inputs.expected-config-count }}
+        VERIFY_PLUGIN: ${{ inputs.verify-plugin }}
+        VERSION_SYNC_SCRIPT: ${{ inputs.version-sync-script }}
+        PUBLIC_SKILLS_CHECK_SCRIPT: ${{ inputs.public-skills-check-script }}
+        AI_RULEZ_STRICT: "1"
+      run: python3 "${{ github.action_path }}/scripts/validate.py"

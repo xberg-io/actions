@@ -1,0 +1,50 @@
+name: AI-Rulez validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".ai-rulez/**"
+      - "modules/**"
+      - "plugin/**"
+      - "skills/**"
+      - ".agents/plugins/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - "scripts/sync*"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "package.json"
+      - ".gitignore"
+      - ".github/workflows/ai-rulez-validation.yml"
+      - "setup-ai-rulez/**"
+      - "validate-ai-rulez/**"
+      - "tests/test_validate_ai_rulez.py"
+  pull_request:
+    paths:
+      - ".ai-rulez/**"
+      - "modules/**"
+      - "plugin/**"
+      - "skills/**"
+      - ".agents/plugins/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - "scripts/sync*"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "package.json"
+      - ".gitignore"
+      - ".github/workflows/ai-rulez-validation.yml"
+      - "setup-ai-rulez/**"
+      - "validate-ai-rulez/**"
+      - "tests/test_validate_ai_rulez.py"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./setup-ai-rulez
+        with:
+          source-revision: "ace2a7d0e98a69663ddfa62e2ffa92db03e075d2"
+      - uses: ./validate-ai-rulez

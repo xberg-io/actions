@@ -9,11 +9,11 @@ x-ai-rulez:
     name: testing-conventions
 ---
 
-# Testing conventions (xberg-io/actions)
+## Testing conventions (xberg-io/actions)
 
 Every action in this repo is a script plus a thin `action.yml`. The scripts are the product; the tests are how we know a change to one does not silently break a consumer's pipeline.
 
-## Which framework, and where
+### Which framework, and where
 
 | Language | Framework | Location | Task |
 |---|---|---|---|
@@ -25,7 +25,7 @@ Every action in this repo is a script plus a thin `action.yml`. The scripts are 
 
 Python suites live in the root `tests/` rather than beside the action because they share `tests/conftest.py` fixtures (`tmp_path_with_files`, `github_output`). Bats and Pester suites live beside their action, matching how the runner resolves them.
 
-## The failure this repo actually had
+### The failure this repo actually had
 
 Read this before writing a test that touches a tool.
 
@@ -36,7 +36,7 @@ Several Bats suites set `PATH="$STUB_BIN:/usr/bin:/bin"` and treated that as iso
 
 Both were real product bugs the suite was correctly reporting; they had been dismissed as "flaky platform-specific tests".
 
-## Isolating from the host
+### Isolating from the host
 
 **Exclude, do not allow-list.** Mirror the host's command directories into a private directory *minus* the one command whose absence is the point, then assert the mirror really lacks it so a leak fails loudly instead of quietly restoring the host's copy.
 
@@ -49,13 +49,13 @@ expose_system_commands() { ... }   # mirror host bins, minus the probed command
 
 In pytest, `monkeypatch` every `shutil.which`, every `subprocess.run`, and every environment variable the script reads; prove it by running the suite with `env PATH=/nonexistent`. In Pester, `Mock` the probe (`Mock Get-Command`, `Mock Invoke-WebRequest`) rather than touching the real `PATH`.
 
-## Portability constraints for scripts
+### Portability constraints for scripts
 
 - **bash 3.2 is the floor.** No `mapfile`/`readarray`, no `${var^^}`, no associative arrays. Derive with `tr` instead of `^^`.
 - **GNU form first, BSD fallback second.** `stat -c '%Y' || stat -f '%m'`. GNU-first fails cleanly on BSD; BSD-first silently succeeds on GNU and emits garbage.
 - Verify with `bash --version` on a macOS runner, not locally, unless your local `/bin/bash` is genuinely 3.2.
 
-## Proving a test discriminates
+### Proving a test discriminates
 
 A green run is not evidence. Before trusting a test, break what it covers and watch it fail:
 
@@ -66,7 +66,7 @@ A green run is not evidence. Before trusting a test, break what it covers and wa
 
 Mutation-test the whole set when you add a suite. Two recent examples of why: one pytest suite had a test that still passed when the guard it covered was deleted, because control fell through to a different guard emitting superset stderr — fixed by asserting stderr exactly. A Bats fix was read as "unchanged" because the same test number kept failing, when it had actually moved from failing at line 54 to line 74 for a different reason.
 
-## Honesty about coverage
+### Honesty about coverage
 
 Pester suites run on `windows-latest` in CI. Locally on macOS or Linux, cover the portable logic (parsing, URL and filename construction, arch mapping, error paths) and mark genuinely Windows-dependent behaviour `-Skip` with a stated reason. A skipped test that says why is honest. A test that pretends to exercise Windows behaviour on macOS is not, and it will be believed.
 

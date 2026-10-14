@@ -1,0 +1,60 @@
+name: Setup AI-Rulez
+description: Install a pinned AI-Rulez release or build an immutable source revision.
+inputs:
+  ai-rulez-version:
+    description: AI-Rulez release version to install when source-revision is empty.
+    required: false
+    default: "5.2.1"
+  source-revision:
+    description: Optional full 40-character Goldziher/ai-rulez commit SHA to build instead of installing a release.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.0
+    - name: Install AI-Rulez
+      if: inputs.source-revision == ''
+      shell: bash
+      env:
+        AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
+      run: |
+        uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
+        uv tool dir --bin >> "$GITHUB_PATH"
+    - name: Check out pinned AI-Rulez source
+      if: inputs.source-revision != ''
+      id: source
+      shell: bash
+      env:
+        SOURCE_REVISION: ${{ inputs.source-revision }}
+      run: |
+        if [[ ! "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "source-revision must be a full 40-character commit SHA" >&2
+          exit 1
+        fi
+        source_directory=$(mktemp -d "$RUNNER_TEMP/ai-rulez-source.XXXXXX")
+        git -C "$source_directory" init -q
+        git -C "$source_directory" remote add origin https://github.com/Goldziher/ai-rulez.git
+        git -C "$source_directory" fetch --depth=1 origin "$SOURCE_REVISION"
+        git -C "$source_directory" -c advice.detachedHead=false checkout --detach FETCH_HEAD
+        test "$(git -C "$source_directory" rev-parse HEAD)" = "$SOURCE_REVISION"
+        echo "source-directory=$source_directory" >> "$GITHUB_OUTPUT"
+    - name: Set up Go for source build
+      if: inputs.source-revision != ''
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: ${{ steps.source.outputs.source-directory }}/go.mod
+        cache-dependency-path: ${{ steps.source.outputs.source-directory }}/go.sum
+    - name: Install Task for source build
+      if: inputs.source-revision != ''
+      uses: xberg-io/actions/install-task@v1
+    - name: Build pinned AI-Rulez with static native dependencies
+      if: inputs.source-revision != ''
+      shell: bash
+      working-directory: ${{ steps.source.outputs.source-directory }}
+      run: |
+        task build
+        test -x bin/ai-rulez
+        "$PWD/bin/ai-rulez" --version
+        echo "$PWD/bin" >> "$GITHUB_PATH"

@@ -1,0 +1,36 @@
+name: Test AI-Rulez plugin actions
+on:
+  push:
+    branches: [main]
+    paths:
+      - "setup-ai-rulez/**"
+      - "validate-ai-rulez/**"
+      - "tests/test_validate_ai_rulez.py"
+      - "verify-ai-rulez-plugin/**"
+      - "package-ai-rulez-plugin/**"
+      - "tests/test_ai_rulez_plugin.py"
+      - "tests/fixtures/plugin-config.toml"
+      - ".github/workflows/test-ai-rulez-plugin.yml"
+  pull_request:
+    paths:
+      - "setup-ai-rulez/**"
+      - "validate-ai-rulez/**"
+      - "tests/test_validate_ai_rulez.py"
+      - "verify-ai-rulez-plugin/**"
+      - "package-ai-rulez-plugin/**"
+      - "tests/test_ai_rulez_plugin.py"
+      - "tests/fixtures/plugin-config.toml"
+      - ".github/workflows/test-ai-rulez-plugin.yml"
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./setup-ai-rulez
+        with:
+          source-revision: "ace2a7d0e98a69663ddfa62e2ffa92db03e075d2"
+      - uses: ./install-task
+      - name: Test real generation and release artifacts
+        run: task test:ai-rulez-plugin test:ai-rulez-validation
