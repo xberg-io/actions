@@ -93,7 +93,7 @@ jobs:
           submodules: recursive
 
       # Pin matches the reference implementation; bump here to move the whole fleet at once.
-      - uses: cargo-bins/cargo-binstall@v1.25.2
+      - uses: cargo-bins/cargo-binstall@v1.25.3
 
       - name: Install CLI via cargo-binstall
         shell: bash
