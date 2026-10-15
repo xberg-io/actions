@@ -118,7 +118,7 @@ runs:
             if ! sudo apt-get update -y; then
               echo "::warning::Some package indexes could not be refreshed; attempting protobuf-compiler installation with available indexes."
             fi
-            sudo apt-get install -y --no-install-recommends protobuf-compiler
+            sudo apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev
             ;;
           macOS)
             brew install protobuf

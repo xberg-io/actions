@@ -95,7 +95,7 @@ def test_protoc_installs_and_verifies_after_unrelated_index_failure(apt_boundary
     assert result.returncode == 0, result.stdout + result.stderr
     assert log.read_text().splitlines() == [
         "apt-get update -y",
-        "apt-get install -y --no-install-recommends protobuf-compiler",
+        "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev",
         "protoc --version",
     ]
     assert "libprotoc 29.3" in result.stdout
@@ -109,7 +109,7 @@ def test_protoc_install_failure_remains_fatal(apt_boundary, update_code):
     assert result.returncode == _INSTALL_FAILURE, result.stdout + result.stderr
     assert log.read_text().splitlines() == [
         "apt-get update -y",
-        "apt-get install -y --no-install-recommends protobuf-compiler",
+        "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev",
     ]
 
 
@@ -119,7 +119,10 @@ def test_protoc_missing_after_successful_install_remains_fatal(apt_boundary):
     result = _run_protoc(env)
     assert result.returncode == 1, result.stdout + result.stderr
     assert "protoc installation failed; not on PATH" in result.stdout
-    assert log.read_text().splitlines()[-1] == "apt-get install -y --no-install-recommends protobuf-compiler"
+    assert (
+        log.read_text().splitlines()[-1]
+        == "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev"
+    )
 
 
 def test_musl_installs_after_unrelated_index_failure_before_exporting_compiler(apt_boundary):
