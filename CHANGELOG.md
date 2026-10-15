@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.26.1] - 2026-10-15
+
 ### Added
 
 - `archive-python` permanently mirrors Python distributions to public GitHub Releases,
