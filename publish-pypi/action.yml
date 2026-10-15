@@ -26,10 +26,18 @@ inputs:
     required: false
     default: ""
 
+  fallback-index-url:
+    description: "Optional public HTTPS simple index; verified quota-only fallback, never suppresses other failures"
+    required: false
+    default: ""
+
 outputs:
   published:
     description: "Whether packages were published"
     value: ${{ steps.publish.outputs.published }}
+  fallback:
+    description: "Whether PyPI storage quota required the verified public archive"
+    value: ${{ steps.upload.outputs.fallback }}
   skipped:
     description: "Whether the publish was skipped because every dist file was already on the registry"
     value: ${{ steps.validate.outputs.version_published }}
@@ -49,37 +57,19 @@ runs:
 
     - name: Install uv
       if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
-      uses: astral-sh/setup-uv@v10.3.0
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
       with:
         enable-cache: false
 
     - name: Publish to PyPI via trusted publishing
+      id: upload
       if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
       shell: bash
       env:
         UV_PUBLISH_URL: ${{ inputs.repository-url }}
         PACKAGES_DIR: ${{ inputs.packages-dir }}
-      run: |
-        set -euo pipefail
-        # Derive the simple-index URL from the upload URL so `--check-url` can skip
-        # files already on the registry (e.g. https://upload.pypi.org/legacy/ ->
-        # https://pypi.org/simple/). Without it, uploading a directory that spans
-        # multiple packages (the integrations dist: crewai/txtai/surrealdb/...) fails
-        # the moment one package's version already exists from an earlier partial run.
-        # publish.py's idempotency check bails on multi-package dirs and only skips when
-        # every local file is already present, so this per-file skip is what lets a
-        # partial upload (xberg 1.2.5: 2 of 8 wheels before a quota 400) finish on re-run.
-        base="${UV_PUBLISH_URL%/}"
-        base="${base%/legacy}"
-        base="$(printf '%s' "$base" | sed -E 's#^([a-z]+://)upload\.#\1#')"
-        check_url="$base/simple/"
-        # uv discovers the GHA OIDC token via ACTIONS_ID_TOKEN_REQUEST_{URL,TOKEN}
-        # and exchanges it with PyPI's mint-token endpoint automatically.
-        uv publish \
-          --trusted-publishing automatic \
-          --publish-url "$UV_PUBLISH_URL" \
-          --check-url "$check_url" \
-          "$PACKAGES_DIR"/*
+        INPUT_FALLBACK_INDEX_URL: ${{ inputs.fallback-index-url }}
+      run: python3 "${{ github.action_path }}/scripts/upload.py"
 
     - name: Set output
       id: publish
@@ -87,9 +77,10 @@ runs:
       env:
         VERSION_PUBLISHED: ${{ steps.validate.outputs.version_published }}
         PYPI_DRY_RUN: ${{ inputs.dry-run }}
+        UPLOAD_PUBLISHED: ${{ steps.upload.outputs.published }}
       run: |
         if [ "$VERSION_PUBLISHED" = "true" ] || [ "$PYPI_DRY_RUN" = "true" ]; then
           echo "published=false" >> "$GITHUB_OUTPUT"
         else
-          echo "published=true" >> "$GITHUB_OUTPUT"
+          echo "published=$UPLOAD_PUBLISHED" >> "$GITHUB_OUTPUT"
         fi

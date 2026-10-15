@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `archive-python` permanently mirrors Python distributions to public GitHub Releases,
+  verifies downloaded hashes and sizes, and generates a PEP 503 index with Python requirements.
+- `publish-pypi` can use an explicitly configured, verified archive when PyPI rejects an
+  upload because the project storage quota is exhausted. PyPI remains the primary publisher;
+  authentication, package validation, network failures, and other errors still fail.
+
 ## [1.26.0] - 2026-10-14
 
 ### Added

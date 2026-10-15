@@ -1,0 +1,67 @@
+name: Archive Python distributions
+description: Verify permanent GitHub Release copies and generate a PEP 503 simple index
+inputs:
+  index-only:
+    description: Render all existing release manifests without uploading distributions
+    default: "false"
+  packages-dir:
+    description: Directory containing wheels and sdists
+    required: false
+  repository:
+    description: Public GitHub repository that owns the release assets
+    default: ${{ github.repository }}
+  tag:
+    description: Existing public release tag
+    required: false
+  expected-version:
+    description: Exact distribution version, optionally prefixed with v
+    required: false
+  output-dir:
+    description: Fresh destination for simple index and archive manifests
+    default: python-index
+  existing-manifests-dir:
+    description: Optional directory of previously archived JSON manifests from other source repositories
+    default: ""
+  token:
+    description: Token with contents write permission for release assets
+    default: ${{ github.token }}
+outputs:
+  index-dir:
+    description: Directory containing simple/ to merge into the Pages deployment
+    value: ${{ steps.archive.outputs.index-dir }}
+  manifest:
+    description: JSON receipt containing every current verified artifact
+    value: ${{ steps.archive.outputs.manifest }}
+  file-count:
+    description: Number of verified current distributions (strictly positive)
+    value: ${{ steps.archive.outputs.file-count }}
+runs:
+  using: composite
+  steps:
+    - name: Archive distributions and generate simple index
+      id: archive
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ARCHIVE_INDEX_ONLY: ${{ inputs.index-only }}
+        ARCHIVE_PACKAGES: ${{ inputs.packages-dir }}
+        ARCHIVE_REPOSITORY: ${{ inputs.repository }}
+        ARCHIVE_TAG: ${{ inputs.tag }}
+        ARCHIVE_VERSION: ${{ inputs.expected-version }}
+        ARCHIVE_OUTPUT: ${{ inputs.output-dir }}
+        ARCHIVE_EXISTING: ${{ inputs.existing-manifests-dir }}
+      run: |
+        args=()
+        if [ "$ARCHIVE_INDEX_ONLY" = "true" ]; then
+          args+=(--index-only)
+        elif [ "$ARCHIVE_INDEX_ONLY" = "false" ]; then
+          args+=(--packages-dir "$ARCHIVE_PACKAGES" --tag "$ARCHIVE_TAG" --expected-version "$ARCHIVE_VERSION")
+        else
+          echo "index-only must be true or false" >&2
+          exit 1
+        fi
+        if [ -n "$ARCHIVE_EXISTING" ]; then
+          args+=(--existing-manifests-dir "$ARCHIVE_EXISTING")
+        fi
+        python3 "${{ github.action_path }}/scripts/archive.py" \
+          --repository "$ARCHIVE_REPOSITORY" --output-dir "$ARCHIVE_OUTPUT" "${args[@]}"

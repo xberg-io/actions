@@ -68,7 +68,8 @@ to print the command without executing.
 
 | Action | Target | Auth | Description |
 |--------|--------|------|-------------|
-| `publish-pypi` | PyPI | OIDC trusted publisher | Python packages via `pypa/gh-action-pypi-publish` |
+| `publish-pypi` | PyPI | OIDC trusted publisher | Python packages via uv, with optional verified storage quota fallback |
+| [`archive-python`](archive-python/README.md) | GitHub Releases + Pages | GitHub token | Permanent distributions and a hash-pinned PEP 503 index |
 | `publish-npm` | npm | `NPM_TOKEN` | `.tgz` files from a directory or direct `package-dir`; supports `npm-tag` (`latest`/`next`/`rc`) |
 | `publish-crates` | crates.io | OIDC (`rust-lang/crates-io-auth-action`) | Rust crates with dependency-ordered publishing |
 | `publish-rubygems` | RubyGems.org | `GEM_HOST_API_KEY` or trusted publisher | Ruby gems |
