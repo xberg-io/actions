@@ -85,3 +85,9 @@ STUB
 	grep -F 'CARGO_ZIGBUILD_REVISION: ${{ inputs.cargo-zigbuild-revision }}' "$action"
 	grep -F '"$GITHUB_ACTION_PATH/scripts/install-cargo-zigbuild.sh" "$CARGO_ZIGBUILD_REVISION"' "$action"
 }
+
+@test "pinned installer runs after every other setup-rust PATH mutation" {
+	action="$BATS_TEST_DIRNAME/../action.yml"
+	last_step=$(grep '^    - name:' "$action" | tail -n 1)
+	[ "$last_step" = "    - name: Install pinned cargo-zigbuild source" ]
+}

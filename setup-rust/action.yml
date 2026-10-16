@@ -110,14 +110,6 @@ runs:
       run: |
         "$GITHUB_ACTION_PATH/scripts/verify-install.sh" "$RUST_TARGET"
 
-    - name: Install pinned cargo-zigbuild source
-      if: inputs.cargo-zigbuild-revision != ''
-      shell: bash
-      env:
-        CARGO_ZIGBUILD_REVISION: ${{ inputs.cargo-zigbuild-revision }}
-      run: |
-        "$GITHUB_ACTION_PATH/scripts/install-cargo-zigbuild.sh" "$CARGO_ZIGBUILD_REVISION"
-
     - name: Install protoc
       shell: bash
       run: |
@@ -248,3 +240,11 @@ runs:
       shell: bash
       run: |
         "$GITHUB_ACTION_PATH/scripts/report-sccache-stats.sh"
+
+    - name: Install pinned cargo-zigbuild source
+      if: inputs.cargo-zigbuild-revision != ''
+      shell: bash
+      env:
+        CARGO_ZIGBUILD_REVISION: ${{ inputs.cargo-zigbuild-revision }}
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/install-cargo-zigbuild.sh" "$CARGO_ZIGBUILD_REVISION"
