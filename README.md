@@ -199,6 +199,10 @@ For repositories with compiled binding workspaces, set `prose-dependency-directo
     alef-version: latest
 ```
 
+Set `cargo-zigbuild-revision` on `setup-rust` to a full lowercase 40-character commit from the official
+cargo-zigbuild repository when a cross-build needs an unreleased upstream fix. The action verifies
+Cargo's recorded source commit before making the installed tool available.
+
 Matrix usage for post-publish e2e validation:
 
 ```yaml

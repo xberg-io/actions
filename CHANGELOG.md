@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `setup-rust` can install a verified official cargo-zigbuild commit through `cargo-zigbuild-revision`,
+  supporting upstream cross-linker fixes before the next tool release.
+
 ## [1.26.1] - 2026-10-15
 
 ### Added
