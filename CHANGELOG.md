@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.26.2] - 2026-10-16
+
 ### Fixed
 
 - Swift Linux libraries use the selected official Zig 0.17.0 toolchain, avoiding Zig 0.16 libc++
