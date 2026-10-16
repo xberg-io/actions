@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Swift Linux libraries use the selected official Zig 0.17.0 toolchain, avoiding Zig 0.16 libc++
+  diagnostics that fail strict Rust builds while preserving existing warning and compatibility checks.
+- Unix Zig setup verifies archive checksums and sizes before extraction and selects the downloaded
+  release even when an older installation remains in the runner cache.
+
 ### Added
 
 - `setup-rust` can install a verified official cargo-zigbuild commit through `cargo-zigbuild-revision`,

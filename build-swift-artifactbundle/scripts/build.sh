@@ -8,6 +8,7 @@ BINARY_TARGET_NAME="${INPUT_BINARY_TARGET_NAME:-}"
 HEADER_PATH="${INPUT_HEADER_PATH:-}"
 OUTPUT_DIR="${INPUT_OUTPUT_DIR:-dist/swift-artifactbundle}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
+ZIG_VERSION="${INPUT_ZIG_VERSION:-0.17.0}"
 INCLUDE_MACOS_X86_64="${INPUT_INCLUDE_MACOS_X86_64:-true}"
 INCLUDE_IOS_X86_64="${INPUT_INCLUDE_IOS_X86_64:-true}"
 # shellcheck disable=SC2034
@@ -136,9 +137,13 @@ else
   if [[ "$needs_zig" == "true" ]]; then
     echo "=== Ensuring cargo-zigbuild + Zig are installed ==="
     if ! command -v zig >/dev/null 2>&1; then
-      if command -v brew >/dev/null 2>&1; then
-        brew install zig 2>/dev/null || true
-      fi
+      echo "The selected Zig $ZIG_VERSION toolchain is not on PATH" >&2
+      exit 1
+    fi
+    actual_zig_version="$(zig version)"
+    if [[ "$actual_zig_version" != "$ZIG_VERSION" ]]; then
+      echo "Expected Zig $ZIG_VERSION, found $actual_zig_version" >&2
+      exit 1
     fi
     if ! command -v cargo-zigbuild >/dev/null 2>&1; then
       cargo install --locked cargo-zigbuild 2>/dev/null || true

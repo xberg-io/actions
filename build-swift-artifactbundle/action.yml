@@ -62,6 +62,10 @@ inputs:
       assembles in one job, which is the original behaviour.
     required: false
     default: ""
+  zig-version:
+    description: "Exact official Zig release used to cross-compile Linux libraries"
+    required: false
+    default: "0.17.0"
   prebuilt-libs-dir:
     description: >
       Directory holding already-built static libraries laid out as
@@ -116,6 +120,20 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Install the selected Zig release for Linux cross-compilation
+      if: >-
+        inputs.dry-run != 'true' && inputs.prebuilt-libs-dir == '' &&
+        (inputs.targets == '' || contains(inputs.targets, '-linux-gnu'))
+      shell: bash
+      env:
+        ZIG_VERSION: ${{ inputs.zig-version }}
+      run: |
+        if [[ ! "$ZIG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "zig-version must be an exact release version" >&2
+          exit 1
+        fi
+        bash "${{ github.action_path }}/../setup-zig/scripts/unix.sh" "$ZIG_VERSION"
+
     - name: Build artifact bundle
       id: build
       shell: bash
@@ -131,6 +149,7 @@ runs:
         INPUT_INCLUDE_IOS_X86_64: ${{ inputs.include-ios-x86_64 }}
         INPUT_TARGETS: ${{ inputs.targets }}
         INPUT_PREBUILT_LIBS_DIR: ${{ inputs.prebuilt-libs-dir }}
+        INPUT_ZIG_VERSION: ${{ inputs.zig-version }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
       run: |

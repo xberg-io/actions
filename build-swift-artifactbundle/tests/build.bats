@@ -15,7 +15,7 @@ stub() {
 @test "should_describe_optional_target_skips_during_dry_run" {
 	stub sed 'input=$(cat); [ "$input" = my_crate ] && { printf "MyCrate\n"; exit 0; }; /usr/bin/sed "$@" <<<"$input"'
 	export INPUT_DRY_RUN=true INPUT_CRATE_NAME=my-crate INPUT_INCLUDE_MACOS_X86_64=false INPUT_INCLUDE_IOS_X86_64=false
-	run bash "$SCRIPT"
+	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"skip x86_64-apple-darwin (include-macos-x86_64=false)"* ]]
 	[[ "$output" == *"ios-sim uses arm64 only"* ]]
@@ -25,9 +25,9 @@ stub() {
 @test "should_return_error_when_a_target_build_does_not_produce_its_static_library" {
 	stub rustup 'exit 0'
 	stub cargo 'exit 0'
-	stub zig 'exit 0'
+	stub zig 'echo 0.17.0'
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_INCLUDE_MACOS_X86_64=false INPUT_INCLUDE_IOS_X86_64=false
-	run bash "$SCRIPT"
+	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"$ROOT/target/aarch64-apple-darwin/release/libmy_lib.a"* ]]
 }
@@ -35,13 +35,13 @@ stub() {
 @test "should_assemble_disabled_optional_variants_and_write_metadata" {
 	stub rustup 'exit 0'
 	stub cargo 'if [ "$1" = build ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
-	stub zig 'exit 0'
+	stub zig 'echo 0.17.0'
 	stub cargo-zigbuild 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
 	stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
 	stub zip 'touch "$2"'
 	stub swift 'echo checksum123'
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_BINARY_TARGET_NAME=KitTarget INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_INCLUDE_MACOS_X86_64=false INPUT_INCLUDE_IOS_X86_64=false
-	run bash "$SCRIPT"
+	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Skipping x86_64-apple-darwin (include-macos-x86_64=false)"* ]]
 	[ "$(grep -o 'supportedTriples' "$ROOT/dist/Kit.artifactbundle/info.json" | wc -l)" -eq 5 ]
@@ -52,12 +52,12 @@ stub() {
 @test "should_build_only_the_requested_targets_and_stage_them_without_assembling" {
 	stub rustup 'exit 0'
 	stub cargo 'if [ "$1" = build ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
-	stub zig 'exit 0'
+	stub zig 'echo 0.17.0'
 	stub cargo-zigbuild 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
 	stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
 	stub rustup "printf '%s\\n' \"\$*\" >>'$ROOT/rustup.log'"
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_TARGETS=aarch64-apple-darwin
-	run bash "$SCRIPT"
+	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 0 ]
 	# `should_build` must be defined before the toolchain section uses it. A missing
 	# function returns 127, and `if should_build x` then quietly takes the false branch --
@@ -80,7 +80,7 @@ stub() {
 	# A cargo invocation in assemble mode is the defect this guards: fail loudly.
 	stub cargo 'echo "cargo must not run in assemble mode: $*" >&2; exit 97'
 	stub cargo-zigbuild 'echo "zigbuild must not run in assemble mode" >&2; exit 97'
-	stub zig 'exit 0'
+	stub zig 'echo 0.17.0'
 	stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
 	stub zip 'touch "$2"'
 	stub swift 'echo checksum456'
@@ -90,10 +90,76 @@ stub() {
 		touch "$prebuilt/$triple/libmy_lib.a"
 	done
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_BINARY_TARGET_NAME=KitTarget INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_INCLUDE_MACOS_X86_64=false INPUT_INCLUDE_IOS_X86_64=false INPUT_PREBUILT_LIBS_DIR="$prebuilt"
-	run bash "$SCRIPT"
+	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 0 ]
 	[ -f "$ROOT/dist/Kit.artifactbundle/Kit-macos-arm64/libmy_lib.a" ]
 	[ -f "$ROOT/dist/Kit.artifactbundle/Kit-linux-aarch64/libmy_lib.a" ]
 	[ "$(grep -o 'supportedTriples' "$ROOT/dist/Kit.artifactbundle/info.json" | wc -l)" -eq 5 ]
 	[[ "$output" != *"must not run in assemble mode"* ]]
+}
+
+@test "should_reject_a_stale_zig_version_before_any_linux_cargo_build" {
+	stub rustup 'exit 0'
+	stub zig 'echo 0.16.0'
+	stub cargo 'printf "%s\n" "$*" >>"$GITHUB_WORKSPACE/cargo.log"; target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; printf archive >"$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
+	stub cargo-zigbuild 'exit 0'
+	stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
+	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_TARGETS=aarch64-unknown-linux-gnu
+	run /bin/bash "$SCRIPT"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Expected Zig 0.17.0, found 0.16.0"* ]]
+	[ ! -e "$ROOT/cargo.log" ]
+}
+
+@test "should_preserve_selected_zig_verified_cargo_driver_and_ambient_rustflags" {
+	stub rustup 'exit 0'
+	stub zig 'echo 0.17.0'
+	stub cargo 'if [[ "$1" == install ]]; then exit 96; fi; printf "%s\n" "$*" "$RUSTFLAGS" >>"$GITHUB_WORKSPACE/cargo.log"; shift; exec cargo-zigbuild "$@"'
+	stub cargo-zigbuild 'printf "%s\n" "$VERIFIED_CARGO_ZIGBUILD_REVISION" >"$GITHUB_WORKSPACE/driver.log"; target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; printf archive >"$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
+	stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
+	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_TARGETS=aarch64-unknown-linux-gnu INPUT_ZIG_VERSION=0.17.0
+	export VERIFIED_CARGO_ZIGBUILD_REVISION=89c352ae6ff0bbafe17788da327764d9ef92240b RUSTFLAGS='-D warnings -C force-unwind-tables=yes'
+	run /bin/bash "$SCRIPT"
+	[ "$status" -eq 0 ]
+	[ "$(cat "$ROOT/driver.log")" = "$VERIFIED_CARGO_ZIGBUILD_REVISION" ]
+	[ "$(cat "$ROOT/cargo.log")" = $'zigbuild --locked -p my-crate --release --target aarch64-unknown-linux-gnu\n-D warnings -C force-unwind-tables=yes' ]
+	[ -s "$ROOT/dist/libs/aarch64-unknown-linux-gnu/libmy_lib.a" ]
+}
+
+@test "should_provision_pinned_zig_only_for_actual_linux_build_steps" {
+	run python3 - "$BATS_TEST_DIRNAME/../action.yml" <<'PY'
+import pathlib
+import re
+import sys
+
+import yaml
+
+action = yaml.safe_load(pathlib.Path(sys.argv[1]).read_text())
+assert action["inputs"].get("zig-version", {}).get("default") == "0.17.0", "missing pinned Zig release input"
+steps = action["runs"]["steps"]
+selected = [step for step in steps if step.get("env", {}).get("ZIG_VERSION") == "${{ inputs.zig-version }}"]
+assert len(selected) == 1, "expected one explicit Zig provisioning step"
+step = selected[0]
+assert "${{ github.action_path }}/../setup-zig/scripts/unix.sh" in step["run"], "must reuse the same action checkout"
+assert steps.index(step) < next(i for i, item in enumerate(steps) if item.get("id") == "build")
+build = next(item for item in steps if item.get("id") == "build")
+assert build["env"]["INPUT_ZIG_VERSION"] == "${{ inputs.zig-version }}"
+cases = [
+    ({"targets": "aarch64-unknown-linux-gnu", "dry-run": "false", "prebuilt-libs-dir": ""}, True),
+    ({"targets": "", "dry-run": "false", "prebuilt-libs-dir": ""}, True),
+    ({"targets": "aarch64-apple-darwin", "dry-run": "false", "prebuilt-libs-dir": ""}, False),
+    ({"targets": "aarch64-unknown-linux-gnu", "dry-run": "true", "prebuilt-libs-dir": ""}, False),
+    ({"targets": "", "dry-run": "false", "prebuilt-libs-dir": "archives"}, False),
+]
+for inputs, expected in cases:
+    condition = step["if"].strip()
+    condition = condition.removeprefix("${{").removesuffix("}}")
+    condition = re.sub(r"inputs\.([a-z-]+)", lambda match: repr(inputs[match[1]]), condition)
+    condition = condition.replace("&&", " and ").replace("||", " or ")
+    actual = eval(condition, {"__builtins__": {}, "contains": lambda value, part: part in value})
+    assert actual is expected, (inputs, expected, actual)
+print("5 provisioning cases passed")
+PY
+	[ "$status" -eq 0 ]
+	[ "$output" = "5 provisioning cases passed" ]
 }
