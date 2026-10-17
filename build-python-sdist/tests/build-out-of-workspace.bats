@@ -4,6 +4,8 @@ setup() {
 	ROOT="$BATS_TEST_TMPDIR/root"
 	BIN="$ROOT/bin"
 	mkdir -p "$BIN" "$ROOT/ws"
+	ROOT="$(cd "$ROOT" && pwd -P)"
+	BIN="$ROOT/bin"
 	export PATH="$BIN:$PATH"
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/build-out-of-workspace.sh"
 }
@@ -131,4 +133,14 @@ EOF
 	run /bin/bash "$SCRIPT" packages/python "$ROOT/out" "$ROOT/ws" workspace-closure
 	[ "$status" -eq 37 ]
 	[[ "$output" == *package-failed* ]]
+}
+
+@test "should_canonicalize_symlinked_workspace_for_manifest_and_relative_output" {
+	closure_fixture
+	metadata_only_cargo
+	ln -s "$ROOT/ws" "$ROOT/workspace-link"
+	stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
+	run /bin/bash "$SCRIPT" crates/binding/Cargo.toml dist "$ROOT/workspace-link" workspace-closure
+	[ "$status" -eq 0 ]
+	[ "$(cat "$ROOT/closure-call")" = "$ROOT/ws"$'\n'"sdist --manifest-path $ROOT/ws/crates/binding/Cargo.toml --out $ROOT/ws/dist" ]
 }
