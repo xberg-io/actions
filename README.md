@@ -29,12 +29,18 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 
 ### Build
 
+`build-python-sdist` defaults to registry dependencies. Set `source-dependencies: workspace-closure`
+to include internal Rust sources through maturin, using the same mode for release and dry-run artifacts.
+This mode requires Python 3.11+ and Cargo and validates the internal dependency closure before packaging.
+It preserves plain Maturin feature selection and lock requirements; conditional feature objects, nonempty
+`tool.maturin.config` or `unstable-flags`, and local source overrides are unsupported and fail before packaging.
+
 | Action | Description |
 |--------|-------------|
 | `build-rust-ffi` | Shared/static Rust FFI libraries with native static-link metadata and error diagnostics |
 | `build-and-cache-binding` | Language binding build with intelligent caching |
 | `build-python-wheels` | Python wheels via cibuildwheel/maturin |
-| `build-python-sdist` | Python sdist via maturin, with baked-in path-dep → registry rewrite for source installs |
+| `build-python-sdist` | Python sdists with registry dependencies or an included Rust workspace source closure |
 | `build-node-napi` | Node.js NAPI-RS native modules |
 | `build-ruby-gem` | Platform-specific Ruby gems |
 | `build-php-extension` | PHP extensions |

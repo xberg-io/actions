@@ -6,6 +6,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Python source distributions can include internal Rust sources before their crates are published.
 - Rust crate publishing dry runs report Cargo diagnostics and fail immediately when package verification fails.
 
 ## [1.26.2] - 2026-10-16

@@ -5,10 +5,53 @@ set -euo pipefail
 INPUT="${1:-}"
 OUTPUT_DIR="${2:-.}"
 WORKSPACE_ROOT="${3:-.}"
+SOURCE_DEPENDENCIES="${4-registry}"
+
+case "$SOURCE_DEPENDENCIES" in
+registry | workspace-closure) ;;
+*)
+  echo "Error: unsupported source-dependencies: $SOURCE_DEPENDENCIES" >&2
+  exit 1
+  ;;
+esac
 
 if [ -z "$INPUT" ]; then
   echo "Error: missing input (manifest-path or package-dir)" >&2
   exit 1
+fi
+
+if [ "$SOURCE_DEPENDENCIES" = "workspace-closure" ]; then
+  WORKSPACE_ROOT="$(cd "$WORKSPACE_ROOT" && pwd -P)"
+  case "$OUTPUT_DIR" in
+  /*) closure_output="$OUTPUT_DIR" ;;
+  *) closure_output="$WORKSPACE_ROOT/$OUTPUT_DIR" ;;
+  esac
+  source_path=$(
+    python3 - "$WORKSPACE_ROOT" "$INPUT" <<'PYTHON'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1]).resolve()
+source = (root / sys.argv[2]).resolve()
+if not source.is_relative_to(root):
+    raise SystemExit("Error: input resolves outside workspace")
+print(source)
+PYTHON
+  )
+  python3 "$(dirname "$0")/validate-workspace-closure.py" "$WORKSPACE_ROOT" "$INPUT"
+  if [ -f "$source_path" ]; then
+    mkdir -p "$closure_output"
+    cd "$WORKSPACE_ROOT"
+    maturin sdist --manifest-path "$source_path" --out "$closure_output"
+  elif [ -d "$source_path" ] && [ -f "$source_path/pyproject.toml" ]; then
+    mkdir -p "$closure_output"
+    cd "$source_path"
+    maturin sdist --out "$closure_output"
+  else
+    echo "Error: workspace-closure input must be a manifest or Python package directory" >&2
+    exit 1
+  fi
+  exit 0
 fi
 
 BUILD_TEMP=$(mktemp -d)

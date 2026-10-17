@@ -1,8 +1,8 @@
 name: Build Python sdist
 description: >
   Build a Python source distribution (sdist) with maturin, after rewriting the
-  binding crate's workspace path-dependencies to registry version-dependencies so
-  the sdist compiles standalone on a consumer machine (no workspace present). This
+  binding crate's workspace path-dependencies to registry version-dependencies by
+  default, or including local Rust sources with source-dependencies: workspace-closure. This
   is the python-sdist analog of build-ruby-gem: it bakes in the dependency rewrite
   so it can't be forgotten. The built sdist is written to <output-dir>; the caller
   uploads it. The caller must have set up the Rust and Python toolchains first
@@ -11,6 +11,15 @@ description: >
   as workflow steps BEFORE this action.
 
 inputs:
+  source-dependencies:
+    description: >
+      registry rewrites internal Rust dependencies to published registry versions.
+      workspace-closure lets maturin include their local sources in the sdist.
+      Requires Python 3.11+ and Cargo in workspace-closure mode.
+      Conditional features, nonempty Maturin config/unstable flags and local source overrides are unsupported.
+      Use the same explicit mode for release and dry-run artifacts.
+    required: false
+    default: "registry"
   package-dir:
     description: "Python package directory containing pyproject.toml. Used unless manifest-path is set."
     required: false
@@ -53,8 +62,18 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate source dependency mode
+      shell: bash
+      env:
+        INPUT_SOURCE_DEPENDENCIES: ${{ inputs.source-dependencies }}
+      run: |
+        case "${INPUT_SOURCE_DEPENDENCIES}" in
+          registry|workspace-closure) ;;
+          *) echo "Error: unsupported source-dependencies: ${INPUT_SOURCE_DEPENDENCIES}" >&2; exit 1 ;;
+        esac
+
     - name: Rewrite native dependencies to registry versions
-      if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true'
+      if: inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true' && inputs.source-dependencies == 'registry'
       uses: xberg-io/actions/rewrite-native-deps@v1
       with:
         lang: python
@@ -73,6 +92,7 @@ runs:
         INPUT_PACKAGE_DIR: ${{ inputs.package-dir }}
         INPUT_MANIFEST_PATH: ${{ inputs.manifest-path }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_SOURCE_DEPENDENCIES: ${{ inputs.source-dependencies }}
       run: |
         set -euo pipefail
         case "${INPUT_OUTPUT_DIR}" in
@@ -83,4 +103,4 @@ runs:
 
         input_path="${INPUT_MANIFEST_PATH:-${INPUT_PACKAGE_DIR}}"
         bash "${{ github.action_path }}/scripts/build-out-of-workspace.sh" \
-          "$input_path" "$out" "$GITHUB_WORKSPACE"
+          "$input_path" "$out" "$GITHUB_WORKSPACE" "$INPUT_SOURCE_DEPENDENCIES"

@@ -10,6 +10,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import yaml
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,7 +31,7 @@ def test_runs_rewrite_then_maturin():
 def test_rewrite_is_opt_outable_and_default_on():
     content = _read()
     assert "rewrite-native-deps:" in content
-    assert "if: inputs.rewrite-native-deps == 'true'" in content
+    assert "inputs.rewrite-native-deps == 'true'" in content
     assert 'default: "true"' in content
 
 
@@ -162,3 +164,35 @@ def test_split_layout_without_readme_key_copies_nothing(tmp_path: Path):
 
     assert result.returncode == 0, result.stderr
     assert "README.md" not in listed
+
+
+def test_source_dependency_mode_defaults_to_registry_and_validates_before_rewrite(tmp_path: Path):
+    action = yaml.safe_load(_read())
+    assert "source-dependencies" in action["inputs"]
+    assert action["inputs"]["source-dependencies"]["default"] == "registry"
+    steps = action["runs"]["steps"]
+    assert steps[0]["name"] == "Validate source dependency mode"
+    rewrite = next(step for step in steps if step.get("name") == "Rewrite native dependencies to registry versions")
+    assert (
+        rewrite["if"]
+        == "inputs.rewrite-native-deps == 'true' && inputs.dry-run != 'true' && inputs.source-dependencies == 'registry'"
+    )
+    for mode, expected in [("registry", 0), ("workspace-closure", 0), ("unknown", 1), ("", 1)]:
+        result = subprocess.run(
+            ["bash", "-c", steps[0]["run"]],
+            cwd=tmp_path,
+            env={**os.environ, "INPUT_SOURCE_DEPENDENCIES": mode},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == expected, (mode, result.stderr)
+        assert list(tmp_path.iterdir()) == []
+
+
+def test_build_step_passes_the_explicit_source_mode_to_the_actual_helper():
+    action = yaml.safe_load(_read())
+    build = next(step for step in action["runs"]["steps"] if step.get("name") == "Build sdist")
+    assert "INPUT_SOURCE_DEPENDENCIES" in build["env"]
+    assert build["env"]["INPUT_SOURCE_DEPENDENCIES"] == "${{ inputs.source-dependencies }}"
+    assert '"$input_path" "$out" "$GITHUB_WORKSPACE" "$INPUT_SOURCE_DEPENDENCIES"' in build["run"]
