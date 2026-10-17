@@ -136,7 +136,7 @@ jobs:
 
       - name: Create dummy Rust crate
         run: |
-          cargo init --name test-crate /tmp/test-crate
+          cargo init --vcs git --name test-crate /tmp/test-crate
           # ~keep Pin the manifest version explicitly rather than relying on `cargo init`'s
           # default: the release-version guard compares this against the `version` input below,
           # so the two must agree by construction. They previously did not (init defaults to
@@ -144,6 +144,16 @@ jobs:
           # job ran against it. Keep both numbers in sync when changing either.
           sed -i 's/^version = .*/version = "0.0.1"/' /tmp/test-crate/Cargo.toml
           grep -q '^version = "0.0.1"$' /tmp/test-crate/Cargo.toml
+          sed -i \
+            -e '/^edition = /a description = "Synthetic publish action fixture"' \
+            -e '/^edition = /a license = "MIT"' \
+            -e '/^edition = /a repository = "https://github.com/xberg-io/actions"' /tmp/test-crate/Cargo.toml
+          cargo generate-lockfile --manifest-path /tmp/test-crate/Cargo.toml
+          git -C /tmp/test-crate add .gitignore Cargo.toml Cargo.lock src/main.rs
+          git -C /tmp/test-crate -c user.name="Publish fixture" \
+            -c user.email="publish-fixture@example.invalid" \
+            -c commit.gpgsign=false commit -m "test: initialize publish fixture"
+          test -z "$(git -C /tmp/test-crate status --porcelain)"
 
       - name: Test publish-crates (dry-run)
         uses: ./publish-crates
