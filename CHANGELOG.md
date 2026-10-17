@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Rust crate publishing dry runs report Cargo diagnostics and fail immediately when package verification fails.
+
 ## [1.26.2] - 2026-10-16
 
 ### Fixed

@@ -654,6 +654,21 @@ def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     return exit_code, output
 
 
+def _dry_run_crate(crate: str, manifest_args: list[str], crate_manifest: str | None, version: str) -> None:
+    print(f"  [dry-run] cargo publish -p {crate} --dry-run")
+    with _temporarily_inject_versions(crate_manifest, version) as injected:
+        dirty_args = ["--allow-dirty"] if injected else []
+        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run", *dirty_args])
+    if output:
+        print(
+            output,
+            end="" if output.endswith("\n") else "\n",
+            file=sys.stderr if exit_code else sys.stdout,
+        )
+    if exit_code != 0:
+        sys.exit(exit_code)
+
+
 def main() -> None:
     crates_input = os.environ.get("INPUT_CRATES", "")
     version = normalize_release_version(os.environ.get("INPUT_VERSION", ""))
@@ -687,10 +702,7 @@ def main() -> None:
         crate_manifest = workspace_package.manifest_path if workspace_package else None
 
         if dry_run:
-            print(f"  [dry-run] cargo publish -p {crate} --dry-run")
-            with _temporarily_inject_versions(crate_manifest, version) as injected:
-                dirty_args = ["--allow-dirty"] if injected else []
-                _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run", *dirty_args])
+            _dry_run_crate(crate, manifest_args, crate_manifest, version)
             continue
 
         with _temporarily_inject_versions(crate_manifest, version):
