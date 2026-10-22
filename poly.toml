@@ -267,7 +267,7 @@ enabled = true
 
 [hooks.pre-commit.commands.pyrefly]
 run = "task typecheck"
-files = "**/*.py"
+files = "{**/*.py,**/pyrefly.toml,pyproject.toml,poly.toml,Taskfile.yml}"
 exclude = ["tests/**", "**/tests/**"]
 workspace = true
 cache = { inputs = ["**/*.py", "**/pyrefly.toml", "pyproject.toml", "Taskfile.yml"] }
