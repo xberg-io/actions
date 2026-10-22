@@ -263,6 +263,7 @@ runs:
         FFI_DIR: ${{ inputs.multi-platform-ffi-dir }}
         MODULE_NAME: ${{ inputs.module-name }}
         FFI_LIB_NAME: ${{ inputs.ffi-lib-name }}
+        FFI_HEADER_PATH: ${{ inputs.ffi-header-path }}
       run: |
         set -euo pipefail
 
@@ -305,7 +306,7 @@ runs:
             mkdir -p "$dst_dir"
             # Copy shared/static libraries only — headers go in include/ shared.
             find "$src_dir" -maxdepth 1 -type f \
-              \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' -o -name '*.a' \) \
+              \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' -o -name '*.a' -o -name '*.lib' \) \
               -exec cp {} "$dst_dir/" \;
             if compgen -G "$dst_dir/*" > /dev/null; then
               bundled_any=1
@@ -325,6 +326,25 @@ runs:
           find "$FFI_DIR/include" -maxdepth 1 -type f -name '*.h' -exec cp {} "$WORKING_DIR/include/" \;
           echo "Bundled headers:"
           ls -lh "$WORKING_DIR/include/" || true
+        fi
+
+        # ~keep Alef bindings import a named c module; include paths alone cannot supply it.
+        ffi_header_name=""
+        if grep -Fq '@import("c")' "$WORKING_DIR/src/$MODULE_NAME.zig"; then
+          if [[ -n "${FFI_HEADER_PATH:-}" ]]; then
+            ffi_header_name=$(basename "$FFI_HEADER_PATH")
+          else
+            set -- "$WORKING_DIR"/include/*.h
+            if [[ $# -ne 1 || ! -f "$1" ]]; then
+              echo "Error: provide ffi-header-path when the c module has zero or multiple bundled headers" >&2
+              exit 1
+            fi
+            ffi_header_name=$(basename "$1")
+          fi
+          if [[ ! -f "$WORKING_DIR/include/$ffi_header_name" ]]; then
+            echo "Error: FFI header is not bundled: $ffi_header_name" >&2
+            exit 1
+          fi
         fi
 
         # Patch build.zig.zon .paths to expose lib/ and include/ to consumers.
@@ -385,6 +405,15 @@ runs:
           printf '%s\n' '        .optimize = optimize,'
           printf '%s\n' '        .link_libc = true,'
           printf '%s\n' '    });'
+          if [[ -n "$ffi_header_name" ]]; then
+            printf '%s\n' '    const translate_c = b.addTranslateC(.{'
+            printf '        .root_source_file = b.path("include/%s"),\n' "$ffi_header_name"
+            printf '%s\n' '        .target = target,'
+            printf '%s\n' '        .optimize = optimize,'
+            printf '%s\n' '    });'
+            printf '%s\n' '    translate_c.addIncludePath(b.path("include"));'
+            printf '%s\n' '    module.addImport("c", translate_c.createModule());'
+          fi
           printf '%s\n' '    module.addLibraryPath(b.path(lib_subdir));'
           printf '%s\n' '    module.addIncludePath(b.path("include"));'
           printf '    module.linkSystemLibrary("%s", .{});\n' "$FFI_LIB_NAME"

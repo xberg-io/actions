@@ -25,7 +25,7 @@ if ! echo "$body" | grep -q "<!-- zig-fetch -->"; then
   # ~keep printf, not $'...' spliced around the variables: the previous one-liner left the
   # ANSI-C quoting at the first variable, so everything after the package name reached the
   # release page as literal \n and \" -- visible on every published Zig block.
-  zig_block=$(printf '<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .%s = .{\n        .url = "%s",\n        .hash = "%s",\n    },\n},\n```' \
+  zig_block=$(printf '<!-- zig-fetch -->\n## Zig\n\nAdd to your `build.zig.zon`:\n\n```\n.dependencies = .{\n    .@"%s" = .{\n        .url = "%s",\n        .hash = "%s",\n    },\n},\n```' \
     "$PKG_NAME" "$URL" "$HASH")
   new_body="$body"$'\n\n'"$zig_block"$'\n'
   # ~keep tag_name travels with every PATCH even though only the body changes. On a release
