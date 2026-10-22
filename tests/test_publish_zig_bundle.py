@@ -19,6 +19,14 @@ def _package(tmp_path):
     (package / "src" / "sample.zig").write_text('pub const c = @import("c");\n')
     (natives / "include").mkdir(parents=True)
     (natives / "include" / "sample.h").write_text("int sample_version(void);\n")
+    for rid, library in (
+        ("linux-x64", "libsample_ffi.so"),
+        ("linux-arm64", "libsample_ffi.so"),
+        ("osx-arm64", "libsample_ffi.dylib"),
+        ("osx-x64", "libsample_ffi.dylib"),
+    ):
+        (natives / rid).mkdir()
+        (natives / rid / library).write_bytes(b"platform-library")
     (natives / "win-x64").mkdir()
     (natives / "win-x64" / "sample_ffi.dll").write_bytes(b"shared-library")
     (natives / "win-x64" / "sample_ffi.lib").write_bytes(b"import-or-static-library")
@@ -52,3 +60,19 @@ def test_should_bundle_windows_link_library_alongside_dll(tmp_path):
     library = package / "lib" / "x86_64-windows-msvc" / "sample_ffi.lib"
     assert library.is_file(), "Windows link library was silently dropped"
     assert library.read_bytes() == b"import-or-static-library"
+
+
+def test_should_preserve_libraries_for_every_supported_target(tmp_path):
+    package = _package(tmp_path)
+    libraries = package / "lib"
+    observed = {
+        path.relative_to(libraries).as_posix(): path.read_bytes() for path in libraries.rglob("*") if path.is_file()
+    }
+    assert observed == {
+        "x86_64-linux-gnu/libsample_ffi.so": b"platform-library",
+        "aarch64-linux-gnu/libsample_ffi.so": b"platform-library",
+        "aarch64-darwin/libsample_ffi.dylib": b"platform-library",
+        "x86_64-darwin/libsample_ffi.dylib": b"platform-library",
+        "x86_64-windows-msvc/sample_ffi.dll": b"shared-library",
+        "x86_64-windows-msvc/sample_ffi.lib": b"import-or-static-library",
+    }

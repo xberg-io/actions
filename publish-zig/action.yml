@@ -287,19 +287,18 @@ runs:
         # bundled package re-keys them under canonical Rust target triples that
         # Zig's compile-time target switch maps to (see the rewritten build.zig
         # below).
-        declare -A rid_to_libdir=(
-          ["linux-x64"]="x86_64-linux-gnu"
-          ["linux-arm64"]="aarch64-linux-gnu"
-          ["osx-arm64"]="aarch64-darwin"
-          ["osx-x64"]="x86_64-darwin"
-          ["win-x64"]="x86_64-windows-msvc"
-        )
-
         mkdir -p "$WORKING_DIR/lib" "$WORKING_DIR/include"
 
         bundled_any=0
-        for rid in "${!rid_to_libdir[@]}"; do
-          libdir="${rid_to_libdir[$rid]}"
+        # ~keep macOS ships Bash 3, which does not support associative arrays.
+        for target_mapping in \
+          "linux-x64:x86_64-linux-gnu" \
+          "linux-arm64:aarch64-linux-gnu" \
+          "osx-arm64:aarch64-darwin" \
+          "osx-x64:x86_64-darwin" \
+          "win-x64:x86_64-windows-msvc"; do
+          rid="${target_mapping%%:*}"
+          libdir="${target_mapping#*:}"
           src_dir="$FFI_DIR/$rid"
           if [[ -d "$src_dir" ]]; then
             dst_dir="$WORKING_DIR/lib/$libdir"
