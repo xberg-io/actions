@@ -112,14 +112,18 @@ lint.pylint.max-returns = 10
 keep_full_version = true
 max_supported_python = "3.14"
 
-[tool.mypy]
-python_version = "3.10"
-disable_error_code = ["import-untyped"]
-explicit_package_bases = true
-implicit_reexport = false
-show_error_codes = true
-strict = true
-namespace_packages = true
+[tool.pyrefly]
+python-version = "3.10"
+preset = "default"
+project-excludes = ["tests/**", "**/tests/**"]
+search-path = [
+  "build-csharp-natives/scripts",
+  "build-elixir-natives/scripts",
+  "build-java-natives/scripts",
+  "publish-github-release/scripts",
+  "publish-homebrew-source-formulas/scripts",
+  "publish-scoop-manifests/scripts",
+]
 
 [tool.pytest]
 # Per-action tests/ directories are listed explicitly. They used to be invisible to CI, which is

@@ -27,6 +27,11 @@ tasks:
       - poly fmt --check .
       - task: lint:bats
 
+  typecheck:
+    desc: Check Python types with Pyrefly
+    cmds:
+      - uv run --frozen pyrefly check . --project-excludes 'tests/**' --project-excludes '**/tests/**'
+
   test:
     desc: Run all tests
     cmds:

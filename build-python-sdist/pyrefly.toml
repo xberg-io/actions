@@ -1,0 +1,2 @@
+extends = "../pyproject.toml"
+python-version = "3.11"

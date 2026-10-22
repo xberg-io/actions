@@ -4,8 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-10-22
+
+### Changed
+
+- Python type checks use native Pyrefly configuration in CI and local hooks.
+
 ### Fixed
 
+- Python source archive validation is checked against its Python 3.11 minimum.
 - Python source distributions can include internal Rust sources before their crates are published.
 - Rust crate publishing dry runs report Cargo diagnostics and fail immediately when package verification fails.
 
@@ -740,9 +747,8 @@ All notable changes to xberg-io/actions are documented in this file.
   and preventing golangci-lint from type-checking against a newer standard library than the module
   declares. Callers can still override `go-version` explicitly.
 
-- Type checking runs **pyrefly** instead of mypy, matching the pre-commit hook in `poly.toml`;
-  the CI step now mirrors that hook's per-action `--search-path` list rather than looping mypy over
-  each file. `[tool.mypy]` stays as the settings source pyrefly reads.
+- Type checking runs **Pyrefly**, matching the pre-commit hook in `poly.toml`;
+  the CI step mirrors that hook's per-action import search paths.
   (`.github/workflows/test-unit.yml`, `pyproject.toml`, `README.md`)
 
 - `test_upload_artifacts.py` converted from `unittest.TestCase` classes to pytest functions,
