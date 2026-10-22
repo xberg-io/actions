@@ -49,7 +49,6 @@ poly.local.toml
 .ai-rulez/.generated-manifest.local.json
 .ai-rulez/local/
 .claude/agents/
-.claude/settings.json
 .claude/skills/
 .codex/agents/
 .codex/config.toml
