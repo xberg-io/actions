@@ -13,7 +13,7 @@ setup() {
 
 run_script() {
 	run env GH_TOKEN=token GITHUB_REPOSITORY=example/project RELEASE_ID=4242 TAG=v1.2.3 \
-		PKG_NAME=demo URL=https://example.invalid/demo.tar.gz HASH=1220abc \
+		PKG_NAME="${2:-demo}" URL=https://example.invalid/demo.tar.gz HASH=1220abc \
 		GH_STUB_BODY="$1" XBERG_TRACE="$XBERG_TRACE" \
 		bash "$BATS_TEST_DIRNAME/../scripts/append-release-notes.sh"
 }
@@ -38,7 +38,7 @@ Add to your `build.zig.zon`:
 
 ```
 .dependencies = .{
-    .demo = .{
+    .@"demo" = .{
         .url = "https://example.invalid/demo.tar.gz",
         .hash = "1220abc",
     },
@@ -73,4 +73,11 @@ Add to your `build.zig.zon`:
 	xberg_assert_status 1
 	xberg_assert_output "Error: TAG is required"
 	xberg_assert_trace_empty
+}
+
+@test "should_quote_hyphenated_package_names_as_zig_identifiers" {
+	run_script "Existing notes" "crawlberg-zig"
+
+	xberg_assert_status 0
+	[ "$(grep -Fc '.@"crawlberg-zig" = .{' "$XBERG_TRACE")" = 1 ]
 }
