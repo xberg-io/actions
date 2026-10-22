@@ -15,11 +15,6 @@ All notable changes to xberg-io/actions are documented in this file.
 - Python source archive validation is checked against its Python 3.11 minimum.
 - Python source distributions can include internal Rust sources before their crates are published.
 - Rust crate publishing dry runs report Cargo diagnostics and fail immediately when package verification fails.
-
-## [1.26.2] - 2026-10-16
-
-### Fixed
-
 - Swift Linux libraries use the selected official Zig 0.17.0 toolchain, avoiding Zig 0.16 libc++
   diagnostics that fail strict Rust builds while preserving existing warning and compatibility checks.
 - Unix Zig setup verifies archive checksums and sizes before extraction and selects the downloaded
