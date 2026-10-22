@@ -30,7 +30,7 @@ tasks:
   typecheck:
     desc: Check Python types with Pyrefly
     cmds:
-      - uv run --frozen pyrefly check . --project-excludes 'tests/**' --project-excludes '**/tests/**'
+      - uv run --frozen pyrefly check . --verbose --project-excludes 'tests/**' --project-excludes '**/tests/**'
 
   test:
     desc: Run all tests
