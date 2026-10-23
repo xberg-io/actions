@@ -30,6 +30,11 @@ on:
         required: false
         type: string
         default: "false"
+      rust-use-sccache:
+        description: "Enable sccache for Rust compilation"
+        required: false
+        type: boolean
+        default: true
       build-musl:
         description: "Also build x86_64-unknown-linux-musl as a best-effort job"
         required: false
@@ -117,6 +122,7 @@ jobs:
 
       - uses: xberg-io/actions/setup-rust@v1
         with:
+          use-sccache: ${{ inputs.rust-use-sccache }}
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
 
@@ -183,6 +189,7 @@ jobs:
 
       - uses: xberg-io/actions/setup-rust@v1
         with:
+          use-sccache: ${{ inputs.rust-use-sccache }}
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
 
@@ -247,6 +254,7 @@ jobs:
 
       - uses: xberg-io/actions/setup-rust@v1
         with:
+          use-sccache: ${{ inputs.rust-use-sccache }}
           target: x86_64-unknown-linux-musl
           cache-key-prefix: publish-cli-x86_64-unknown-linux-musl
 
