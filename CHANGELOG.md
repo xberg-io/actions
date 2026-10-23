@@ -4,13 +4,18 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.27.1] - 2026-10-23
+
 ### Fixed
 
 - Java test-app and Android setup actions select Temurin builds published for each runner OS and architecture.
-
 - Explicit release target inputs override event defaults, so published releases honor requested channels.
-
 - Maven setup tests retain the available Temurin release on Windows while other platforms use the updated JDK.
+- Restore C imports and Windows link libraries in multi-platform Zig bundles, support macOS Bash 3, and quote hyphenated dependency names.
+
+### Changed
+
+- Update tool setup and validation action pins to their reviewed patch releases.
 
 ## [1.27.0] - 2026-10-22
 
