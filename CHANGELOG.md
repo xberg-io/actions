@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Maven setup tests retain the available Temurin release on Windows while other platforms use the updated JDK.
+
 ## [1.27.0] - 2026-10-22
 
 ### Changed
