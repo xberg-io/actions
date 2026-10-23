@@ -6,6 +6,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Explicit release target inputs override event defaults, so published releases honor requested channels.
+
 - Maven setup tests retain the available Temurin release on Windows while other platforms use the updated JDK.
 
 ## [1.27.0] - 2026-10-22

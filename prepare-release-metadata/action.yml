@@ -208,6 +208,9 @@ runs:
         if [[ -n "${INPUT_TAG}" ]]; then
           tag="${INPUT_TAG}"
         fi
+        if [[ -n "${INPUT_TARGETS}" ]]; then
+          targets="${INPUT_TARGETS}"
+        fi
 
         # When dry-running without an explicit tag, synthesize one from the
         # repo's canonical version so the publish pipeline can dry-build
