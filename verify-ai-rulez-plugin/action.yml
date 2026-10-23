@@ -22,7 +22,7 @@ runs:
   steps:
     - name: Install uv for a legacy caller
       if: inputs.ai-rulez-version != ''
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Install the legacy caller's pinned AI-Rulez release
       if: inputs.ai-rulez-version != ''
       shell: bash
