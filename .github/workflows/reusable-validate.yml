@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "rustfmt, clippy"
+      rust-use-sccache:
+        description: "Enable the compiler cache; disable it when the cache service is unavailable."
+        required: false
+        type: boolean
+        default: true
       setup-python:
         description: "Install a Python env so poly's pyrefly type-check can resolve imports."
         required: false
@@ -235,6 +240,7 @@ jobs:
         with:
           components: ${{ inputs.rust-components }}
           install-llvm-cov: "false"
+          use-sccache: ${{ inputs.rust-use-sccache }}
 
       # ~keep opt-in: xberg's tools/benchmark-harness pulls in libheif-sys via the
       # `full` feature, and Ubuntu Noble only ships libheif 1.17.6 (libheif-sys needs
