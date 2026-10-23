@@ -90,7 +90,11 @@ runs:
       uses: actions/setup-java@v6
       with:
         distribution: "temurin"
-        java-version: "25.0.5+8.0.LTS"
+        # Temurin 25.0.5+8 currently has only Linux x64 and macOS ARM64 JDK archives. ~keep
+        java-version: >-
+          ${{ ((runner.os == 'Linux' && runner.arch == 'X64') ||
+          (runner.os == 'macOS' && runner.arch == 'ARM64')) &&
+          '25.0.5+8.0.LTS' || '25.0.4+101.0.LTS' }}
 
     - name: Setup .NET
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}

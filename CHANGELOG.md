@@ -6,6 +6,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Java test-app and Android setup actions select Temurin builds published for each runner OS and architecture.
+
 - Explicit release target inputs override event defaults, so published releases honor requested channels.
 
 - Maven setup tests retain the available Temurin release on Windows while other platforms use the updated JDK.
