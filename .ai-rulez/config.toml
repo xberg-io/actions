@@ -3,6 +3,8 @@ version = "5.0"
 name = 'actions'
 description = 'Shared GitHub Actions composite actions for xberg-io CI/CD pipelines'
 gitignore = true
+# ~keep The manifest is committed so CI can detect stale generated files.
+gitignore_exclude = [".ai-rulez/.generated-manifest.json"]
 presets = ["claude", "codex", "opencode", "pi", "hermes"]
 # ~keep CLAUDE.md without the glob-scoped rules: they load from .claude/rules on a matching read.
 agents_md = false
