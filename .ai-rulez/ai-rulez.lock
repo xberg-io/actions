@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.6.3'
 scope = 'all'
-tree = 'sha256:1ff21bedfff2f6221a2dd9bedb054bc4a3c10adf9859222dd8a282dadec6916b'
+tree = 'sha256:9985dbec0dafe121bc06c8c08419a6ee64fa9588f5c387f145fcc6abb1d72375'
 
 [[include]]
 name = 'xberg-cicd'
@@ -136,7 +136,7 @@ digest = 'sha256:37e225c8dfdab9a71522d9ec9718ee8f41881bab149618e58467534827488dd
 name = 'release-workflow'
 source = '.ai-rulez/skills/release-workflow/SKILL.md'
 commit = ''
-digest = 'sha256:3b6153308e6928491dd0ed2047bb4fd443b4249c9e7d8d28dc5e3a2f70848f56'
+digest = 'sha256:edbb4faef2195fe7acbc6dde32771f01c2a0f44b2068983ec672052adeb30ea3'
 
 [[served]]
 name = 'scoop-distribution'
@@ -172,7 +172,7 @@ digest = 'sha256:a07f0dd7b07b37533acbd76b571f831a9854935b817d5e5de1e94865052176c
 name = 'testing-conventions'
 source = '.ai-rulez/skills/testing-conventions/SKILL.md'
 commit = ''
-digest = 'sha256:967d3212ca38b1d343a4b9ea9287caeea1a0e47e08b8aecff4faabdf74c4c53a'
+digest = 'sha256:0e4ee7bd1f3e8bd0cf81b9cf4a4b8381ea18c042db3da3023bf5208d157839db'
 
 [[served]]
 name = 'tracing-conventions'
@@ -190,7 +190,7 @@ digest = 'sha256:552648a1d89cccb6bc3d47cb25f3b6355f75a104936fc70668fdb6167868c96
 kind = 'rule'
 id = 'test-coverage-by-language'
 path = 'rules/test-coverage-by-language.md'
-digest = 'sha256:d22a43a434374e0964a4496532b09ca921c11e3756cf489aea964a6ec902668b'
+digest = 'sha256:01f5dafb917a30722a4aafd8981bc727478263b47ef1250f1499110f5f1befe7'
 
 [[item]]
 kind = 'settings'
@@ -201,10 +201,10 @@ digest = 'sha256:81bb42246d1c22113883a04cedb34f4d9e1ba31930ed3a2921dce10505ab1b6
 kind = 'skill'
 id = 'release-workflow'
 path = 'skills/release-workflow'
-digest = 'sha256:0e0d7539044c4a95b413cf75a090aa7d3eefc14347b2ae431b445b86649def9f'
+digest = 'sha256:493e271bddc4a3ce2a0b7eb04c6be55b2ed2c4e259e9e200d5dfbe5793ca602b'
 
 [[item]]
 kind = 'skill'
 id = 'testing-conventions'
 path = 'skills/testing-conventions'
-digest = 'sha256:4d7870909be8af74a11a5e4ca34fbbc22fd2b5a67cb48f1f0ac03888a324225a'
+digest = 'sha256:9386d99eb3d89c3c6fb817fdcb9362dc33ff8063e44773bfa59901b0261fbe63'
