@@ -1,7 +1,12 @@
 ---
 type: Playbook
 title: Testing Conventions
-description: How to test scripts in xberg-io/actions — which framework each language uses (Bats for shell, pytest for Python, Pester for PowerShell), where suites live, how to isolate a test from the host machine so it cannot pass locally and fail on a runner, and how to prove a test actually discriminates. Load when adding or changing any script under an action, when writing or fixing tests, or when a suite passes locally but fails in CI.
+description: "How to test scripts in xberg-io/actions: Bats/pytest/Pester layout, isolating tests from host tools, bash 3.2 portability, proving a test discriminates. Use when writing or fixing tests or when a suite passes locally but fails in CI."
+paths:
+  - "**/*.sh"
+  - "**/*.py"
+  - "**/*.ps1"
+  - "**/*.bats"
 x-ai-rulez:
   kind: skill
   id: testing-conventions
@@ -22,6 +27,8 @@ Every action in this repo is a script plus a thin `action.yml`. The scripts are 
 | PowerShell `*.ps1` | Pester | `<action>/tests/<name>.Tests.ps1` | `task test:pester` |
 
 `task test` runs all three. Adding a script means adding its tests in the same change.
+
+Split a Python suite that exceeds the 1000-line `file-too-long` lint at a natural seam (one file per script under test) rather than exempting it in `poly.toml`.
 
 Python suites live in the root `tests/` rather than beside the action because they share `tests/conftest.py` fixtures (`tmp_path_with_files`, `github_output`). Bats and Pester suites live beside their action, matching how the runner resolves them.
 
