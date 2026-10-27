@@ -69,8 +69,6 @@ tasks:
   test:pester:
     desc: Run Pester suites for PowerShell action scripts
     vars:
-      # The same pin .github/workflows/test-pester.yml passes to install-pester, so a local run
-      # and a CI run exercise the same Pester. ~keep
       PESTER_VERSION: "6.2.0"
     preconditions:
       - sh: command -v pwsh
