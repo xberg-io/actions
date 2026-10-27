@@ -1,5 +1,5 @@
 name: Setup AI-Rulez
-description: Install a pinned AI-Rulez release or build an immutable source revision.
+description: Install an AI-Rulez release (latest by default) through the upstream action, or build an immutable source revision.
 inputs:
   ai-rulez-version:
     description: AI-Rulez release to install when source-revision is empty; "latest" installs the newest release.
@@ -14,19 +14,12 @@ runs:
   steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.2
-    - name: Install AI-Rulez
+    - name: Install AI-Rulez release
       if: inputs.source-revision == ''
-      shell: bash
-      env:
-        AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
-      run: |
-        if [ "$AI_RULEZ_VERSION" = "latest" ]; then
-          uv tool install --force --upgrade ai-rulez
-        else
-          uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
-        fi
-        "$(uv tool dir --bin)/ai-rulez" --version
-        uv tool dir --bin >> "$GITHUB_PATH"
+      # ~keep The upstream action installs a sha256-verified, cached release binary; it publishes no floating major tag.
+      uses: Goldziher/ai-rulez@v5.7.0
+      with:
+        version: ${{ inputs.ai-rulez-version }}
     - name: Check out pinned AI-Rulez source
       if: inputs.source-revision != ''
       id: source
