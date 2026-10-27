@@ -47,9 +47,7 @@ poly.local.toml
 .agents/skills/
 .ai-rulez/local/
 .claude/agents/
-.claude/rules/c-ffi.md
 .claude/rules/csharp.md
-.claude/rules/dart.md
 .claude/rules/elixir.md
 .claude/rules/go.md
 .claude/rules/java.md
@@ -60,20 +58,12 @@ poly.local.toml
 .claude/rules/r.md
 .claude/rules/ruby.md
 .claude/rules/rust.md
-.claude/rules/swift.md
 .claude/rules/test-coverage-by-language.md
 .claude/rules/typescript.md
-.claude/rules/wasm.md
-.claude/rules/zig.md
-.claude/settings.json
 .claude/skills/
 .codex/agents/
-.codex/config.toml
 .opencode/agents/
 .opencode/commands/
-.pi/agents/
-.pi/mcp.json
-.pi/prompts/
 opencode.json
 # END ai-rulez
 
