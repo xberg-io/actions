@@ -4,8 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade native HEIF stacks to libheif 1.23.7, libde265 1.1.3 and libaom 3.15.2; verify source checksums before building and reject stale native caches.
+
 ### Changed
 
+- `install-system-deps` provides Tesseract 5.5.3 and Leptonica 1.87.0 on Linux and macOS, verifies real OCR output, and validates Tesseract 5.5.3 on Windows.
+- Windows provisioning verifies LLVM 23.1.3 and CMake 4.4.4 and uses an isolated, immutable vcpkg baseline.
+- Linux defaults to the current libheif security release; the new `libheif-version` input allows an explicit 1.19.8 ABI compatibility experiment without raising consumers' Rust API floor.
 - `setup-ai-rulez` defaults to the 5.7.0 release, and the ai-rulez Poly hook runs 5.7.0.
 
 ## [1.27.1] - 2026-10-23

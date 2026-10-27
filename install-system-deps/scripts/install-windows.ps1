@@ -16,7 +16,9 @@ function Retry-Command {
   while ($attempt -le $MaxAttempts) {
     try {
       Write-Host "Attempt $attempt of $MaxAttempts..."
-      & $Command
+      $global:LASTEXITCODE = 0
+      & $Command | Out-Host
+      if ($LASTEXITCODE -ne 0) { throw "Native dependency command failed with exit $LASTEXITCODE" }
       return $true
     }
     catch {
@@ -33,8 +35,39 @@ function Retry-Command {
   }
 }
 
+function Assert-LibheifVersion {
+  param([string[]]$Packages)
+  $matching = @($Packages | Where-Object { $_ -match '^libheif:x64-windows-static-md\s+1\.23\.7(?:#\d+)?\s' })
+  if ($matching.Count -ne 1) { throw 'Expected exactly one installed libheif 1.23.7 x64-windows-static-md port' }
+  Write-Host "Verified $($matching[0])"
+}
+
+function Initialize-XbergVcpkg {
+  param([string]$Root)
+  $baseline = '5363acb796e576328288fae60c25304e227e9839'
+  if (-not (Test-Path (Join-Path $Root '.git'))) {
+    & git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git $Root
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to clone the dedicated vcpkg root' }
+  }
+  & git -C $Root fetch --depth=1 origin $baseline
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch the verified vcpkg baseline' }
+  & git -C $Root checkout --detach $baseline
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to select the verified vcpkg baseline' }
+  & (Join-Path $Root 'bootstrap-vcpkg.bat') -disableMetrics
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to bootstrap the verified vcpkg baseline' }
+}
+
+function Invoke-XbergVcpkg {
+  param([string]$Root, [string[]]$Arguments)
+  $global:LASTEXITCODE = 0
+  & (Join-Path $Root 'vcpkg.exe') @Arguments
+  if ($LASTEXITCODE -ne 0) { throw "vcpkg failed with exit $LASTEXITCODE" }
+}
+
 $tesseractCacheHit = $env:TESSERACT_CACHE_HIT -eq "true"
 $llvmCacheHit = $env:LLVM_CACHE_HIT -eq "true"
+. "$PSScriptRoot/ensure-tesseract-windows.ps1"
+. "$PSScriptRoot/ensure-build-tools-windows.ps1"
 $cmakeCacheHit = $env:CMAKE_CACHE_HIT -eq "true"
 $cmakeInstalled = $false
 
@@ -99,50 +132,71 @@ else {
   Write-Host "✓ Tesseract found in cache"
 }
 
-if (-not $llvmCacheHit) {
-  Write-Host "LLVM cache miss, installing LLVM/Clang (required for bindgen)..."
-  if (-not (Retry-Command { choco install -y llvm --no-progress } -MaxAttempts 3)) {
-    Write-Host "::warning::Failed to install LLVM/Clang via Chocolatey"
-  }
-  else {
-    Write-Host "✓ LLVM/Clang installed"
-  }
-}
-else {
-  Write-Host "✓ LLVM/Clang found in cache"
-}
+Ensure-Tesseract -Executable 'C:\Program Files\Tesseract-OCR\tesseract.exe' `
+  -Installer (Join-Path $env:TEMP 'xberg-tesseract-5.5.3.exe')
+
+Ensure-BuildTool -Package 'llvm' -Executable 'C:\Program Files\LLVM\bin\clang.exe' -Version '23.1.3'
 
 $libheifCacheHit = $env:LIBHEIF_CACHE_HIT -eq "true"
 if (-not $libheifCacheHit) {
   Write-Host "libheif/boost/zlib cache miss, installing via vcpkg..."
-  $vcpkgRoot = if ($env:VCPKG_INSTALLATION_ROOT) { $env:VCPKG_INSTALLATION_ROOT } else { "C:\vcpkg" }
-  $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
-  if (-not (Test-Path $vcpkgExe)) {
-    Write-Host "::warning::vcpkg.exe not found at $vcpkgExe; skipping libheif/boost/zlib install"
+  $vcpkgRoot = 'C:\xberg-vcpkg-5363acb7'
+  Initialize-XbergVcpkg -Root $vcpkgRoot
+  if (-not (Retry-Command { Invoke-XbergVcpkg -Root $vcpkgRoot -Arguments @('install', 'libheif[aom]:x64-windows-static-md', '--recurse') } -MaxAttempts 2)) {
+    throw "Failed to install libheif via the verified vcpkg baseline"
   }
   else {
-    if (-not (Retry-Command { & $vcpkgExe install "libheif:x64-windows-static-md" --recurse } -MaxAttempts 2)) {
-      Write-Host "::warning::Failed to install libheif via vcpkg after retries (Windows wheels for python/node/ruby/php/elixir/swift/jni may fail to link)"
-    }
-    else {
-      Write-Host "✓ libheif installed via vcpkg (x64-windows-static-md)"
-    }
-    # boost-spirit + boost-serialization (header-only, used by librevenge/libwpd:
-    # RVNGBinaryData.cpp needs boost/archive/iterators/*) and zlib (linked
-    # by librevenge's zip stream) — needed by xberg-libwpd's build.rs.
-    if (-not (Retry-Command { & $vcpkgExe install "boost-spirit:x64-windows-static-md" "boost-serialization:x64-windows-static-md" "zlib:x64-windows-static-md" --recurse } -MaxAttempts 2)) {
-      Write-Host "::warning::Failed to install boost/zlib via vcpkg after retries (xberg-libwpd build will fail)"
-    }
-    else {
-      Write-Host "✓ boost-spirit + boost-serialization + zlib installed via vcpkg (x64-windows-static-md)"
-    }
+    Write-Host "✓ libheif installed via vcpkg (x64-windows-static-md)"
+  }
+  # boost-spirit + boost-serialization (header-only, used by librevenge/libwpd:
+  # RVNGBinaryData.cpp needs boost/archive/iterators/*) and zlib (linked
+  # by librevenge's zip stream) — needed by xberg-libwpd's build.rs.
+  if (-not (Retry-Command { Invoke-XbergVcpkg -Root $vcpkgRoot -Arguments @('install', 'boost-spirit:x64-windows-static-md', 'boost-serialization:x64-windows-static-md', 'zlib:x64-windows-static-md', '--recurse') } -MaxAttempts 2)) {
+    throw "Failed to install boost/zlib via the verified vcpkg baseline"
+  }
+  else {
+    Write-Host "✓ boost-spirit + boost-serialization + zlib installed via vcpkg (x64-windows-static-md)"
   }
   Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_ROOT=$vcpkgRoot"
+  Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_INSTALLATION_ROOT=$vcpkgRoot"
 }
 else {
   Write-Host "✓ libheif/boost/zlib found in cache"
-  $vcpkgRoot = if ($env:VCPKG_INSTALLATION_ROOT) { $env:VCPKG_INSTALLATION_ROOT } else { "C:\vcpkg" }
+  $vcpkgRoot = 'C:\xberg-vcpkg-5363acb7'
   Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_ROOT=$vcpkgRoot"
+  Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_INSTALLATION_ROOT=$vcpkgRoot"
+}
+
+$actualBaseline = & git -C $vcpkgRoot rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $actualBaseline -ne '5363acb796e576328288fae60c25304e227e9839') {
+  throw 'The cached vcpkg checkout does not match its verified baseline'
+}
+$heifPackages = @(Invoke-XbergVcpkg -Root $vcpkgRoot -Arguments @('list', 'libheif:x64-windows-static-md'))
+if ($LASTEXITCODE -ne 0) { throw 'Failed to query the installed libheif port' }
+Assert-LibheifVersion -Packages $heifPackages
+
+# Neither branch above proves zlib is on disk: the install path prints its "✓" whenever the
+# vcpkg call merely does not throw, and the cache path prints one unconditionally. When the port
+# is actually missing, nothing notices until `xberg-libwpd`'s build.rs probe finds no archive and
+# emits its deliberate loud-failure stem -- surfacing ~45 minutes later, in a different step, as
+# `rust-lld: could not open 'zlibstatic.lib'`, which reads like a wrong-library-name bug rather
+# than a missing dependency. That is how the Elixir NIF Windows leg failed for v1.1.0 and v1.1.1,
+# taking the Hex publish down with it. Check the artifact itself, using the same stem list
+# build.rs probes (crates/xberg-libwpd/build.rs ZLIB_RELEASE_STEMS). ~keep
+$zlibLibDir = Join-Path $vcpkgRoot "installed\x64-windows-static-md\lib"
+$zlibStems = @("zlibstatic", "zlib", "zs", "z")
+$zlibFound = $zlibStems | Where-Object { Test-Path (Join-Path $zlibLibDir "$_.lib") } | Select-Object -First 1
+if ($zlibFound) {
+  Write-Host "✓ zlib archive verified: $(Join-Path $zlibLibDir "$zlibFound.lib")"
+}
+else {
+  Write-Host "::error::no zlib archive ($($zlibStems -join '/')).lib found in $zlibLibDir -- vcpkg reported success but the port is not on disk; xberg-libwpd cannot link"
+  exit 1
+}
+
+foreach ($header in @('boost/spirit/include/qi.hpp', 'boost/archive/iterators/base64_from_binary.hpp')) {
+  $path = Join-Path $vcpkgRoot "installed/x64-windows-static-md/include/$header"
+  if (-not (Test-Path -LiteralPath $path)) { throw "Required Boost header is missing: $path" }
 }
 
 Write-Host "Installing PHP..."
@@ -163,17 +217,7 @@ catch {
   }
 }
 
-Write-Host "Installing CMake..."
-if (-not $cmakeCacheHit) {
-  Write-Host "CMake cache miss, installing..."
-  if (-not (Retry-Command { choco install -y cmake --no-progress } -MaxAttempts 3)) {
-    throw "Failed to install CMake after 3 attempts"
-  }
-  Write-Host "✓ CMake installed"
-}
-else {
-  Write-Host "✓ CMake found in cache"
-}
+Ensure-BuildTool -Package 'cmake' -Executable 'C:\Program Files\CMake\bin\cmake.exe' -Version '4.4.4'
 
 Write-Host "Configuring PATH and environment variables..."
 $paths = @(

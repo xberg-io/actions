@@ -23,12 +23,23 @@ packages=(
   # rather than downloaded inside the timed extraction. ~keep
   tesseract-ocr-kor
   tesseract-ocr-jpn-vert
+  libtesseract-dev
+  libleptonica-dev
   fonts-liberation
   fonts-dejavu-core
   fonts-noto-core
   libssl-dev
   pkg-config
   build-essential
+  python3
+  libpng-dev
+  libjpeg-dev
+  libtiff-dev
+  libgif-dev
+  libwebp-dev
+  libopenjp2-7-dev
+  libarchive-dev
+  libcurl4-openssl-dev
   patchelf
   cmake
   libmagic-dev
@@ -54,6 +65,12 @@ packages=(
   libbz2-dev
 )
 
+# Cached libheif can require SharpYUV's pkg-config metadata. Older distributions bundle
+# WebP without a separate SharpYUV package, so keep their apt batch installable. ~keep
+if apt-cache show libsharpyuv-dev >/dev/null 2>&1; then
+  packages+=(libsharpyuv-dev)
+fi
+
 echo "Installing dependencies..."
 if retry_with_backoff_timeout 900 sudo apt-get install -y "${packages[@]}"; then
   echo "✓ All packages installed successfully"
@@ -63,7 +80,7 @@ else
     echo "::error::Package installation timed out after 15 minutes"
   else
     echo "::warning::Some packages failed to install, attempting individual installs..."
-    for pkg in tesseract-ocr libssl-dev pkg-config cmake; do
+    for pkg in tesseract-ocr libtesseract-dev libleptonica-dev libssl-dev pkg-config cmake; do
       echo "Installing $pkg..."
       if retry_with_backoff_timeout 300 sudo apt-get install -y "$pkg" 2>&1; then
         echo "  ✓ $pkg installed"
@@ -89,9 +106,20 @@ fi
 
 echo "::endgroup::"
 
-echo "::group::Building libheif from source (Noble ships 1.17.6, libheif-sys needs >=1.21)"
+echo "::group::Building the selected libheif runtime"
 
-LIBHEIF_VERSION="${LIBHEIF_VERSION:-1.23.0}"
+# Keep Rust's v1_19 API floor while exercising current security fixes by default.
+# Select 1.19.8 explicitly only for minimum-runtime ABI qualification; that old
+# upstream source is not a security-qualified production dependency. ~keep
+LIBHEIF_VERSION="${LIBHEIF_VERSION:-1.23.7}"
+case "$LIBHEIF_VERSION" in
+1.23.7) LIBHEIF_SHA256=f7483e818503ea6224c8863e4a56ac02c7089021a98472c811c12aa19faf2475 ;;
+1.19.8) LIBHEIF_SHA256=6c4a5b08e6eae66d199977468859dea3b5e059081db8928f7c7c16e53836c906 ;;
+*)
+  echo "::error::Unverified libheif version: $LIBHEIF_VERSION" >&2
+  exit 1
+  ;;
+esac
 LIBHEIF_PREFIX="${LIBHEIF_PREFIX:-/usr/local}"
 
 echo "Removing apt's libheif to prevent shadowing..."
@@ -112,6 +140,7 @@ else
 
   if retry_with_backoff_timeout 300 curl -fsSL -o libheif.tar.gz \
     "https://github.com/strukturag/libheif/releases/download/v${LIBHEIF_VERSION}/libheif-${LIBHEIF_VERSION}.tar.gz"; then
+    printf '%s  libheif.tar.gz\n' "$LIBHEIF_SHA256" | sha256sum -c -
     tar xzf libheif.tar.gz
     cd "libheif-${LIBHEIF_VERSION}"
     mkdir build
@@ -141,11 +170,25 @@ if [ -n "${GITHUB_ACTION:-}" ]; then
   mkdir -p /tmp/libheif-cache/usr/local/lib/pkgconfig
   mkdir -p /tmp/libheif-cache/usr/local/include
   mkdir -p /tmp/libheif-cache/usr/local/share
-  cp -a /usr/local/lib/libheif* /tmp/libheif-cache/usr/local/lib/ 2>/dev/null || true
-  cp -a /usr/local/lib/pkgconfig/libheif.pc /tmp/libheif-cache/usr/local/lib/pkgconfig/ 2>/dev/null || true
+  cp -a /usr/local/lib/libheif* /tmp/libheif-cache/usr/local/lib/
+  cp -a /usr/local/lib/pkgconfig/libheif.pc /tmp/libheif-cache/usr/local/lib/pkgconfig/
   [ -d /usr/local/include/libheif ] && cp -a /usr/local/include/libheif /tmp/libheif-cache/usr/local/include/
   [ -d /usr/local/share/libheif ] && cp -a /usr/local/share/libheif /tmp/libheif-cache/usr/local/share/
 fi
+
+resolved_libheif_version="$(PKG_CONFIG_PATH="$LIBHEIF_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}" \
+  pkg-config --modversion libheif 2>/dev/null || true)"
+if [ "$resolved_libheif_version" != "$LIBHEIF_VERSION" ]; then
+  echo "::error::pkg-config resolves libheif ${resolved_libheif_version:-<not found>}, expected ${LIBHEIF_VERSION}."
+  echo "::error::The selected runtime must match its versioned CI cache and build receipt."
+  exit 1
+fi
+if ! PKG_CONFIG_PATH="$LIBHEIF_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}" \
+  pkg-config --cflags --libs libheif; then
+  echo "::error::pkg-config cannot resolve libheif's compiler and linker dependencies."
+  exit 1
+fi
+echo "✓ pkg-config resolves libheif ${resolved_libheif_version}"
 
 echo ""
 echo "libheif symbol verification:"
@@ -247,4 +290,9 @@ if [ $tessdata_found -eq 0 ]; then
   exit 1
 fi
 
+echo "::endgroup::"
+
+echo "::group::Verifying current source-built OCR stack"
+bash "$(dirname "${BASH_SOURCE[0]}")/build-ocr-linux.sh"
+if [[ -n "${GITHUB_PATH:-}" ]]; then echo /usr/local/bin >>"$GITHUB_PATH"; fi
 echo "::endgroup::"

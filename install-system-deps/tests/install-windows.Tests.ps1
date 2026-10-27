@@ -1,5 +1,17 @@
 BeforeAll {
     $script:Script = Join-Path $PSScriptRoot '..' 'scripts' 'install-windows.ps1'
+    . (Join-Path $PSScriptRoot '../scripts/ensure-tesseract-windows.ps1')
+    . (Join-Path $PSScriptRoot '../scripts/ensure-build-tools-windows.ps1')
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($script:Script, [ref]$tokens, [ref]$parseErrors)
+    if ($parseErrors.Count -ne 0) { throw 'Installer must parse before testing it' }
+    $wrappers = @($ast.FindAll({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -in @('Initialize-XbergVcpkg', 'Invoke-XbergVcpkg')
+    }, $true))
+    if ($wrappers.Count -ne 2) { throw 'Expected both actual native dependency boundaries' }
+    foreach ($wrapper in $wrappers) { . ([scriptblock]::Create($wrapper.Extent.Text)) }
 
     # ~keep These are native Windows commands the script calls by bare name. Pester cannot mock
     # a command it cannot resolve, so stubs must exist before any Mock replaces them, and
@@ -15,7 +27,7 @@ BeforeAll {
     # ~keep behind here decides what the next file sees -- TEMP and USERPROFILE especially,
     # ~keep since [IO.Path]::GetTempPath() reads them. Snapshot on entry, hand back on exit.
     $script:SavedEnvironment = @{}
-    foreach ($name in @('GITHUB_ENV', 'GITHUB_PATH', 'VCPKG_INSTALLATION_ROOT', 'TESSERACT_CACHE_HIT', 'LLVM_CACHE_HIT', 'CMAKE_CACHE_HIT', 'LIBHEIF_CACHE_HIT', 'TESSDATA_PREFIX', 'PATH')) {
+    foreach ($name in @('GITHUB_ENV', 'GITHUB_PATH', 'VCPKG_INSTALLATION_ROOT', 'TESSERACT_CACHE_HIT', 'LLVM_CACHE_HIT', 'CMAKE_CACHE_HIT', 'LIBHEIF_CACHE_HIT', 'TESSDATA_PREFIX', 'PATH', 'TEMP')) {
         $script:SavedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
     }
 }
@@ -29,6 +41,7 @@ Describe 'install-system-deps install-windows.ps1' {
         Set-Content -LiteralPath $script:GithubEnv -Value @()
         Set-Content -LiteralPath $script:GithubPath -Value @()
 
+        $env:TEMP = $script:Root
         $env:GITHUB_ENV = $script:GithubEnv
         $env:GITHUB_PATH = $script:GithubPath
         $env:VCPKG_INSTALLATION_ROOT = $null
@@ -57,10 +70,35 @@ Describe 'install-system-deps install-windows.ps1' {
         # ~keep Separators are normalised so one declaration matches on Windows and POSIX alike.
         $global:VirtualPaths = [System.Collections.Generic.HashSet[string]]::new(
             [System.StringComparer]::OrdinalIgnoreCase)
-        Mock Test-Path { $global:VirtualPaths.Contains(([string]$Path).Replace('\', '/')) }
+        Mock Test-Path {
+            $requested = if ($LiteralPath) { $LiteralPath } else { $Path }
+            $global:VirtualPaths.Contains(([string]$requested).Replace('\', '/'))
+        }
+        foreach ($path in @(
+            'C:/xberg-vcpkg-5363acb7/installed/x64-windows-static-md/lib/zlib.lib',
+            'C:/xberg-vcpkg-5363acb7/installed/x64-windows-static-md/include/boost/spirit/include/qi.hpp',
+            'C:/xberg-vcpkg-5363acb7/installed/x64-windows-static-md/include/boost/archive/iterators/base64_from_binary.hpp'
+        )) { $global:VirtualPaths.Add($path) | Out-Null }
+        $global:VerifiedTools = @{}
+        Mock Test-BuildToolVersion {
+            $package = if ($Executable -like '*clang.exe') { 'llvm' } else { 'cmake' }
+            $cached = if ($package -eq 'llvm') { $env:LLVM_CACHE_HIT } else { $env:CMAKE_CACHE_HIT }
+            return ($cached -eq 'true' -or $global:VerifiedTools.ContainsKey($package))
+        }
+        Mock Ensure-Tesseract {}
+        Mock Initialize-XbergVcpkg {}
+        Mock Invoke-XbergVcpkg {
+            $global:LASTEXITCODE = 0
+            if ($Arguments[0] -eq 'list') { 'libheif:x64-windows-static-md 1.23.7 HEIF decoder' }
+        }
+        Mock git { $global:LASTEXITCODE = 0; '5363acb796e576328288fae60c25304e227e9839' }
         Mock Start-Sleep { }
         Mock Invoke-WebRequest { }
-        Mock choco { $global:LASTEXITCODE = 0 }
+        Mock choco {
+            $global:LASTEXITCODE = 0
+            if ($args -contains 'llvm') { $global:VerifiedTools['llvm'] = $true }
+            if ($args -contains 'cmake') { $global:VerifiedTools['cmake'] = $true }
+        }
         Mock Get-Command { [pscustomobject]@{ Source = 'C:\Program Files\CMake\bin\cmake.exe' } } -ParameterFilter { $Name -eq 'cmake' }
         Mock Get-Command { throw 'tesseract is not recognised' } -ParameterFilter { $Name -eq 'tesseract' }
     }
@@ -83,9 +121,9 @@ Describe 'install-system-deps install-windows.ps1' {
         $output = @(& $script:Script 6>&1 | ForEach-Object { $_.ToString() })
 
         $output | Should -Contain '✓ Tesseract found in cache'
-        $output | Should -Contain '✓ LLVM/Clang found in cache'
+        $output | Should -Contain 'Verified llvm 23.1.3 from C:\Program Files\LLVM\bin\clang.exe'
         $output | Should -Contain '✓ libheif/boost/zlib found in cache'
-        $output | Should -Contain '✓ CMake found in cache'
+        $output | Should -Contain 'Verified cmake 4.4.4 from C:\Program Files\CMake\bin\cmake.exe'
     }
 
     It 'should_install_tesseract_and_llvm_and_cmake_when_their_caches_are_cold' {
@@ -96,8 +134,8 @@ Describe 'install-system-deps install-windows.ps1' {
         & $script:Script 6>&1 | Out-Null
 
         Should -Invoke choco -Times 1 -Exactly -ParameterFilter { ($args -join ' ') -eq 'install -y tesseract --no-progress' }
-        Should -Invoke choco -Times 1 -Exactly -ParameterFilter { ($args -join ' ') -eq 'install -y llvm --no-progress' }
-        Should -Invoke choco -Times 1 -Exactly -ParameterFilter { ($args -join ' ') -eq 'install -y cmake --no-progress' }
+        Should -Invoke choco -Times 1 -Exactly -ParameterFilter { ($args -join ' ') -eq 'upgrade -y llvm --version=23.1.3 --allow-downgrade --no-progress' }
+        Should -Invoke choco -Times 1 -Exactly -ParameterFilter { ($args -join ' ') -eq 'upgrade -y cmake --version=4.4.4 --allow-downgrade --no-progress' }
     }
 
     It 'should_write_the_default_vcpkg_root_to_github_env_when_the_libheif_cache_is_cold' {
@@ -105,37 +143,28 @@ Describe 'install-system-deps install-windows.ps1' {
 
         & $script:Script 6>&1 | Out-Null
 
-        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=C:\vcpkg'
+        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=C:\xberg-vcpkg-5363acb7'
     }
 
-    It 'should_write_the_configured_vcpkg_root_to_github_env_when_the_libheif_cache_is_cold' {
+    It 'should_preserve_the_runner_baseline_and_publish_a_dedicated_vcpkg_root' {
         $env:LIBHEIF_CACHE_HIT = 'false'
         $env:VCPKG_INSTALLATION_ROOT = 'D:\tools\vcpkg'
 
         & $script:Script 6>&1 | Out-Null
 
-        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=D:\tools\vcpkg'
+        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=C:\xberg-vcpkg-5363acb7'
     }
 
     It 'should_still_publish_the_vcpkg_root_when_the_libheif_cache_is_warm' {
         & $script:Script 6>&1 | Out-Null
 
-        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=C:\vcpkg'
+        Get-Content -LiteralPath $script:GithubEnv | Should -Contain 'VCPKG_ROOT=C:\xberg-vcpkg-5363acb7'
     }
 
-    It 'should_warn_and_skip_the_vcpkg_installs_when_the_vcpkg_executable_is_absent' {
+    It 'should_fail_if_the_verified_vcpkg_baseline_cannot_be_initialized' {
         $env:LIBHEIF_CACHE_HIT = 'false'
-
-        # ~keep The script interpolates the path straight from Join-Path, which the suite mocks
-        # ~keep to [IO.Path]::Combine -- and that emits the HOST separator, so the message reads
-        # ~keep "C:\vcpkg/vcpkg.exe" here and "C:\vcpkg\vcpkg.exe" on a Windows runner. Hardcoding
-        # ~keep the POSIX spelling made this assertion pass only off Windows. Build the expected
-        # ~keep path the same way the script does rather than pinning one platform's separator.
-        $expectedVcpkgExe = [System.IO.Path]::Combine('C:\vcpkg', 'vcpkg.exe')
-
-        $output = @(& $script:Script 6>&1 | ForEach-Object { $_.ToString() })
-
-        $output | Should -Contain "::warning::vcpkg.exe not found at ${expectedVcpkgExe}; skipping libheif/boost/zlib install"
+        Mock Initialize-XbergVcpkg { throw 'baseline unavailable' }
+        { & $script:Script 6>&1 | Out-Null } | Should -Throw '*baseline unavailable*'
     }
 
     It 'should_warn_but_continue_when_the_optional_tesseract_install_fails' {
@@ -151,13 +180,11 @@ Describe 'install-system-deps install-windows.ps1' {
         $env:LLVM_CACHE_HIT = 'false'
         Mock choco { throw 'chocolatey failed' } -ParameterFilter { ($args -join ' ') -like '*llvm*' }
 
-        $output = @(& $script:Script 6>&1 | ForEach-Object { $_.ToString() })
+        { & $script:Script 6>&1 | Out-Null } | Should -Throw '*Failed to install llvm 23.1.3*'
 
         Should -Invoke choco -Times 3 -Exactly -ParameterFilter { ($args -join ' ') -like '*llvm*' }
-        $output | Should -Contain 'Attempt 3 of 3...'
         Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 10 }
         Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 20 }
-        $output | Should -Contain '::warning::Failed to install LLVM/Clang via Chocolatey'
     }
 
     It 'should_throw_when_cmake_cannot_be_installed_after_three_attempts' {
@@ -166,7 +193,7 @@ Describe 'install-system-deps install-windows.ps1' {
 
         $thrown = { & $script:Script 6>&1 | Out-Null } | Should -Throw -PassThru
 
-        $thrown.Exception.Message | Should -BeExactly 'Failed to install CMake after 3 attempts'
+        $thrown.Exception.Message | Should -BeExactly 'Failed to install cmake 4.4.4'
     }
 
     It 'should_fail_verification_when_cmake_is_absent_after_installation' {

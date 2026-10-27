@@ -60,7 +60,7 @@ inputs:
     default: "manylinux2014"
   build-libheif:
     description: >
-      Build and install libheif 1.23.0 (plus codec headers) in the manylinux
+      Build and install libheif 1.23.7 with libde265 1.1.3 and libaom 3.15.2 in the manylinux
       container before building wheels. Required only by libheif-sys consumers
       (e.g. xberg). Opt-in — defaults to off so consumers that do not link
       libheif are not coupled to its system dependencies.
@@ -139,18 +139,27 @@ runs:
           source ~/.cargo/env &&
           if [ "$BUILD_LIBHEIF" = "true" ]; then
           PKG=$(command -v dnf >/dev/null && echo dnf || echo yum) &&
-          $PKG install -y cmake gcc-c++ numactl-devel &&
-          for codec in libaom-devel libdav1d-devel libde265-devel x265-devel; do $PKG install -y "$codec" || true; done &&
-          curl -fsSL -o /tmp/libheif.tar.gz https://github.com/strukturag/libheif/releases/download/v1.23.0/libheif-1.23.0.tar.gz &&
-          tar -xzf /tmp/libheif.tar.gz -C /tmp &&
-          mkdir -p /tmp/libheif-1.23.0/build &&
-          cd /tmp/libheif-1.23.0/build &&
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib -DWITH_EXAMPLES=OFF -DWITH_GDK_PIXBUF=OFF -DBUILD_TESTING=OFF &&
-          make -j"$(nproc)" &&
-          make install &&
+          $PKG install -y cmake gcc-c++ nasm numactl-devel &&
+          for codec in libdav1d-devel x265-devel; do $PKG install -y "$codec" || true; done &&
+          NATIVE_WORK=$(mktemp -d) &&
+          trap 'rm -rf "$NATIVE_WORK"' EXIT &&
+          build_native() {
+          local name="$1" version="$2" url="$3" sha256="$4"; shift 4;
+          curl -fsSL -o "$NATIVE_WORK/$name.tar.gz" "$url" &&
+          printf '%s  %s\n' "$sha256" "$NATIVE_WORK/$name.tar.gz" | sha256sum -c - &&
+          tar -xzf "$NATIVE_WORK/$name.tar.gz" -C "$NATIVE_WORK" &&
+          cmake -S "$NATIVE_WORK/$name-$version" -B "$NATIVE_WORK/$name-build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib "$@" &&
+          cmake --build "$NATIVE_WORK/$name-build" -j"${CMAKE_BUILD_PARALLEL_LEVEL:-$(nproc)}" &&
+          cmake --install "$NATIVE_WORK/$name-build";
+          } &&
+          build_native libde265 1.1.3 https://github.com/strukturag/libde265/releases/download/v1.1.3/libde265-1.1.3.tar.gz 554228bd17788c99a7e63b37ab5634722190e6e2bf60c1dcb01cef328e133905 -DBUILD_SHARED_LIBS=ON -DENABLE_SDL=OFF &&
+          build_native libaom 3.15.2 https://storage.googleapis.com/aom-releases/libaom-3.15.2.tar.gz 67bb54b245f33ed98600e08269e6139986e48114e14042474ddd8885801dfddc -DBUILD_SHARED_LIBS=ON -DENABLE_APPS=OFF -DENABLE_EXAMPLES=OFF -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF &&
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig &&
+          build_native libheif 1.23.7 https://github.com/strukturag/libheif/releases/download/v1.23.7/libheif-1.23.7.tar.gz f7483e818503ea6224c8863e4a56ac02c7089021a98472c811c12aa19faf2475 -DWITH_EXAMPLES=OFF -DWITH_GDK_PIXBUF=OFF -DBUILD_TESTING=OFF &&
           ldconfig &&
-          cd - &&
-          rm -rf /tmp/libheif*;
+          test "$(pkg-config --modversion libheif)" = 1.23.7 &&
+          test "$(pkg-config --modversion libde265)" = 1.1.3 &&
+          test "$(pkg-config --modversion aom)" = 3.15.2;
           fi
         CIBW_BEFORE_ALL_MACOS: >
           rm -rf ~/.cargo ~/.rustup &&

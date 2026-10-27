@@ -18,6 +18,13 @@ if [[ -d "/usr/local/bin" ]]; then
   echo "/usr/local/sbin" >>"$GITHUB_PATH"
 fi
 
+retry_with_backoff brew update
+for formula in cmake tesseract leptonica tesseract-lang libmagic libheif boost pkg-config; do
+  if brew list "$formula" &>/dev/null; then
+    retry_with_backoff brew upgrade "$formula"
+  fi
+done
+
 if ! brew list cmake &>/dev/null; then
   echo "Installing CMake..."
   retry_with_backoff brew install cmake || {
@@ -148,6 +155,8 @@ else
 fi
 
 echo ""
+bash "$(dirname "${BASH_SOURCE[0]}")/verify-ocr-macos.sh"
+
 echo "Available languages:"
 tesseract --list-langs | head -5
 

@@ -1,0 +1,101 @@
+name: Native libheif runtime qualification
+on:
+  push:
+    branches: [main]
+    paths:
+      - "install-system-deps/**"
+      - "tests/native/verify_heif_runtime.py"
+      - ".github/workflows/test-native-runtime.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime:
+    if: github.ref == 'refs/heads/main'
+    name: libheif ${{ matrix.version }} ABI and real decoding
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["1.19.8", "1.23.7"]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Provision selected runtime
+        uses: ./install-system-deps
+        with:
+          libheif-version: ${{ matrix.version }}
+      - name: Compile against and decode through selected system ABI
+        shell: bash
+        env:
+          EXPECTED_HEIF_VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+          test "$(pkg-config --modversion libheif)" = "$EXPECTED_HEIF_VERSION"
+          cat >"$RUNNER_TEMP/heif-abi.c" <<'C'
+          #include <libheif/heif.h>
+          #include <stdio.h>
+          #include <string.h>
+          int main(int argc, char **argv) {
+              if (argc != 2 || strcmp(heif_get_version(), argv[1])) return 1;
+              struct heif_context *context = heif_context_alloc();
+              if (!context) return 2;
+              printf("linked libheif %s\n", heif_get_version());
+              heif_context_free(context);
+              return 0;
+          }
+          C
+          read -r -a heif_flags <<<"$(pkg-config --cflags --libs libheif)"
+          cc "$RUNNER_TEMP/heif-abi.c" "${heif_flags[@]}" -Wl,-rpath,/usr/local/lib -o "$RUNNER_TEMP/heif-abi"
+          ldd "$RUNNER_TEMP/heif-abi" | tee "$RUNNER_TEMP/heif-abi-linkage.txt"
+          grep -Eq 'libheif.so.1 => /usr/local/lib/libheif.so.1' "$RUNNER_TEMP/heif-abi-linkage.txt"
+          "$RUNNER_TEMP/heif-abi" "$EXPECTED_HEIF_VERSION"
+          if "$RUNNER_TEMP/heif-abi" 0.0.0; then echo 'wrong-runtime negative control passed'; exit 1; fi
+          python3 tests/native/verify_heif_runtime.py --library /usr/local/lib/libheif.so.1 --version "$EXPECTED_HEIF_VERSION"
+
+  windows-tools:
+    if: github.ref == 'refs/heads/main'
+    name: Windows current native provisioning and build tools
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - name: Provision current Windows native closure
+        uses: ./install-system-deps
+      - name: Compile with actual selected LLVM and CMake
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Join-Path $env:RUNNER_TEMP 'native-tools'
+          New-Item -ItemType Directory -Path $source -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $source 'main.c') -Value 'int main(void) { return 0; }'
+          & 'C:\Program Files\LLVM\bin\clang.exe' (Join-Path $source 'main.c') -o (Join-Path $source 'llvm-probe.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Selected LLVM could not compile and link' }
+          & (Join-Path $source 'llvm-probe.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'LLVM native artifact failed' }
+          Set-Content -LiteralPath (Join-Path $source 'CMakeLists.txt') -Value @(
+            'cmake_minimum_required(VERSION 3.16)', 'project(native_tool_probe C)', 'add_executable(cmake_probe main.c)'
+          )
+          & 'C:\Program Files\CMake\bin\cmake.exe' -S $source -B "$source/build"
+          if ($LASTEXITCODE -ne 0) { throw 'Selected CMake configure failed' }
+          & 'C:\Program Files\CMake\bin\cmake.exe' --build "$source/build" --config Release --parallel 1
+          if ($LASTEXITCODE -ne 0) { throw 'Selected CMake build failed' }
+          $artifacts = @(Get-ChildItem "$source/build" -Filter 'cmake_probe.exe' -File -Recurse)
+          if ($artifacts.Count -ne 1) { throw "Expected one CMake native executable, found $($artifacts.Count)" }
+          & $artifacts[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'CMake native artifact failed' }
+
+  macos-ocr:
+    if: github.ref == 'refs/heads/main'
+    name: macOS current OCR runtime and English fixture
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Provision and verify current Homebrew OCR stack
+        uses: ./install-system-deps
+      - name: Recognize genuine upstream English fixture
+        shell: bash
+        run: |
+          bash install-system-deps/scripts/verify-ocr-fixture.sh "$(command -v tesseract)" "$(brew --prefix tesseract)/share/tessdata"

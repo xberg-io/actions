@@ -4,7 +4,7 @@ set -euo pipefail
 version="$(
   apt-cache policy tesseract-ocr 2>/dev/null |
     grep 'Candidate:' |
-    grep -Eo '[0-9]+\.[0-9]+' |
+    grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' |
     head -1 ||
     true
 )"

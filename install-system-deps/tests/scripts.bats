@@ -18,7 +18,7 @@ make_stub() {
 	chmod +x "$STUB_BIN/$name"
 }
 
-@test "detect-tesseract-linux should_write_candidate_major_minor_version_to_github_output" {
+@test "detect-tesseract-linux should_write_candidate_patch_version_to_github_output" {
 	make_stub apt-cache '#!/usr/bin/env bash' \
 		'printf "%s\n" "Candidate: 5.4.1-1build1"'
 	local output_file="$TEST_ROOT/github-output"
@@ -27,8 +27,8 @@ make_stub() {
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-linux.sh"
 
 	[ "$status" -eq 0 ]
-	[ "$(cat "$output_file")" = "version=5.4" ]
-	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.4" ]
+	[ "$(cat "$output_file")" = "version=5.4.1" ]
+	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.4.1" ]
 }
 
 @test "detect-tesseract-linux should_write_unknown_when_package_cache_has_no_candidate" {
@@ -52,8 +52,8 @@ make_stub() {
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-macos.sh"
 
 	[ "$status" -eq 0 ]
-	[ "$(cat "$output_file")" = "version=5.5" ]
-	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.5" ]
+	[ "$(cat "$output_file")" = "version=5.5.0" ]
+	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.5.0" ]
 }
 
 @test "detect-tesseract-macos should_fall_back_to_human_readable_brew_info" {
@@ -66,8 +66,8 @@ make_stub() {
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-macos.sh"
 
 	[ "$status" -eq 0 ]
-	[ "$(cat "$output_file")" = "version=5.4" ]
-	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.4" ]
+	[ "$(cat "$output_file")" = "version=5.4.1" ]
+	[ "$output" = "::notice title=Tesseract Version::Detected version: 5.4.1" ]
 }
 
 @test "retry should_return_one_after_three_failed_attempts" {
@@ -97,7 +97,7 @@ make_stub() {
 		'printf "sudo %s\n" "$*" >>"$COMMAND_LOG"' \
 		'exit 0'
 	make_stub dpkg '#!/usr/bin/env bash' 'exit 0'
-	make_stub pkg-config '#!/usr/bin/env bash' 'printf "%s\n" "1.23.0"'
+	make_stub pkg-config '#!/usr/bin/env bash' 'printf "%s\n" "1.23.7"'
 	make_stub ldconfig '#!/usr/bin/env bash' 'exit 0'
 	local prefix="$TEST_ROOT/libheif"
 	mkdir -p "$prefix/lib/pkgconfig"
@@ -108,10 +108,10 @@ make_stub() {
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install-linux.sh"
 
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"✓ libheif 1.23.0 already installed (cached)"* ]]
+	[[ "$output" == *"✓ libheif 1.23.7 already installed (cached)"* ]]
 	[[ "$output" == *"::error::CMake not found after installation"* ]]
 	[ "$(sed -n '1p' "$command_log")" = "sudo apt-get update" ]
-	[ "$(sed -n '2p' "$command_log")" = "sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-tur tesseract-ocr-deu tesseract-ocr-kor tesseract-ocr-jpn-vert fonts-liberation fonts-dejavu-core fonts-noto-core libssl-dev pkg-config build-essential patchelf cmake libmagic-dev libuv1-dev libde265-dev libaom-dev libx265-dev libdav1d-dev libnuma-dev libboost-dev zlib1g-dev liblzma-dev libbz2-dev" ]
+	[ "$(sed -n '2p' "$command_log")" = "sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-tur tesseract-ocr-deu tesseract-ocr-kor tesseract-ocr-jpn-vert libtesseract-dev libleptonica-dev fonts-liberation fonts-dejavu-core fonts-noto-core libssl-dev pkg-config build-essential python3 libpng-dev libjpeg-dev libtiff-dev libgif-dev libwebp-dev libopenjp2-7-dev libarchive-dev libcurl4-openssl-dev patchelf cmake libmagic-dev libuv1-dev libde265-dev libaom-dev libx265-dev libdav1d-dev libnuma-dev libboost-dev zlib1g-dev liblzma-dev libbz2-dev" ]
 }
 
 @test "install-macos should_fail_after_retrying_required_cmake_installation" {
@@ -163,8 +163,8 @@ make_stub() {
 	printf '%s\n' \
 		'brew() { [ "$1" = "list" ] && return 0; return 0; }' \
 		'cmake() { printf "%s\n" "cmake version 3.30.0"; }' \
-		'tesseract() { if [ "$1" = "--version" ]; then printf "%s\n" "tesseract 5.5.0"; else printf "%s\n" "eng"; fi; }' \
-		'pkg-config() { printf "%s\n" "2.3.0"; }' \
+		'tesseract() { if [ "$1" = "--version" ]; then printf "%s\n" "tesseract 5.5.3" " leptonica-1.87.0"; else printf "%s\n" "eng"; fi; }' \
+		'pkg-config() { case "${2:-}" in tesseract) echo 5.5.3 ;; lept) echo 1.87.0 ;; *) echo 2.3.0 ;; esac; }' \
 		'php() { printf "%s\n" "PHP 8.4.0"; }' >"$bash_env"
 
 	run env PATH="$STUB_BIN:/usr/bin:/bin" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \

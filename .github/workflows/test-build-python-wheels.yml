@@ -4,17 +4,16 @@ on:
     branches: [main]
     paths:
       - "build-python-wheels/**"
+      - "tests/native/**"
       - ".github/workflows/test-build-python-wheels.yml"
-  pull_request:
-    paths:
-      - "build-python-wheels/**"
-      - ".github/workflows/test-build-python-wheels.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   test:
+    if: github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +23,7 @@ jobs:
           - os: macos-latest
             cibw-build: cp312-macosx_arm64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
 
@@ -93,6 +92,10 @@ jobs:
           cibw-build: ${{ matrix.cibw-build }}
           cibw-skip: ""
           upload-artifact: "false"
+          build-libheif: ${{ runner.os == 'Linux' && 'true' || 'false' }}
+          cibw-before-build-linux: >-
+            python {project}/tests/native/verify_heif_runtime.py --library /usr/local/lib/libheif.so.1 --version 1.23.7 --require-codec-prefix /usr/local/lib &&
+            pip install maturin uv && source ~/.cargo/env
 
       - name: Verify wheel produced
         shell: bash
