@@ -76,11 +76,12 @@ Use that exact object as `<previous-remote-tag-object>` in the lease below.
 Update `v1` to point at the same commit/tag, then force-push the `v1` ref so `@v1` consumers pick up the release:
 
 ```bash
-git tag -f -a v1 -m "v1 -> vX.Y.Z" vX.Y.Z   # re-point annotated v1 at the new version tag
+git tag -f -a v1 -m "v1 -> vX.Y.Z" 'vX.Y.Z^{}'   # re-point annotated v1 at the release commit
 git push origin v1 --force-with-lease=refs/tags/v1:<previous-remote-tag-object>
 ```
 
-The `vX.Y.Z` argument can also be the release commit SHA; both resolve to the same commit.
+Target the commit (`vX.Y.Z^{}` or the release SHA), not the tag object: `git tag -a v1 vX.Y.Z` creates a nested tag
+(v1 → vX.Y.Z → commit) instead of the v1 → commit shape. Check with `git cat-file -p v1 | head -2` (`type commit`).
 
 > This tag move is the sanctioned exception to the shared-branch force-push rule.
 > The explicit lease rejects a concurrent update to `v1`. Never force-move an immutable
