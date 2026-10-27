@@ -40,7 +40,7 @@ discover_skills = "repo"
 tools = ["find_skill", "load_skill"]
 
 [lint]
-allow_overrides = ["testing-conventions"]
+allow_overrides = ["testing-conventions", "basemind-usage"]
 
 [lock]
 include_outputs = false
@@ -48,3 +48,15 @@ include_outputs = false
 [rules]
 # ~keep Glob-scoped rules stay out of AGENTS.md: rule files for Claude, path-gated skills for Codex.
 scoped_fallback = "skill"
+
+[skills]
+delivery = "served"
+
+[delivery.stub]
+description = "Find task-specific conventions through ai-rulez."
+body = "Call `find_skill` on `{{server}}` with the task and affected path, then `load_skill` with the returned name. Follow it before editing. Load referenced files with the `path` argument of `load_skill`."
+
+[[mcp_servers]]
+name = "ai-rulez"
+command = "ai-rulez"
+args = ["mcp", "--serve-skills"]

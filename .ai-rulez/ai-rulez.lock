@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.7.0'
 scope = 'all'
-tree = 'sha256:9f7f075b83e882819ff63017f19eb6d9f6b8a6faabc47e8aae30788a9ea7eeb9'
+tree = 'sha256:a20e29ee9d66eeeff2f6086491da9388dced1946254dd77790906fa7ad5ba7f8'
 
 [[include]]
 name = 'xberg-cicd'
@@ -85,22 +85,10 @@ commit = ''
 digest = 'sha256:b31111df0d7c3427e8ef3257fedeea76bc2430e4e132e7c986ab39d7c9b0d9c6'
 
 [[served]]
-name = 'iterate'
-source = ''
-commit = ''
-digest = 'sha256:5cb87728d1449fadda6d8557501fcc0823509c60a37058ce4d2dda123296f67c'
-
-[[served]]
 name = 'owasp-quick-reference'
 source = 'builtin://universal/security/skills/owasp-quick-reference/SKILL.md'
 commit = ''
 digest = 'sha256:195755e5e5628857b680bb0b0453c909f258a0c36ce3f1b8e1d746c7ea54bffc'
-
-[[served]]
-name = 'parallelize'
-source = ''
-commit = ''
-digest = 'sha256:2700d984ba10baa2e16ed19b48cc8fd5f7351776f2ce03f6712394d3912f91cb'
 
 [[served]]
 name = 'poly-lint-format'
@@ -172,13 +160,24 @@ digest = 'sha256:ef1b56c090e2c93fecd8bfbe916f79a0bebed69afe53ec89284e7ff433f64d0
 kind = 'context'
 id = 'area-map'
 path = 'context/area-map.md'
-digest = 'sha256:b586eaa0b68e4b70abd2e7beecd2ff5e001ecadf8c8c19ebaba9846e5ab8024d'
+digest = 'sha256:5fcb9e6553a6a7828b7df5e68210647ea5707a0b07da99bce8fe3c5f8f223a68'
+
+[[item]]
+kind = 'rule'
+id = 'basemind-usage'
+path = 'rules/basemind-usage.md'
+digest = 'sha256:59187d66271fb5e7d102fa801ba5519723e4d40a4964efdb9ea66452f9cb5b14'
 
 [[item]]
 kind = 'rule'
 id = 'test-coverage-by-language'
 path = 'rules/test-coverage-by-language.md'
 digest = 'sha256:01f5dafb917a30722a4aafd8981bc727478263b47ef1250f1499110f5f1befe7'
+
+[[item]]
+kind = 'settings'
+id = 'mcp-servers'
+digest = 'sha256:0c9a9f6f3f440d1bc8dad96fc41d6458907ae78bd923e8621713ccfdc08a0268'
 
 [[item]]
 kind = 'skill'

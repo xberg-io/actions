@@ -1,22 +1,11 @@
 {
   "version": "1",
   "files": [
-    ".agents/skills/agent-coordination/SKILL.md",
-    ".agents/skills/basemind-tools/SKILL.md",
-    ".agents/skills/code-quality-standards/SKILL.md",
-    ".agents/skills/config-placement/SKILL.md",
-    ".agents/skills/dependency-awareness/SKILL.md",
-    ".agents/skills/error-handling/SKILL.md",
-    ".agents/skills/feature-flag-conventions/SKILL.md",
-    ".agents/skills/github-workflow-conventions/SKILL.md",
-    ".agents/skills/incremental-approach/SKILL.md",
+    ".agents/skills/dynamic-skills/SKILL.md",
     ".agents/skills/iterate/SKILL.md",
     ".agents/skills/iterate/agents/openai.yaml",
-    ".agents/skills/owasp-quick-reference/SKILL.md",
     ".agents/skills/parallelize/SKILL.md",
     ".agents/skills/parallelize/agents/openai.yaml",
-    ".agents/skills/poly-lint-format/SKILL.md",
-    ".agents/skills/release-workflow/SKILL.md",
     ".agents/skills/rule-csharp/SKILL.md",
     ".agents/skills/rule-elixir/SKILL.md",
     ".agents/skills/rule-go/SKILL.md",
@@ -30,15 +19,6 @@
     ".agents/skills/rule-rust/SKILL.md",
     ".agents/skills/rule-test-coverage-by-language/SKILL.md",
     ".agents/skills/rule-typescript/SKILL.md",
-    ".agents/skills/scoop-distribution/SKILL.md",
-    ".agents/skills/skill-authoring/SKILL.md",
-    ".agents/skills/task-runner/SKILL.md",
-    ".agents/skills/taskfile-structure/SKILL.md",
-    ".agents/skills/tdd-workflow/SKILL.md",
-    ".agents/skills/testing-conventions/SKILL.md",
-    ".agents/skills/tracing-conventions/SKILL.md",
-    ".agents/skills/verification-harness/SKILL.md",
-    ".agents/skills/xberg-brand-and-docs/SKILL.md",
     ".claude/agents/code-reviewer.md",
     ".claude/agents/docs-writer.md",
     ".claude/agents/performance-engineer.md",
@@ -58,34 +38,15 @@
     ".claude/rules/test-coverage-by-language.md",
     ".claude/rules/typescript.md",
     ".claude/settings.json",
-    ".claude/skills/agent-coordination/SKILL.md",
-    ".claude/skills/basemind-tools/SKILL.md",
-    ".claude/skills/code-quality-standards/SKILL.md",
-    ".claude/skills/config-placement/SKILL.md",
-    ".claude/skills/dependency-awareness/SKILL.md",
-    ".claude/skills/error-handling/SKILL.md",
-    ".claude/skills/feature-flag-conventions/SKILL.md",
-    ".claude/skills/github-workflow-conventions/SKILL.md",
-    ".claude/skills/incremental-approach/SKILL.md",
+    ".claude/skills/dynamic-skills/SKILL.md",
     ".claude/skills/iterate/SKILL.md",
-    ".claude/skills/owasp-quick-reference/SKILL.md",
     ".claude/skills/parallelize/SKILL.md",
-    ".claude/skills/poly-lint-format/SKILL.md",
-    ".claude/skills/release-workflow/SKILL.md",
-    ".claude/skills/scoop-distribution/SKILL.md",
-    ".claude/skills/skill-authoring/SKILL.md",
-    ".claude/skills/task-runner/SKILL.md",
-    ".claude/skills/taskfile-structure/SKILL.md",
-    ".claude/skills/tdd-workflow/SKILL.md",
-    ".claude/skills/testing-conventions/SKILL.md",
-    ".claude/skills/tracing-conventions/SKILL.md",
-    ".claude/skills/verification-harness/SKILL.md",
-    ".claude/skills/xberg-brand-and-docs/SKILL.md",
     ".codex/agents/code-reviewer.toml",
     ".codex/agents/docs-writer.toml",
     ".codex/agents/performance-engineer.toml",
     ".codex/agents/security-auditor.toml",
     ".codex/agents/test-writer.toml",
+    ".codex/config.toml",
     ".mcp.json",
     ".opencode/agents/code-reviewer.md",
     ".opencode/agents/docs-writer.md",
@@ -100,13 +61,26 @@
   ],
   "merged": {
     ".claude/settings.json": [],
+    ".codex/config.toml": [],
     ".mcp.json": [],
     "opencode.json": []
   },
   "servers": {
+    ".codex/config.toml": [
+      [
+        "mcp_servers",
+        "ai-rulez"
+      ]
+    ],
     ".mcp.json": [
       [
         "mcpServers",
+        "ai-rulez"
+      ]
+    ],
+    "opencode.json": [
+      [
+        "mcp",
         "ai-rulez"
       ]
     ]

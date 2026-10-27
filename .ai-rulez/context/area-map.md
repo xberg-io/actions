@@ -10,17 +10,4 @@ x-ai-rulez:
 
 ## Area Map
 
-This repo holds shared GitHub Actions composite actions and reusable workflows; each top-level `<name>/` with an `action.yml` is one action.
-
-- `setup-*/`, `install-*/` — toolchain and runtime setup
-- `build-*/`, `stage-*/`, `package-*/` — binding, native-library and CLI builds
-- `publish-*/` — registry publishing per ecosystem
-- `verify-*/`, `validate-*/`, `check-*/` — package, release and config checks
-- `*-release*/`, `retag-for-republish/` — release lifecycle
-- `homebrew-*/` — Homebrew bottles
-- `cache-*/`, `*-cache/` — build caches
-- `run-*/` — test-suite runners
-- `.github/workflows/reusable-*.yml` — reusable workflows
-- `.github/workflows/test-*.yml`, `tests/`, `bats-lib/` — tests for the actions (`testing-conventions` skill)
-
-Releasing a new version and moving the major tag: `release-workflow` skill.
+Each top-level `<name>/action.yml` defines one action. Workflows live in `.github/workflows/`; test suites in `tests/`, `bats-lib/` and each action's `tests/`. Use `testing-conventions` for tests and `release-workflow` for versioning and the floating major tag.

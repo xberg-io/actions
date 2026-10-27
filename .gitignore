@@ -62,6 +62,7 @@ poly.local.toml
 .claude/rules/typescript.md
 .claude/skills/
 .codex/agents/
+.codex/config.toml
 .opencode/agents/
 .opencode/commands/
 opencode.json
