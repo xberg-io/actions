@@ -4,12 +4,19 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-10-27
+
 ### Changed
 
 - `setup-ai-rulez` and `verify-ai-rulez-plugin` accept `ai-rulez-version: latest`, and `setup-ai-rulez` defaults to it;
   the ai-rulez Poly hook runs v5.7.0, since hook sources need a fixed revision.
 - `setup-ai-rulez` installs releases through the upstream `Goldziher/ai-rulez` action (a sha256-verified, cached
   binary) instead of `uv tool install`; that action's ref moves with the hook revision.
+- Composite actions reference upstream actions by version tag instead of commit SHA.
+
+### Fixed
+
+- `install-system-deps` on Windows accepts a `v`-prefixed Tesseract version banner (`tesseract v5.5.3.20260724`).
 
 ## [1.28.0] - 2026-10-27
 
