@@ -45,6 +45,7 @@ poly.local.toml
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/skills/
+.ai-rulez/config.local.*
 .ai-rulez/local/
 .claude/agents/
 .claude/rules/csharp.md
@@ -60,6 +61,7 @@ poly.local.toml
 .claude/rules/rust.md
 .claude/rules/test-coverage-by-language.md
 .claude/rules/typescript.md
+.claude/rules/workflow-deltas.md
 .claude/skills/
 .codex/agents/
 .codex/config.toml
