@@ -21,4 +21,4 @@ x-ai-rulez:
 - A test never depends on what the host has installed: isolate by exclusion, not by a `PATH` allow-list.
 - Scripts run under bash 3.2 (macOS `/bin/bash`): no `mapfile`/`readarray`, `${var^^}`, or associative arrays; GNU utility form first, BSD fallback second.
 - Break the covered code and watch the test go red before trusting it.
-- The `testing-conventions` skill has the isolation recipe, the history behind these rules, and coverage-honesty guidance.
+- Call `load_skill` with `name: testing-conventions` for the isolation recipe, the history behind these rules, and coverage-honesty guidance.

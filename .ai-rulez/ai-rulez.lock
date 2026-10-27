@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.7.0'
 scope = 'all'
-tree = 'sha256:a20e29ee9d66eeeff2f6086491da9388dced1946254dd77790906fa7ad5ba7f8'
+tree = 'sha256:ff3381ebdb07e959bc6cc9b8cfd256dca183e924495cc9b84db5e9bc40c4d59a'
 
 [[include]]
 name = 'xberg-cicd'
@@ -172,7 +172,7 @@ digest = 'sha256:59187d66271fb5e7d102fa801ba5519723e4d40a4964efdb9ea66452f9cb5b1
 kind = 'rule'
 id = 'test-coverage-by-language'
 path = 'rules/test-coverage-by-language.md'
-digest = 'sha256:01f5dafb917a30722a4aafd8981bc727478263b47ef1250f1499110f5f1befe7'
+digest = 'sha256:69cc40144823edc0639cb0026ce34e68ca3cf00593a3183565a5ef53b9f3935e'
 
 [[item]]
 kind = 'settings'
