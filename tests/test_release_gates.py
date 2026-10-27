@@ -13,7 +13,7 @@ def test_task_test_collects_every_configured_testpath():
     assert "pytest tests/" not in test_unit
 
     release_skill = (_ROOT / ".ai-rulez" / "skills" / "release-workflow" / "SKILL.md").read_text()
-    assert "runs `uv run pytest -v` across configured testpaths" in release_skill
+    assert "task test                         # pytest + Bats + Pester" in release_skill
     assert "pytest tests/" not in release_skill
 
 

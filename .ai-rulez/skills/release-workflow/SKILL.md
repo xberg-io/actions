@@ -32,7 +32,7 @@ git log --oneline origin/main -1  # confirm local main == remote tip
 
 poly fmt --check .                # formatting clean
 poly lint .                       # lint clean (also: task lint)
-task test                         # unit tests — runs `uv run pytest -v` across configured testpaths
+task test                         # pytest + Bats + Pester (needs pwsh and Pester 6.2.0)
 ```
 
 Do not proceed if the tree is dirty or any check fails. `task validate` (== `task lint`) runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
@@ -44,7 +44,7 @@ Do not proceed if the tree is dirty or any check fails. `task validate` (== `tas
 ```markdown
 ## [Unreleased]
 
-## [vX.Y.Z] - YYYY-MM-DD
+## [X.Y.Z] - YYYY-MM-DD
 
 ### Added
 - ... (entries that were under Unreleased)
@@ -80,7 +80,7 @@ git tag -f -a v1 -m "v1 -> vX.Y.Z" vX.Y.Z   # re-point annotated v1 at the new v
 git push origin v1 --force-with-lease=refs/tags/v1:<previous-remote-tag-object>
 ```
 
-`git tag -f v1 <ref>` + `git push origin v1 --force-with-lease=refs/tags/v1:<previous-remote-tag-object>` is the established method for advancing the floating major. `<ref>` can be the new version tag (`vX.Y.Z`) or the release commit SHA — both resolve to the same commit.
+The `vX.Y.Z` argument can also be the release commit SHA; both resolve to the same commit.
 
 > This tag move is the sanctioned exception to the shared-branch force-push rule.
 > The explicit lease rejects a concurrent update to `v1`. Never force-move an immutable
