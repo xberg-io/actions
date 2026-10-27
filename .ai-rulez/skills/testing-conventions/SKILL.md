@@ -44,8 +44,10 @@ Both were real product bugs the suite was correctly reporting; they had been dis
 An allow-list ("link in the utilities this script needs") guesses at an implementation detail and breaks on the first indirect dependency: GNU `tar -xzf` shells out to `gzip`, BSD `tar` does not, so a curated bin that omits `gzip` fails on Linux and passes on macOS.
 
 ```bash
-# see ensure-gh/tests/unix.bats for the working version
-expose_system_commands() { ... }   # mirror host bins, minus the probed command
+# helpers in bats-lib/xberg-bats (bats_load_library xberg-bats); see ensure-gh/tests/unix.bats
+setup_file() { bats_load_library xberg-bats; xberg_shadow_system_path_without gh; }
+setup() { bats_load_library xberg-bats; xberg_setup_isolated; }
+run env PATH="$(xberg_isolated_path)" ...   # stubs ahead of the mirror, minus gh
 ```
 
 In pytest, `monkeypatch` every `shutil.which`, every `subprocess.run`, and every environment variable the script reads; prove it by running the suite with `env PATH=/nonexistent`. In Pester, `Mock` the probe (`Mock Get-Command`, `Mock Invoke-WebRequest`) rather than touching the real `PATH`.
@@ -71,4 +73,4 @@ Mutation-test the whole set when you add a suite. Two recent examples of why: on
 
 Pester suites run on `windows-latest` in CI. Locally on macOS or Linux, cover the portable logic (parsing, URL and filename construction, arch mapping, error paths) and mark genuinely Windows-dependent behaviour `-Skip` with a stated reason. A skipped test that says why is honest. A test that pretends to exercise Windows behaviour on macOS is not, and it will be believed.
 
-When a CI-only failure shows an assertion and no reason, the runner is not printing test output: Bats needs `--print-output-on-failure`, Pester needs `-Output Detailed`. Both are set in the workflows; keep them.
+When a CI-only failure shows an assertion and no reason, the runner is not printing test output: Bats needs `--print-output-on-failure`, Pester needs `Output.Verbosity = 'Detailed'` in its configuration (`-Output Detailed` on the command line). Both are set in the workflows; keep them.
