@@ -5,7 +5,7 @@ description = 'Shared GitHub Actions composite actions for xberg-io CI/CD pipeli
 gitignore = true
 # ~keep The manifest is committed so CI can detect stale generated files.
 gitignore_exclude = [".ai-rulez/.generated-manifest.json"]
-presets = ["claude", "codex", "opencode", "pi", "hermes"]
+presets = ["claude", "codex", "opencode"]
 builtins = ["!agent-delegation", "!git-workflow", "default-commands"]
 
 default_layers = ["plugins"]
@@ -38,11 +38,6 @@ serve_skills = true
 read_only = true
 discover_skills = "repo"
 tools = ["find_skill", "load_skill"]
-
-[[mcp_servers]]
-name = "playwright"
-command = "npx"
-args = ["-y", "@playwright/mcp@0.0.83"]
 
 [lint]
 allow_overrides = ["testing-conventions"]
