@@ -20,7 +20,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Stage a tiny cargo workspace with one bin target
         shell: bash

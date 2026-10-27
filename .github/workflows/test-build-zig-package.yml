@@ -20,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Stage workspace with FFI crate + minimal Zig package
         shell: bash

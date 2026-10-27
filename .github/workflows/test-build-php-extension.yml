@@ -34,7 +34,9 @@ jobs:
           php-version: "8.3"
           tools: none
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Stage a tiny ext-php-rs crate that inherits from a workspace root
         shell: bash
@@ -134,7 +136,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.2
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
       - name: Test unpublished workspace dependency and locked build
         run: uv run pytest tests/test_build_php_extension.py -k workspace_build -v
 

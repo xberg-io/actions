@@ -16,7 +16,9 @@ jobs:
         with:
           ruby-version: "4.0.9"
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Stage a tiny Magnus gem
         shell: bash
