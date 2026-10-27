@@ -137,3 +137,12 @@ def test_a_run_that_discovers_nothing_fails_the_job() -> None:
 def test_every_pester_suite_is_tracked_under_a_tests_directory(suite: str) -> None:
     """Keeps discovery predictable: suites live in `<action>/tests/`, like the Bats ones."""
     assert "/tests/" in suite, f"{suite} is not under a tests/ directory"
+
+
+def test_workflow_uses_checksum_verified_pinned_pester_installation() -> None:
+    installers = [step for step in _steps() if step.get("uses") == "./install-pester"]
+    assert len(installers) == 1, "workflow must use the verified installer, with bounded download retries"
+    version = installers[0]["with"]["version"]
+    checksums = (_ROOT / "install-pester" / "checksums.tsv").read_text().splitlines()
+    assert any(line.split()[0] == version for line in checksums), "requested Pester must have a reviewed checksum"
+    assert f"Import-Module Pester -RequiredVersion {version} -Force" in "\n".join(_run_scripts())

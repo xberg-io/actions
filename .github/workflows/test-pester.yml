@@ -45,21 +45,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # ~keep windows-latest images ship Pester 3.4.0 in the system module path, which cannot
-      # ~keep parse Pester 5+ syntax. -Force installs 5.x alongside it; -SkipPublisherCheck is
-      # ~keep required because the preinstalled 3.4.0 is signed by a different publisher.
       - name: Install Pester
-        shell: pwsh
-        run: |
-          Install-Module -Name Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
-          Import-Module Pester -MinimumVersion 5.5.0 -Force
-          (Get-Module Pester).Version.ToString()
+        uses: ./install-pester
+        with:
+          version: "6.2.0"
 
       - name: Run Pester tests
         shell: pwsh
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Import-Module Pester -MinimumVersion 5.5.0 -Force
+          Import-Module Pester -RequiredVersion 6.2.0 -Force
           $config = New-PesterConfiguration
           $config.Run.Path = '.'
           $config.Run.Exit = $true

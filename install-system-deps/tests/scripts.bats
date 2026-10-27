@@ -1,5 +1,10 @@
 #!/usr/bin/env bats
 
+setup_file() {
+	bats_load_library xberg-bats
+	xberg_shadow_system_path_without cmake
+}
+
 setup() {
 	TEST_ROOT="$(mktemp -d)"
 	STUB_BIN="$TEST_ROOT/bin"
@@ -99,12 +104,13 @@ make_stub() {
 	make_stub dpkg '#!/usr/bin/env bash' 'exit 0'
 	make_stub pkg-config '#!/usr/bin/env bash' 'printf "%s\n" "1.23.7"'
 	make_stub ldconfig '#!/usr/bin/env bash' 'exit 0'
+	make_stub apt-cache '#!/usr/bin/env bash' 'exit 1'
 	local prefix="$TEST_ROOT/libheif"
 	mkdir -p "$prefix/lib/pkgconfig"
 	: >"$prefix/lib/pkgconfig/libheif.pc"
 	local command_log="$TEST_ROOT/commands"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" COMMAND_LOG="$command_log" LIBHEIF_PREFIX="$prefix" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_ACTION= COMMAND_LOG="$command_log" LIBHEIF_PREFIX="$prefix" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install-linux.sh"
 
 	[ "$status" -eq 1 ]
