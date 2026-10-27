@@ -236,7 +236,7 @@ jobs:
 
       - name: Set up Rust
         if: ${{ inputs.setup-rust }}
-        uses: xberg-io/actions/setup-rust@d5e2929fdb454b4805184f34ceba8836f396ea8d
+        uses: xberg-io/actions/setup-rust@v1
         with:
           components: ${{ inputs.rust-components }}
           install-llvm-cov: "false"
