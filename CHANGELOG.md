@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-10-27
+
 ### Security
 
 - Upgrade native HEIF stacks to libheif 1.23.7, libde265 1.1.3 and libaom 3.15.2; verify source checksums before building and reject stale native caches.
