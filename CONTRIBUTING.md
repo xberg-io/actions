@@ -31,7 +31,7 @@ This will setup the dependencies, and pre-commit hooks via `poly`.
 
 ## What to keep in mind
 
-Because every other repository consumes these actions, treat a change here as a change to every pipeline at once. Pin third-party actions by commit SHA, keep `permissions:` as narrow as the job allows, and never interpolate untrusted input (a PR title, a branch name) directly into a shell step.
+Because every other repository consumes these actions, treat a change here as a change to every pipeline at once. Pin third-party actions to their shortest major tag (`@v4`), keep `permissions:` as narrow as the job allows, and never interpolate untrusted input (a PR title, a branch name) directly into a shell step.
 
 ## Commit guidelines
 
