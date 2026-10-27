@@ -20,13 +20,7 @@ Every action in this repo is a script plus a thin `action.yml`. The scripts are 
 
 ### Which framework, and where
 
-| Language | Framework | Location | Task |
-|---|---|---|---|
-| Shell `*.sh` | Bats | `<action>/tests/<name>.bats` | `task test:bats` |
-| Python `*.py` | pytest | `tests/test_<action_name>.py` (repo root) | `task test:unit` |
-| PowerShell `*.ps1` | Pester | `<action>/tests/<name>.Tests.ps1` | `task test:pester` |
-
-`task test` runs all three. Adding a script means adding its tests in the same change.
+Framework, test location and `task` target per language are in the `test-coverage-by-language` rule.
 
 Split a Python suite that exceeds the 1000-line `file-too-long` lint at a natural seam (one file per script under test) rather than exempting it in `poly.toml`.
 
@@ -58,7 +52,7 @@ In pytest, `monkeypatch` every `shutil.which`, every `subprocess.run`, and every
 
 ### Portability constraints for scripts
 
-- **bash 3.2 is the floor.** No `mapfile`/`readarray`, no `${var^^}`, no associative arrays. Derive with `tr` instead of `^^`.
+- **bash 3.2 is the floor** (forbidden constructs listed in the rule). Derive with `tr` instead of `^^`.
 - **GNU form first, BSD fallback second.** `stat -c '%Y' || stat -f '%m'`. GNU-first fails cleanly on BSD; BSD-first silently succeeds on GNU and emits garbage.
 - Verify with `bash --version` on a macOS runner, not locally, unless your local `/bin/bash` is genuinely 3.2.
 
