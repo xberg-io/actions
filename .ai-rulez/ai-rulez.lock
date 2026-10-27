@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.7.0'
 scope = 'all'
-tree = 'sha256:f4df539465cd8de7052b8e75a1f5414438062dc9afcbc8af1f29b647150afe27'
+tree = 'sha256:e5931f8ef005a43861749fcd757264c0d44d4146bf76ff0d51a6c68d4cddaef4'
 
 [[include]]
 name = 'xberg-cicd'
@@ -39,13 +39,13 @@ digest = 'sha256:787d279d0143dc09385d4673bfb828209ff1ed3ef94d9122701ad7f4a5b8113
 [[served]]
 name = 'agent-coordination'
 source = 'include:xberg-core/skills/agent-coordination/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:e90c5be4a990678e8adb92b66af2a54bb2e4c1efbed08aee978b47f90e0b4b48'
 
 [[served]]
 name = 'basemind-tools'
 source = 'include:xberg-core/skills/basemind-tools/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:ff5cf13e1d705a00567e6ea1f4e4ea2774fd8d7e780f53586bb41727a10c4478'
 
 [[served]]
@@ -75,13 +75,13 @@ digest = 'sha256:fbc7d452c7171e71341578b6c7a56fc2c87031c0ce15d35884bc3260e04ff68
 [[served]]
 name = 'feature-flag-conventions'
 source = 'include:xberg-languages/skills/feature-flag-conventions/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:72ab88042d36374449285381c76935c2032bbd9b5f552d18f4e1c19f120b093c'
 
 [[served]]
 name = 'github-workflow-conventions'
 source = 'include:xberg-cicd/skills/github-workflow-conventions/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:c212bf4c27b2c4a464135e67bcbe0a95b9b796d8739ed8a2049caf1ed7ed865b'
 
 [[served]]
@@ -99,7 +99,7 @@ digest = 'sha256:195755e5e5628857b680bb0b0453c909f258a0c36ce3f1b8e1d746c7ea54bff
 [[served]]
 name = 'poly-lint-format'
 source = 'include:xberg-core/skills/poly-lint-format/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:772854a122a129565f974e6c5ae84ef1169f7bc4f3a2068bfdc56b548c161697'
 
 [[served]]
@@ -111,7 +111,7 @@ digest = 'sha256:85cd89d4297d37d325ce755158bd6aff4d1e2185493b0d36458291b8dfd23bf
 [[served]]
 name = 'scoop-distribution'
 source = 'include:xberg-cicd/skills/scoop-distribution/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:6e9b84f5dbda314cf743a4e92178642674143d36d8b7ceef2eab6cb057581c07'
 
 [[served]]
@@ -129,13 +129,13 @@ digest = 'sha256:c57056e3a74a261b3a9d47638726c7d1f64c76b255838b6aaa3e635f3ffa861
 [[served]]
 name = 'taskfile-structure'
 source = 'include:xberg-core/skills/taskfile-structure/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:3e3dadd66907874e2fdff0641c2e4ac56d87532d5f2411122a2854aa87ef35d2'
 
 [[served]]
 name = 'tdd-workflow'
 source = 'include:xberg-core/skills/tdd-workflow/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:8651ec0982657585e697dd493effee488ec008a92362636b2262db859ab30afc'
 
 [[served]]
@@ -147,13 +147,13 @@ digest = 'sha256:37a1f519ddee7c4a1822ac293669a550d673c97ef5d162866f781dc28a2c92c
 [[served]]
 name = 'tracing-conventions'
 source = 'include:xberg-languages/skills/tracing-conventions/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:6b41c52c1e88c3251b6c85f5196b0cd536a41f63ad5ba0862485d569259457e0'
 
 [[served]]
 name = 'verification-harness'
 source = 'include:xberg-core/skills/verification-harness/SKILL.md'
-commit = '6e7f6a6793ea7380b916367e10a8acd13c3afbc3'
+commit = 'ba901616aa6ea8218ce0ed0b474571f3e9b46a45'
 digest = 'sha256:52ffa5fdd63293f4d0325b3f51a187d07eba9b69e2341da62c4603e2798dd948'
 
 [[item]]
@@ -184,7 +184,7 @@ digest = 'sha256:69cc40144823edc0639cb0026ce34e68ca3cf00593a3183565a5ef53b9f3935
 kind = 'rule'
 id = 'workflow-deltas'
 path = 'rules/workflow-deltas.md'
-digest = 'sha256:60dd2a1183a9c69f92d9c9400072ac7ced94ed92ab771cfdf7904ad56fcb546c'
+digest = 'sha256:f3d135ca6aa3651603189ee8e908443401c5e243f0e99eaa20504f0468a32026'
 
 [[item]]
 kind = 'settings'
