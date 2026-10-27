@@ -8,7 +8,7 @@ x-ai-rulez:
     priority: high
 ---
 
-# Area Map
+## Area Map
 
 This repo holds shared GitHub Actions composite actions and reusable workflows; each top-level `<name>/` with an `action.yml` is one action.
 
