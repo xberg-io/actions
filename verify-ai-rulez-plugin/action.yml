@@ -2,7 +2,7 @@ name: Verify AI-Rulez Plugin
 description: Verify plugin versions, strict validity, freshness and provenance using an installed AI-Rulez CLI.
 inputs:
   ai-rulez-version:
-    description: Optional legacy release install; omit when setup-ai-rulez already installed a pinned CLI.
+    description: Optional legacy release install ("latest" or a version); omit when setup-ai-rulez already installed the CLI.
     required: false
     default: ""
   version-sync-script:
@@ -29,7 +29,12 @@ runs:
       env:
         AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
       run: |
-        uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
+        if [ "$AI_RULEZ_VERSION" = "latest" ]; then
+          uv tool install --force --upgrade ai-rulez
+        else
+          uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
+        fi
+        "$(uv tool dir --bin)/ai-rulez" --version
         uv tool dir --bin >> "$GITHUB_PATH"
     - name: Verify plugin version tracks core
       shell: bash

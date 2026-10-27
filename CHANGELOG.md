@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `setup-ai-rulez` and `verify-ai-rulez-plugin` accept `ai-rulez-version: latest`, and `setup-ai-rulez` defaults to it;
+  the ai-rulez Poly hook runs v5.7.0, since hook sources need a fixed revision.
+
 ## [1.28.0] - 2026-10-27
 
 ### Security

@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./setup-ai-rulez
         with:
-          ai-rulez-version: "5.7.0"
+          ai-rulez-version: "latest"
       - uses: ./install-task
       - name: Test real generation and release artifacts
         run: task test:ai-rulez-plugin test:ai-rulez-validation

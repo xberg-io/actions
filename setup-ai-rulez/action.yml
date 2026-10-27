@@ -2,9 +2,9 @@ name: Setup AI-Rulez
 description: Install a pinned AI-Rulez release or build an immutable source revision.
 inputs:
   ai-rulez-version:
-    description: AI-Rulez release version to install when source-revision is empty.
+    description: AI-Rulez release to install when source-revision is empty; "latest" installs the newest release.
     required: false
-    default: "5.7.0"
+    default: "latest"
   source-revision:
     description: Optional full 40-character Goldziher/ai-rulez commit SHA to build instead of installing a release.
     required: false
@@ -20,7 +20,12 @@ runs:
       env:
         AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
       run: |
-        uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
+        if [ "$AI_RULEZ_VERSION" = "latest" ]; then
+          uv tool install --force --upgrade ai-rulez
+        else
+          uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
+        fi
+        "$(uv tool dir --bin)/ai-rulez" --version
         uv tool dir --bin >> "$GITHUB_PATH"
     - name: Check out pinned AI-Rulez source
       if: inputs.source-revision != ''

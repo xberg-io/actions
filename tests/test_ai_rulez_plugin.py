@@ -27,7 +27,7 @@ def run_step(action_name, step_name, cwd, environment):
 @pytest.fixture
 def plugin(tmp_path):
     if shutil.which("ai-rulez") is None:
-        pytest.fail("ai-rulez 5.7.0 is required for plugin integration tests")
+        pytest.fail("ai-rulez is required for plugin integration tests")
     config = tmp_path / "plugin" / ".ai-rulez"
     config.mkdir(parents=True)
     source = (_ROOT / "tests/fixtures/plugin-config.toml").read_text()

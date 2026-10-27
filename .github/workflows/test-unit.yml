@@ -61,7 +61,7 @@ jobs:
 
       - uses: ./setup-ai-rulez
         with:
-          ai-rulez-version: "5.7.0"
+          ai-rulez-version: "latest"
 
       # No explicit path: an argument overrides `testpaths`, which is how the per-action
       # tests/ directories went uncollected for so long.

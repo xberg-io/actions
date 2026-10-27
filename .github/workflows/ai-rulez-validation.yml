@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./setup-ai-rulez
         with:
-          ai-rulez-version: "5.7.0"
+          ai-rulez-version: "latest"
       - uses: ./validate-ai-rulez
       - uses: xberg-io/agent-conventions/actions/context-exposure@6e7f6a6793ea7380b916367e10a8acd13c3afbc3
         with:
