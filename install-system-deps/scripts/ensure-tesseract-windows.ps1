@@ -6,7 +6,7 @@ function Get-TesseractVersion {
   if (-not (Test-Path -LiteralPath $Executable)) { return $null }
   $output = @(& $Executable --version 2>&1)
   if ($LASTEXITCODE -ne 0) { throw "Tesseract version probe failed: $LASTEXITCODE" }
-  if ($output.Count -eq 0 -or $output[0] -notmatch '^tesseract\s+(\d+\.\d+\.\d+)') {
+  if ($output.Count -eq 0 -or $output[0] -notmatch '^tesseract\s+v?(\d+\.\d+\.\d+)') {
     throw 'Tesseract returned no recognized version'
   }
   return [version]$Matches[1]

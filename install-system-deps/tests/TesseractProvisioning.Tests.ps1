@@ -50,3 +50,40 @@ Describe 'Tesseract provisioning' {
             Should -Throw '*below required 5.5.3*'
     }
 }
+
+Describe 'Tesseract executable version detection' {
+    BeforeAll {
+        function Invoke-TesseractVersionFixture {
+            $global:LASTEXITCODE = $script:ProbeExitCode
+            $script:ProbeOutput
+        }
+    }
+
+    BeforeEach {
+        $script:ProbeExitCode = 0
+        $script:ProbeOutput = @('tesseract 5.5.3', ' leptonica-1.87.0')
+        Mock Test-Path { $true }
+    }
+
+    It 'should parse the native banner <Banner>' -ForEach @(
+        @{ Banner = 'tesseract 5.5.3' }
+        @{ Banner = 'tesseract v5.5.3.20260724' }
+        @{ Banner = 'tesseract v5.5.0.20241111' }
+    ) {
+        $script:ProbeOutput = @($Banner, ' leptonica-1.87.0')
+        $expected = if ($Banner -like '*5.5.0*') { [version]'5.5.0' } else { [version]'5.5.3' }
+        Get-TesseractVersion -Executable 'Invoke-TesseractVersionFixture' | Should -BeExactly $expected
+    }
+
+    It 'should reject a successful unrecognized banner' {
+        $script:ProbeOutput = @('not tesseract 5.5.3')
+        { Get-TesseractVersion -Executable 'Invoke-TesseractVersionFixture' } |
+            Should -Throw '*no recognized version*'
+    }
+
+    It 'should reject a failing native probe even when its banner is valid' {
+        $script:ProbeExitCode = 2
+        { Get-TesseractVersion -Executable 'Invoke-TesseractVersionFixture' } |
+            Should -Throw '*probe failed: 2*'
+    }
+}
