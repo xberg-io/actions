@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `setup-ai-rulez` defaults to the 5.7.0 release, and the ai-rulez Poly hook runs 5.7.0.
+
 ## [1.27.1] - 2026-10-23
 
 ### Fixed
