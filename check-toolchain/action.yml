@@ -1,0 +1,18 @@
+name: Check toolchain
+description: >-
+  Fail when the repository's mise.toml drifts from the xberg-io/toolchains baseline named in its toolchains.toml.
+  Runs on Linux and macOS runners; needs git and Python 3.11+.
+inputs:
+  working-directory:
+    description: Repository root holding mise.toml and toolchains.toml.
+    required: false
+    default: "."
+runs:
+  using: composite
+  steps:
+    - name: Check toolchain against the baseline
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        "${{ github.action_path }}/scripts/check.sh" "$WORKING_DIRECTORY"
