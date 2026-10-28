@@ -23,6 +23,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # ~keep mise.ci.toml declares a second task version, locked in mise.ci.lock; a matrix leg selects it the
+    # ~keep way consumers do, at job level so every later step resolves the same version.
+    env:
+      MISE_TASK_VERSION: "3.51.1"
     steps:
       - uses: actions/checkout@v7
 
@@ -48,7 +52,7 @@ jobs:
           jq_version="$(jq --version)"
           echo "task: $task_version"
           echo "jq: $jq_version"
-          [[ "$task_version" == "3.54.0" ]]
+          [[ "$task_version" == "3.51.1" ]]
           [[ "$jq_version" == "jq-1.8.2" ]]
 
       - name: Verify the environment setup-mise exports
@@ -58,8 +62,9 @@ jobs:
           [[ "${MISE_ENV:-}" == "ci" ]]
           [[ "${FIXTURE_PROFILE:-}" == "ci" ]]
           [[ "${MISE_RUBY_COMPILE:-}" == "false" ]]
+          [[ "${MISE_HTTP_TIMEOUT:-}" == "5m" ]]
 
-      - name: Verify the install left the fixture untouched
+      - name: Verify the install left the fixture and its locks untouched
         shell: bash
         run: |
           changes="$(git status --porcelain -- setup-mise/tests/fixtures/locked)"

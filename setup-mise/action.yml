@@ -14,7 +14,8 @@ inputs:
     required: false
     default: ""
   mise-env:
-    description: Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml).
+    description: >-
+      Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml and its mise.ci.lock).
     required: false
     default: ""
   github-token:
@@ -24,7 +25,9 @@ inputs:
     required: false
     default: ${{ github.token }}
   cache:
-    description: Cache the mise data directory, keyed on the mise config and lock files, OS and arch.
+    description: >-
+      Cache the mise data directory, keyed on mise.toml, mise.*.toml, mise.lock and mise.*.lock, MISE_ENV, OS
+      and arch.
     required: false
     default: "true"
 runs:
@@ -41,6 +44,10 @@ runs:
         fi
         if [[ -z "${MISE_RUBY_COMPILE:-}" ]]; then
           echo "MISE_RUBY_COMPILE=false" >>"$GITHUB_ENV"
+        fi
+        # ~keep mise's 30s default connect/read timeout fails repeatedly on loaded runners.
+        if [[ -z "${MISE_HTTP_TIMEOUT:-}" ]]; then
+          echo "MISE_HTTP_TIMEOUT=5m" >>"$GITHUB_ENV"
         fi
         # ~keep Self-hosted runner images preinstall tools under a fixed MISE_DATA_DIR set in the image, which
         # ~keep the `env` context cannot see. Hand it to mise-action so it caches and installs there.

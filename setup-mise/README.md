@@ -6,10 +6,12 @@ that does not cover the declared versions or the runner's platform fails the job
 
 Works on GitHub-hosted Ubuntu (x64 and arm64), macOS and Windows runners. Also:
 
-- exports `MISE_RUBY_COMPILE=false` unless already set, so Ruby installs use precompiled builds;
+- exports `MISE_RUBY_COMPILE=false` unless already set, so Ruby installs use precompiled builds, and
+  `MISE_HTTP_TIMEOUT=5m` unless already set, since the 30s default fails on loaded runners;
 - respects a `MISE_DATA_DIR` already present in the runner environment (self-hosted images with preinstalled
   tools) and caches that directory instead of the default one;
-- caches the mise data directory keyed on the mise config and lock files, `MISE_ENV`, OS and arch.
+- caches the mise data directory keyed on `mise.toml`, `mise.*.toml`, `mise.lock`, `mise.*.lock`, `MISE_ENV`, OS
+  and arch.
 
 ## Usage
 
@@ -35,6 +37,28 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 | `mise-env`          | no       | `""`                    | Exported as `MISE_ENV` for this and later steps.                 |
 | `github-token`      | no       | `${{ github.token }}`   | Token for GitHub release lookups, avoiding API rate limits.      |
 | `cache`             | no       | `true`                  | Cache the mise data directory.                                   |
+
+## Matrix versions
+
+Declare every extra version in a profile file such as `mise.ci.toml` (`task = ["3.54.0", "3.51.1"]`) and lock it
+with `MISE_ENV=ci mise lock`, which writes `mise.ci.lock` beside `mise.lock`. Select a leg's version with job-level
+env, so `mise install --locked` and every later step resolve the same version:
+
+```yaml
+jobs:
+  test:
+    strategy:
+      matrix:
+        task: ["3.54.0", "3.51.1"]
+    env:
+      MISE_ENV: ci
+      MISE_TASK_VERSION: ${{ matrix.task }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: xberg-io/actions/setup-mise@v1
+```
+
+A version that the profile's lock does not cover fails the install.
 
 Generate the lock for every CI platform with
 `mise lock --platform linux-x64,linux-arm64,macos-arm64,windows-x64`.
