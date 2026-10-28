@@ -8,6 +8,11 @@ if [[ -z "$config_ref" || -f "$working_directory/mise.toml" ]]; then
   exit 0
 fi
 
+if [[ "$config_ref" == -* ]]; then
+  echo "::error::config-ref \"$config_ref\" is not a valid git ref" >&2
+  exit 1
+fi
+
 # An older checkout may predate the directory as well as its config.
 mkdir -p "$working_directory"
 repo_root="$(git -C "$working_directory" rev-parse --show-toplevel)"
@@ -55,6 +60,8 @@ exclude_file="$(git -C "$repo_root" rev-parse --git-path info/exclude)"
 [[ "$exclude_file" == /* ]] || exclude_file="$repo_root/$exclude_file"
 mkdir -p "$(dirname "$exclude_file")"
 for path in "${files[@]}"; do
-  printf '/%s\n' "$path" >>"$exclude_file"
+  if ! grep -qxF "/$path" "$exclude_file" 2>/dev/null; then
+    printf '/%s\n' "$path" >>"$exclude_file"
+  fi
 done
 printf 'Restored from %s: %s\n' "$config_ref" "${files[*]}"

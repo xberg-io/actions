@@ -130,6 +130,39 @@ make_origin() {
 	cmp "$CLONE/sub/mise.toml" "$ORIGIN/sub/mise.toml"
 }
 
+@test "restore should_add_each_exclude_line_only_once_across_repeated_restores" {
+	run "$SCRIPT" "$CLONE/sub" "$NEW_SHA"
+	[ "$status" -eq 0 ]
+	rm "$CLONE"/sub/mise.toml
+
+	run "$SCRIPT" "$CLONE/sub" "$NEW_SHA"
+
+	[ "$status" -eq 0 ]
+	[ "$(grep -cxF '/sub/mise.toml' "$CLONE/.git/info/exclude")" -eq 1 ]
+	[ "$(grep -cxF '/sub/mise.ci.lock' "$CLONE/.git/info/exclude")" -eq 1 ]
+}
+
+@test "restore should_work_in_a_git_worktree_whose_git_dir_is_a_file" {
+	local worktree="$TEST_ROOT/worktree"
+	git -C "$CLONE" worktree add --quiet --detach "$worktree" "$OLD_SHA"
+	[ -f "$worktree/.git" ]
+
+	run "$SCRIPT" "$worktree/sub" "$NEW_SHA"
+
+	[ "$status" -eq 0 ]
+	cmp "$worktree/sub/mise.toml" "$ORIGIN/sub/mise.toml"
+	[ -z "$(git -C "$worktree" status --porcelain)" ]
+	git -C "$worktree" diff --cached --quiet
+}
+
+@test "restore should_reject_a_config_ref_that_starts_with_a_dash" {
+	run "$SCRIPT" "$CLONE/sub" "--upload-pack=touch $TEST_ROOT/pwned"
+
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"is not a valid git ref"* ]]
+	[ ! -e "$TEST_ROOT/pwned" ]
+}
+
 @test "restore should_restore_the_root_config_for_the_default_working_directory" {
 	cd "$CLONE"
 

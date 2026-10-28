@@ -24,12 +24,20 @@ export_default MISE_HTTP_TIMEOUT 5m
 lockfiles=("$working_directory/mise.lock")
 IFS=',' read -r -a profiles <<<"$mise_env"
 for profile in ${profiles[@]+"${profiles[@]}"}; do
-  lockfiles+=("$working_directory/mise.${profile}.lock")
+  profile="${profile#"${profile%%[![:space:]]*}"}"
+  profile="${profile%"${profile##*[![:space:]]}"}"
+  if [[ -n "$profile" ]]; then
+    lockfiles+=("$working_directory/mise.${profile}.lock")
+  fi
 done
 for lockfile in "${lockfiles[@]}"; do
   if [[ -f "$lockfile" ]]; then
-    echo "Found $lockfile; installing with MISE_LOCKED=1"
-    echo "MISE_LOCKED=1" >>"$GITHUB_ENV"
+    if [[ -n "${MISE_LOCKED:-}" ]]; then
+      echo "Found $lockfile; keeping the caller's MISE_LOCKED=$MISE_LOCKED"
+    else
+      echo "Found $lockfile; installing with MISE_LOCKED=1"
+      echo "MISE_LOCKED=1" >>"$GITHUB_ENV"
+    fi
     break
   fi
 done

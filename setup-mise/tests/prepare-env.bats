@@ -72,6 +72,26 @@ run_script() {
 	[ "$(grep -c '^MISE_ENV=' "$GITHUB_ENV")" -eq 0 ]
 }
 
+@test "prepare should_keep_a_mise_locked_value_the_caller_already_set" {
+	: >"$REPO/mise.lock"
+
+	run_script MISE_LOCKED=false "$SCRIPT" "$REPO" "" auto
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"keeping the caller's MISE_LOCKED=false"* ]]
+	[ "$(grep -c '^MISE_LOCKED=' "$GITHUB_ENV")" -eq 0 ]
+}
+
+@test "prepare should_trim_whitespace_around_each_mise_env_profile" {
+	: >"$REPO/mise.release.lock"
+
+	run_script MISE_ENV=" ci , release " "$SCRIPT" "$REPO" "" auto
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"Found $REPO/mise.release.lock"* ]]
+	grep -qx "MISE_LOCKED=1" "$GITHUB_ENV"
+}
+
 @test "prepare should_not_export_mise_locked_without_a_lock_for_the_active_profiles" {
 	: >"$REPO/mise.other.lock"
 
