@@ -32,13 +32,26 @@ jobs:
           task --version
           which task || where task
 
+      # ~keep install-task installs only the mise binary; shims on PATH would let a repository mise.toml
+      # ~keep decide which tools later steps run.
+      - name: Verify no mise shims directory is on PATH
+        shell: bash
+        run: |
+          if tr ':' '\n' <<<"$PATH" | grep -qi 'mise/shims'; then
+            echo "::error::a mise shims directory is on PATH: $PATH"
+            exit 1
+          fi
+
   # The pinned path resolves no release metadata at all; it only ever broke on Windows, where the
   # script used to hard-fail on a rate-limited API call with no fallback.
   test-pinned-version:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        case:
+          - { version: "3.51.1", install-dir: "" }
+          - { version: "v3.51.1", install-dir: "relative-task-bin" }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -46,10 +59,23 @@ jobs:
       - name: Install Task (pinned version)
         uses: ./install-task
         with:
-          version: "3.51.1"
+          version: ${{ matrix.case.version }}
+          install-dir: ${{ matrix.case.install-dir }}
 
       - name: Verify the pinned version was installed
         shell: bash
         run: |
           task --version
           task --version | grep -q "3.51.1"
+
+      - name: Verify a relative install-dir resolved against the workspace
+        if: matrix.case.install-dir != ''
+        shell: bash
+        env:
+          INSTALL_DIR: ${{ matrix.case.install-dir }}
+        run: |
+          set -euo pipefail
+          task_dir="$(dirname "$(command -v task)")"
+          echo "task resolves from $task_dir"
+          [[ "$task_dir" == */"$INSTALL_DIR" ]]
+          [[ -f "$PWD/$INSTALL_DIR/task" || -f "$PWD/$INSTALL_DIR/task.exe" ]]

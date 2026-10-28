@@ -10,11 +10,37 @@ if ([string]::IsNullOrWhiteSpace($taskBinDir)) {
   $taskBinDir = Join-Path $env:RUNNER_TEMP "task-bin"
 }
 New-Item -ItemType Directory -Force -Path $taskBinDir | Out-Null
+# ~keep Resolve before Push-Location below, or a relative install-dir would land under RUNNER_TEMP.
+$taskBinDir = (Resolve-Path -LiteralPath $taskBinDir).Path
 
 $taskExe = "$taskBinDir\task.exe"
 
 if (-not $env:MISE_GITHUB_TOKEN -and $env:GITHUB_TOKEN) {
   $env:MISE_GITHUB_TOKEN = $env:GITHUB_TOKEN
+}
+if (-not $env:MISE_HTTP_TIMEOUT) {
+  $env:MISE_HTTP_TIMEOUT = "5m"
+}
+# ~keep setup-mise exports MISE_LOCKED=1 for the repository's lock; this install is outside that lock.
+$env:MISE_LOCKED = "false"
+
+$maxAttempts = 6
+
+# Run a mise network call, retrying with exponential backoff; release lookups and downloads fail transiently.
+function Invoke-MiseWithRetry {
+  $wait = 5
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $output = & mise @args
+    if ($LASTEXITCODE -eq 0) {
+      return $output
+    }
+    if ($attempt -eq $maxAttempts) {
+      throw "'mise $($args -join ' ')' failed after $maxAttempts attempts"
+    }
+    Write-Host "'mise $($args -join ' ')' failed (attempt $attempt/$maxAttempts); retrying in ${wait}s"
+    Start-Sleep -Seconds $wait
+    $wait *= 2
+  }
 }
 
 # ~keep Run outside the checkout: a repository mise.toml must neither decide this version nor have its
@@ -22,8 +48,8 @@ if (-not $env:MISE_GITHUB_TOKEN -and $env:GITHUB_TOKEN) {
 Push-Location $env:RUNNER_TEMP
 try {
   if ($taskVersion -eq "latest") {
-    $resolvedVersion = [string](& mise latest task)
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($resolvedVersion)) {
+    $resolvedVersion = [string](Invoke-MiseWithRetry latest task)
+    if ([string]::IsNullOrWhiteSpace($resolvedVersion)) {
       throw "mise could not resolve the latest Task release"
     }
     $resolvedVersion = $resolvedVersion.Trim()
@@ -36,10 +62,7 @@ try {
 
   Write-Host "Installing Task v$resolvedVersion"
 
-  & mise install "task@$resolvedVersion"
-  if ($LASTEXITCODE -ne 0) {
-    throw "mise install task@$resolvedVersion failed with exit code $LASTEXITCODE"
-  }
+  Invoke-MiseWithRetry install "task@$resolvedVersion" | Out-Host
 
   $taskSource = [string](& mise which task --tool "task@$resolvedVersion")
   if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($taskSource)) {

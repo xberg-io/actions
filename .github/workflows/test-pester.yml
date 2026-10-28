@@ -28,9 +28,9 @@ jobs:
     name: Pester on ${{ matrix.os }}
     # ~keep Windows is the real target -- every script under test is a `scripts/windows.ps1`
     # ~keep or the PHP build's Windows-only path rewriting. macOS is here for one specific
-    # ~keep reason: 4 tests (2 in install-task, 2 in setup-zig) execute the unpacked binary
+    # ~keep reason: 5 tests (3 in install-task, 2 in setup-zig) execute the unpacked binary
     # ~keep and are `-Skip:($IsWindows)`, because that needs a real PE on Windows while a
-    # ~keep shebang stub only works on POSIX. On a Windows-only matrix those 4 would run on
+    # ~keep shebang stub only works on POSIX. On a Windows-only matrix those 5 would run on
     # ~keep no runner at all and still report green.
     runs-on: ${{ matrix.os }}
     # ~keep A cap so a stall fails with a log instead of sitting on a runner for the
