@@ -40,7 +40,7 @@ strategy:
         target: x86_64-unknown-linux-gnu
       - os: ubuntu-latest
         target: aarch64-unknown-linux-gnu
-      - os: macos-latest
+      - os: macos-26
         target: aarch64-apple-darwin
       - os: windows-latest
         target: x86_64-pc-windows-msvc

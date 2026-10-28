@@ -38,7 +38,7 @@ strategy:
       - os: ubuntu-latest
         target: aarch64-unknown-linux-gnu
         classifier: linux-aarch64
-      - os: macos-latest
+      - os: macos-26
         target: aarch64-apple-darwin
         classifier: darwin-aarch64
       - os: windows-latest

@@ -89,7 +89,7 @@ jobs:
   macos-ocr:
     if: github.ref == 'refs/heads/main'
     name: macOS current OCR runtime and English fixture
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7

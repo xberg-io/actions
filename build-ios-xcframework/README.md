@@ -6,7 +6,7 @@ Xcode projects or Swift Package Manager distributions.
 
 The action expects the caller to have already checked out the repo and run
 `xberg-io/actions/setup-rust@v1`. It does not install any toolchains itself.
-Must run on `macos-latest`.
+Must run on `macos-26`.
 
 ## Inputs
 
@@ -31,7 +31,7 @@ Must run on `macos-latest`.
 ## Usage
 
 ```yaml
-runs-on: macos-latest
+runs-on: macos-26
 steps:
   - uses: actions/checkout@v6
   - uses: xberg-io/actions/setup-rust@v1

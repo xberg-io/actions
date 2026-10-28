@@ -1,7 +1,7 @@
 name: Ensure gh CLI
 description: >
   Install the GitHub CLI (gh) into the runner's PATH when missing. No-op on
-  runners that already ship gh (ubuntu-latest, macos-latest, etc). Required
+  runners that already ship gh (ubuntu-latest, macos-26, etc). Required
   on bare runners (runner-medium, self-hosted) where gh is not preinstalled.
 inputs:
   version:

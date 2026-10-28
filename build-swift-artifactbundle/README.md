@@ -25,7 +25,7 @@ The artifact bundle is suitable for distribution via Swift Package Manager:
 
 ## Prerequisites
 
-- **macOS runner** (e.g. `macos-latest`): required for Apple target compilation
+- **macOS runner** (e.g. `macos-26`): required for Apple target compilation
 - **Rust setup** (e.g. via `xberg-io/actions/setup-rust@v1`)
 - **Cross CLI** installed (action handles this automatically)
 

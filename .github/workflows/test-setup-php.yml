@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-26]
         php-version: ["8.4", "8.5"]
     runs-on: ${{ matrix.os }}
     steps:

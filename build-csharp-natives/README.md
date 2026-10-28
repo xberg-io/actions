@@ -39,7 +39,7 @@ strategy:
       - os: ubuntu-latest
         target: aarch64-unknown-linux-gnu
         rid: linux-arm64
-      - os: macos-latest
+      - os: macos-26
         target: aarch64-apple-darwin
         rid: osx-arm64
       - os: windows-latest

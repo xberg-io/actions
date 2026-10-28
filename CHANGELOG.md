@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- macOS runners move to `macos-26` (Apple silicon) and `macos-26-intel` (Intel) because GitHub deprecated macOS 14.
+  The `reusable-cli-release` `targets` and `reusable-binstall-verify` `targets` defaults build and verify
+  `aarch64-apple-darwin` on `macos-26` instead of `macos-latest`.
+
 ## [1.31.1] - 2026-10-28
 
 ### Changed

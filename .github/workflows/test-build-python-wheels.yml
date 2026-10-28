@@ -20,7 +20,7 @@ jobs:
         include:
           - os: ubuntu-latest
             cibw-build: cp312-manylinux_x86_64
-          - os: macos-latest
+          - os: macos-26
             cibw-build: cp312-macosx_arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90

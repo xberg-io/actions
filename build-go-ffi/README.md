@@ -56,7 +56,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-latest
+          - os: macos-26
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
