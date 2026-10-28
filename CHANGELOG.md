@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `setup-chromium` installs Playwright with npm and npx again. Since 1.25.0 it called `pnpm`, which neither
+  `actions/setup-node` nor any Node release provides, so every run failed with `pnpm: command not found` (exit 127)
+  on Node 24 and 26 alike. Its Windows check no longer runs `chrome.exe --version`, which on Windows starts a browser
+  that never exits and held the job for its 6h limit; it reads the file version and bounds the headless run to 120s.
+  The install step moved to `scripts/install.sh` with a Bats suite that runs it without pnpm on `PATH`.
+
 ## [1.30.0] - 2026-10-28
 
 ### Added

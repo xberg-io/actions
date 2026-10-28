@@ -22,44 +22,40 @@ runs:
     - name: Install Chromium via Playwright
       id: install
       shell: bash
-      run: |
-        set -euo pipefail
-        tmpdir="${RUNNER_TEMP:-/tmp}/setup-chromium-$$"
-        mkdir -p "$tmpdir"
-        cd "$tmpdir"
-
-        cat > package.json <<'EOF'
-        { "name": "chromium-installer", "version": "1.0.0", "private": true }
-        EOF
-
-        # Install the standalone playwright runtime (no test framework needed)
-        pnpm add --no-audit --no-fund --silent playwright@^1.49.0
-
-        # Download Chromium browser binaries
-        if [ "${RUNNER_OS:-}" = "Linux" ]; then
-          pnpm dlx --no-install playwright install --with-deps chromium
-        else
-          pnpm dlx --no-install playwright install chromium
-        fi
-
-        # Resolve the executable path via Playwright's own API
-        chromium_path=$(node -e "console.log(require('playwright').chromium.executablePath())")
-        if [ -z "$chromium_path" ] || [ ! -x "$chromium_path" ]; then
-          echo "ERROR: Chromium binary not found at: $chromium_path" >&2
-          exit 1
-        fi
-
-        echo "Chromium binary: $chromium_path"
-        echo "chromium-path=$chromium_path" >> "$GITHUB_OUTPUT"
+      run: bash "${{ github.action_path }}/scripts/install.sh"
 
     - name: Verify Chromium accepts headless flags
+      if: runner.os != 'Windows'
       shell: bash
+      env:
+        CHROMIUM_PATH: ${{ steps.install.outputs.chromium-path }}
       run: |
         set -euo pipefail
-        "${{ steps.install.outputs.chromium-path }}" --version
-        "${{ steps.install.outputs.chromium-path }}" \
+        "$CHROMIUM_PATH" --version
+        "$CHROMIUM_PATH" \
           --headless=new \
           --no-sandbox \
           --disable-features=TranslateUI \
           --dump-dom \
           about:blank > /dev/null
+
+    # ~keep chrome.exe ignores --version and starts a browser that never exits, which hung this step for the
+    # ~keep whole 6h job limit; read the version from the file metadata and bound the headless run instead.
+    - name: Verify Chromium accepts headless flags (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CHROMIUM_PATH: ${{ steps.install.outputs.chromium-path }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Write-Host "Chromium $((Get-Item $env:CHROMIUM_PATH).VersionInfo.ProductVersion)"
+        $arguments = '--headless=new', '--no-sandbox', '--disable-features=TranslateUI', '--dump-dom', 'about:blank'
+        $process = Start-Process -FilePath $env:CHROMIUM_PATH -ArgumentList $arguments -PassThru -NoNewWindow `
+          -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP 'chromium-dump.html')
+        # ~keep Reading Handle caches it, without which ExitCode stays null after WaitForExit.
+        $null = $process.Handle
+        if (-not $process.WaitForExit(120000)) {
+          Stop-Process -Id $process.Id -Force
+          throw 'Chromium did not exit within 120s of a headless --dump-dom run'
+        }
+        if ($process.ExitCode -ne 0) { throw "Chromium headless run exited with $($process.ExitCode)" }

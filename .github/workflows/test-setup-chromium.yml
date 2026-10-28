@@ -18,6 +18,8 @@ jobs:
   test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    # A Chromium that never exits must fail the leg, not hold it for the 6h job limit.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -53,16 +55,37 @@ jobs:
       - name: Test headless flag (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          CHROMIUM_PATH: ${{ steps.chromium.outputs.chromium-path }}
         run: |
-          & "${{ steps.chromium.outputs.chromium-path }}" `
-            --headless `
-            --no-sandbox `
-            --disable-features=TranslateUI `
-            --version
-          Write-Host "✓ Headless flags accepted"
+          $ErrorActionPreference = 'Stop'
+          $dump = Join-Path $env:RUNNER_TEMP 'test-dump.html'
+          $arguments = '--headless=new', '--no-sandbox', '--disable-features=TranslateUI', '--dump-dom', 'about:blank'
+          $process = Start-Process -FilePath $env:CHROMIUM_PATH -ArgumentList $arguments -PassThru -NoNewWindow `
+            -RedirectStandardOutput $dump
+          $null = $process.Handle
+          if (-not $process.WaitForExit(120000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'Chromium did not exit within 120s'
+          }
+          if ($process.ExitCode -ne 0) { throw "Chromium exited with $($process.ExitCode)" }
+          if (-not (Select-String -Path $dump -Pattern '<html' -Quiet)) { throw 'Chromium dumped no DOM' }
+          Write-Host "Headless flags accepted"
 
       - name: Test version output
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           "${{ steps.chromium.outputs.chromium-path }}" --version
           echo "✓ Version command works"
+
+      # chrome.exe has no --version on Windows; the version lives in the file metadata.
+      - name: Test version output (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          CHROMIUM_PATH: ${{ steps.chromium.outputs.chromium-path }}
+        run: |
+          $version = (Get-Item $env:CHROMIUM_PATH).VersionInfo.ProductVersion
+          if (-not $version) { throw "No version metadata on $env:CHROMIUM_PATH" }
+          Write-Host "Chromium $version"
