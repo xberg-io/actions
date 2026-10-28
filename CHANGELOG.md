@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.32.1] - 2026-10-28
+
 ### Changed
 
 - `install-system-deps` moves the Linux and macOS OCR runtime to Tesseract 5.5.4; Windows stays on 5.5.3 until
