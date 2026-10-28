@@ -4,11 +4,16 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.32.0] - 2026-10-28
+
 ### Changed
 
 - macOS runners move to `macos-26` (Apple silicon) and `macos-26-intel` (Intel) because GitHub deprecated macOS 14.
   The `reusable-cli-release` `targets` and `reusable-binstall-verify` `targets` defaults build and verify
   `aarch64-apple-darwin` on `macos-26` instead of `macos-latest`.
+- `reusable-validate` installs poly v0.31.0 by default, which honours ruff `target-version` and `requires-python`
+  again (Goldziher/poly#42).
+- This repository follows toolchain baseline v1.3.2 (poly 0.31.0).
 
 ## [1.31.1] - 2026-10-28
 

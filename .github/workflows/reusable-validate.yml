@@ -199,8 +199,7 @@ on:
         description: "poly version to install. Empty installs the latest release."
         required: false
         type: string
-        # poly 0.30.0 lints Python as 3.11+ whatever target-version says (Goldziher/poly#42). ~keep
-        default: "v0.29.0"
+        default: "v0.31.0"
       install-system-deps:
         description: >-
           Run this repo's install-system-deps composite action before linting (Linux only, requires
