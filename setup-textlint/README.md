@@ -6,7 +6,7 @@ Install Node.js, textlint, and the xberg-io standard rule set in one batched `pn
 
 | Name | Required | Default | Description |
 |---|---|---|---|
-| `node-version` | no | `24` | Node.js version to install. |
+| `node-version` | no | `26` | Node.js version to install. |
 | `extra-packages` | no | `` | Whitespace-separated list of additional npm package specs. |
 
 ## Standard rule set

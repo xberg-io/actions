@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `setup-node-workspace`, `setup-textlint` and the `reusable-docs-deploy` workflow default `node-version` to 26
+  instead of 24; `setup-chromium` installs Node 26.
+
 ### Fixed
 
 - `setup-chromium` installs Playwright with npm and npx again. Since 1.25.0 it called `pnpm`, which neither

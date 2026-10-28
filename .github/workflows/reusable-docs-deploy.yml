@@ -17,7 +17,7 @@ on:
         description: "Node.js version."
         required: false
         type: string
-        default: "24"
+        default: "26"
       build-command:
         description: "Command that builds the static site into <working-directory>/dist."
         required: false
