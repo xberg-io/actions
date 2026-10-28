@@ -4,6 +4,22 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-10-28
+
+### Added
+
+- `setup-mise` installs the tools a repository pins in `mise.toml` through `jdx/mise-action` with a fixed mise version,
+  in locked mode whenever a `mise.lock` (or the active `MISE_ENV` profile's lock) exists. Inputs: `working-directory`,
+  `install-args`, `mise-env`, `github-token`, `cache` (`auto` skips the cache when a runner image presets
+  `MISE_DATA_DIR`) and `config-ref`, which restores the mise config from another ref for older-tag checkouts.
+- `check-toolchain` fails a job when the repository's `mise.toml` or `rust-toolchain.toml` drifts from the
+  `xberg-io/toolchains` baseline tag named in `toolchains.toml`.
+
+### Changed
+
+- `install-task` installs Task through mise with retries; its inputs and outputs are unchanged. It is deprecated in
+  favour of pinning `task` in `mise.toml` and running `setup-mise`.
+
 ## [1.29.0] - 2026-10-27
 
 ### Changed
