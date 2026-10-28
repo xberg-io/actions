@@ -27,7 +27,8 @@ runs:
       run: |
         npm install --global pnpm@12.11.2
         echo "PNPM_HOME=$RUNNER_TEMP/pnpm" >> "$GITHUB_ENV"
-        echo "$RUNNER_TEMP/pnpm" >> "$GITHUB_PATH"
+        # ~keep pnpm 12 links global binaries into $PNPM_HOME/bin and refuses to install unless that is on PATH.
+        echo "$RUNNER_TEMP/pnpm/bin" >> "$GITHUB_PATH"
 
     - name: Install textlint and rules
       shell: bash
