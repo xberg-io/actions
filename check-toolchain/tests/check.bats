@@ -85,6 +85,42 @@ make_toolchains_remote() {
 	[[ "$output" != *"checker"* ]]
 }
 
+@test "check should_use_the_tag_when_a_branch_has_the_same_name" {
+	local remote="$TOOLCHAINS_REPOSITORY_URL"
+	git -C "$remote" checkout --quiet -b v1.0.0
+	printf '%s\n' 'import sys' 'print("branch checker")' 'sys.exit(1)' >"$remote/scripts/toolchains.py"
+	git -C "$remote" -c user.name=t -c user.email=t@example.com -c commit.gpgSign=false commit --quiet -am branch
+	printf '%s\n' 'baseline = "v1.0.0"' >"$REPO/toolchains.toml"
+
+	run env RUNNER_TEMP="$TEST_ROOT" "$BATS_TEST_DIRNAME/../scripts/check.sh" "$REPO"
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"checker check --baseline"* ]]
+	[[ "$output" != *"branch checker"* ]]
+}
+
+@test "check should_report_an_unreachable_remote_as_an_access_error_not_a_missing_tag" {
+	printf '%s\n' 'baseline = "v1.0.0"' >"$REPO/toolchains.toml"
+
+	run env RUNNER_TEMP="$TEST_ROOT" TOOLCHAINS_REPOSITORY_URL="$TEST_ROOT/no-such-remote" \
+		"$BATS_TEST_DIRNAME/../scripts/check.sh" "$REPO"
+
+	[ "$status" -ne 0 ]
+	[ "$status" -ne 2 ]
+	[[ "$output" == *"could not list the tags of $TEST_ROOT/no-such-remote"* ]]
+	[[ "$output" != *"is not a tag"* ]]
+}
+
+@test "check should_reject_a_baseline_that_starts_with_a_dash" {
+	printf '%s\n' 'baseline = "--upload-pack=touch /tmp/x"' >"$REPO/toolchains.toml"
+
+	run env RUNNER_TEMP="$TEST_ROOT" "$BATS_TEST_DIRNAME/../scripts/check.sh" "$REPO"
+
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"is not a valid tag name"* ]]
+	[[ "$output" != *"checker"* ]]
+}
+
 @test "check should_remove_the_temporary_checkout_when_it_finishes" {
 	printf '%s\n' 'baseline = "v1.0.0"' >"$REPO/toolchains.toml"
 	mkdir -p "$TEST_ROOT/runner"
