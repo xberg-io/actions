@@ -55,7 +55,7 @@ runs:
         # ~keep Reading Handle caches it, without which ExitCode stays null after WaitForExit.
         $null = $process.Handle
         if (-not $process.WaitForExit(120000)) {
-          Stop-Process -Id $process.Id -Force
+          & taskkill.exe /T /F /PID $process.Id
           throw 'Chromium did not exit within 120s of a headless --dump-dom run'
         }
         if ($process.ExitCode -ne 0) { throw "Chromium headless run exited with $($process.ExitCode)" }

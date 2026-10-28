@@ -21,7 +21,7 @@ setup() {
 @test "should_install_with_node_bundled_tools_and_system_deps_on_linux" {
 	xberg_stub chrome 'exit 0'
 	cp "$XBERG_STUB_BIN/chrome" "$CHROMIUM"
-	run env PATH="$(xberg_isolated_path)" RUNNER_OS=Linux /bin/bash "$SCRIPT"
+	run env -u PLAYWRIGHT_VERSION PATH="$(xberg_isolated_path)" RUNNER_OS=Linux /bin/bash "$SCRIPT"
 	xberg_assert_status 0
 	xberg_assert_trace "npm install --no-audit --no-fund --silent playwright@^1.49.0" \
 		"npx --no-install playwright install --with-deps chromium"
@@ -31,14 +31,14 @@ setup() {
 @test "should_skip_system_deps_off_linux" {
 	xberg_stub chrome 'exit 0'
 	cp "$XBERG_STUB_BIN/chrome" "$CHROMIUM"
-	run env PATH="$(xberg_isolated_path)" RUNNER_OS=macOS /bin/bash "$SCRIPT"
+	run env -u PLAYWRIGHT_VERSION PATH="$(xberg_isolated_path)" RUNNER_OS=macOS /bin/bash "$SCRIPT"
 	xberg_assert_status 0
 	xberg_assert_trace "npm install --no-audit --no-fund --silent playwright@^1.49.0" \
 		"npx --no-install playwright install chromium"
 }
 
 @test "should_fail_when_playwright_reports_no_executable_binary" {
-	run env PATH="$(xberg_isolated_path)" RUNNER_OS=Linux /bin/bash "$SCRIPT"
+	run env -u PLAYWRIGHT_VERSION PATH="$(xberg_isolated_path)" RUNNER_OS=Linux /bin/bash "$SCRIPT"
 	xberg_assert_status 1
 	xberg_assert_output_contains "ERROR: Chromium binary not found at: $CHROMIUM"
 	xberg_assert_github_output ""

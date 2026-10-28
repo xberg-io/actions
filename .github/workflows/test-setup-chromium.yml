@@ -65,7 +65,7 @@ jobs:
             -RedirectStandardOutput $dump
           $null = $process.Handle
           if (-not $process.WaitForExit(120000)) {
-            Stop-Process -Id $process.Id -Force
+            & taskkill.exe /T /F /PID $process.Id
             throw 'Chromium did not exit within 120s'
           }
           if ($process.ExitCode -ne 0) { throw "Chromium exited with $($process.ExitCode)" }
