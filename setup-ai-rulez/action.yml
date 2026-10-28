@@ -13,12 +13,12 @@ runs:
   using: composite
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
     - name: Install AI-Rulez release
       if: inputs.source-revision == ''
       # ~keep The upstream action installs a sha256-verified, cached release binary; it publishes no floating major tag.
       # ~keep Its install script stays at this ref while the CLI floats: bump it with the ai-rulez hook revision in poly.toml.
-      uses: Goldziher/ai-rulez@v5.8.0
+      uses: Goldziher/ai-rulez@v5.9.1
       with:
         version: ${{ inputs.ai-rulez-version }}
     - name: Check out pinned AI-Rulez source
