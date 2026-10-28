@@ -14,6 +14,7 @@ function Get-TesseractVersion {
 
 function Ensure-Tesseract {
   param([string]$Executable, [string]$Installer)
+  # Windows stays on 5.5.3 while Linux and macOS use 5.5.4: upstream published no 5.5.4 Windows installer. ~keep
   $required = [version]'5.5.3'
   $current = Get-TesseractVersion -Executable $Executable
   if ($null -ne $current -and $current -ge $required) {

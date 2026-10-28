@@ -169,8 +169,8 @@ make_stub() {
 	printf '%s\n' \
 		'brew() { [ "$1" = "list" ] && return 0; return 0; }' \
 		'cmake() { printf "%s\n" "cmake version 3.30.0"; }' \
-		'tesseract() { if [ "$1" = "--version" ]; then printf "%s\n" "tesseract 5.5.3" " leptonica-1.87.0"; else printf "%s\n" "eng"; fi; }' \
-		'pkg-config() { case "${2:-}" in tesseract) echo 5.5.3 ;; lept) echo 1.87.0 ;; *) echo 2.3.0 ;; esac; }' \
+		'tesseract() { if [ "$1" = "--version" ]; then printf "%s\n" "tesseract 5.5.4" " leptonica-1.87.0"; else printf "%s\n" "eng"; fi; }' \
+		'pkg-config() { case "${2:-}" in tesseract) echo 5.5.4 ;; lept) echo 1.87.0 ;; *) echo 2.3.0 ;; esac; }' \
 		'php() { printf "%s\n" "PHP 8.4.0"; }' >"$bash_env"
 
 	run env PATH="$STUB_BIN:/usr/bin:/bin" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \

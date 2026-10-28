@@ -113,6 +113,7 @@ runs:
         LIBHEIF_VERSION: ${{ inputs.libheif-version }}
       run: "${{ github.action_path }}/scripts/install-linux.sh"
 
+    # Pinned to 5.5.3 with ensure-tesseract-windows.ps1 until upstream ships a 5.5.4 installer. ~keep
     - name: Cache Tesseract (Windows)
       if: runner.os == 'Windows'
       id: cache-tesseract-windows
