@@ -5,7 +5,7 @@ lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "windows-x64"]
 [tools]
 task = "3.54.0"
 python = "3.13.18"
-uv = "0.13.5"
+uv = "0.13.6"
 "github:Goldziher/poly" = "0.29.0"
 "github:Goldziher/ai-rulez" = "v5.8.0"
 actionlint = "1.7.12"
