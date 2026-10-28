@@ -142,6 +142,63 @@ jobs:
             exit 1
           fi
 
+  config-ref:
+    name: Config restored from config-ref
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Remove the fixture config as an older checkout would lack it
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+          rm setup-mise/tests/fixtures/locked/mise.*
+          [[ -z "$(ls -A setup-mise/tests/fixtures/locked)" ]]
+
+      - name: Setup mise with the config restored from the triggering commit
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          config-ref: ${{ github.sha }}
+          cache: "false"
+
+      - name: Verify the config was restored and its tools installed
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/locked
+        run: |
+          set -euo pipefail
+          for file in mise.toml mise.lock mise.ci.toml mise.ci.lock; do
+            [[ -f "$file" ]] || { echo "::error::$file was not restored"; exit 1; }
+          done
+          [[ -z "$(git status --porcelain -- .)" ]]
+          [[ "$(task --version)" == "3.54.0" ]]
+          [[ "$(jq --version)" == "jq-1.8.2" ]]
+
+      - name: Setup mise where the ref has no mise.toml either
+        id: no-config
+        continue-on-error: true
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/no-config
+          config-ref: ${{ github.sha }}
+          cache: "false"
+
+      - name: Assert it failed because the ref has no config
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.no-config.outcome }}
+          CONFIG_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$OUTCOME" == "failure" ]] || { echo "::error::missing config outcome: $OUTCOME"; exit 1; }
+          status=0
+          setup-mise/scripts/restore-config.sh setup-mise/tests/fixtures/no-config "$CONFIG_REF" \
+            >"$RUNNER_TEMP/no-config.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/no-config.log"
+          [[ "$status" -eq 1 ]]
+          grep -q "has no setup-mise/tests/fixtures/no-config/mise.toml either" "$RUNNER_TEMP/no-config.log"
+
   check-toolchain:
     name: check-toolchain on ${{ matrix.os }}
     strategy:

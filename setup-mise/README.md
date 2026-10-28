@@ -36,7 +36,15 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 | `install-args`      | no       | `""`                    | Arguments for `mise install`, e.g. `node python`.                |
 | `mise-env`          | no       | `""`                    | Exported as `MISE_ENV` for this and later steps.                 |
 | `github-token`      | no       | `${{ github.token }}`   | Token for GitHub release lookups, avoiding API rate limits.      |
+| `config-ref`        | no       | `""`                    | Ref to restore the mise config from when `mise.toml` is missing. |
 | `cache`             | no       | `true`                  | Cache the mise data directory.                                   |
+
+## Older checkouts
+
+Release and heal jobs that check out a tag predating `mise.toml` pass `config-ref: ${{ github.sha }}`. When the
+working directory has no `mise.toml`, the action fetches that ref and restores `mise.toml`, `mise.lock`,
+`mise.*.toml` and `mise.*.lock` from it (the restored files are staged in the checkout). It fails when the ref has
+no `mise.toml` either.
 
 ## Matrix versions
 

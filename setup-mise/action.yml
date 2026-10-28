@@ -24,6 +24,12 @@ inputs:
       requests/hour per runner IP, shared across every job on it.
     required: false
     default: ${{ github.token }}
+  config-ref:
+    description: >-
+      Git ref to restore mise.toml, mise.lock and mise.*.toml / mise.*.lock from when the working directory has
+      no mise.toml, e.g. a release job that checked out an older tag. Callers pass github.sha. Empty skips this.
+    required: false
+    default: ""
   cache:
     description: >-
       Cache the mise data directory, keyed on mise.toml, mise.*.toml, mise.lock and mise.*.lock, MISE_ENV, OS
@@ -33,6 +39,15 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Restore mise config
+      if: inputs.config-ref != ''
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        CONFIG_REF: ${{ inputs.config-ref }}
+      run: |
+        "${{ github.action_path }}/scripts/restore-config.sh" "$WORKING_DIRECTORY" "$CONFIG_REF"
+
     - name: Prepare mise environment
       id: env
       shell: bash
