@@ -52,32 +52,32 @@ url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz"
 url_api = "https://api.github.com/repos/bats-core/bats-core/tarball/v1.14.0"
 
 [[tools."github:Goldziher/ai-rulez"]]
-version = "5.7.0"
+version = "5.8.0"
 backend = "github:Goldziher/ai-rulez"
-specifiers = ["5.7.0"]
+specifiers = ["v5.8.0"]
 
 [tools."github:Goldziher/ai-rulez"."platforms.linux-arm64"]
-checksum = "sha256:a554e3baa54a3a0780b3f8678e81e15d0b3851f3645070852f8aea7f84d19e03"
-url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.7.0/ai-rulez_5.7.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/677531267"
+checksum = "sha256:6e281649d853980ddc2ac2f7d07ae2974745cb54fd1598ef003732a0bdcf8b4b"
+url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.8.0/ai-rulez_5.8.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/683089776"
 provenance = "github-attestations"
 
 [tools."github:Goldziher/ai-rulez"."platforms.linux-x64"]
-checksum = "sha256:8826698a1740b02280f68514b23884ad0d5b16a78d7f1b23477c17204d1c3a11"
-url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.7.0/ai-rulez_5.7.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/677531271"
+checksum = "sha256:c54c04282c05e7f811cf11ea7e2938a7fdafce76dd39c2104df961a4cb2fa712"
+url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.8.0/ai-rulez_5.8.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/683089773"
 provenance = "github-attestations"
 
 [tools."github:Goldziher/ai-rulez"."platforms.macos-arm64"]
-checksum = "sha256:3d00ce40b63bc855537c5a46834ef8c10f507857d1e9de1c55efe7301a4ff9ba"
-url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.7.0/ai-rulez_5.7.0_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/677531266"
+checksum = "sha256:901eac11597a750e4cfdaaf8e4f5a6138d08b496dc70e99566d3f9233c3325d4"
+url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.8.0/ai-rulez_5.8.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/683089772"
 provenance = "github-attestations"
 
 [tools."github:Goldziher/ai-rulez"."platforms.windows-x64"]
-checksum = "sha256:b9a25919ff6b0da99e552823d60decd861db3336b9829ee1e3472ecde3a332e9"
-url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.7.0/ai-rulez_5.7.0_windows_amd64.zip"
-url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/677531268"
+checksum = "sha256:b41f787984ad2f28f8075a1e7a967341bbd7f8bc0dcd940f033cd72ab6f56c8f"
+url = "https://github.com/Goldziher/ai-rulez/releases/download/v5.8.0/ai-rulez_5.8.0_windows_amd64.zip"
+url_api = "https://api.github.com/repos/Goldziher/ai-rulez/releases/assets/683089774"
 provenance = "github-attestations"
 
 [[tools."github:Goldziher/poly"]]
