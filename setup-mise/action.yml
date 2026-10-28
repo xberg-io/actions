@@ -1,0 +1,73 @@
+name: Setup mise
+description: >-
+  Install mise and the tools declared in the repository's mise.toml. When a mise.lock is present the install
+  runs with --locked, so a lock that is stale or missing the runner's platform fails the job.
+inputs:
+  working-directory:
+    description: Directory holding the mise.toml (and mise.lock) to install from.
+    required: false
+    default: "."
+  install-args:
+    description: >-
+      Arguments passed to `mise install`, e.g. "node python" to install only those tools. Empty installs every
+      tool in mise.toml.
+    required: false
+    default: ""
+  mise-env:
+    description: >-
+      Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml and its mise.ci.lock).
+    required: false
+    default: ""
+  github-token:
+    description: >-
+      Token mise uses for GitHub release lookups and downloads. Unauthenticated api.github.com allows 60
+      requests/hour per runner IP, shared across every job on it.
+    required: false
+    default: ${{ github.token }}
+  config-ref:
+    description: >-
+      Git ref to restore mise.toml, mise.lock and mise.*.toml / mise.*.lock from when the working directory has
+      no mise.toml, e.g. a release job that checked out an older tag. Callers pass github.sha. Empty skips this.
+    required: false
+    default: ""
+  cache:
+    description: >-
+      Cache the mise data directory, keyed on mise.toml, mise.*.toml, mise.lock and mise.*.lock, MISE_ENV, OS
+      and arch. "auto" caches unless MISE_DATA_DIR is preset (a runner image's baked tools); "true" and "false"
+      force it.
+    required: false
+    default: "auto"
+outputs:
+  cache:
+    description: Whether the mise data directory was cached ("true" or "false"), after resolving "auto".
+    value: ${{ steps.env.outputs.cache }}
+runs:
+  using: composite
+  steps:
+    - name: Restore mise config
+      if: inputs.config-ref != ''
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        CONFIG_REF: ${{ inputs.config-ref }}
+      run: |
+        "${{ github.action_path }}/scripts/restore-config.sh" "$WORKING_DIRECTORY" "$CONFIG_REF"
+
+    - name: Prepare mise environment
+      id: env
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_MISE_ENV: ${{ inputs.mise-env }}
+        INPUT_CACHE: ${{ inputs.cache }}
+      run: |
+        "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE"
+
+    - name: Install mise and tools
+      uses: jdx/mise-action@v5
+      with:
+        version: "2026.10.21"
+        working_directory: ${{ inputs.working-directory }}
+        install_args: ${{ inputs.install-args }}
+        github_token: ${{ inputs.github-token }}
+        cache: ${{ steps.env.outputs.cache }}

@@ -1,8 +1,10 @@
 name: Install Task
-description: Install the Task CLI
+description: >-
+  Deprecated: declare `task` in mise.toml and use setup-mise instead. Installs the Task CLI through mise and puts
+  it on PATH.
 inputs:
   version:
-    description: Task CLI version to install. Use "latest" for the newest release.
+    description: Task CLI version to install, with or without a leading "v". Use "latest" for the newest release.
     required: false
     default: "latest"
   install-dir:
@@ -11,7 +13,7 @@ inputs:
     default: ""
   github-token:
     description: >-
-      Token used to authenticate the release lookup. Unauthenticated api.github.com allows 60
+      Token mise uses for the release lookup and download. Unauthenticated api.github.com allows 60
       requests/hour per runner IP, shared across every job on it, which makes resolving "latest"
       a routine CI flake.
     required: false
@@ -19,6 +21,19 @@ inputs:
 runs:
   using: composite
   steps:
+    # ~keep Only the mise binary: no install, no cache and no repository env or shims, so a mise.toml in
+    # ~keep the caller's checkout is left for setup-mise to handle.
+    - name: Install mise
+      uses: jdx/mise-action@v5
+      with:
+        version: "2026.10.21"
+        install: "false"
+        cache: "false"
+        env: "false"
+        export_path: "false"
+        add_shims_to_path: "false"
+        github_token: ${{ inputs.github-token }}
+
     - name: Setup Task (Unix)
       if: runner.os != 'Windows'
       shell: bash

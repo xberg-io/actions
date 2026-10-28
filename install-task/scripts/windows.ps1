@@ -10,75 +10,70 @@ if ([string]::IsNullOrWhiteSpace($taskBinDir)) {
   $taskBinDir = Join-Path $env:RUNNER_TEMP "task-bin"
 }
 New-Item -ItemType Directory -Force -Path $taskBinDir | Out-Null
+# ~keep Resolve before Push-Location below, or a relative install-dir would land under RUNNER_TEMP.
+$taskBinDir = (Resolve-Path -LiteralPath $taskBinDir).Path
 
 $taskExe = "$taskBinDir\task.exe"
 
-$headers = @{
-  "X-GitHub-Api-Version" = "2022-11-28"
+if (-not $env:MISE_GITHUB_TOKEN -and $env:GITHUB_TOKEN) {
+  $env:MISE_GITHUB_TOKEN = $env:GITHUB_TOKEN
 }
-if ($env:GITHUB_TOKEN) {
-  $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+if (-not $env:MISE_HTTP_TIMEOUT) {
+  $env:MISE_HTTP_TIMEOUT = "5m"
 }
+# ~keep setup-mise exports MISE_LOCKED=1 for the repository's lock; this install is outside that lock.
+$env:MISE_LOCKED = "false"
 
-# ~keep Unauthenticated api.github.com allows 60 requests/hour per source IP, shared by every job
-# on that runner, so resolving "latest" through the API fails outright often enough to be a routine
-# CI flake. Fall back to the /releases/latest redirect: a plain github.com request under a separate,
-# far higher limit that needs no credentials.
-function Resolve-LatestTag {
-  try {
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/go-task/task/releases/latest" -Headers $headers
-    return $release.tag_name
-  } catch {
-    Write-Host "GitHub API lookup failed ($($_.Exception.Message)); falling back to the releases/latest redirect"
-  }
+$maxAttempts = 6
 
-  $response = Invoke-WebRequest -Uri "https://github.com/go-task/task/releases/latest" `
-    -MaximumRedirection 0 -SkipHttpErrorCheck
-  $location = $response.Headers["Location"]
-  if ($location) {
-    $tag = ([string]($location | Select-Object -First 1)).Split("/")[-1]
-    if ($tag) {
-      return $tag
+# Run a mise network call, retrying with exponential backoff; release lookups and downloads fail transiently.
+function Invoke-MiseWithRetry {
+  $wait = 5
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $output = & mise @args
+    if ($LASTEXITCODE -eq 0) {
+      return $output
     }
-  }
-
-  throw "Could not resolve the latest Task release"
-}
-
-if ($taskVersion -eq "latest") {
-  $resolvedVersion = Resolve-LatestTag
-} else {
-  $resolvedVersion = $taskVersion
-  if (-not $resolvedVersion.StartsWith("v")) {
-    $resolvedVersion = "v$resolvedVersion"
-  }
-}
-
-Write-Host "Installing Task $resolvedVersion"
-
-# The asset name is stable across releases, so the download itself needs no API call. ~keep
-$downloadUrl = "https://github.com/go-task/task/releases/download/$resolvedVersion/task_windows_amd64.zip"
-$zipPath = "$taskBinDir\task.zip"
-
-$maxAttempts = 3
-for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-  try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
-    break
-  } catch {
     if ($attempt -eq $maxAttempts) {
-      throw "Failed to download $downloadUrl after $maxAttempts attempts: $($_.Exception.Message)"
+      throw "'mise $($args -join ' ')' failed after $maxAttempts attempts"
     }
-    $wait = [Math]::Pow(2, $attempt)
-    Write-Host "Download attempt $attempt failed; retrying in ${wait}s"
+    Write-Host "'mise $($args -join ' ')' failed (attempt $attempt/$maxAttempts); retrying in ${wait}s"
     Start-Sleep -Seconds $wait
+    $wait *= 2
   }
 }
 
-Expand-Archive -Path $zipPath -DestinationPath $taskBinDir -Force
-Remove-Item $zipPath
+# ~keep Run outside the checkout: a repository mise.toml must neither decide this version nor have its
+# ~keep mise.lock rewritten by this install.
+Push-Location $env:RUNNER_TEMP
+try {
+  if ($taskVersion -eq "latest") {
+    $resolvedVersion = [string](Invoke-MiseWithRetry latest task)
+    if ([string]::IsNullOrWhiteSpace($resolvedVersion)) {
+      throw "mise could not resolve the latest Task release"
+    }
+    $resolvedVersion = $resolvedVersion.Trim()
+    Write-Host "Resolved 'latest' to v$resolvedVersion"
+  } elseif ($taskVersion.StartsWith("v")) {
+    $resolvedVersion = $taskVersion.Substring(1)
+  } else {
+    $resolvedVersion = $taskVersion
+  }
 
-if (-not (Test-Path $taskExe)) {
+  Write-Host "Installing Task v$resolvedVersion"
+
+  Invoke-MiseWithRetry install "task@$resolvedVersion" | Out-Host
+
+  $taskSource = [string](& mise which task --tool "task@$resolvedVersion")
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($taskSource)) {
+    throw "mise could not locate the task binary for task@$resolvedVersion"
+  }
+  Copy-Item -LiteralPath $taskSource.Trim() -Destination $taskExe -Force
+} finally {
+  Pop-Location
+}
+
+if (-not (Test-Path -LiteralPath $taskExe)) {
   throw "Task binary not found at $taskExe"
 }
 

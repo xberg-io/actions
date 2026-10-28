@@ -1,0 +1,5 @@
+[tools]
+task = ["3.54.0", "3.51.1"]
+
+[env]
+FIXTURE_PROFILE = "ci"
