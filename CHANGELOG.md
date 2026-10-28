@@ -193,7 +193,7 @@ All notable changes to xberg-io/actions are documented in this file.
 ### Fixed
 
 - `publish-pypi` no longer reports success for a partially published version. The idempotency
-  check asked the PyPI JSON API whether the *version* existed and skipped the whole publish on a
+  check asked the PyPI JSON API whether the _version_ existed and skipped the whole publish on a
   hit. xberg 1.2.5 uploaded two macOS wheels before PyPI's project size limit returned 400; the
   re-run after the limit was raised found the version on the registry, skipped `uv publish` and
   went green with six wheels and the sdist still missing (xberg GH#1699). The check now reads
@@ -237,7 +237,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `setup-c-cpp-tools` installs a pinned `shfmt` (3.14.1), controlled by the new `install-shfmt`
   and `shfmt-version` inputs, and `reusable-validate` now provisions it. poly delegates shell
-  formatting to `shfmt` only *when present* and silently skips shell entirely when it is absent,
+  formatting to `shfmt` only _when present_ and silently skips shell entirely when it is absent,
   so a runner without it formats nothing while a developer machine with it formats everything.
   That asymmetry is invisible until a generated file is compared byte-for-byte:
   html-to-markdown run 35080918605 regenerated `e2e/c/download_ffi.sh` unformatted and failed the
@@ -277,7 +277,7 @@ All notable changes to xberg-io/actions are documented in this file.
   cannot be read back. `brew trust --json v1` is the read-back shape Homebrew 7.0.1 documents,
   but aborting on a brew that spells it differently would turn a verification step into a fresh
   way for every bottle build to die. An unreadable store now warns and continues; a store that
-  reads back *without* the tap in it is still fatal.
+  reads back _without_ the tap in it is still fatal.
 
 ## [1.21.0] - 2026-09-15
 
@@ -300,7 +300,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `homebrew-build-bottles` could not tap `xberg-io/tap` at all. Homebrew 7.0 refuses to load
   formulae from an untrusted third-party tap, and `brew tap` surfaces that refusal as
-  `Cannot tap <tap>: invalid syntax in tap!` — so the `brew trust` call that sat *after*
+  `Cannot tap <tap>: invalid syntax in tap!` — so the `brew trust` call that sat _after_
   `brew tap` was unreachable: the tap failed first and exhausted the retry loop. Trust is now
   granted before tapping, which `brew trust` supports because it resolves the name through
   `Tap.fetch` rather than from disk. The deprecated `HOMEBREW_NO_REQUIRE_TAP_TRUST` bypass is
@@ -337,7 +337,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `publish-github-release` could fail on a release it had just created. `ensure_release.py`
   created the release and discarded the id it received; `upload_artifacts.py` then re-derived
-  the same release from the releases *listing* endpoint, and that listing has a read-after-write
+  the same release from the releases _listing_ endpoint, and that listing has a read-after-write
   lag. Reported from a tree-sitter-language-pack v1.19.1 publish: the draft was created at
   13:36:19 and the upload failed 8.3 seconds later with "release not found (checked drafts and
   published)", against a draft that was real and sat at index 0 of page 1. The id is now passed
@@ -459,7 +459,7 @@ All notable changes to xberg-io/actions are documented in this file.
   earlier changelog entry here claiming it did: `cd target` provides no containment once a child
   of `target/` is a symlink to somewhere else (e.g. `target/escape -> /elsewhere`), because a
   pattern like `escape/*.o` is ordinary relative text that matches straight through the symlink.
-  Confinement is now checked on the *resolved* path, not the pattern text: `target`'s own
+  Confinement is now checked on the _resolved_ path, not the pattern text: `target`'s own
   canonical (symlink-resolved) directory is compared against each glob match's own resolved path
   via `realpath`, and only a match that resolves under `target/`'s real location is deleted —
   reproduced against a real `target/escape -> outside/` symlink and a `victim.o` file placed
@@ -488,7 +488,7 @@ All notable changes to xberg-io/actions are documented in this file.
   above: a whitespace-only value (e.g. `"   "`) passed the `[[ -n "$VAR" ]]` non-empty check, but
   `xargs -n1` emits nothing for it, and the subsequent `while read <<< ""` here-string still
   yielded one empty line, so a stray empty-string argv entry reached cargo. The guard now checks
-  the *split result* for non-emptiness rather than the raw input, so a whitespace-only value now
+  the _split result_ for non-emptiness rather than the raw input, so a whitespace-only value now
   contributes exactly zero argv entries, matching the empty-input case.
 - `build-rust-cli`'s whitespace-only-guard fix above traded one defect for another: it also
   silently dropped a legitimate explicitly quoted empty argument (e.g. `--config ""`). Isolated
@@ -584,12 +584,12 @@ All notable changes to xberg-io/actions are documented in this file.
 ### Fixed
 
 - **`publish-github-release` can find the draft releases it creates.**
-  `GET /repos/{owner}/{repo}/releases/tags/{tag}` resolves only *published* releases -- a draft
+  `GET /repos/{owner}/{repo}/releases/tags/{tag}` resolves only _published_ releases -- a draft
   has no published git tag, so the endpoint 404s for one no matter how long the caller retries.
   The action creates releases as drafts so the caller can promote them once its asset checks
   pass, which meant every by-tag lookup failed against the release the action had just created:
   `upload_artifacts` exited on the 404 so no asset could ever upload, and `ensure_release` spent
-  its full 20-attempt retry budget before creating a *second* release for the same tag. Both now
+  its full 20-attempt retry budget before creating a _second_ release for the same tag. Both now
   resolve the release by paging `GET /releases` and matching `tag_name`, which returns drafts for
   a token with push access, and fall back to the by-tag lookup for tokens that only see published
   releases. `verify-release-assets` already resolved releases this way.
@@ -636,7 +636,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- **`verify-release-assets` resolves a tag to its *published* release.** Deleting a Git tag
+- **`verify-release-assets` resolves a tag to its _published_ release.** Deleting a Git tag
   converts its release into a draft, so a tag that has been deleted and re-created -- what
   `retag-for-republish` does -- carries two releases: the orphaned draft holding the failed
   attempt's asset list, and the live one. The action matched on `tag_name` and took whichever
@@ -660,7 +660,7 @@ All notable changes to xberg-io/actions are documented in this file.
   dependencies and enforcing the workspace lockfile on Linux, macOS, and Windows.
 
 - **`verify-release-assets` no longer fails on uploads that are still in flight.** The action
-  retried only the release *lookup*, so a 404 right after `gh release create` was covered but a
+  retried only the release _lookup_, so a 404 right after `gh release create` was covered but a
   release found holding a partial asset list was taken as final. Assets arrive from many jobs in
   parallel and the release replica can serve a stale list seconds after the last upload job
   reports success, so a single evaluation failed every pattern whose asset had not landed yet.
@@ -1303,7 +1303,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- **`publish-crates`: handle the first-ever publish of a new crate under Trusted Publishing.** crates.io OIDC tokens cannot *create* a crate that has never been published (`Trusted Publishing tokens do not support creating new crates. Publish the crate manually, first`), which hard-failed the whole release the moment a new crate (e.g. kreuzberg's `kreuzberg-candle-ocr` in v5.0.0) entered the publish list. The script now detects this specific rejection, stops retrying it (retrying never grants the token create permission), records the crate, and lets the remaining crates publish; at end-of-run it fails with one consolidated, actionable summary naming each crate and the exact one-time manual bootstrap (`CARGO_REGISTRY_TOKEN=<classic-token> cargo publish -p <crate> --allow-dirty`). Already-published versions (including an existing rc) still take the idempotent success path. (`publish-crates/scripts/publish.py`)
+- **`publish-crates`: handle the first-ever publish of a new crate under Trusted Publishing.** crates.io OIDC tokens cannot _create_ a crate that has never been published (`Trusted Publishing tokens do not support creating new crates. Publish the crate manually, first`), which hard-failed the whole release the moment a new crate (e.g. kreuzberg's `kreuzberg-candle-ocr` in v5.0.0) entered the publish list. The script now detects this specific rejection, stops retrying it (retrying never grants the token create permission), records the crate, and lets the remaining crates publish; at end-of-run it fails with one consolidated, actionable summary naming each crate and the exact one-time manual bootstrap (`CARGO_REGISTRY_TOKEN=<classic-token> cargo publish -p <crate> --allow-dirty`). Already-published versions (including an existing rc) still take the idempotent success path. (`publish-crates/scripts/publish.py`)
 - **`publish-rubygems`: report the actual `gem spec` command in the failure diagnostic.** On a structurally-invalid gem the diagnostic printed `gem spec --file <name>`, but the `--file` flag was removed in RubyGems 3.3+ and the script already invokes `gem spec <path>` positionally. The misleading text made "invalid gem structure" failures look like a flag/version problem rather than a corrupt archive. Print the real positional command. (`publish-rubygems/scripts/publish.py`)
 - **`homebrew-build-bottles`: pin the Linux leg to Homebrew 6.0.12.** Homebrew 6.0.13 regressed `brew install --build-bottle` on Linux — the keg builds (🍺 prints) but the process then exits 1 with the underlying error swallowed, aborting the script under `set -e` before `brew bottle` runs (crawlberg v1.0.11: both Linux bottles red on 6.0.13; 6.0.12 was the last green build, and macOS on 6.0.11 was unaffected). The Linux install path — where brew is freshly installed to latest — now checks out the `6.0.12` tag in the brew repo and sets `HOMEBREW_NO_AUTO_UPDATE=1` instead of `brew update`ing to latest; macOS keeps its preinstalled brew and its `brew update` unchanged. Override via `LINUX_BREW_PIN`. (`homebrew-build-bottles/scripts/build-bottles.sh`)
 
@@ -1351,7 +1351,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Added
 
-- **`reusable-cli-release.yml`: centralized CLI binary build + GitHub Release upload.** A `workflow_call` reusable workflow that builds a standalone Rust CLI across a reliable cross-platform matrix (x64+arm64 linux-gnu, arm64 macOS, x64 Windows) and uploads the archives to the repo's release. The reliable set deliberately excludes the scarce x64-macOS and arm64-Windows runners whose queue starvation previously blocked *all* CLI uploads — a single stuck leg failed the strict `upload` gate, leaving zero CLI assets on the release (observed on html-to-markdown v3.6.18). musl is a separate `continue-on-error` best-effort job, so its failure never fails the workflow or blocks the core uploads; `upload` runs whenever the core matrix succeeds (`!cancelled() && needs.cli-binaries.result == 'success'`). The upload step also un-drafts the release (`publish-github-release@v1 draft:false`, idempotent) so CLI binaries are never stranded in a draft, and can emit a `<asset-prefix>SHA256SUMS` file (`checksums: true`) for fail-closed verification by CLI proxy packages. Scarcer/flaky platforms (x64 macOS, arm64 Windows) belong in `extra-targets` — a separate `continue-on-error` best-effort matrix that ships when it builds but never blocks the release — rather than `targets`, which is strict-gated. Inputs: `package-name`, `binary-name`, `tag`, `asset-prefix` (default `cli-`), `checkout-ref`, `dry-run`, `build-musl` (default `true`), `checksums` (default `false`), `targets` (core matrix), `extra-targets` (best-effort matrix, default `[]`). (`.github/workflows/reusable-cli-release.yml`)
+- **`reusable-cli-release.yml`: centralized CLI binary build + GitHub Release upload.** A `workflow_call` reusable workflow that builds a standalone Rust CLI across a reliable cross-platform matrix (x64+arm64 linux-gnu, arm64 macOS, x64 Windows) and uploads the archives to the repo's release. The reliable set deliberately excludes the scarce x64-macOS and arm64-Windows runners whose queue starvation previously blocked _all_ CLI uploads — a single stuck leg failed the strict `upload` gate, leaving zero CLI assets on the release (observed on html-to-markdown v3.6.18). musl is a separate `continue-on-error` best-effort job, so its failure never fails the workflow or blocks the core uploads; `upload` runs whenever the core matrix succeeds (`!cancelled() && needs.cli-binaries.result == 'success'`). The upload step also un-drafts the release (`publish-github-release@v1 draft:false`, idempotent) so CLI binaries are never stranded in a draft, and can emit a `<asset-prefix>SHA256SUMS` file (`checksums: true`) for fail-closed verification by CLI proxy packages. Scarcer/flaky platforms (x64 macOS, arm64 Windows) belong in `extra-targets` — a separate `continue-on-error` best-effort matrix that ships when it builds but never blocks the release — rather than `targets`, which is strict-gated. Inputs: `package-name`, `binary-name`, `tag`, `asset-prefix` (default `cli-`), `checkout-ref`, `dry-run`, `build-musl` (default `true`), `checksums` (default `false`), `targets` (core matrix), `extra-targets` (best-effort matrix, default `[]`). (`.github/workflows/reusable-cli-release.yml`)
 
 ## [1.8.76] - 2026-06-20
 
@@ -1440,7 +1440,7 @@ All notable changes to xberg-io/actions are documented in this file.
 ### Fixed
 
 - **`publish-zig`: drop `-f` from curl invocation (conflicts with `--fail-with-body`).** The `Upload release asset` step ran `curl -fsSL --fail-with-body ...` against the `/uploads` endpoint. curl 7.76+ rejects this invocation with `curl: option --fail-with-body: is badly used here` because `-f`/`--fail` and `--fail-with-body` are mutually exclusive — they implement different non-2xx failure semantics (`--fail` discards the body, `--fail-with-body` surfaces it). The 1.8.52 + Unreleased draft-aware work added `--fail-with-body` without removing the preexisting `-f`. Use `-sS` (silent + show-errors) instead of `-fsS`; `--fail-with-body` already supplies the non-2xx failure path. Fixes html-to-markdown v3.6.0 Publish run 27423263158 `Publish Zig package metadata` failure.
-- **`publish-zig`: address the release by id, not tag, for draft-release support.** `gh release upload <tag>`, `gh release view <tag>`, and `gh release edit <tag>` all resolve the tag via `GET /repos/.../releases/tags/<tag>`, which only returns *published* releases — drafts 404 regardless of token scope. The publish workflows in xberg-io/* keep the release in draft until the terminal `release-finalize` step, so every `publish-zig` invocation prior to that step failed with `release not found`. The action now (a) resolves `tag → release_id` via the paginated `/repos/.../releases` listing (which surfaces drafts when the calling token has `contents:write`, falling back to `/releases/tags/<tag>` so published-only tokens still work), (b) uploads the asset via `POST https://uploads.github.com/repos/.../releases/{id}/assets` with explicit `--clobber` (DELETE-then-POST) semantics, and (c) computes the Zig content multihash from the *local* tarball via `zig fetch <path>` — the public release-asset URL 404s for draft assets, and the hash is content-addressed so a local fetch yields the identical hash a consumer would compute against the eventual published URL. Release-notes append now uses `PATCH /repos/.../releases/{id}`. Fixes html-to-markdown v3.6.0-rc.24 Publish run 27400690680 `Publish Zig package metadata` failure. Mirrors the same draft-aware migration applied to `generate-elixir-checksums` and `verify-release-assets` in v1.8.52.
+- **`publish-zig`: address the release by id, not tag, for draft-release support.** `gh release upload <tag>`, `gh release view <tag>`, and `gh release edit <tag>` all resolve the tag via `GET /repos/.../releases/tags/<tag>`, which only returns _published_ releases — drafts 404 regardless of token scope. The publish workflows in xberg-io/* keep the release in draft until the terminal `release-finalize` step, so every `publish-zig` invocation prior to that step failed with `release not found`. The action now (a) resolves `tag → release_id` via the paginated `/repos/.../releases` listing (which surfaces drafts when the calling token has `contents:write`, falling back to `/releases/tags/<tag>` so published-only tokens still work), (b) uploads the asset via `POST https://uploads.github.com/repos/.../releases/{id}/assets` with explicit `--clobber` (DELETE-then-POST) semantics, and (c) computes the Zig content multihash from the _local_ tarball via `zig fetch <path>` — the public release-asset URL 404s for draft assets, and the hash is content-addressed so a local fetch yields the identical hash a consumer would compute against the eventual published URL. Release-notes append now uses `PATCH /repos/.../releases/{id}`. Fixes html-to-markdown v3.6.0-rc.24 Publish run 27400690680 `Publish Zig package metadata` failure. Mirrors the same draft-aware migration applied to `generate-elixir-checksums` and `verify-release-assets` in v1.8.52.
 - **`publish-npm`: skip stub packages without `.node` native bindings.** Platform-specific npm package placeholders (e.g., `@kreuzberg/node-linux-arm64-musl` bootstrap stubs created in rc.8) contain only `README.md` and `package.json` with no prebuilt `.node` binary. When npm attempted to publish these empty payloads with `--provenance`, Sigstore transparency-log creation failed with `TLOG_CREATE_ENTRY_ERROR` during the signature generation phase. The script now inspects each `.tgz` tarball, skips any without a `.node` file, and logs the count of skipped stubs. Genuine build failures (missing binaries due to CI issues) are still published so the registry entry exists for diagnostics. Fixes kreuzberg rc.10 Publish run 27193384688 `@kreuzberg/node-linux-arm64-musl` failure.
 - **`build-elixir-natives` and `build-php-extension`: force `/MD` CRT for cc-rs MSVC on Windows.** Linking `kreuzberg_nif.dll` and `kreuzberg_php.dll` on `x86_64-pc-windows-msvc` failed with `LNK1319: mismatch detected for 'RuntimeLibrary': MT_StaticRelease vs MD_DynamicRelease`. Root cause: `libkreuzberg_tesseract.rlib` is built by cmake-rs (defaults to `/MD`); `libesaxx_rs.rlib` (transitively via `gliner` → `tokenizers`) is built by cc-rs (defaults to `/MT`). When both rlibs are linked into the same cdylib, the mismatch trips the linker error. Both composites now set `CFLAGS_x86_64_pc_windows_msvc`, `CXXFLAGS_x86_64_pc_windows_msvc`, `CFLAGS_i686_pc_windows_msvc`, and `CXXFLAGS_i686_pc_windows_msvc` to `/MD` in the Windows build steps' `env:` blocks. cc-rs honors target-suffixed env vars only when actually compiling for that target, so non-Windows builds are unaffected. Fixes the recurring rc.7→rc.10 "Build Elixir NIF (windows-x86_64)" and "Build PHP extension (windows-x86_64)" failures.
 
@@ -1449,8 +1449,8 @@ All notable changes to xberg-io/actions are documented in this file.
 ### Fixed
 
 - **`publish-zig`: make release-asset upload idempotent (`--clobber` unconditionally).** Previously `gh release upload` ran without `--clobber` when `update-existing` was not opted in, so reruns of a partially-failed job (e.g. the `zig fetch` CDN-propagation retry budget timed out after a successful upload) aborted with `asset under the same name already exists`. `--clobber` is now unconditional: first upload still creates the asset, and any subsequent rerun cleanly overwrites it. Fixes kreuzcrawl v0.3.0-rc.53 publish run 27221636352 attempt 2 Zig metadata failure.
-- **`generate-elixir-checksums`: download NIF assets via authenticated `gh release download` instead of the public CDN URL.** The script hit `https://github.com/<repo>/releases/download/<tag>/<name>` which only resolves for *published* releases — but the kreuzberg-dev publish workflows keep the release in draft until the terminal `release-finalize` job (which is itself gated on this checksum step), so the public URL always 404'd. `gh release download <tag> --pattern <name>` uses the authenticated GitHub API and works against both draft and published releases. Added a `token` input (defaults to the job's `GITHUB_TOKEN`); pass an App token with `contents:write` to see drafts. 20×10s retry loop preserved for transient API blips. Fixes kreuzcrawl v0.3.0-rc.53 publish run 27221636352 attempt 2 `Publish Elixir Hex package > Generate checksums from GitHub release` 404.
-- **`verify-release-assets`: locate releases by tag via `GET /repos/{owner}/{repo}/releases` (handles drafts), falling back to `gh release view <tag>`.** The previous lookup used `gh release view <tag>` exclusively, which calls `GET /releases/tags/<tag>` — that endpoint only finds *published* releases. Drafts have no real Git tag and were invisible, so verification 404'd while `release-finalize` was blocked behind it. Now lists releases via the paginated API (which returns drafts when the calling token has draft visibility) and matches by `tag_name`; if that returns no match, falls back to `gh release view <tag>` so the action still works against published releases via tokens without draft scope. Fixes kreuzcrawl v0.3.0-rc.53 publish run 27221636352 attempt 2 `Verify release assets` failure.
+- **`generate-elixir-checksums`: download NIF assets via authenticated `gh release download` instead of the public CDN URL.** The script hit `https://github.com/<repo>/releases/download/<tag>/<name>` which only resolves for _published_ releases — but the kreuzberg-dev publish workflows keep the release in draft until the terminal `release-finalize` job (which is itself gated on this checksum step), so the public URL always 404'd. `gh release download <tag> --pattern <name>` uses the authenticated GitHub API and works against both draft and published releases. Added a `token` input (defaults to the job's `GITHUB_TOKEN`); pass an App token with `contents:write` to see drafts. 20×10s retry loop preserved for transient API blips. Fixes kreuzcrawl v0.3.0-rc.53 publish run 27221636352 attempt 2 `Publish Elixir Hex package > Generate checksums from GitHub release` 404.
+- **`verify-release-assets`: locate releases by tag via `GET /repos/{owner}/{repo}/releases` (handles drafts), falling back to `gh release view <tag>`.** The previous lookup used `gh release view <tag>` exclusively, which calls `GET /releases/tags/<tag>` — that endpoint only finds _published_ releases. Drafts have no real Git tag and were invisible, so verification 404'd while `release-finalize` was blocked behind it. Now lists releases via the paginated API (which returns drafts when the calling token has draft visibility) and matches by `tag_name`; if that returns no match, falls back to `gh release view <tag>` so the action still works against published releases via tokens without draft scope. Fixes kreuzcrawl v0.3.0-rc.53 publish run 27221636352 attempt 2 `Verify release assets` failure.
 
 ## [1.8.51] - 2026-06-09
 
@@ -1739,7 +1739,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- **`setup-node-workspace`: honor `frozen-lockfile: false` by passing `--no-frozen-lockfile`.** pnpm defaults `frozen-lockfile=true` in CI, so the action's prior logic — which only *added* `--frozen-lockfile` when the input was `"true"` and otherwise passed no flag — still ran a frozen install in CI, silently ignoring `frozen-lockfile: false`. napi-rs workspaces whose main package pins platform `optionalDependencies` at a not-yet-published version (the release under test) cannot record those specifiers in the lockfile, so a frozen install fails with `ERR_PNPM_OUTDATED_LOCKFILE`. The action now passes `--no-frozen-lockfile` when the input is not `"true"`. Surfaced by spikard v0.15.6-rc.8 CI Rust/Validate (Setup Node). (`setup-node-workspace/action.yml`)
+- **`setup-node-workspace`: honor `frozen-lockfile: false` by passing `--no-frozen-lockfile`.** pnpm defaults `frozen-lockfile=true` in CI, so the action's prior logic — which only _added_ `--frozen-lockfile` when the input was `"true"` and otherwise passed no flag — still ran a frozen install in CI, silently ignoring `frozen-lockfile: false`. napi-rs workspaces whose main package pins platform `optionalDependencies` at a not-yet-published version (the release under test) cannot record those specifiers in the lockfile, so a frozen install fails with `ERR_PNPM_OUTDATED_LOCKFILE`. The action now passes `--no-frozen-lockfile` when the input is not `"true"`. Surfaced by spikard v0.15.6-rc.8 CI Rust/Validate (Setup Node). (`setup-node-workspace/action.yml`)
 - **`build-ruby-gem`: switch the Windows linker to `lld` to handle rustc's brace-expanded archive args.** Recent mingw-w64-ucrt toolchain bumps (gcc 16.x) ship an `ld.exe` that does not brace-expand the `{libfoo,libbar,...}.rlib` shorthand rustc emits for cdylib link lines. The result is `ld.exe: cannot find  ■: No such file or directory` (mojibake of the literal `{`) and a failed Ruby gem build on x64-mingw-ucrt. The Windows install step now also installs `mingw-w64-ucrt-x86_64-lld`, and the compile step exports `CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS='-C link-arg=-fuse-ld=lld'`. (The target-prefixed env var is required because rb-sys's cargo invocation does not propagate plain `RUSTFLAGS` to rustc — verified in kreuzcrawl rc.32 Publish Release job 77937367149, where the original `RUSTFLAGS` export was set but never reached the gcc command line.) Surfaced by kreuzcrawl v0.3.0-rc.31 Publish Release job 77914103699.
 - **`install-alef`: pass `--force` to the `cargo install` source-build fallback.** When the release binary is missing (the tag-vs-binary-upload race) and the fallback runs on a runner that already has `alef` installed (cached image or a prior step), `cargo install` aborted with "binary `alef` already exists in destination". The unix and Windows fallbacks now use `--force` to overwrite, making installation idempotent. Surfaced via `check-registry` failing in consumer publish workflows.
 - **`build-elixir-hex`: gate Cargo.lock generation on dry-run.** The "Generate Cargo.lock" step now only runs when `inputs.dry-run == 'true'`, which is the intended behavior when a dry-run publish bypasses the rewrite step (before the core crate is on crates.io). Previously the step always ran unconditionally, which was inconsistent with the documented workflow and failed the test assertion.
@@ -1780,7 +1780,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- **`homebrew-merge-bottles`: strip ALL existing bottle blocks (any scope) before inserting fresh one.** Old GoReleaser-bootstrapped formulas (e.g. `xberg-io/tap/alef`) accreted `bottle do … end` blocks at file-level scope — outside the `class < Formula … end` body. `brew bottle` then failed with `undefined method 'bottle' for module Formulary::FormulaNamespace…` because the DSL call lives where no Formula receiver is bound. The merge script previously replaced only the *first* matched block (`count=1`) and required a trailing `\n` after the closing `end` (so trailing-without-newline blocks were missed). Now: regex matches `end(?:\n|\Z)` (covers trailing block without newline), and the replace step strips *every* bottle block in the file before inserting one fresh block immediately after the `license` line — guaranteed inside the class. Triple+ blank lines from the strip are collapsed. (`homebrew-merge-bottles/scripts/merge-bottles.sh`)
+- **`homebrew-merge-bottles`: strip ALL existing bottle blocks (any scope) before inserting fresh one.** Old GoReleaser-bootstrapped formulas (e.g. `xberg-io/tap/alef`) accreted `bottle do … end` blocks at file-level scope — outside the `class < Formula … end` body. `brew bottle` then failed with `undefined method 'bottle' for module Formulary::FormulaNamespace…` because the DSL call lives where no Formula receiver is bound. The merge script previously replaced only the _first_ matched block (`count=1`) and required a trailing `\n` after the closing `end` (so trailing-without-newline blocks were missed). Now: regex matches `end(?:\n|\Z)` (covers trailing block without newline), and the replace step strips _every_ bottle block in the file before inserting one fresh block immediately after the `license` line — guaranteed inside the class. Triple+ blank lines from the strip are collapsed. (`homebrew-merge-bottles/scripts/merge-bottles.sh`)
 
 ## [1.7.1] - 2026-05-25
 
@@ -1933,8 +1933,7 @@ All notable changes to xberg-io/actions are documented in this file.
 - `build-elixir-natives`: build the NIF crate named by `nif-crate-name` instead
   of the hardcoded `kreuzberg_nif`. The musl/alpine build rewrite left a literal
   `cargo build -p kreuzberg_nif` in `scripts/build.py`, so every consumer whose
-  crate is not named `kreuzberg_nif` (e.g. `spikard_nif`) failed with cargo exit
-  101. Added a unit test asserting the configured crate name is threaded through.
+  crate is not named `kreuzberg_nif` (e.g. `spikard_nif`) failed with cargo exit 101. Added a unit test asserting the configured crate name is threaded through.
 
 ## [1.5.0] - 2026-05-24
 
