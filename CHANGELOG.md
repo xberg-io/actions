@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-10-28
+
 ### Changed
 
 - `setup-node-workspace`, `setup-textlint` and the `reusable-docs-deploy` workflow default `node-version` to 26
