@@ -33,6 +33,8 @@ make_origin() {
 		printf '%s\n' '[tools]' 'task = ["3.54.0", "3.51.1"]' >"$dir/mise.ci.toml"
 		printf '%s\n' 'lockfile_version = 3' >"$dir/mise.ci.lock"
 		printf '%s\n' 'unrelated' >"$dir/other.toml"
+		printf '%s\n' '[tools]' >"$dir/mise.local.toml"
+		printf '%s\n' '[tools]' >"$dir/mise.ci.local.toml"
 	done
 	mkdir -p "$ORIGIN/sub/nested"
 	printf '%s\n' '[tools]' >"$ORIGIN/sub/nested/mise.toml"
@@ -69,8 +71,63 @@ make_origin() {
 		cmp "$CLONE/sub/$file" "$ORIGIN/sub/$file"
 	done
 	[ ! -e "$CLONE/sub/other.toml" ]
+	[ ! -e "$CLONE/sub/mise.local.toml" ]
+	[ ! -e "$CLONE/sub/mise.ci.local.toml" ]
 	[ ! -e "$CLONE/sub/nested/mise.toml" ]
 	[ ! -e "$CLONE/mise.toml" ]
+}
+
+@test "restore should_leave_the_index_and_git_status_clean" {
+	run "$SCRIPT" "$CLONE/sub" "$NEW_SHA"
+
+	[ "$status" -eq 0 ]
+	git -C "$CLONE" diff --cached --quiet
+	git -C "$CLONE" diff --quiet
+	[ -z "$(git -C "$CLONE" status --porcelain)" ]
+	[ -f "$CLONE/sub/mise.toml" ]
+}
+
+@test "restore should_keep_git_status_clean_when_the_restored_files_are_tracked_but_deleted" {
+	git -C "$CLONE" -c advice.detachedHead=false checkout --quiet "$NEW_SHA"
+	rm "$CLONE/sub/mise.toml" "$CLONE/sub/mise.lock" "$CLONE/sub/mise.ci.toml" "$CLONE/sub/mise.ci.lock"
+
+	run "$SCRIPT" "$CLONE/sub" "$NEW_SHA"
+
+	[ "$status" -eq 0 ]
+	[ -z "$(git -C "$CLONE" status --porcelain)" ]
+	[ -f "$CLONE/sub/mise.ci.lock" ]
+}
+
+@test "restore should_keep_a_full_clone_full_when_the_ref_is_a_present_commit" {
+	run "$SCRIPT" "$CLONE/sub" "$NEW_SHA"
+
+	[ "$status" -eq 0 ]
+	[ "$(git -C "$CLONE" rev-parse --is-shallow-repository)" = "false" ]
+	[ "$(git -C "$CLONE" rev-list --count --all)" -eq 2 ]
+}
+
+@test "restore should_keep_a_full_clone_full_when_the_ref_must_be_fetched" {
+	git -C "$ORIGIN" -c tag.gpgSign=false -c tag.forceSignAnnotated=false tag config-tag "$NEW_SHA"
+
+	run "$SCRIPT" "$CLONE/sub" config-tag
+
+	[ "$status" -eq 0 ]
+	[ "$(git -C "$CLONE" rev-parse --is-shallow-repository)" = "false" ]
+	[ "$(git -C "$CLONE" rev-list --count --all)" -eq 2 ]
+	cmp "$CLONE/sub/mise.toml" "$ORIGIN/sub/mise.toml"
+}
+
+@test "restore should_fetch_shallowly_into_a_shallow_checkout" {
+	rm -rf "$CLONE"
+	git clone --quiet --depth 1 "file://$ORIGIN" "$CLONE"
+	git -C "$ORIGIN" -c tag.gpgSign=false -c tag.forceSignAnnotated=false tag config-tag "$NEW_SHA"
+	rm "$CLONE/sub/mise.toml"
+
+	run "$SCRIPT" "$CLONE/sub" config-tag
+
+	[ "$status" -eq 0 ]
+	[ "$(git -C "$CLONE" rev-parse --is-shallow-repository)" = "true" ]
+	cmp "$CLONE/sub/mise.toml" "$ORIGIN/sub/mise.toml"
 }
 
 @test "restore should_restore_the_root_config_for_the_default_working_directory" {
@@ -93,10 +150,12 @@ make_origin() {
 	[ ! -e "$CLONE/sub/mise.toml" ]
 }
 
-@test "restore should_fail_when_the_ref_cannot_be_fetched" {
+@test "restore should_fail_with_an_actionable_error_when_the_ref_cannot_be_fetched" {
 	run "$SCRIPT" "$CLONE/sub" "no-such-ref"
 
-	[ "$status" -ne 0 ]
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"::error::could not fetch no-such-ref from origin to restore the mise config."* ]]
+	[[ "$output" == *"persist-credentials"* ]]
 	[ ! -e "$CLONE/sub/mise.toml" ]
 }
 

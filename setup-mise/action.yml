@@ -33,9 +33,14 @@ inputs:
   cache:
     description: >-
       Cache the mise data directory, keyed on mise.toml, mise.*.toml, mise.lock and mise.*.lock, MISE_ENV, OS
-      and arch.
+      and arch. "auto" caches unless MISE_DATA_DIR is preset (a runner image's baked tools); "true" and "false"
+      force it.
     required: false
-    default: "true"
+    default: "auto"
+outputs:
+  cache:
+    description: Whether the mise data directory was cached ("true" or "false"), after resolving "auto".
+    value: ${{ steps.env.outputs.cache }}
 runs:
   using: composite
   steps:
@@ -52,21 +57,11 @@ runs:
       id: env
       shell: bash
       env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_MISE_ENV: ${{ inputs.mise-env }}
+        INPUT_CACHE: ${{ inputs.cache }}
       run: |
-        if [[ -n "$INPUT_MISE_ENV" ]]; then
-          echo "MISE_ENV=$INPUT_MISE_ENV" >>"$GITHUB_ENV"
-        fi
-        if [[ -z "${MISE_RUBY_COMPILE:-}" ]]; then
-          echo "MISE_RUBY_COMPILE=false" >>"$GITHUB_ENV"
-        fi
-        # ~keep mise's 30s default connect/read timeout fails repeatedly on loaded runners.
-        if [[ -z "${MISE_HTTP_TIMEOUT:-}" ]]; then
-          echo "MISE_HTTP_TIMEOUT=5m" >>"$GITHUB_ENV"
-        fi
-        # ~keep Self-hosted runner images preinstall tools under a fixed MISE_DATA_DIR set in the image, which
-        # ~keep the `env` context cannot see. Hand it to mise-action so it caches and installs there.
-        echo "mise-dir=${MISE_DATA_DIR:-}" >>"$GITHUB_OUTPUT"
+        "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE"
 
     - name: Install mise and tools
       uses: jdx/mise-action@v5
@@ -75,5 +70,4 @@ runs:
         working_directory: ${{ inputs.working-directory }}
         install_args: ${{ inputs.install-args }}
         github_token: ${{ inputs.github-token }}
-        cache: ${{ inputs.cache }}
-        mise_dir: ${{ steps.env.outputs.mise-dir }}
+        cache: ${{ steps.env.outputs.cache }}

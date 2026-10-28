@@ -5,11 +5,19 @@ on:
     paths:
       - "setup-mise/**"
       - "check-toolchain/**"
+      - "install-task/**"
+      - "mise.toml"
+      - "mise.lock"
+      - "toolchains.toml"
       - ".github/workflows/test-setup-mise.yml"
   pull_request:
     paths:
       - "setup-mise/**"
       - "check-toolchain/**"
+      - "install-task/**"
+      - "mise.toml"
+      - "mise.lock"
+      - "toolchains.toml"
       - ".github/workflows/test-setup-mise.yml"
 
 permissions:
@@ -38,6 +46,7 @@ jobs:
           "MISE_CEILING_PATHS=$((Resolve-Path setup-mise/tests/fixtures).Path)" >> $env:GITHUB_ENV
 
       - name: Setup mise
+        id: setup
         uses: ./setup-mise
         with:
           working-directory: setup-mise/tests/fixtures/locked
@@ -52,13 +61,17 @@ jobs:
           jq_version="$(jq --version)"
           echo "task: $task_version"
           echo "jq: $jq_version"
-          [[ "$task_version" == "3.51.1" ]]
-          [[ "$jq_version" == "jq-1.8.2" ]]
+          grep -q "3.51.1" <<<"$task_version"
+          grep -q "1.8.2" <<<"$jq_version"
 
       - name: Verify the environment setup-mise exports
         shell: bash
+        env:
+          CACHE: ${{ steps.setup.outputs.cache }}
         run: |
           set -euo pipefail
+          [[ "$CACHE" == "true" ]]
+          [[ "${MISE_LOCKED:-}" == "1" ]]
           [[ "${MISE_ENV:-}" == "ci" ]]
           [[ "${FIXTURE_PROFILE:-}" == "ci" ]]
           [[ "${MISE_RUBY_COMPILE:-}" == "false" ]]
@@ -88,25 +101,30 @@ jobs:
           working-directory: setup-mise/tests/fixtures/stale
           cache: "false"
 
-      - name: Assert the install failed
-        if: steps.stale.outcome != 'failure'
+      - name: Assert the action failed in locked mode and left the lock alone
         shell: bash
-        run: |
-          echo "::error::setup-mise succeeded against a stale mise.lock (outcome: ${{ steps.stale.outcome }})"
-          exit 1
-
-      - name: Assert it failed because the lock lacks the pinned version
-        shell: bash
-        working-directory: setup-mise/tests/fixtures/stale
+        env:
+          OUTCOME: ${{ steps.stale.outcome }}
         run: |
           set -euo pipefail
-          if mise install --locked 2>"$RUNNER_TEMP/stale.log"; then
-            echo "::error::mise install --locked succeeded against a stale mise.lock"
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/stale.log"
-          grep -q "task@3.51.1 is not in the lockfile" "$RUNNER_TEMP/stale.log"
-          [[ -z "$(git status --porcelain -- .)" ]]
+          [[ "$OUTCOME" == "failure" ]] || { echo "::error::setup-mise outcome on a stale lock: $OUTCOME"; exit 1; }
+          [[ "${MISE_LOCKED:-}" == "1" ]] || { echo "::error::setup-mise did not export MISE_LOCKED=1"; exit 1; }
+          git diff --exit-code -- setup-mise/tests/fixtures/stale
+          changes="$(git status --porcelain -- setup-mise/tests/fixtures/stale)"
+          [[ -z "$changes" ]] || { echo "::error::the failed install changed the fixture:"; echo "$changes"; exit 1; }
+
+      # ~keep Control: the same job installs from a lock that does cover its versions, so the failure above
+      # ~keep is the stale lock and not the network or the runner.
+      - name: Setup mise against a current lock
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          cache: "false"
+
+      - name: Verify the control installed its locked version
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/locked
+        run: task --version | grep -q "3.54.0"
 
   mise-data-dir:
     name: Preset MISE_DATA_DIR is respected
@@ -120,23 +138,26 @@ jobs:
           echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
           echo "MISE_DATA_DIR=$RUNNER_TEMP/preinstalled-mise" >>"$GITHUB_ENV"
 
-      - name: Setup mise
+      - name: Setup mise with the default cache setting
+        id: setup
         uses: ./setup-mise
         with:
           working-directory: setup-mise/tests/fixtures/locked
           install-args: task
-          cache: "false"
 
-      - name: Verify tools landed in the preset directory
+      - name: Verify caching was skipped and tools landed in the preset directory
         shell: bash
         working-directory: setup-mise/tests/fixtures/locked
+        env:
+          CACHE: ${{ steps.setup.outputs.cache }}
         run: |
           set -euo pipefail
+          [[ "$CACHE" == "false" ]] || { echo "::error::cache resolved to '$CACHE' with MISE_DATA_DIR preset"; exit 1; }
           task_dir="$(mise where task)"
           echo "task: $task_dir"
           [[ "$MISE_DATA_DIR" == "$RUNNER_TEMP/preinstalled-mise" ]]
           [[ "$task_dir" == "$RUNNER_TEMP/preinstalled-mise/"* ]]
-          [[ "$(task --version)" == "3.54.0" ]]
+          task --version | grep -q "3.54.0"
           if mise where jq 2>/dev/null; then
             echo "::error::install-args: task also installed jq"
             exit 1
@@ -172,8 +193,8 @@ jobs:
             [[ -f "$file" ]] || { echo "::error::$file was not restored"; exit 1; }
           done
           [[ -z "$(git status --porcelain -- .)" ]]
-          [[ "$(task --version)" == "3.54.0" ]]
-          [[ "$(jq --version)" == "jq-1.8.2" ]]
+          task --version | grep -q "3.54.0"
+          jq --version | grep -q "1.8.2"
 
       - name: Setup mise where the ref has no mise.toml either
         id: no-config
@@ -198,6 +219,50 @@ jobs:
           cat "$RUNNER_TEMP/no-config.log"
           [[ "$status" -eq 1 ]]
           grep -q "has no setup-mise/tests/fixtures/no-config/mise.toml either" "$RUNNER_TEMP/no-config.log"
+
+  config-ref-older-commit:
+    name: Config restored into an older checkout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # ~keep A release job checks out a tag that predates the config. Keep the action under test outside
+      # ~keep the history (untracked files survive the checkout), then move to the fixture's parent commit.
+      - name: Check out the commit before the fixture existed
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R setup-mise .setup-mise-under-test
+          added="$(git log --diff-filter=A --format=%H -- setup-mise/tests/fixtures/locked/mise.toml | tail -n 1)"
+          git -c advice.detachedHead=false checkout --quiet "${added}^"
+          [[ ! -e setup-mise/tests/fixtures/locked/mise.toml ]]
+          echo "HISTORY_BEFORE=$(git rev-list --count --all)" >>"$GITHUB_ENV"
+          mkdir -p setup-mise/tests/fixtures
+          echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+
+      - name: Setup mise with the config restored from the triggering commit
+        uses: ./.setup-mise-under-test
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          config-ref: ${{ github.sha }}
+          cache: "false"
+
+      - name: Verify the restore installed the tools and left git clean and complete
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in mise.toml mise.lock mise.ci.toml mise.ci.lock; do
+            [[ -f "setup-mise/tests/fixtures/locked/$file" ]] || { echo "::error::$file was not restored"; exit 1; }
+          done
+          git diff --exit-code
+          git diff --cached --exit-code
+          changes="$(git status --porcelain -- setup-mise)"
+          [[ -z "$changes" ]] || { echo "::error::restored files show in git status:"; echo "$changes"; exit 1; }
+          [[ "$(git rev-parse --is-shallow-repository)" == "false" ]]
+          [[ "$(git rev-list --count --all)" -eq "$HISTORY_BEFORE" ]]
+          (cd setup-mise/tests/fixtures/locked && task --version | grep -q "3.54.0")
 
   check-toolchain:
     name: check-toolchain on ${{ matrix.os }}
