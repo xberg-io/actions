@@ -1,10 +1,10 @@
 BeforeAll {
     $script:Script = Join-Path $PSScriptRoot '..' 'scripts' 'windows.ps1'
 
-    # ~keep The script ends by executing the binary it just unpacked ("& $taskExe --version").
-    # A shebang stub satisfies that on POSIX hosts; on Windows only a real PE image would, so
-    # the tests that run to completion are skipped there and the Windows runner covers the
-    # rest through the paths that throw before this line. See the -Skip reasons below.
+    # ~keep The script ends by executing the binary it copied ("& $taskExe --version"). A shebang
+    # stub satisfies that on POSIX hosts; on Windows only a real PE image would, so the tests that
+    # run to completion are skipped there and the Windows runner covers the paths that throw
+    # before this line. See the -Skip reasons below.
     function New-ExecutableStub {
         param([string]$Path, [string]$Output)
 
@@ -18,11 +18,11 @@ BeforeAll {
         if ($LASTEXITCODE -ne 0) { throw "could not make the stub at $posixPath executable" }
     }
 
-    # ~keep CI runs all nine suites in a single pwsh process, so an environment variable left
-    # ~keep behind here decides what the next file sees -- TEMP and USERPROFILE especially,
-    # ~keep since [IO.Path]::GetTempPath() reads them. Snapshot on entry, hand back on exit.
+    # ~keep CI runs every suite in a single pwsh process, so an environment variable or a global
+    # ~keep function left behind here decides what the next file sees. Snapshot on entry, hand
+    # ~keep back on exit.
     $script:SavedEnvironment = @{}
-    foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_TOKEN')) {
+    foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_TOKEN', 'MISE_GITHUB_TOKEN')) {
         $script:SavedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
     }
 }
@@ -39,165 +39,140 @@ Describe 'install-task windows.ps1' {
         $env:RUNNER_TEMP = $script:Root
         $env:GITHUB_PATH = $script:GithubPath
         $env:GITHUB_TOKEN = $null
+        $env:MISE_GITHUB_TOKEN = $null
 
         # ~keep "$taskBinDir\task.exe" is string concatenation, not Join-Path, so the literal
         # backslash survives on POSIX and names a single file. The tests build the same string
         # rather than assuming a nested directory.
         $script:TaskExe = "$script:BinDir\task.exe"
 
-        Mock Invoke-WebRequest { }
-        Mock Expand-Archive { }
-        Mock Remove-Item { }
-        Mock Start-Sleep { }
+        # ~keep The script calls `mise` by name; a global function wins over any native binary,
+        # so CI hosts without mise run the same paths. Each call is recorded with the working
+        # directory and the token mise would see. `which` points at a file that only the tests
+        # running to completion create, so every other test stops at the copy.
+        $global:MiseCalls = [System.Collections.Generic.List[pscustomobject]]::new()
+        $global:MiseLatest = '3.54.0'
+        $global:MiseFail = ''
+        $global:MiseBinary = Join-Path $script:Root 'mise-task'
+        function global:mise {
+            $global:MiseCalls.Add([pscustomobject]@{
+                    Args     = $args -join ' '
+                    Location = (Get-Location).Path
+                    Token    = $env:MISE_GITHUB_TOKEN
+                })
+            if ($args[0] -eq $global:MiseFail) {
+                $global:LASTEXITCODE = 1
+                return
+            }
+            $global:LASTEXITCODE = 0
+            switch ($args[0]) {
+                'latest' { $global:MiseLatest }
+                'which' { $global:MiseBinary }
+            }
+        }
     }
 
     AfterEach {
         Remove-Item -Recurse -Force $script:Root -ErrorAction SilentlyContinue
+        Remove-Item -Path Function:\mise -ErrorAction SilentlyContinue
         $env:GITHUB_TOKEN = $null
+        $env:MISE_GITHUB_TOKEN = $null
     }
 
-    It 'should_prefix_a_bare_pinned_version_with_v_when_building_the_download_url' {
-        { & $script:Script '3.51.1' $script:BinDir } | Should -Throw
-
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://github.com/go-task/task/releases/download/v3.51.1/task_windows_amd64.zip'
-        }
-    }
-
-    It 'should_keep_an_already_prefixed_version_unchanged_when_building_the_download_url' {
+    It 'should_strip_a_leading_v_before_installing_the_pinned_version' {
         { & $script:Script 'v3.51.1' $script:BinDir } | Should -Throw
 
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://github.com/go-task/task/releases/download/v3.51.1/task_windows_amd64.zip'
-        }
+        $global:MiseCalls.Args | Should -Contain 'install task@3.51.1'
+        $global:MiseCalls.Args | Should -Contain 'which task --tool task@3.51.1'
+        $global:MiseCalls.Args | Should -Not -Contain 'latest task'
     }
 
-    It 'should_resolve_the_latest_tag_from_the_github_api_when_no_version_is_given' {
-        Mock Invoke-RestMethod { [pscustomobject]@{ tag_name = 'v3.52.0' } }
+    It 'should_install_a_bare_pinned_version_unchanged' {
+        { & $script:Script '3.51.1' $script:BinDir } | Should -Throw
 
-        { & $script:Script '' $script:BinDir } | Should -Throw
-
-        Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://api.github.com/repos/go-task/task/releases/latest'
-        }
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://github.com/go-task/task/releases/download/v3.52.0/task_windows_amd64.zip'
-        }
+        $global:MiseCalls.Args | Should -Contain 'install task@3.51.1'
     }
 
-    It 'should_fall_back_to_the_releases_latest_redirect_when_the_github_api_lookup_fails' {
-        Mock Invoke-RestMethod { throw 'rate limit exceeded' }
-        Mock Invoke-WebRequest {
-            [pscustomobject]@{ Headers = @{ Location = 'https://github.com/go-task/task/releases/tag/v3.53.0' } }
-        } -ParameterFilter { $Uri -eq 'https://github.com/go-task/task/releases/latest' }
+    It 'should_resolve_latest_through_mise_and_install_that_exact_version' {
+        $global:MiseLatest = '3.55.0'
 
         { & $script:Script 'latest' $script:BinDir } | Should -Throw
 
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://github.com/go-task/task/releases/download/v3.53.0/task_windows_amd64.zip'
-        }
+        $global:MiseCalls.Args[0] | Should -BeExactly 'latest task'
+        $global:MiseCalls.Args | Should -Contain 'install task@3.55.0'
     }
 
-    It 'should_throw_when_neither_the_api_nor_the_redirect_yields_a_latest_tag' {
-        Mock Invoke-RestMethod { throw 'rate limit exceeded' }
-        Mock Invoke-WebRequest {
-            [pscustomobject]@{ Headers = @{} }
-        } -ParameterFilter { $Uri -eq 'https://github.com/go-task/task/releases/latest' }
+    It 'should_treat_an_empty_version_as_latest' {
+        { & $script:Script '' $script:BinDir } | Should -Throw
+
+        $global:MiseCalls.Args | Should -Contain 'latest task'
+        $global:MiseCalls.Args | Should -Contain 'install task@3.54.0'
+    }
+
+    It 'should_throw_when_mise_cannot_resolve_latest' {
+        $global:MiseFail = 'latest'
 
         $thrown = { & $script:Script 'latest' $script:BinDir } | Should -Throw -PassThru
 
-        $thrown.Exception.Message | Should -BeExactly 'Could not resolve the latest Task release'
+        $thrown.Exception.Message | Should -BeExactly 'mise could not resolve the latest Task release'
+        $global:MiseCalls.Args | Should -Not -Contain 'install task@3.54.0'
     }
 
-    It 'should_send_a_bearer_authorization_header_when_a_github_token_is_present' {
-        $env:GITHUB_TOKEN = 'secret-token'
-        Mock Invoke-RestMethod { [pscustomobject]@{ tag_name = 'v3.52.0' } }
+    It 'should_throw_and_leave_github_path_untouched_when_mise_install_fails' {
+        $global:MiseFail = 'install'
 
-        { & $script:Script 'latest' $script:BinDir } | Should -Throw
+        $thrown = { & $script:Script '3.54.0' $script:BinDir } | Should -Throw -PassThru
 
-        Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
-            $Headers['Authorization'] -eq 'Bearer secret-token' -and
-            $Headers['X-GitHub-Api-Version'] -eq '2022-11-28'
-        }
-    }
-
-    It 'should_always_send_the_api_version_header_even_without_a_token' {
-        Mock Invoke-RestMethod { [pscustomobject]@{ tag_name = 'v3.52.0' } }
-
-        { & $script:Script 'latest' $script:BinDir } | Should -Throw
-
-        Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
-            $Headers.Count -eq 1 -and $Headers['X-GitHub-Api-Version'] -eq '2022-11-28'
-        }
-    }
-
-    It 'should_retry_the_download_three_times_with_exponential_backoff_before_giving_up' {
-        Mock Invoke-WebRequest { throw 'connection reset' }
-
-        $thrown = { & $script:Script '3.51.1' $script:BinDir } | Should -Throw -PassThru
-
-        $thrown.Exception.Message | Should -BeExactly 'Failed to download https://github.com/go-task/task/releases/download/v3.51.1/task_windows_amd64.zip after 3 attempts: connection reset'
-        Should -Invoke Invoke-WebRequest -Times 3 -Exactly
-        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 2 }
-        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 4 }
-    }
-
-    It 'should_stop_retrying_once_a_download_attempt_succeeds' {
-        $script:Attempts = 0
-        Mock Invoke-WebRequest {
-            $script:Attempts++
-            if ($script:Attempts -eq 1) { throw 'transient failure' }
-        }
-
-        { & $script:Script '3.51.1' $script:BinDir } | Should -Throw
-
-        Should -Invoke Invoke-WebRequest -Times 2 -Exactly
-        Should -Invoke Start-Sleep -Times 1 -Exactly
-    }
-
-    It 'should_throw_when_the_archive_did_not_contain_the_task_executable' {
-        $thrown = { & $script:Script '3.51.1' $script:BinDir } | Should -Throw -PassThru
-
-        $thrown.Exception.Message | Should -BeExactly "Task binary not found at $script:TaskExe"
+        $thrown.Exception.Message | Should -BeExactly 'mise install task@3.54.0 failed with exit code 1'
         Get-Content -LiteralPath $script:GithubPath | Should -BeNullOrEmpty
     }
 
-    It 'should_default_the_install_directory_to_task_bin_under_runner_temp' {
-        $expected = "$(Join-Path $env:RUNNER_TEMP 'task-bin')\task.exe"
+    It 'should_run_mise_from_runner_temp_with_the_github_token_and_restore_the_location' {
+        $env:GITHUB_TOKEN = 'secret-token'
+        $before = (Get-Location).Path
 
-        $thrown = { & $script:Script '3.51.1' '' } | Should -Throw -PassThru
+        { & $script:Script '3.54.0' $script:BinDir } | Should -Throw
 
-        $thrown.Exception.Message | Should -BeExactly "Task binary not found at $expected"
+        $global:MiseCalls.Count | Should -Be 2
+        $global:MiseCalls | ForEach-Object { $_.Location | Should -BeExactly (Get-Item $script:Root).FullName }
+        $global:MiseCalls.Token | Sort-Object -Unique | Should -BeExactly 'secret-token'
+        (Get-Location).Path | Should -BeExactly $before
     }
 
-    It 'should_unpack_the_archive_into_the_requested_directory_and_delete_the_zip' {
-        Mock Expand-Archive { New-ExecutableStub -Path $script:TaskExe -Output 'Task version: v3.51.1' }
+    It 'should_default_the_install_directory_to_task_bin_under_runner_temp' {
+        $global:MiseFail = 'which'
+        $expected = Join-Path $env:RUNNER_TEMP 'task-bin'
 
-        & $script:Script '3.51.1' $script:BinDir | Out-Null
+        { & $script:Script '3.54.0' '' } | Should -Throw
 
-        Should -Invoke Expand-Archive -Times 1 -Exactly -ParameterFilter {
-            $Path -eq "$script:BinDir\task.zip" -and $DestinationPath -eq $script:BinDir
-        }
-        Should -Invoke Remove-Item -Times 1 -Exactly -ParameterFilter {
-            $Path -eq "$script:BinDir\task.zip"
-        }
+        Test-Path -LiteralPath $expected -PathType Container | Should -BeTrue
+    }
+
+    It 'should_copy_the_binary_report_its_version_and_append_the_bin_directory_to_github_path' {
+        New-ExecutableStub -Path $global:MiseBinary -Output 'Task version: v3.54.0'
+
+        # ~keep 6>&1 merges the information stream: the script announces the version with
+        # Write-Host, which the call operator does not place on the success stream.
+        $output = @(& $script:Script '3.54.0' $script:BinDir 6>&1 | ForEach-Object { $_.ToString() })
+
+        $output | Should -Contain 'Installing Task v3.54.0'
+        $output[-1] | Should -BeExactly 'Task version: v3.54.0'
+        Get-Content -LiteralPath $script:GithubPath | Should -BeExactly $script:BinDir
     } -Skip:($IsWindows)
 
-    It 'should_report_the_installed_version_and_append_the_bin_directory_to_github_path' {
-        Mock Expand-Archive { New-ExecutableStub -Path $script:TaskExe -Output 'Task version: v3.51.1' }
+    It 'should_overwrite_a_task_binary_left_by_an_earlier_install' {
+        New-ExecutableStub -Path $global:MiseBinary -Output 'Task version: v3.54.0'
+        New-ExecutableStub -Path $script:TaskExe -Output 'Task version: v3.0.0'
 
-        # ~keep 6>&1 merges the information stream: the script announces the resolved version
-        # with Write-Host, which the call operator does not place on the success stream.
-        $output = @(& $script:Script '3.51.1' $script:BinDir 6>&1 | ForEach-Object { $_.ToString() })
+        $output = @(& $script:Script '3.54.0' $script:BinDir 6>&1 | ForEach-Object { $_.ToString() })
 
-        $output | Should -Contain 'Installing Task v3.51.1'
-        $output[-1] | Should -BeExactly 'Task version: v3.51.1'
-        Get-Content -LiteralPath $script:GithubPath | Should -BeExactly $script:BinDir
+        $output[-1] | Should -BeExactly 'Task version: v3.54.0'
     } -Skip:($IsWindows)
 
     AfterAll {
         foreach ($entry in $script:SavedEnvironment.GetEnumerator()) {
             [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value)
         }
+        Remove-Variable -Scope Global -Name MiseCalls, MiseLatest, MiseFail, MiseBinary -ErrorAction SilentlyContinue
     }
 }
