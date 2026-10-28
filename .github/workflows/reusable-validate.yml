@@ -196,10 +196,11 @@ on:
         type: string
         default: "ubuntu-latest"
       poly-version:
-        description: "poly version to install. Empty (default) installs the latest release; set to pin a specific version."
+        description: "poly version to install. Empty installs the latest release."
         required: false
         type: string
-        default: ""
+        # poly 0.30.0 lints Python as 3.11+ whatever target-version says (Goldziher/poly#42). ~keep
+        default: "v0.29.0"
       install-system-deps:
         description: >-
           Run this repo's install-system-deps composite action before linting (Linux only, requires

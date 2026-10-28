@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.31.1] - 2026-10-28
+
+### Changed
+
+- `reusable-validate` installs poly v0.29.0 by default instead of the latest release. poly 0.30.0 lints Python as
+  3.11+ whatever `target-version` says (Goldziher/poly#42). Pass `poly-version: ""` to get the latest release.
+- This repository follows toolchain baseline v1.3.1.
+
 ## [1.31.0] - 2026-10-28
 
 ### Changed
