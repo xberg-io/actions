@@ -8,6 +8,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `setup-node-workspace`, `setup-textlint` and the `reusable-docs-deploy` workflow default `node-version` to 26
   instead of 24; `setup-chromium` installs Node 26.
+- The ai-rulez Poly hook runs v5.8.0, and `task` requires ai-rulez 5.8.0 or newer.
 
 ### Fixed
 
