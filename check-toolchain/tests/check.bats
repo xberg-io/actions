@@ -26,6 +26,7 @@ make_toolchains_remote() {
 	git -C "$remote" add .
 	git -C "$remote" -c user.name=t -c user.email=t@example.com -c commit.gpgSign=false commit --quiet -m baseline
 	git -C "$remote" -c tag.gpgSign=false -c tag.forceSignAnnotated=false tag v1.0.0
+	git -C "$remote" branch release-line
 	export TOOLCHAINS_REPOSITORY_URL="$remote"
 }
 
@@ -69,7 +70,18 @@ make_toolchains_remote() {
 
 	run env RUNNER_TEMP="$TEST_ROOT" "$BATS_TEST_DIRNAME/../scripts/check.sh" "$REPO"
 
-	[ "$status" -ne 0 ]
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"baseline \"v9.9.9\" is not a tag of $TOOLCHAINS_REPOSITORY_URL"* ]]
+	[[ "$output" != *"checker"* ]]
+}
+
+@test "check should_reject_a_baseline_that_names_a_branch" {
+	printf '%s\n' 'baseline = "release-line"' >"$REPO/toolchains.toml"
+
+	run env RUNNER_TEMP="$TEST_ROOT" "$BATS_TEST_DIRNAME/../scripts/check.sh" "$REPO"
+
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"baseline \"release-line\" is not a tag of"* ]]
 	[[ "$output" != *"checker"* ]]
 }
 

@@ -23,6 +23,12 @@ print(ref.strip())
 PYTHON
 )"
 
+# A branch would let the baseline move under the repository without a reviewed bump of toolchains.toml. ~keep
+if ! git ls-remote --exit-code --tags "$toolchains_url" "refs/tags/$baseline_ref" >/dev/null; then
+  echo "::error file=$manifest::baseline \"$baseline_ref\" is not a tag of $toolchains_url; pin a release tag such as v1.0.0" >&2
+  exit 2
+fi
+
 checkout="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/toolchains.XXXXXX")"
 trap 'rm -rf "$checkout"' EXIT
 
