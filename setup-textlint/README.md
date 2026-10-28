@@ -2,6 +2,9 @@
 
 Install Node.js, textlint, and the xberg-io standard rule set in one batched `pnpm install`. Used for prose linting in docs CI.
 
+The packages go into `$RUNNER_TEMP/textlint`: its `node_modules/.bin` is added to `PATH` and `NODE_PATH` points at its
+`node_modules`, so later steps can run `textlint` and `require` a rule.
+
 ## Inputs
 
 | Name | Required | Default | Description |

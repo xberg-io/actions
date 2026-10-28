@@ -1,8 +1,9 @@
 name: Setup textlint
 description: >
   Install textlint plus the xberg-io standard rule set in one
-  batched pnpm add. Pairs with a project-local `.textlintrc` and
-  caller-provided runner script.
+  batched pnpm add into a runner-temp directory, put its binaries on
+  PATH and export NODE_PATH to its node_modules. Pairs with a
+  project-local `.textlintrc` and caller-provided runner script.
 
 inputs:
   node-version:
@@ -24,11 +25,7 @@ runs:
 
     - name: Install pnpm 12
       shell: bash
-      run: |
-        npm install --global pnpm@12.11.2
-        echo "PNPM_HOME=$RUNNER_TEMP/pnpm" >> "$GITHUB_ENV"
-        # ~keep pnpm 12 links global binaries into $PNPM_HOME/bin and refuses to install unless that is on PATH.
-        echo "$RUNNER_TEMP/pnpm/bin" >> "$GITHUB_PATH"
+      run: npm install --global pnpm@12.11.2
 
     - name: Install textlint and rules
       shell: bash

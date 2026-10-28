@@ -31,9 +31,20 @@ jobs:
       - name: Verify a representative rule is installed
         shell: bash
         run: |
-          # setup-textlint installs globally; resolve via NODE_PATH=$(pnpm root -g)
-          NODE_PATH="$(pnpm root -g)"
-          export NODE_PATH
+          # setup-textlint exports NODE_PATH to its install directory's node_modules.
           node -e "require('textlint-rule-terminology')"
           node -e "require('textlint-rule-alex')"
           node -e "require('@textlint-rule/textlint-rule-no-unmatched-pair')"
+
+      - name: Verify textlint loads an installed rule
+        shell: bash
+        run: |
+          # pnpm 12 global installs left the rules unloadable ("Failed to load packages"), and "No rules found"
+          # also exits 1, so assert the rule's own report rather than the exit status.
+          work="$(mktemp -d)"
+          printf '%s\n' '{ "rules": { "terminology": true } }' >"$work/.textlintrc.json"
+          printf '# Doc\n\nWe use javascript here.\n' >"$work/doc.md"
+          cd "$work"
+          output="$(textlint doc.md 2>&1)" || true
+          printf '%s\n' "$output"
+          grep -q 'use “JavaScript” instead  terminology' <<<"$output"

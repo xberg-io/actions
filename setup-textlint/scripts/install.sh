@@ -25,4 +25,13 @@ if [[ -n "${INPUT_EXTRA_PACKAGES:-}" ]]; then
   packages+=("${extras[@]}")
 fi
 
-pnpm add -g --ignore-scripts --config.strict-peer-dependencies=false "${packages[@]}"
+# A project directory, not `pnpm add -g`: pnpm 12 puts each global install in its own hashed directory, where
+# textlint cannot load the rules installed beside it ("Failed to load packages").
+install_dir="${TEXTLINT_DIR:-${RUNNER_TEMP:?RUNNER_TEMP or TEXTLINT_DIR must be set}/textlint}"
+mkdir -p "$install_dir"
+printf '%s\n' '{ "name": "textlint-installer", "private": true }' >"$install_dir/package.json"
+
+pnpm add --dir "$install_dir" --ignore-scripts --config.strict-peer-dependencies=false "${packages[@]}"
+
+echo "$install_dir/node_modules/.bin" >>"$GITHUB_PATH"
+echo "NODE_PATH=$install_dir/node_modules" >>"$GITHUB_ENV"

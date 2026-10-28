@@ -13,8 +13,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- `setup-textlint` puts `$PNPM_HOME/bin` on `PATH`, where pnpm 12 links global binaries. Since 1.25.0 it added
-  `$PNPM_HOME`, so every install failed with `ERR_PNPM_GLOBAL_BIN_DIR_NOT_IN_PATH`.
+- `setup-textlint` installs into `$RUNNER_TEMP/textlint` instead of `pnpm add -g`, puts its `node_modules/.bin` on
+  `PATH` and exports `NODE_PATH` to its `node_modules`. Since 1.25.0 the global install failed with
+  `ERR_PNPM_GLOBAL_BIN_DIR_NOT_IN_PATH`, and with that fixed textlint still could not load rules from pnpm 12's
+  per-install global directories. `pnpm root -g` no longer locates the rules; use `NODE_PATH`.
 - `setup-chromium` installs Playwright with npm and npx again. Since 1.25.0 it called `pnpm`, which
   is not on `PATH` after `actions/setup-node`, so every run failed with `pnpm: command not found` (exit 127) on
   Node 24 and 26 alike. Its Windows check no longer runs `chrome.exe --version`, which on Windows starts a browser
