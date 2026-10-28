@@ -1,0 +1,190 @@
+name: Test setup-mise
+on:
+  push:
+    branches: [main]
+    paths:
+      - "setup-mise/**"
+      - "check-toolchain/**"
+      - ".github/workflows/test-setup-mise.yml"
+  pull_request:
+    paths:
+      - "setup-mise/**"
+      - "check-toolchain/**"
+      - ".github/workflows/test-setup-mise.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  locked:
+    name: Locked install on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # ~keep The repository's own mise.toml sits above the fixtures. Without a ceiling mise would merge it in
+      # ~keep and install the whole repo toolchain, and a lock failure there could pass for one in the fixture.
+      - name: Stop mise config discovery at the fixtures
+        shell: pwsh
+        run: |
+          "MISE_CEILING_PATHS=$((Resolve-Path setup-mise/tests/fixtures).Path)" >> $env:GITHUB_ENV
+
+      - name: Setup mise
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          mise-env: ci
+
+      - name: Verify the locked tool versions
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/locked
+        run: |
+          set -euo pipefail
+          task_version="$(task --version)"
+          jq_version="$(jq --version)"
+          echo "task: $task_version"
+          echo "jq: $jq_version"
+          [[ "$task_version" == "3.54.0" ]]
+          [[ "$jq_version" == "jq-1.8.2" ]]
+
+      - name: Verify the environment setup-mise exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${MISE_ENV:-}" == "ci" ]]
+          [[ "${FIXTURE_PROFILE:-}" == "ci" ]]
+          [[ "${MISE_RUBY_COMPILE:-}" == "false" ]]
+
+      - name: Verify the install left the fixture untouched
+        shell: bash
+        run: |
+          changes="$(git status --porcelain -- setup-mise/tests/fixtures/locked)"
+          [[ -z "$changes" ]] || { echo "::error::locked install changed the fixture:"; echo "$changes"; exit 1; }
+
+  stale-lock:
+    name: Stale lock fails the install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Stop mise config discovery at the fixtures
+        shell: bash
+        run: echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+
+      - name: Setup mise against a lock without the pinned task version
+        id: stale
+        continue-on-error: true
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/stale
+          cache: "false"
+
+      - name: Assert the install failed
+        if: steps.stale.outcome != 'failure'
+        shell: bash
+        run: |
+          echo "::error::setup-mise succeeded against a stale mise.lock (outcome: ${{ steps.stale.outcome }})"
+          exit 1
+
+      - name: Assert it failed because the lock lacks the pinned version
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/stale
+        run: |
+          set -euo pipefail
+          if mise install --locked 2>"$RUNNER_TEMP/stale.log"; then
+            echo "::error::mise install --locked succeeded against a stale mise.lock"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/stale.log"
+          grep -q "task@3.51.1 is not in the lockfile" "$RUNNER_TEMP/stale.log"
+          [[ -z "$(git status --porcelain -- .)" ]]
+
+  mise-data-dir:
+    name: Preset MISE_DATA_DIR is respected
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preset MISE_DATA_DIR as a runner image would
+        shell: bash
+        run: |
+          echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+          echo "MISE_DATA_DIR=$RUNNER_TEMP/preinstalled-mise" >>"$GITHUB_ENV"
+
+      - name: Setup mise
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          install-args: task
+          cache: "false"
+
+      - name: Verify tools landed in the preset directory
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/locked
+        run: |
+          set -euo pipefail
+          task_dir="$(mise where task)"
+          echo "task: $task_dir"
+          [[ "$MISE_DATA_DIR" == "$RUNNER_TEMP/preinstalled-mise" ]]
+          [[ "$task_dir" == "$RUNNER_TEMP/preinstalled-mise/"* ]]
+          [[ "$(task --version)" == "3.54.0" ]]
+          if mise where jq 2>/dev/null; then
+            echo "::error::install-args: task also installed jq"
+            exit 1
+          fi
+
+  check-toolchain:
+    name: check-toolchain on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check an aligned repository
+        uses: ./check-toolchain
+        with:
+          working-directory: check-toolchain/tests/fixtures/aligned
+
+      - name: Check a repository that drifts from the baseline
+        id: drift
+        continue-on-error: true
+        uses: ./check-toolchain
+        with:
+          working-directory: check-toolchain/tests/fixtures/drift
+
+      - name: Check a repository without toolchains.toml
+        id: no-baseline
+        continue-on-error: true
+        uses: ./check-toolchain
+        with:
+          working-directory: check-toolchain/tests/fixtures/no-baseline
+
+      - name: Assert both negative checks failed for the expected reason
+        shell: bash
+        env:
+          DRIFT_OUTCOME: ${{ steps.drift.outcome }}
+          NO_BASELINE_OUTCOME: ${{ steps.no-baseline.outcome }}
+        run: |
+          set -euo pipefail
+          [[ "$DRIFT_OUTCOME" == "failure" ]] || { echo "::error::drift check outcome: $DRIFT_OUTCOME"; exit 1; }
+          [[ "$NO_BASELINE_OUTCOME" == "failure" ]] || {
+            echo "::error::missing toolchains.toml outcome: $NO_BASELINE_OUTCOME"
+            exit 1
+          }
+          status=0
+          check-toolchain/scripts/check.sh check-toolchain/tests/fixtures/drift >"$RUNNER_TEMP/drift.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/drift.log"
+          [[ "$status" -eq 1 ]]
+          grep -q "drift: jq: mise.toml pins 1.8.1, baseline is 1.8.2" "$RUNNER_TEMP/drift.log"
+          status=0
+          check-toolchain/scripts/check.sh check-toolchain/tests/fixtures/no-baseline >"$RUNNER_TEMP/none.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/none.log"
+          [[ "$status" -eq 2 ]]
+          grep -q "toolchains.toml not found" "$RUNNER_TEMP/none.log"

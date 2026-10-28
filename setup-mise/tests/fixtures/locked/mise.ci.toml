@@ -1,0 +1,2 @@
+[env]
+FIXTURE_PROFILE = "ci"

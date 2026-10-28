@@ -1,0 +1,57 @@
+name: Setup mise
+description: >-
+  Install mise and the tools declared in the repository's mise.toml. When a mise.lock is present the install
+  runs with --locked, so a lock that is stale or missing the runner's platform fails the job.
+inputs:
+  working-directory:
+    description: Directory holding the mise.toml (and mise.lock) to install from.
+    required: false
+    default: "."
+  install-args:
+    description: >-
+      Arguments passed to `mise install`, e.g. "node python" to install only those tools. Empty installs every
+      tool in mise.toml.
+    required: false
+    default: ""
+  mise-env:
+    description: Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml).
+    required: false
+    default: ""
+  github-token:
+    description: >-
+      Token mise uses for GitHub release lookups and downloads. Unauthenticated api.github.com allows 60
+      requests/hour per runner IP, shared across every job on it.
+    required: false
+    default: ${{ github.token }}
+  cache:
+    description: Cache the mise data directory, keyed on the mise config and lock files, OS and arch.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Prepare mise environment
+      id: env
+      shell: bash
+      env:
+        INPUT_MISE_ENV: ${{ inputs.mise-env }}
+      run: |
+        if [[ -n "$INPUT_MISE_ENV" ]]; then
+          echo "MISE_ENV=$INPUT_MISE_ENV" >>"$GITHUB_ENV"
+        fi
+        if [[ -z "${MISE_RUBY_COMPILE:-}" ]]; then
+          echo "MISE_RUBY_COMPILE=false" >>"$GITHUB_ENV"
+        fi
+        # ~keep Self-hosted runner images preinstall tools under a fixed MISE_DATA_DIR set in the image, which
+        # ~keep the `env` context cannot see. Hand it to mise-action so it caches and installs there.
+        echo "mise-dir=${MISE_DATA_DIR:-}" >>"$GITHUB_OUTPUT"
+
+    - name: Install mise and tools
+      uses: jdx/mise-action@v5
+      with:
+        version: "2026.10.21"
+        working_directory: ${{ inputs.working-directory }}
+        install_args: ${{ inputs.install-args }}
+        github_token: ${{ inputs.github-token }}
+        cache: ${{ inputs.cache }}
+        mise_dir: ${{ steps.env.outputs.mise-dir }}
