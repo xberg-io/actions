@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `reusable-validate` installs poly v0.31.2 by default. It reports unknown actionlint runner labels as warnings
+  again (Goldziher/poly#43) and keeps skip-worktree files in the sparse staged snapshot (Goldziher/poly#44).
+- This repository follows toolchain baseline v1.3.3 (poly 0.31.2, ai-rulez 5.9.2).
+
 ## [1.32.1] - 2026-10-28
 
 ### Changed
