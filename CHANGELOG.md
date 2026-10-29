@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.34.0] - 2026-10-29
+
 ### Changed
 
 - `build-docs` and `lint-docs` run each `docs:*` task through mise when the consumer's mise config defines it,
