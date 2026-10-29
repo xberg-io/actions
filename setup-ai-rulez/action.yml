@@ -18,7 +18,7 @@ runs:
       if: inputs.source-revision == ''
       # ~keep The upstream action installs a sha256-verified, cached release binary; it publishes no floating major tag.
       # ~keep Its install script stays at this ref while the CLI floats: bump it with the ai-rulez hook revision in poly.toml.
-      uses: Goldziher/ai-rulez@v5.9.1
+      uses: Goldziher/ai-rulez@v5.9.2
       with:
         version: ${{ inputs.ai-rulez-version }}
     - name: Check out pinned AI-Rulez source
