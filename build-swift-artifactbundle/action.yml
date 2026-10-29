@@ -26,6 +26,14 @@ inputs:
     description: "Optional path to C headers directory to embed in bundle"
     required: false
     default: ""
+  additional-license-files:
+    description: >
+      Optional newline-separated required license/notice files relative to the
+      caller workspace. Files must be nonempty and contained in the workspace;
+      paths and bytes are retained inside the artifact bundle and verified in
+      the final ZIP before its checksum is computed.
+    required: false
+    default: ""
   output-dir:
     description: "Output directory for the artifact bundle"
     required: false
@@ -143,6 +151,7 @@ runs:
         INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
         INPUT_BINARY_TARGET_NAME: ${{ inputs.binary-target-name }}
         INPUT_HEADER_PATH: ${{ inputs.header-path }}
+        INPUT_ADDITIONAL_LICENSE_FILES: ${{ inputs.additional-license-files }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
         INPUT_INCLUDE_MACOS_X86_64: ${{ inputs.include-macos-x86_64 }}

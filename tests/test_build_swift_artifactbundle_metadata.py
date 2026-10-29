@@ -7,6 +7,16 @@ import yaml
 _ACTION = Path(__file__).resolve().parents[1] / "build-swift-artifactbundle" / "action.yml"
 
 
+def test_should_forward_optional_notice_files_to_the_bundle_builder():
+    action = yaml.safe_load(_ACTION.read_text())
+    notice_input = action["inputs"]["additional-license-files"]
+    assert notice_input["required"] is False
+    assert notice_input["default"] == ""
+    builds = [step for step in action["runs"]["steps"] if step.get("id") == "build"]
+    assert len(builds) == 1
+    assert builds[0]["env"]["INPUT_ADDITIONAL_LICENSE_FILES"] == "${{ inputs.additional-license-files }}"
+
+
 @pytest.mark.parametrize(
     ("inputs", "expected"),
     [

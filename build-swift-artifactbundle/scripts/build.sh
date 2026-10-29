@@ -6,6 +6,7 @@ LIB_NAME="${INPUT_LIB_NAME:-}"
 ARTIFACT_NAME="${INPUT_ARTIFACT_NAME:-}"
 BINARY_TARGET_NAME="${INPUT_BINARY_TARGET_NAME:-}"
 HEADER_PATH="${INPUT_HEADER_PATH:-}"
+ADDITIONAL_LICENSE_FILES="${INPUT_ADDITIONAL_LICENSE_FILES:-}"
 OUTPUT_DIR="${INPUT_OUTPUT_DIR:-dist/swift-artifactbundle}"
 BUILD_PROFILE="${INPUT_BUILD_PROFILE:-release}"
 ZIG_VERSION="${INPUT_ZIG_VERSION:-0.17.0}"
@@ -70,9 +71,17 @@ if [[ "$DRY_RUN" == "true" ]]; then
   if [[ -n "$HEADER_PATH" ]]; then
     echo "[dry-run] would copy headers from $HEADER_PATH"
   fi
+  if [[ -n "$ADDITIONAL_LICENSE_FILES" ]]; then
+    printf '[dry-run] would copy additional license files from %s:\n%s\n' "$workspace" "$ADDITIONAL_LICENSE_FILES"
+  fi
   echo "[dry-run] would zip to $OUTPUT_DIR/$ARTIFACT_NAME.artifactbundle.zip"
   echo "[dry-run] would compute checksum via swift package compute-checksum"
   exit 0
+fi
+
+notice_helper="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/notices.py"
+if [[ -n "$ADDITIONAL_LICENSE_FILES" ]]; then
+  python3 "$notice_helper" validate "$workspace"
 fi
 
 # The full target set, in the order the bundle expects them. `should_build` narrows it when
@@ -362,6 +371,10 @@ EOF
 
 echo "Created $bundle_dir/info.json"
 
+if [[ -n "$ADDITIONAL_LICENSE_FILES" ]]; then
+  python3 "$notice_helper" stage "$workspace" --bundle "$bundle_dir"
+fi
+
 echo "=== Creating zip archive ==="
 pushd "$OUTPUT_DIR" >/dev/null
 zip -r "${ARTIFACT_NAME}.artifactbundle.zip" "${ARTIFACT_NAME}.artifactbundle"
@@ -369,6 +382,10 @@ popd >/dev/null
 
 bundle_zip="$OUTPUT_DIR/${ARTIFACT_NAME}.artifactbundle.zip"
 echo "Created $bundle_zip"
+
+if [[ -n "$ADDITIONAL_LICENSE_FILES" ]]; then
+  python3 "$notice_helper" verify "$workspace" --bundle "$bundle_dir" --archive "$bundle_zip"
+fi
 
 echo "=== Computing checksum ==="
 checksum=$(swift package compute-checksum "$bundle_zip" 2>/dev/null ||
