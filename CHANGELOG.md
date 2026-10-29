@@ -4,6 +4,20 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `build-docs` and `lint-docs` run each `docs:*` task through mise when the consumer's mise config defines it,
+  else through go-task when a Taskfile defines it, else the tool directly. They install go-task only for a
+  consumer with a Taskfile whose docs tasks mise does not define, instead of on every run. Inputs are unchanged.
+- This repository's own tasks move from `Taskfile.yml` to mise tasks under the same names (`mise run test`,
+  `mise run lint`, ...); CI runs them through `setup-mise`, and go-task leaves the repository toolchain.
+- The `setup-mise` test fixtures pin yq instead of task.
+
+### Deprecated
+
+- `install-task` is removed in a later release. Declare `task` in `mise.toml` and use `setup-mise`, or move to
+  mise tasks.
+
 ## [1.33.0] - 2026-10-29
 
 ### Changed
