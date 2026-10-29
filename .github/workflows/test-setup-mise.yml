@@ -76,6 +76,7 @@ jobs:
           [[ "${FIXTURE_PROFILE:-}" == "ci" ]]
           [[ "${MISE_RUBY_COMPILE:-}" == "false" ]]
           [[ "${MISE_HTTP_TIMEOUT:-}" == "5m" ]]
+          [[ "${MISE_TASK_OUTPUT:-}" == "interleave" ]]
 
       # ~keep pwsh, so the task's shell comes from setup-mise's environment and not from this step's.
       - name: Run a POSIX inline task on every OS

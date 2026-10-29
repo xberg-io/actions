@@ -18,19 +18,19 @@ teardown() {
 
 # Run with a clean mise environment, so the host's own MISE_* variables cannot decide the result.
 run_script() {
-	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED -u MISE_TASK_RUN_AUTO_INSTALL -u MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS -u RUNNER_OS "$@"
+	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED -u MISE_TASK_RUN_AUTO_INSTALL -u MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS -u RUNNER_OS -u MISE_TASK_OUTPUT "$@"
 }
 
 @test "prepare should_export_the_runner_defaults_when_nothing_is_preset" {
 	run_script "$SCRIPT" "$REPO" "" auto
 
 	[ "$status" -eq 0 ]
-	[ "$(cat "$GITHUB_ENV")" = "$(printf '%s\n' MISE_RUBY_COMPILE=false MISE_HTTP_TIMEOUT=5m)" ]
+	[ "$(cat "$GITHUB_ENV")" = "$(printf '%s\n' MISE_RUBY_COMPILE=false MISE_HTTP_TIMEOUT=5m MISE_TASK_OUTPUT=interleave)" ]
 	[ "$(cat "$GITHUB_OUTPUT")" = "cache=true" ]
 }
 
 @test "prepare should_keep_ruby_and_timeout_settings_the_caller_already_set" {
-	run_script MISE_RUBY_COMPILE=true MISE_HTTP_TIMEOUT=60s "$SCRIPT" "$REPO" "" auto
+	run_script MISE_RUBY_COMPILE=true MISE_HTTP_TIMEOUT=60s MISE_TASK_OUTPUT=prefix "$SCRIPT" "$REPO" "" auto
 
 	[ "$status" -eq 0 ]
 	[ ! -s "$GITHUB_ENV" ]
