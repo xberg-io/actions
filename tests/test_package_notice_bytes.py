@@ -227,3 +227,28 @@ def test_should_follow_sdist_declared_license_globs_instead_of_dependency_metada
         ]
     )
     assert notices.verify_archive_bytes(payload, "sdist", {NOTICE: CONTENT}) is None
+
+
+@pytest.mark.parametrize("alias", [f"META-INF/{NOTICE}.", f"META-INF/{NOTICE} ", f"META-INF /{NOTICE}"])
+def test_should_reject_notice_paths_aliased_by_windows_extraction(alias):
+    payload = package_bytes("jar", extra=[(alias, CONTENT, stat.S_IFREG)])
+    with pytest.raises(notices.NoticeVerificationError, match="alias"):
+        notices.verify_archive_bytes(payload, "jar", {NOTICE: CONTENT})
+
+
+@pytest.mark.parametrize("kind", [stat.S_IFREG, stat.S_IFLNK])
+def test_should_reject_a_notice_below_a_non_directory_ancestor(kind):
+    payload = package_bytes("jar", extra=[("META-INF", b"other", kind)])
+    with pytest.raises(notices.NoticeVerificationError, match="ancestor"):
+        notices.verify_archive_bytes(payload, "jar", {NOTICE: CONTENT})
+
+
+def test_should_report_missing_stdlib_toml_support_only_for_sdist(monkeypatch):
+    def missing_tomllib(name):
+        assert name == "tomllib"
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr(notices.importlib, "import_module", missing_tomllib)
+    assert notices.verify_archive_bytes(package_bytes("jar"), "jar", {NOTICE: CONTENT}) is None
+    with pytest.raises(notices.NoticeVerificationError, match="Python 3.11"):
+        notices.verify_archive_bytes(package_bytes("sdist"), "sdist", {NOTICE: CONTENT})

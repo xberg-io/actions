@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import fnmatch
+import importlib
 import io
 import re
 import stat
 import tarfile
+import unicodedata
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
@@ -45,13 +47,18 @@ def _required_names(names: Sequence[str]) -> list[str]:
 def load_notices(canonical_root: str | Path, required_names: Sequence[str]) -> dict[str, bytes]:
     """Load a nonempty, unambiguous set of regular canonical notice files."""
     names = _required_names(required_names)
+    if not str(canonical_root).strip():
+        raise NoticeVerificationError("canonical source root must not be empty")
     root = Path(canonical_root).resolve()
     notices = {}
     for name in names:
         source = root / name
         if source.is_symlink() or not source.is_file() or not source.resolve().is_relative_to(root):
             raise NoticeVerificationError(f"canonical notice is not a regular file under {root}: {name}")
-        content = source.read_bytes()
+        try:
+            content = source.read_bytes()
+        except OSError as error:
+            raise NoticeVerificationError(f"cannot read canonical notice {name}: {error}") from error
         if not content:
             raise NoticeVerificationError(f"empty canonical notice: {name}")
         notices[name] = content
@@ -60,6 +67,7 @@ def load_notices(canonical_root: str | Path, required_names: Sequence[str]) -> d
 
 class _Member(NamedTuple):
     regular: bool
+    directory: bool
     archive: tarfile.TarFile | zipfile.ZipFile
     entry: tarfile.TarInfo | zipfile.ZipInfo
 
@@ -90,22 +98,31 @@ def _members(payload: bytes, zip_container: bool = False) -> Iterator[dict[str, 
             if isinstance(entry, zipfile.ZipInfo):
                 name = entry.filename
                 mode = stat.S_IFMT(entry.external_attr >> 16)
-                regular = not entry.is_dir() and not entry.external_attr & 0x10 and mode in (0, stat.S_IFREG)
+                directory = entry.is_dir() or mode == stat.S_IFDIR or bool(entry.external_attr & 0x10)
+                regular = not directory and mode in (0, stat.S_IFREG)
             else:
-                name, regular = entry.name, entry.isfile()
+                name, regular, directory = entry.name, entry.isfile(), entry.isdir()
             path = _path(name)
             if path in index:
                 raise NoticeVerificationError(f"duplicate effective archive path or alias: {name}")
-            index[path] = _Member(regular, archive, entry)
+            index[path] = _Member(regular, directory, archive, entry)
         yield index
 
 
+def _notice_key(path: str) -> str:
+    return unicodedata.normalize("NFC", "/".join(part.rstrip(" .") for part in path.split("/"))).casefold()
+
+
 def _member(index: Mapping[str, _Member], expected: str) -> _Member:
-    aliases = [name for name in index if name.casefold() == expected.casefold()]
+    aliases = [name for name in index if _notice_key(name) == _notice_key(expected)]
     if aliases != [expected]:
         if aliases:
             raise NoticeVerificationError(f"notice path alias or duplicate for {expected}: {aliases}")
         raise NoticeVerificationError(f"missing packaged notice or container: {expected}")
+    for parent in PurePosixPath(expected).parents:
+        ancestor = index.get(parent.as_posix())
+        if ancestor is not None and not ancestor.directory:
+            raise NoticeVerificationError(f"notice ancestor is not a regular directory: {parent}")
     entry = index[expected]
     if not entry.regular:
         raise NoticeVerificationError(f"packaged notice or container is not a regular file: {expected}")
@@ -138,7 +155,7 @@ def _glob_matches(path: str, pattern: str) -> bool:
 
 def _verify_sdist(index: Mapping[str, _Member], notices: Mapping[str, bytes]) -> None:
     try:
-        import tomllib
+        tomllib = importlib.import_module("tomllib")
     except ImportError as error:
         raise NoticeVerificationError("sdist notice verification requires Python 3.11 or newer") from error
     roots = {PurePosixPath(name).parts[0] for name in index if name != "."}
