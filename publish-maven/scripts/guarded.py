@@ -273,7 +273,8 @@ def verify_bundle(
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:  # noqa: ARG002, PLR0917 — stdlib override signature
+    # poly: allow[PLR0917] Matches the required urllib redirect override signature.
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:  # noqa: ARG002 — stdlib override signature
         return None
 
 
