@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.33.0] - 2026-10-29
+
 ### Changed
 
 - `reusable-validate` installs poly v0.31.2 by default. It reports unknown actionlint runner labels as warnings
