@@ -12,7 +12,7 @@ inputs:
     description: "Platform identifier (e.g., linux-x86_64, macos-arm64, windows-x86_64)"
     required: true
   build-command:
-    description: "Command to build the binding (e.g., task python:build:ci, cargo build --release)"
+    description: "Command to build the binding (e.g., mise run python:build:ci, cargo build --release)"
     required: true
   cache-paths:
     description: "Newline-separated list of paths to cache"

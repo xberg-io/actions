@@ -13,6 +13,7 @@ All notable changes to xberg-io/actions are documented in this file.
   directory, instead of through `install-task`, so no `task` binary reaches later steps.
 - This repository's hidden `governance:runtime` task, an ai-rulez minimum-version check that mise's exact pin
   made redundant, is gone.
+- The `build-and-cache-binding` `build-command` description gives `mise run python:build:ci` as its example.
 
 ### Removed
 
