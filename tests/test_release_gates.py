@@ -1,16 +1,17 @@
 from pathlib import Path
 
+import tomlkit
 import yaml
 
 _ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_task_test_collects_every_configured_testpath():
-    taskfile = (_ROOT / "Taskfile.yml").read_text()
-    test_unit = taskfile.split("  test:unit:", 1)[1].split("\n  test:act:", 1)[0]
+    tasks = tomlkit.parse((_ROOT / "mise.toml").read_text())["tasks"]
+    test_unit = tasks["test:unit"]["run"]
 
-    assert "uv run pytest -v" in test_unit
-    assert "pytest tests/" not in test_unit
+    assert test_unit == "uv run pytest -v"
+    assert [step["task"] for step in tasks["test"]["run"]] == ["test:unit", "test:bats", "test:pester"]
 
     release_skill = (_ROOT / ".ai-rulez" / "skills" / "release-workflow" / "SKILL.md").read_text()
     assert "task test                         # pytest + Bats + Pester" in release_skill

@@ -241,7 +241,7 @@ file_safety = { exclude = [
   # this entry every commit that introduces a suite is blocked by a false positive.
   # This exclude does NOT cost lint coverage -- poly has no engine for the .bats extension at all
   # (`poly lint x.bats` reports "no matching engine for this file type"), so these files were never
-  # linted by poly either way. `task lint:bats` runs shfmt and shellcheck over them instead. ~keep
+  # linted by poly either way. `mise run lint:bats` runs shfmt and shellcheck over them instead. ~keep
   "**/*.bats",
   "**/*.lock",
   "**/Cargo.lock",
@@ -266,11 +266,11 @@ enabled = true
 enabled = true
 
 [hooks.pre-commit.commands.pyrefly]
-run = "task typecheck"
-files = "{**/*.py,**/pyrefly.toml,pyproject.toml,poly.toml,Taskfile.yml}"
+run = "mise run typecheck"
+files = "{**/*.py,**/pyrefly.toml,pyproject.toml,poly.toml,mise.toml}"
 exclude = ["tests/**", "**/tests/**"]
 workspace = true
-cache = { inputs = ["**/*.py", "**/pyrefly.toml", "pyproject.toml", "Taskfile.yml"] }
+cache = { inputs = ["**/*.py", "**/pyrefly.toml", "pyproject.toml", "mise.toml"] }
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"

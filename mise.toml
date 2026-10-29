@@ -3,7 +3,6 @@ lockfile = true
 lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "windows-x64"]
 
 [tools]
-task = "3.54.0"
 python = "3.13.18"
 uv = "0.13.6"
 "github:Goldziher/poly" = "0.31.2"
@@ -12,3 +11,60 @@ actionlint = "1.7.12"
 bats = "1.14.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
+
+[tasks.default]
+description = "Show available tasks"
+run = "mise tasks ls"
+
+[tasks.setup]
+description = "Install pre-commit hooks and dev environment"
+run = [
+  "uv lock --check || uv lock",
+  "uv sync --group dev",
+  "command -v poly >/dev/null 2>&1 || brew install goldziher/tap/poly",
+  { task = "governance:hooks:install" },
+]
+
+[tasks.update]
+description = "Update pre-commit hooks and dependencies"
+run = ["uv sync --group dev --upgrade", "gh-actions-updater --update ."]
+
+[tasks.lint]
+description = "Run all linters and formatting checks via poly"
+run = ["poly lint .", "poly fmt --check .", { task = "lint:bats" }]
+
+[tasks.typecheck]
+description = "Check Python types with Pyrefly"
+run = "uv run --frozen pyrefly check . --verbose --project-excludes 'tests/**' --project-excludes '**/tests/**'"
+
+[tasks.test]
+description = "Run all tests"
+run = [{ task = "test:unit" }, { task = "test:bats" }, { task = "test:pester" }]
+
+[tasks."test:ai-rulez-plugin"]
+description = "Test plugin freshness gates and deterministic release artifacts"
+run = "uv run pytest tests/test_ai_rulez_plugin.py -v"
+
+[tasks."test:ai-rulez-validation"]
+description = "Test strict governance validation and artifact freshness gates"
+run = "uv run pytest tests/test_validate_ai_rulez.py -v"
+
+[tasks."test:unit"]
+description = "Run pytest unit tests"
+run = "uv run pytest -v"
+
+[tasks."test:bats"]
+description = "Run Bats tests for Bash action scripts"
+# Suites resolve the shared helpers with `bats_load_library xberg-bats`, which searches
+# BATS_LIB_PATH and nothing else. CI passes the same directory to run-bats via lib-path.
+env = { BATS_LIB_PATH = "{{config_root}}/bats-lib" }
+run = "bats --recursive --print-output-on-failure ."
+
+[tasks."governance:check"]
+description = "Check materialized local governance outputs against shared sources"
+depends = ["governance:runtime"]
+run = "ai-rulez generate --check --no-local --strict-config"
+
+[tasks.validate]
+description = "Run lint (poly handles actionlint + shellcheck + shfmt)"
+run = [{ task = "lint" }]
