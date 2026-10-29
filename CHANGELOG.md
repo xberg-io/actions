@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.36.0] - 2026-10-29
+
 ### Changed
 
 - `build-docs` and `lint-docs` no longer fall back to a consumer's go-task Taskfile: each `docs:*` task runs
