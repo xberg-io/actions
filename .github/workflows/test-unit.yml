@@ -65,6 +65,12 @@ jobs:
         with:
           ai-rulez-version: "latest"
 
+      - name: Set up Erlang and Elixir for Hex metadata tests
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
+        with:
+          otp-version: "29.1.2"
+          elixir-version: "1.20.4"
+
       # No explicit path: an argument overrides `testpaths`, which is how the per-action
       # tests/ directories went uncollected for so long.
       - name: Run tests
