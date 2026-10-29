@@ -250,5 +250,5 @@ def test_should_report_missing_stdlib_toml_support_only_for_sdist(monkeypatch):
 
     monkeypatch.setattr(notices.importlib, "import_module", missing_tomllib)
     assert notices.verify_archive_bytes(package_bytes("jar"), "jar", {NOTICE: CONTENT}) is None
-    with pytest.raises(notices.NoticeVerificationError, match="Python 3.11"):
+    with pytest.raises(notices.NoticeVerificationError, match=r"Python 3\.11"):
         notices.verify_archive_bytes(package_bytes("sdist"), "sdist", {NOTICE: CONTENT})

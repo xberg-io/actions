@@ -17,11 +17,17 @@ and verifies each one using recursive glob.
 from __future__ import annotations
 
 import fnmatch
+import importlib.util
 import os
+import re
 import sys
 import tarfile
 import zipfile
 from pathlib import Path
+from typing import TYPE_CHECKING, NamedTuple
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 ALLOWLISTS: dict[str, list[str]] = {
     "python": [
@@ -190,6 +196,101 @@ def verify_archive(
     return len(files), len(matched), set(missing), had_error
 
 
+_NOTICE_SUFFIXES = {
+    "wheel": (".whl",),
+    "sdist": (".tar.gz", ".tgz"),
+    "gem": (".gem",),
+    "jar": (".jar",),
+    "nuget": (".nupkg",),
+    "hex": (".tar",),
+}
+
+
+class _NoticeChecks(NamedTuple):
+    helper: ModuleType
+    notices: dict[str, bytes]
+    artifact_format: str
+    expected_count: int | None
+
+
+def _load_notice_helper() -> ModuleType:
+    path = Path(__file__).with_name("notices.py")
+    spec = importlib.util.spec_from_file_location("package_notice_bytes", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("cannot load the archive notice verifier")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    return helper
+
+
+def _notice_checks() -> _NoticeChecks | None:
+    raw = os.environ.get("INPUT_REQUIRED_NOTICE_FILES", "")
+    requested = os.environ.get("INPUT_ARTIFACT_FORMAT", "")
+    expected = os.environ.get("INPUT_EXPECTED_ARTIFACT_COUNT", "")
+    if raw == "":
+        if requested or expected:
+            raise ValueError("required-notice-files is required when notice format or count options are set")
+        return None
+    names = [line.strip() for line in raw.splitlines() if line.strip()]
+    if not names:
+        raise ValueError("required-notice-files must contain a nonempty file inventory")
+    artifact_format = requested or "auto"
+    artifact_format = "nuget" if artifact_format == "nupkg" else artifact_format
+    if artifact_format not in {*_NOTICE_SUFFIXES, "auto"}:
+        raise ValueError(f"unsupported artifact-format: {artifact_format!r}")
+    if expected and not re.fullmatch(r"[1-9][0-9]*", expected):
+        raise ValueError("expected-artifact-count must be a positive integer")
+    canonical_root = os.environ.get("INPUT_CANONICAL_ROOT", ".")
+    if not canonical_root.strip():
+        raise ValueError("canonical-root must name the release source directory")
+    if not os.environ.get("INPUT_ARTIFACT_PATH", "").strip():
+        raise ValueError("artifact-path must name a nonempty notice artifact inventory")
+    helper = _load_notice_helper()
+    notices = helper.load_notices(canonical_root, names)
+    return _NoticeChecks(helper, notices, artifact_format, int(expected) if expected else None)
+
+
+def _notice_format(path: Path, requested: str) -> str:
+    if requested != "auto":
+        return requested
+    for artifact_format, suffixes in _NOTICE_SUFFIXES.items():
+        if path.name.lower().endswith(suffixes):
+            return artifact_format
+    raise ValueError(f"cannot infer notice artifact format for {path.name}; set artifact-format explicitly")
+
+
+def _select_notice_archives(archives: list[Path], artifact: Path, checks: _NoticeChecks) -> list[Path]:
+    if artifact.is_dir() and checks.artifact_format != "auto":
+        suffixes = _NOTICE_SUFFIXES[checks.artifact_format]
+        return [archive for archive in archives if archive.name.lower().endswith(suffixes)]
+    return archives
+
+
+def _verify_notices(archives: list[Path], checks: _NoticeChecks) -> bool:
+    if checks.expected_count is not None and len(archives) != checks.expected_count:
+        print(f"::error::expected {checks.expected_count} notice artifacts, found {len(archives)}")
+        return False
+    if any(archive.is_symlink() or not archive.is_file() for archive in archives):
+        print("::error::notice artifacts must be regular files, not symbolic links")
+        return False
+    if len({archive.resolve() for archive in archives}) != len(archives):
+        print("::error::notice artifact inventory contains effective path aliases")
+        return False
+    verified = 0
+    for archive in archives:
+        try:
+            checks.helper.verify_archive_bytes(
+                archive.read_bytes(), _notice_format(archive, checks.artifact_format), checks.notices
+            )
+        except (OSError, ValueError) as error:
+            print(f"::error::Notice verification failed for {archive}: {error}")
+            return False
+        verified += 1
+    print(f"Notice archives verified: {verified}")
+    print(f"Canonical notice files compared: {verified * len(checks.notices)}")
+    return True
+
+
 def main() -> int:
     language = os.environ.get("INPUT_LANGUAGE", "").strip()
     artifact = Path(os.environ.get("INPUT_ARTIFACT_PATH", "").strip())
@@ -199,6 +300,12 @@ def main() -> int:
         if line.strip() and not line.strip().startswith("#")
     ]
     strict = os.environ.get("INPUT_STRICT", "true").lower() == "true"
+
+    try:
+        notice_checks = _notice_checks()
+    except (OSError, ValueError) as error:
+        print(f"::error::Invalid notice verification configuration: {error}")
+        return 2
 
     if language not in ALLOWLISTS:
         print(f"::error::Unknown language: {language!r}. Known: {', '.join(sorted(ALLOWLISTS))}")
@@ -217,6 +324,14 @@ def main() -> int:
     else:
         print(f"::error::Artifact is neither a file nor a directory: {artifact}")
         return 2
+
+    if notice_checks is not None:
+        archives = _select_notice_archives(archives, artifact, notice_checks)
+        if not archives:
+            print(f"::error::No archive files for notice verification in {artifact}")
+            return 2
+        if not _verify_notices(archives, notice_checks):
+            return 1
 
     patterns = [*ALLOWLISTS[language], *extras]
     total_files = 0

@@ -37,6 +37,30 @@ inputs:
     required: false
     default: "true"
 
+  required-notice-files:
+    description: >
+      Opt-in newline-separated canonical notice paths relative to canonical-root.
+      Every selected archive must contain identical bytes. Notice failures always fail,
+      including when strict is false. Empty input preserves legacy file-list checks.
+    required: false
+    default: ""
+  canonical-root:
+    description: "Release source directory containing the canonical notice files."
+    required: false
+    default: "."
+  artifact-format:
+    description: >
+      Notice archive format: wheel, sdist, gem, jar, nuget (or nupkg), hex, or auto.
+      Empty means auto. Explicit formats filter directory scans by their archive extensions.
+    required: false
+    default: ""
+  expected-artifact-count:
+    description: >
+      Exact positive number of selected archives required by the notice gate.
+      Empty permits any nonzero count. Zero, whitespace and invalid counts fail.
+    required: false
+    default: ""
+
 outputs:
   matched:
     description: "Number of allowlist patterns that matched at least one file."
@@ -51,6 +75,12 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Set up Python for canonical notice verification
+      if: inputs.required-notice-files != ''
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      with:
+        python-version: "3.13"
+
     - name: Verify package contents
       id: verify
       shell: bash
@@ -60,4 +90,8 @@ runs:
         INPUT_PACKAGE_NAME: ${{ inputs.package-name }}
         INPUT_REQUIRED_EXTRAS: ${{ inputs.required-extras }}
         INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_REQUIRED_NOTICE_FILES: ${{ inputs.required-notice-files }}
+        INPUT_CANONICAL_ROOT: ${{ inputs.canonical-root }}
+        INPUT_ARTIFACT_FORMAT: ${{ inputs.artifact-format }}
+        INPUT_EXPECTED_ARTIFACT_COUNT: ${{ inputs.expected-artifact-count }}
       run: python3 "${{ github.action_path }}/scripts/verify.py"
