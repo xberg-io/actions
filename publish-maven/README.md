@@ -26,6 +26,9 @@ four detached signatures and sixteen checksum files. Every checksum and signatur
 must equal the canonical files under `META-INF/` in the main and sources JARs; javadoc is checked for inventory and
 signature integrity without imposing a root LICENSE requirement.
 
+Central parameter properties in the effective POM are rejected, including deprecated parameters and output overrides.
+Set supported publication and waiting options explicitly in the Central plugin configuration.
+
 The verified bundle is retained in memory and uploaded once through Central's public API. Effective `autoPublish`,
 `waitUntil`, `waitMaxTime` and `waitPollingInterval` settings control automatic versus staged publication and waiting.
 Manual deployments are never automatically released. Registry conflicts and failed validation fail the guarded run;

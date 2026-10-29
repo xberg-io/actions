@@ -361,3 +361,65 @@ def test_signature_verifier_checks_exact_artifact_bytes(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="signature verification failed"):
         module.verify_signature(b"outgoing artifact", b"invalid detached signature")
     assert seen == [(b"outgoing artifact", b"invalid detached signature")]
+
+
+@pytest.mark.parametrize(
+    "name,value",
+    [
+        ("autoPublish", "true"),
+        ("waitUntil", "published"),
+        ("waitMaxTime", "3600"),
+        ("waitPollingInterval", "10"),
+        ("publishCompletionPollInterval", "2000"),
+        ("waitForPublishCompletion", "true"),
+        ("ignorePublishedComponents", "true"),
+        ("skipUpload", "false"),
+        ("skipPublishing", "true"),
+        ("failOnBuildFailure", "false"),
+        ("outputDirectory", "/tmp/elsewhere"),
+        ("outputFilename", "other.zip"),
+        ("stagingDirectory", "/tmp/staging"),
+        ("deferredDirectory", "/tmp/deferred"),
+        ("deploymentName", "other"),
+        ("publishingServerId", "other"),
+        ("checksums", "none"),
+        ("centralBaseUrl", "https://example.invalid"),
+        ("centralSnapshotsUrl", "https://example.invalid"),
+        ("excludeArtifacts", "demo"),
+    ],
+)
+def test_rejects_provider_parameter_properties(name, value):
+    pom = effective().replace("<build>", f"<properties><{name}>{value}</{name}></properties><build>")
+    with pytest.raises(ValueError, match=f"Central parameter properties.*{name}"):
+        module.parse_config(pom, "1.2.3", "ossrh")
+
+
+def test_unrelated_project_properties_preserve_explicit_publication_configuration():
+    pom = effective("<autoPublish>true</autoPublish><waitUntil>published</waitUntil>").replace(
+        "<build>", "<properties><maven.compiler.release>21</maven.compiler.release></properties><build>"
+    )
+    config = module.parse_config(pom, "1.2.3", "ossrh")
+    assert config.auto_publish
+    assert config.wait_until == "published"
+
+
+@pytest.mark.parametrize(
+    "name,value", [("autoPublish", "true"), ("waitUntil", "published"), ("ignorePublishedComponents", "true")]
+)
+def test_provider_properties_stop_before_deploy(tmp_path, monkeypatch, name, value):
+    pom = tmp_path / "pom.xml"
+    pom.write_text("<project/>")
+    commands = []
+
+    def fake_maven(command, **kwargs):
+        commands.append(command)
+        output = next(part.removeprefix("-Doutput=") for part in command if part.startswith("-Doutput="))
+        Path(output).write_text(
+            effective().replace("<build>", f"<properties><{name}>{value}</{name}></properties><build>")
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_maven)
+    with pytest.raises(ValueError, match=f"Central parameter properties.*{name}"):
+        module.build_bundle(str(pom), "publish", [], "no-credentials.xml", "1.2.3", server_id="ossrh", timeout=10)
+    assert len(commands) == 1
+    assert "deploy" not in commands[0]

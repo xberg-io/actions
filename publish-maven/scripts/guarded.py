@@ -24,6 +24,28 @@ from typing import Any
 CENTRAL_API = "https://central.sonatype.com/api/v1/publisher"
 DIGESTS = ("md5", "sha1", "sha256", "sha512")
 SAFE_PROPERTIES = {"skipTests", "maven.test.skip"}
+CENTRAL_PARAMETER_PROPERTIES = {
+    "autoPublish",
+    "centralBaseUrl",
+    "centralSnapshotsUrl",
+    "checksums",
+    "deferredDirectory",
+    "deploymentName",
+    "excludeArtifacts",
+    "failOnBuildFailure",
+    "ignorePublishedComponents",
+    "outputDirectory",
+    "outputFilename",
+    "publishCompletionPollInterval",
+    "publishingServerId",
+    "skipPublishing",
+    "skipUpload",
+    "stagingDirectory",
+    "waitForPublishCompletion",
+    "waitMaxTime",
+    "waitPollingInterval",
+    "waitUntil",
+}
 SAFE_MAVEN_PLUGINS = {
     "clean",
     "compiler",
@@ -149,6 +171,16 @@ def check_providers(root: ET.Element) -> ET.Element:
     return central[0]
 
 
+def check_parameter_properties(root: ET.Element) -> None:
+    properties = {element.tag for element in root.findall("properties/*")}
+    unsupported = properties & CENTRAL_PARAMETER_PROPERTIES
+    if unsupported:
+        raise ValueError(
+            "Central parameter properties are unsupported in guarded mode; "
+            "use explicit plugin configuration instead: " + ", ".join(sorted(unsupported))
+        )
+
+
 def parse_config(effective_pom: str, expected_version: str, server_id: str) -> CentralConfig:
     root = xml_root(effective_pom)
     if root.tag != "project" or root.findall("modules/module"):
@@ -158,6 +190,7 @@ def parse_config(effective_pom: str, expected_version: str, server_id: str) -> C
         raise ValueError("Effective Maven coordinates are missing or unresolved")
     if not expected_version or version != expected_version or "SNAPSHOT" in version.upper():
         raise ValueError("Guarded publication requires the exact expected release version, excluding snapshots")
+    check_parameter_properties(root)
     values = checked_configuration(check_providers(root), server_id)
     auto_publish = values.get("autoPublish", "false") == "true"
     wait_until = values.get("waitUntil", "validated")
