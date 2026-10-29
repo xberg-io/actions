@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- This repository's `governance:hooks:install` task comes from the shared xberg-io/toolchains v1.5.0 task library
+  instead of a local copy, and its toolchain baseline moves to v1.5.0.
+
 ## [1.34.0] - 2026-10-29
 
 ### Changed
