@@ -9,6 +9,8 @@ All notable changes to xberg-io/actions are documented in this file.
 - `setup-mise` points mise's Windows inline task shell at Git Bash (`MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS`,
   unless already set). mise otherwise runs inline `run` strings under `cmd /c`, which breaks the POSIX task bodies
   ported from go-task, whose built-in shell ran them on every OS.
+- `setup-mise` `config-ref` also restores `mise-tasks/` when the older checkout lacks it, so `mise run` works in
+  release jobs that check out a tag predating the move to mise tasks.
 
 ### Changed
 

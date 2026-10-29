@@ -202,3 +202,31 @@ make_origin() {
 	[ "$status" -eq 0 ]
 	cmp "$CLONE/later/mise.toml" "$ORIGIN/later/mise.toml"
 }
+
+@test "restore should_restore_the_file_tasks_beside_the_config" {
+	mkdir -p "$ORIGIN/sub/mise-tasks/lint"
+	printf '%s\n' '#!/usr/bin/env bash' 'echo lint' >"$ORIGIN/sub/mise-tasks/lint/check.sh"
+	commit tasks
+	TASKS_SHA="$(git -C "$ORIGIN" rev-parse HEAD)"
+
+	run "$SCRIPT" "$CLONE/sub" "$TASKS_SHA"
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"sub/mise.toml sub/mise-tasks"* ]]
+	cmp "$CLONE/sub/mise-tasks/lint/check.sh" "$ORIGIN/sub/mise-tasks/lint/check.sh"
+	[ -z "$(git -C "$CLONE" status --porcelain)" ]
+}
+
+@test "restore should_leave_file_tasks_the_checkout_already_has" {
+	mkdir -p "$ORIGIN/sub/mise-tasks"
+	printf '%s\n' 'new' >"$ORIGIN/sub/mise-tasks/t.sh"
+	commit tasks
+	TASKS_SHA="$(git -C "$ORIGIN" rev-parse HEAD)"
+	mkdir -p "$CLONE/sub/mise-tasks"
+	printf '%s\n' 'old' >"$CLONE/sub/mise-tasks/t.sh"
+
+	run "$SCRIPT" "$CLONE/sub" "$TASKS_SHA"
+
+	[ "$status" -eq 0 ]
+	[ "$(cat "$CLONE/sub/mise-tasks/t.sh")" = "old" ]
+}

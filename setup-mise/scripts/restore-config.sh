@@ -53,6 +53,12 @@ if [[ "$has_config" != true ]]; then
   exit 1
 fi
 
+# mise.toml's file tasks live in mise-tasks/; without them every `mise run` in the older checkout fails. ~keep
+tasks_dir="${prefix}mise-tasks"
+if [[ ! -e "$repo_root/$tasks_dir" && "$(git -C "$repo_root" cat-file -t "$source_ref:$tasks_dir" 2>/dev/null)" == tree ]]; then
+  files+=("$tasks_dir")
+fi
+
 # Worktree only, and excluded: later steps that gate on a clean `git status` or `git diff` must not see the
 # restored files as changes. ~keep
 git -C "$repo_root" restore --source="$source_ref" --worktree -- "${files[@]}"

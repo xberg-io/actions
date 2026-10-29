@@ -41,7 +41,7 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 | `install`           | no       | `true`                  | `false` sets up mise without installing tools.                   |
 | `mise-env`          | no       | `""`                    | Exported as `MISE_ENV` for this and later steps.                 |
 | `github-token`      | no       | `${{ github.token }}`   | Token for GitHub release lookups, avoiding API rate limits.      |
-| `config-ref`        | no       | `""`                    | Ref to restore the mise config from when `mise.toml` is missing. |
+| `config-ref`        | no       | `""`                    | Ref to restore the mise config and `mise-tasks/` from when `mise.toml` is missing. |
 | `cache`             | no       | `auto`                  | `auto`, `true` or `false`; `auto` skips a preset `MISE_DATA_DIR`. |
 
 When `install-args` names some tools, or `install` is `false`, the action exports
