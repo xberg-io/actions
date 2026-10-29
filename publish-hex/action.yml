@@ -36,6 +36,21 @@ inputs:
     required: false
     default: ""
 
+  required-notice-files:
+    description: >
+      Newline-separated canonical filenames. Enables final-byte prebuilt publication through Hex's
+      public API. Requires tarball-path, expected-package and expected-version; publishes package only.
+    required: false
+    default: ""
+  canonical-root:
+    description: "Directory containing the canonical required-notice-files"
+    required: false
+    default: "."
+  expected-package:
+    description: "Exact Hex package name embedded in the guarded prebuilt archive"
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
@@ -45,7 +60,22 @@ runs:
         elixir-version: "v1.20.4"
         otp-version: "29.1.2"
 
+    - name: Publish verified prebuilt Hex archive
+      if: inputs.required-notice-files != ''
+      shell: bash
+      env:
+        HEX_API_KEY: ${{ env.HEX_API_KEY }}
+        INPUT_TARBALL_PATH: ${{ inputs.tarball-path }}
+        INPUT_REQUIRED_NOTICE_FILES: ${{ inputs.required-notice-files }}
+        INPUT_CANONICAL_ROOT: ${{ inputs.canonical-root }}
+        INPUT_EXPECTED_PACKAGE: ${{ inputs.expected-package }}
+        INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
+        INPUT_REPLACE: ${{ inputs.replace }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: python3 "${{ github.action_path }}/scripts/prebuilt.py"
+
     - name: Verify mix.exs carries the release version
+      if: inputs.required-notice-files == ''
       shell: bash
       env:
         PACKAGE_DIR: ${{ inputs.package-dir }}
@@ -90,7 +120,7 @@ runs:
         echo "Verified mix.exs carries the release version ${expected}"
 
     - name: Verify Hex.pm availability
-      if: inputs.dry-run != 'true'
+      if: inputs.required-notice-files == '' && inputs.dry-run != 'true'
       shell: bash
       env:
         HEX_API_KEY: ${{ env.HEX_API_KEY }}
@@ -105,7 +135,7 @@ runs:
         mix local.rebar --force
 
     - name: Fetch Mix dependencies
-      if: inputs.dry-run != 'true'
+      if: inputs.required-notice-files == '' && inputs.dry-run != 'true'
       shell: bash
       env:
         PACKAGE_DIR: ${{ inputs.package-dir }}
@@ -114,7 +144,7 @@ runs:
         mix deps.get
 
     - name: Generate Cargo.lock for native dependencies
-      if: inputs.dry-run != 'true' && inputs.tarball-path == ''
+      if: inputs.required-notice-files == '' && inputs.dry-run != 'true' && inputs.tarball-path == ''
       shell: bash
       env:
         PACKAGE_DIR: ${{ inputs.package-dir }}
@@ -131,7 +161,7 @@ runs:
         done
 
     - name: Publish to Hex.pm (pre-built tarball)
-      if: inputs.dry-run != 'true' && inputs.tarball-path != ''
+      if: inputs.required-notice-files == '' && inputs.dry-run != 'true' && inputs.tarball-path != ''
       shell: bash
       env:
         HEX_API_KEY: ${{ env.HEX_API_KEY }}
@@ -179,7 +209,7 @@ runs:
         fi
 
     - name: Publish to Hex.pm (rebuild)
-      if: inputs.dry-run != 'true' && inputs.tarball-path == ''
+      if: inputs.required-notice-files == '' && inputs.dry-run != 'true' && inputs.tarball-path == ''
       shell: bash
       env:
         HEX_API_KEY: ${{ env.HEX_API_KEY }}
@@ -217,7 +247,7 @@ runs:
         fi
 
     - name: Dry run
-      if: inputs.dry-run == 'true'
+      if: inputs.required-notice-files == '' && inputs.dry-run == 'true'
       shell: bash
       env:
         PACKAGE_DIR: ${{ inputs.package-dir }}
