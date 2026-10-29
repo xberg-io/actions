@@ -175,6 +175,47 @@ def test_source_setup_rejects_unpinned_revision(tmp_path):
     assert "full 40-character commit SHA" in result.stderr
 
 
+def test_source_build_installs_the_pinned_go_task_outside_path(tmp_path):
+    action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
+    assert not [step for step in action["runs"]["steps"] if "install-task" in str(step.get("uses", ""))]
+    build = next(step for step in action["runs"]["steps"] if step["name"].startswith("Build pinned AI-Rulez"))
+    assert build["env"]["GO_TASK_MODULE"] == "github.com/go-task/task/v3/cmd/task@v3.54.0"
+    stubs, source, runner_temp = tmp_path / "stubs", tmp_path / "source", tmp_path / "runner"
+    for directory in (stubs, source, runner_temp):
+        directory.mkdir()
+    calls = tmp_path / "calls.log"
+    task_stub = tmp_path / "task"
+    task_stub.write_text(
+        '#!/usr/bin/env bash\necho "task $*" >>"$CALLS"\nmkdir -p bin\n'
+        "printf '#!/bin/sh\\necho ai-rulez version 0.0.0\\n' >bin/ai-rulez\nchmod +x bin/ai-rulez\n"
+    )
+    go = stubs / "go"
+    go.write_text(
+        '#!/usr/bin/env bash\necho "go $* GOBIN=$GOBIN" >>"$CALLS"\ninstall -m 755 "$TASK_STUB" "$GOBIN/task"\n'
+    )
+    go.chmod(0o755)
+    github_path = tmp_path / "github_path"
+    result = run_step(
+        "setup-ai-rulez",
+        build["name"],
+        source,
+        {
+            "PATH": f"{stubs}:/usr/bin:/bin",
+            "CALLS": str(calls),
+            "TASK_STUB": str(task_stub),
+            "RUNNER_TEMP": str(runner_temp),
+            "GITHUB_PATH": str(github_path),
+            "GO_TASK_MODULE": build["env"]["GO_TASK_MODULE"],
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    go_call, task_call = calls.read_text().splitlines()
+    assert go_call.startswith("go install github.com/go-task/task/v3/cmd/task@v3.54.0 GOBIN=" + str(runner_temp))
+    assert task_call == "task build"
+    assert "ai-rulez version 0.0.0" in result.stdout
+    assert github_path.read_text() == f"{source}/bin\n"
+
+
 def test_package_verifies_root_marketplace_layout(plugin):
     config = plugin / ".ai-rulez"
     config.mkdir()

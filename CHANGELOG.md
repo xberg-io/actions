@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `setup-ai-rulez` builds a `source-revision` with go-task v3.54.0 that `go install` puts in a private
+  directory, instead of through `install-task`, so no `task` binary reaches later steps.
+
 ## [1.35.0] - 2026-10-29
 
 ### Changed

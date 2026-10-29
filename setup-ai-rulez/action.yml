@@ -45,15 +45,18 @@ runs:
       with:
         go-version-file: ${{ steps.source.outputs.source-directory }}/go.mod
         cache-dependency-path: ${{ steps.source.outputs.source-directory }}/go.sum
-    - name: Install Task for source build
-      if: inputs.source-revision != ''
-      uses: xberg-io/actions/install-task@v1
     - name: Build pinned AI-Rulez with static native dependencies
       if: inputs.source-revision != ''
       shell: bash
       working-directory: ${{ steps.source.outputs.source-directory }}
+      # ~keep Upstream builds with go-task. Go installs that one pinned release, verified against the Go checksum
+      # ~keep database, into a private directory so no task binary reaches later steps.
+      env:
+        GO_TASK_MODULE: github.com/go-task/task/v3/cmd/task@v3.54.0
       run: |
-        task build
+        task_bin=$(mktemp -d "$RUNNER_TEMP/go-task.XXXXXX")
+        GOBIN="$task_bin" go install "$GO_TASK_MODULE"
+        "$task_bin/task" build
         test -x bin/ai-rulez
         "$PWD/bin/ai-rulez" --version
         echo "$PWD/bin" >> "$GITHUB_PATH"
