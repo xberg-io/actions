@@ -8,4 +8,4 @@ x-ai-rulez:
     priority: high
 ---
 
-When basemind is available, use it first for code and history; shell is the fallback. Load `basemind-tools` for modes, document retrieval and agent coordination.
+Use available basemind before shell for code/history. Load `basemind-tools` for modes, documents and coordination.

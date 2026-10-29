@@ -10,4 +10,4 @@ x-ai-rulez:
 
 ## Area Map
 
-Each top-level `<name>/action.yml` defines one action. Workflows live in `.github/workflows/`; test suites in `tests/`, `bats-lib/` and each action's `tests/`. An action's inputs and outputs are a public interface consumed at `@v1`: add, never rename or remove, and record changes under `## [Unreleased]` in CHANGELOG.md. Use `testing-conventions` for tests and `release-workflow` for versioning and the floating major tag.
+`<name>/action.yml`: additive public inputs/outputs at `@v1`; never rename/remove. Log changes in CHANGELOG.md `## [Unreleased]`. Workflows: `.github/workflows/`; tests: `tests/`, `bats-lib/`, `<action>/tests/`. Skills: `testing-conventions` (tests), `release-workflow` (versions/floating major tag).

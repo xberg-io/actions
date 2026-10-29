@@ -1,7 +1,7 @@
 
 version = "5.0"
 name = 'actions'
-description = 'Shared GitHub Actions composite actions for xberg-io CI/CD pipelines'
+description = 'xberg-io CI/CD actions'
 gitignore = true
 # ~keep The manifest is committed so CI can detect stale generated files.
 gitignore_exclude = [".ai-rulez/.generated-manifest.json"]
@@ -65,7 +65,7 @@ scoped_fallback = "skill"
 delivery = "served"
 
 [delivery.stub]
-description = "Find task-specific conventions through ai-rulez."
+description = "Task conventions via ai-rulez."
 body = "Call `find_skill` on `{{server}}` with the task and affected path, then `load_skill` with the returned name. Follow it before editing. Load referenced files with the `path` argument of `load_skill`."
 
 [[mcp_servers]]
