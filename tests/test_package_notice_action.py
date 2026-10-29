@@ -195,6 +195,7 @@ def test_should_provision_a_toml_capable_python_only_for_opted_in_notice_checks(
     assert len(python_steps) == 1
     setup = python_steps[0]
     assert setup["if"] == "inputs.required-notice-files != ''"
-    assert setup["with"]["python-version"] == "3.13"
+    major, minor = (int(part) for part in str(setup["with"]["python-version"]).split(".")[:2])
+    assert (major, minor) >= (3, 11), "tomllib is stdlib only from Python 3.11"
     assert len(setup["uses"].split("@", 1)[1]) == 40
     assert steps.index(setup) < next(index for index, step in enumerate(steps) if step.get("id") == "verify")
