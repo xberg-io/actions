@@ -13,6 +13,12 @@ All notable changes to xberg-io/actions are documented in this file.
   `mise run lint`, ...); CI runs them through `setup-mise`, and go-task leaves the repository toolchain.
 - The `setup-mise` test fixtures pin yq instead of task.
 
+### Added
+
+- `setup-mise` takes `install: false` to set up mise without installing tools, and exports
+  `MISE_TASK_RUN_AUTO_INSTALL=false` when `install-args` names only some tools or nothing is installed, so a
+  later `mise run` does not install the rest of `mise.toml`. Callers drop their own copies of that variable.
+
 ### Deprecated
 
 - `install-task` is removed in a later release. Declare `task` in `mise.toml` and use `setup-mise`, or move to

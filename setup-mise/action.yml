@@ -13,6 +13,11 @@ inputs:
       tool in mise.toml.
     required: false
     default: ""
+  install:
+    description: >-
+      "false" sets up mise and the config without installing any tool, for jobs whose `mise run` tasks need none.
+    required: false
+    default: "true"
   mise-env:
     description: >-
       Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml and its mise.ci.lock).
@@ -60,14 +65,18 @@ runs:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_MISE_ENV: ${{ inputs.mise-env }}
         INPUT_CACHE: ${{ inputs.cache }}
+        INPUT_INSTALL: ${{ inputs.install }}
+        INPUT_INSTALL_ARGS: ${{ inputs.install-args }}
       run: |
-        "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE"
+        "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE" \
+          "$INPUT_INSTALL" "$INPUT_INSTALL_ARGS"
 
     - name: Install mise and tools
       uses: jdx/mise-action@v5
       with:
         version: "2026.10.21"
         working_directory: ${{ inputs.working-directory }}
+        install: ${{ inputs.install }}
         install_args: ${{ inputs.install-args }}
         github_token: ${{ inputs.github-token }}
         cache: ${{ steps.env.outputs.cache }}

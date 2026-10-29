@@ -18,7 +18,7 @@ teardown() {
 
 # Run with a clean mise environment, so the host's own MISE_* variables cannot decide the result.
 run_script() {
-	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED "$@"
+	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED -u MISE_TASK_RUN_AUTO_INSTALL "$@"
 }
 
 @test "prepare should_export_the_runner_defaults_when_nothing_is_preset" {
@@ -129,4 +129,39 @@ run_script() {
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"cache must be auto, true or false, got 'yes'"* ]]
 	[ ! -s "$GITHUB_OUTPUT" ]
+}
+
+@test "prepare should_leave_task_auto_install_on_when_every_tool_is_installed" {
+	run_script "$SCRIPT" "$REPO" "" auto true ""
+
+	[ "$status" -eq 0 ]
+	! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
+}
+
+@test "prepare should_turn_task_auto_install_off_when_only_some_tools_are_installed" {
+	run_script "$SCRIPT" "$REPO" "" auto true "node python"
+
+	[ "$status" -eq 0 ]
+	grep -qx MISE_TASK_RUN_AUTO_INSTALL=false "$GITHUB_ENV"
+}
+
+@test "prepare should_turn_task_auto_install_off_when_nothing_is_installed" {
+	run_script "$SCRIPT" "$REPO" "" auto false ""
+
+	[ "$status" -eq 0 ]
+	grep -qx MISE_TASK_RUN_AUTO_INSTALL=false "$GITHUB_ENV"
+}
+
+@test "prepare should_keep_the_callers_task_auto_install_setting" {
+	run_script MISE_TASK_RUN_AUTO_INSTALL=true "$SCRIPT" "$REPO" "" auto true "node"
+
+	[ "$status" -eq 0 ]
+	! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
+}
+
+@test "prepare should_reject_an_install_value_other_than_true_or_false" {
+	run_script "$SCRIPT" "$REPO" "" auto yes ""
+
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"install must be true or false"* ]]
 }

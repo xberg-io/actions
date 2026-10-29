@@ -4,6 +4,8 @@ set -euo pipefail
 working_directory="${1:-.}"
 mise_env="${2:-}"
 cache="${3:-auto}"
+install="${4:-true}"
+install_args="${5:-}"
 
 export_default() {
   if [[ -z "${!1:-}" ]]; then
@@ -20,6 +22,16 @@ fi
 export_default MISE_RUBY_COMPILE false
 # mise's 30s default connect/read timeout fails repeatedly on loaded runners. ~keep
 export_default MISE_HTTP_TIMEOUT 5m
+# A job that installs only some tools (or none) runs `mise run` with exactly those; mise would otherwise
+# install every tool in mise.toml before the first task. ~keep
+case "$install" in
+true) [[ -z "$install_args" ]] || export_default MISE_TASK_RUN_AUTO_INSTALL false ;;
+false) export_default MISE_TASK_RUN_AUTO_INSTALL false ;;
+*)
+  echo "::error::install must be true or false, got '$install'" >&2
+  exit 1
+  ;;
+esac
 
 lockfiles=("$working_directory/mise.lock")
 IFS=',' read -r -a profiles <<<"$mise_env"
