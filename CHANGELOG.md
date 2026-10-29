@@ -13,9 +13,6 @@ All notable changes to xberg-io/actions are documented in this file.
   go-task instead of gaining `[task]` prefixes, which broke CI steps that grep or count it.
 - `setup-mise` `config-ref` also restores `mise-tasks/` when the older checkout lacks it, so `mise run` works in
   release jobs that check out a tag predating the move to mise tasks.
-
-### Changed
-
 - This repository's `governance:hooks:install` task comes from the shared xberg-io/toolchains v1.5.0 task library
   instead of a local copy, and its toolchain baseline moves to v1.5.0.
 
