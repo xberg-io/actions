@@ -18,7 +18,7 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-# The detection is tested in build-docs/tests; both actions ship the same script.
+# The runner choice is tested in build-docs/tests; both actions ship the same script.
 @test "docs-runner should_pass_textlint_strict_through_to_the_mise_prose_task" {
 	cd "$TEST_ROOT"
 
@@ -29,7 +29,7 @@ teardown() {
 	grep -qx "mise run docs:lint:prose TEXTLINT_STRICT=1" "$CALLS"
 }
 
-@test "docs-runner should_run_the_snippet_fallback_when_no_runner_defines_the_task" {
+@test "docs-runner should_run_the_snippet_fallback_when_mise_does_not_define_the_task" {
 	cd "$TEST_ROOT"
 
 	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash "$BATS_TEST_DIRNAME/../../build-docs/scripts/docs-runner.sh" \

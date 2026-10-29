@@ -2,7 +2,7 @@ name: Lint Documentation
 description: >
   Run docs lint suite: link check (lychee) + prose lint (textlint),
   with optional snippet validation for code examples via `alef snippets`.
-  Each step runs the consumer's docs:* mise task, else its go-task task, else the tool directly.
+  Each step runs the consumer's docs:* mise task, else the tool directly.
 
 inputs:
   working-directory:
@@ -15,7 +15,7 @@ inputs:
     default: "false"
   validate-snippets:
     description: >-
-      Also validate code snippets: the docs:snippets:validate mise or go-task task when defined,
+      Also validate code snippets: the docs:snippets:validate mise task when defined,
       else `alef snippets validate`
     required: false
     default: "false"
@@ -27,26 +27,6 @@ inputs:
 runs:
   using: composite
   steps:
-    # ~keep go-task is installed only for a consumer still on a Taskfile whose docs tasks mise does not define.
-    - name: Resolve docs task runner
-      id: runner
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        VALIDATE_SNIPPETS: ${{ inputs.validate-snippets }}
-      run: |
-        set -euo pipefail
-        docs_tasks=(docs:lint:links docs:lint:prose)
-        if [ "$VALIDATE_SNIPPETS" = "true" ]; then
-          docs_tasks+=(docs:snippets:validate)
-        fi
-        needs_task="$("${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" needs-task "${docs_tasks[@]}")"
-        echo "needs-task=$needs_task" >> "$GITHUB_OUTPUT"
-
-    - name: Install Task
-      if: steps.runner.outputs.needs-task == 'true'
-      uses: xberg-io/actions/install-task@v1
-
     - name: Install prek
       shell: bash
       env:

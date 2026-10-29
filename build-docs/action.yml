@@ -2,7 +2,7 @@ name: Build Documentation
 description: >
   Build the documentation site with zensical.
   Supports strict mode for CI (fail on warnings) vs dev mode (permissive).
-  Runs the consumer's docs:build[:strict] mise task, else its go-task task, else zensical directly.
+  Runs the consumer's docs:build[:strict] mise task, else zensical directly.
 
 inputs:
   working-directory:
@@ -53,26 +53,6 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
         install-command: "uv sync --all-extras --all-packages --group dev --group ${{ steps.validate-docs-group.outputs.docs-group }} --no-install-project --no-install-workspace"
-
-    # ~keep go-task is installed only for a consumer still on a Taskfile whose docs task mise does not define.
-    - name: Resolve docs task runner
-      id: runner
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        DOCS_STRICT: ${{ inputs.strict }}
-      run: |
-        set -euo pipefail
-        docs_task=docs:build
-        if [ "$DOCS_STRICT" = "true" ]; then
-          docs_task=docs:build:strict
-        fi
-        needs_task="$("${{ github.action_path }}/scripts/docs-runner.sh" needs-task "$docs_task")"
-        echo "needs-task=$needs_task" >> "$GITHUB_OUTPUT"
-
-    - name: Install Task
-      if: steps.runner.outputs.needs-task == 'true'
-      uses: xberg-io/actions/install-task@v1
 
     - name: Build documentation
       shell: bash

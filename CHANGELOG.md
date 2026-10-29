@@ -6,6 +6,9 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Changed
 
+- `build-docs` and `lint-docs` no longer fall back to a consumer's go-task Taskfile: each `docs:*` task runs
+  through mise when the consumer's mise config defines it, else the tool runs directly. They no longer install
+  go-task. Inputs are unchanged.
 - `setup-ai-rulez` builds a `source-revision` with go-task v3.54.0 that `go install` puts in a private
   directory, instead of through `install-task`, so no `task` binary reaches later steps.
 

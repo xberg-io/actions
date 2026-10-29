@@ -26,18 +26,6 @@ make_mise_stub() {
 	chmod +x "$STUB_BIN/mise"
 }
 
-# go-task 3.54: `--list-all --json` prints {"tasks": [{"name": ...}]}. TASK_STUB_TASKS lists the names.
-make_task_stub() {
-	printf '%s\n' '#!/usr/bin/env bash' \
-		'echo "task $*" >>"$CALLS"' \
-		'if [ "$1" = "--list-all" ]; then' \
-		'  printf "{\n  \"tasks\": [\n"' \
-		'  for t in ${TASK_STUB_TASKS:-}; do printf "    {\n      \"name\": \"%s\",\n      \"task\": \"%s\"\n    },\n" "$t" "$t"; done' \
-		'  printf "  ]\n}\n"' \
-		'fi' >"$STUB_BIN/task"
-	chmod +x "$STUB_BIN/task"
-}
-
 run_runner() {
 	run env PATH="$STUB_BIN:/usr/bin:/bin" "$@"
 }
@@ -46,76 +34,44 @@ runner() {
 	echo "$BATS_TEST_DIRNAME/../scripts/docs-runner.sh"
 }
 
-@test "docs-runner should_run_the_mise_task_when_mise_defines_it_even_with_a_taskfile" {
+@test "docs-runner should_run_the_mise_task_when_mise_defines_it" {
 	make_mise_stub
-	make_task_stub
-	touch "$REPO/Taskfile.yml"
 	cd "$REPO"
 
-	run_runner MISE_STUB_TASKS="docs:build" TASK_STUB_TASKS="docs:build" \
-		/bin/bash "$(runner)" run docs:build echo fallback-ran
+	run_runner MISE_STUB_TASKS="docs:build" /bin/bash "$(runner)" run docs:build echo fallback-ran
 
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Running mise task docs:build"* ]]
 	[[ "$output" != *"fallback-ran"* ]]
 	grep -qx "mise run docs:build" "$CALLS"
-	[ "$(grep -c '^task ' "$CALLS")" -eq 0 ]
 }
 
-@test "docs-runner should_run_the_go_task_task_when_only_the_taskfile_defines_it" {
+@test "docs-runner should_run_the_fallback_when_mise_does_not_define_the_task" {
 	make_mise_stub
-	make_task_stub
-	touch "$REPO/Taskfile.yml"
 	cd "$REPO"
 
-	run_runner MISE_STUB_TASKS="docs:lint:links" TASK_STUB_TASKS="docs:build docs:build:strict" \
-		/bin/bash "$(runner)" run docs:build:strict echo fallback-ran
+	run_runner MISE_STUB_TASKS="docs:build:strict" /bin/bash "$(runner)" run docs:build echo fallback-ran
 
 	[ "$status" -eq 0 ]
-	[[ "$output" == *"Running go-task task docs:build:strict"* ]]
-	grep -qx "task docs:build:strict" "$CALLS"
+	[[ "$output" == *"No docs:build task in mise; running: echo fallback-ran"* ]]
+	[[ "$output" == *$'\n'"fallback-ran"* ]]
 	[ "$(grep -c '^mise run' "$CALLS")" -eq 0 ]
 }
 
-@test "docs-runner should_find_a_taskfile_in_a_parent_of_the_working_directory" {
-	make_task_stub
-	touch "$REPO/Taskfile.yaml"
-	mkdir -p "$REPO/docs"
-	cd "$REPO/docs"
-
-	run_runner TASK_STUB_TASKS="docs:build" /bin/bash "$(runner)" run docs:build echo fallback-ran
-
-	[ "$status" -eq 0 ]
-	grep -qx "task docs:build" "$CALLS"
-}
-
-@test "docs-runner should_run_the_fallback_when_the_taskfile_does_not_list_the_task" {
-	make_mise_stub
-	make_task_stub
+@test "docs-runner should_never_run_go_task_even_with_a_taskfile_and_task_on_path" {
+	printf '%s\n' '#!/usr/bin/env bash' 'echo "task $*" >>"$CALLS"' >"$STUB_BIN/task"
+	chmod +x "$STUB_BIN/task"
 	touch "$REPO/Taskfile.yml"
 	cd "$REPO"
 
-	# docs:build must not match docs:build:strict as a prefix.
-	run_runner TASK_STUB_TASKS="docs:build:strict" /bin/bash "$(runner)" run docs:build echo fallback-ran
+	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
 
 	[ "$status" -eq 0 ]
-	[[ "$output" == *"No docs:build task in mise or a Taskfile; running: echo fallback-ran"* ]]
 	[[ "$output" == *$'\n'"fallback-ran"* ]]
-	[ "$(grep -c '^task docs:build' "$CALLS")" -eq 0 ]
-}
-
-@test "docs-runner should_ignore_go_task_on_path_when_there_is_no_taskfile" {
-	make_task_stub
-	cd "$REPO"
-
-	run_runner TASK_STUB_TASKS="docs:build" /bin/bash "$(runner)" run docs:build echo fallback-ran
-
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"fallback-ran"* ]]
 	[ ! -s "$CALLS" ]
 }
 
-@test "docs-runner should_run_the_fallback_without_mise_or_go_task" {
+@test "docs-runner should_run_the_fallback_without_mise" {
 	cd "$REPO"
 
 	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
@@ -142,60 +98,6 @@ runner() {
 	[[ "$output" != *"fallback-ran"* ]]
 }
 
-@test "docs-runner should_need_go_task_for_a_taskfile_task_mise_does_not_define" {
-	make_mise_stub
-	touch "$REPO/Taskfile.yml"
-	cd "$REPO"
-
-	run_runner MISE_STUB_TASKS="docs:lint:links" /bin/bash "$(runner)" needs-task docs:lint:links docs:lint:prose
-
-	[ "$status" -eq 0 ]
-	[ "$output" = "true" ]
-}
-
-@test "docs-runner should_need_go_task_for_a_taskfile_in_a_parent_directory" {
-	touch "$REPO/taskfile.yml"
-	mkdir -p "$REPO/docs"
-	cd "$REPO/docs"
-
-	run_runner /bin/bash "$(runner)" needs-task docs:build
-
-	[ "$status" -eq 0 ]
-	[ "$output" = "true" ]
-}
-
-@test "docs-runner should_not_need_go_task_when_mise_defines_every_task" {
-	make_mise_stub
-	touch "$REPO/Taskfile.yml"
-	cd "$REPO"
-
-	run_runner MISE_STUB_TASKS="docs:lint:links docs:lint:prose" \
-		/bin/bash "$(runner)" needs-task docs:lint:links docs:lint:prose
-
-	[ "$status" -eq 0 ]
-	[ "$output" = "false" ]
-}
-
-@test "docs-runner should_not_need_go_task_without_a_taskfile" {
-	cd "$REPO"
-
-	run_runner /bin/bash "$(runner)" needs-task docs:build
-
-	[ "$status" -eq 0 ]
-	[ "$output" = "false" ]
-}
-
-@test "docs-runner should_not_need_go_task_when_it_is_already_on_path" {
-	make_task_stub
-	touch "$REPO/Taskfile.yml"
-	cd "$REPO"
-
-	run_runner /bin/bash "$(runner)" needs-task docs:build
-
-	[ "$status" -eq 0 ]
-	[ "$output" = "false" ]
-}
-
 @test "docs-runner should_reject_a_run_without_a_fallback_command" {
 	cd "$REPO"
 
@@ -209,44 +111,4 @@ runner() {
 	run_runner /bin/bash "$(runner)" build
 
 	[ "$status" -eq 2 ]
-}
-
-@test "docs-runner should_consume_the_complete_task_listing_after_a_match" {
-	make_task_stub
-	cat >"$STUB_BIN/task" <<'STUB'
-#!/usr/bin/env bash
-set -euo pipefail
-echo "task $*" >>"$CALLS"
-if [ "$1" = "--list-all" ]; then
-  printf '{"tasks": [{"name": "docs:build"}],\n"padding": "'
-  head -c 262144 /dev/zero | tr '\0' x
-  printf '"}\n'
-fi
-STUB
-	touch "$REPO/Taskfile.yml"
-	cd "$REPO"
-
-	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
-
-	[ "$status" -eq 0 ]
-	[[ "$output" != *"fallback-ran"* ]]
-	grep -qx "task docs:build" "$CALLS"
-}
-
-@test "docs-runner should_not_accept_a_match_from_a_failed_task_listing" {
-	make_task_stub
-	cat >"$STUB_BIN/task" <<'STUB'
-#!/usr/bin/env bash
-echo "task $*" >>"$CALLS"
-printf '{"tasks": [{"name": "docs:build"}]}\n'
-exit 17
-STUB
-	touch "$REPO/Taskfile.yml"
-	cd "$REPO"
-
-	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
-
-	[ "$status" -eq 0 ]
-	[[ "$output" == *"fallback-ran"* ]]
-	[ "$(grep -c '^task docs:build' "$CALLS")" -eq 0 ]
 }
