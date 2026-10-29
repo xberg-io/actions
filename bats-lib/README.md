@@ -20,7 +20,6 @@ Set it two ways, and set both, or a suite passes locally and fails in CI:
 | Where | How |
 |---|---|
 | mise task | `env = { BATS_LIB_PATH = "{{config_root}}/tests/lib" }` on the `test:bats` task |
-| Taskfile | `env: BATS_LIB_PATH: "{{.ROOT_DIR}}/tests/lib"` on the `test:bats` task |
 | CI | `lib-path: tests/lib` on the `run-bats` step |
 
 ## Why consumers vendor a copy instead of fetching it
