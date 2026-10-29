@@ -40,7 +40,7 @@ runs:
         if [ "$VALIDATE_SNIPPETS" = "true" ]; then
           docs_tasks+=(docs:snippets:validate)
         fi
-        needs_task="$("${{ github.action_path }}/scripts/docs-runner.sh" needs-task "${docs_tasks[@]}")"
+        needs_task="$("${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" needs-task "${docs_tasks[@]}")"
         echo "needs-task=$needs_task" >> "$GITHUB_OUTPUT"
 
     - name: Install Task
@@ -120,7 +120,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        "${{ github.action_path }}/scripts/docs-runner.sh" run docs:lint:links \
+        "${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" run docs:lint:links \
           lychee --offline --no-progress docs/ .github/ || true
 
     - name: Lint documentation prose
@@ -130,7 +130,7 @@ runs:
         DOCS_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
-        runner="${{ github.action_path }}/scripts/docs-runner.sh"
+        runner="${{ github.action_path }}/../build-docs/scripts/docs-runner.sh"
         if [ "$DOCS_STRICT" = "true" ]; then
           TEXTLINT_STRICT=1 "$runner" run docs:lint:prose textlint docs/
         else
@@ -149,5 +149,5 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        "${{ github.action_path }}/scripts/docs-runner.sh" run docs:snippets:validate \
+        "${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" run docs:snippets:validate \
           alef snippets validate --snippets docs/snippets --level syntax --timeout 120 -j 4

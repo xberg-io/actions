@@ -19,15 +19,11 @@ teardown() {
 }
 
 # The detection is tested in build-docs/tests; both actions ship the same script.
-@test "docs-runner should_match_the_build_docs_copy" {
-	cmp "$BATS_TEST_DIRNAME/../scripts/docs-runner.sh" "$BATS_TEST_DIRNAME/../../build-docs/scripts/docs-runner.sh"
-}
-
 @test "docs-runner should_pass_textlint_strict_through_to_the_mise_prose_task" {
 	cd "$TEST_ROOT"
 
 	run env PATH="$STUB_BIN:/usr/bin:/bin" MISE_STUB_TASK="docs:lint:prose" TEXTLINT_STRICT=1 \
-		/bin/bash "$BATS_TEST_DIRNAME/../scripts/docs-runner.sh" run docs:lint:prose textlint docs/
+		/bin/bash "$BATS_TEST_DIRNAME/../../build-docs/scripts/docs-runner.sh" run docs:lint:prose textlint docs/
 
 	[ "$status" -eq 0 ]
 	grep -qx "mise run docs:lint:prose TEXTLINT_STRICT=1" "$CALLS"
@@ -36,7 +32,7 @@ teardown() {
 @test "docs-runner should_run_the_snippet_fallback_when_no_runner_defines_the_task" {
 	cd "$TEST_ROOT"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash "$BATS_TEST_DIRNAME/../scripts/docs-runner.sh" \
+	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash "$BATS_TEST_DIRNAME/../../build-docs/scripts/docs-runner.sh" \
 		run docs:snippets:validate echo alef snippets validate
 
 	[ "$status" -eq 0 ]
