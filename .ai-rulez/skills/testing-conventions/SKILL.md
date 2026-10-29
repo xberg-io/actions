@@ -20,7 +20,7 @@ Every action in this repo is a script plus a thin `action.yml`. The scripts are 
 
 ### Which framework, and where
 
-Framework, test location and `task` target per language are in the `test-coverage-by-language` rule.
+Framework, test location and `mise run` task per language are in the `test-coverage-by-language` rule.
 
 Split a Python suite that exceeds the 1000-line `file-too-long` lint at a natural seam (one file per script under test) rather than exempting it in `poly.toml`.
 

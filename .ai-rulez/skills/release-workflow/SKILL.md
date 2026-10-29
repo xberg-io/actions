@@ -31,11 +31,11 @@ git status --porcelain            # must be EMPTY — no uncommitted/untracked c
 git log --oneline origin/main -1  # confirm local main == remote tip
 
 poly fmt --check .                # formatting clean
-poly lint .                       # lint clean (also: task lint)
-task test                         # pytest + Bats + Pester (needs pwsh and Pester 6.2.0)
+poly lint .                       # lint clean (also: mise run lint)
+mise run test                     # pytest + Bats + Pester (needs pwsh and Pester 6.2.0)
 ```
 
-Do not proceed if the tree is dirty or any check fails. `task validate` (== `task lint`) runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
+Do not proceed if the tree is dirty or any check fails. `mise run validate` (== `mise run lint`) runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
 
 ### 1. Roll the CHANGELOG and commit
 

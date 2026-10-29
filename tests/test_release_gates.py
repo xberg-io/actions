@@ -14,7 +14,7 @@ def test_task_test_collects_every_configured_testpath():
     assert [step["task"] for step in tasks["test"]["run"]] == ["test:unit", "test:bats", "test:pester"]
 
     release_skill = (_ROOT / ".ai-rulez" / "skills" / "release-workflow" / "SKILL.md").read_text()
-    assert "task test                         # pytest + Bats + Pester" in release_skill
+    assert "mise run test                     # pytest + Bats + Pester" in release_skill
     assert "pytest tests/" not in release_skill
 
 

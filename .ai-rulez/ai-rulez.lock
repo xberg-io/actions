@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.9.2'
 scope = 'all'
-tree = 'sha256:323220ba1976236536e9806071a2430d916decaa58de5605238261b65a9b00d1'
+tree = 'sha256:27abc5546d483dd1d2fd44811fc2dc7fa579b528f8d71e18884940890ad4f85e'
 
 [[include]]
 name = 'xberg-cicd'
@@ -106,7 +106,7 @@ digest = 'sha256:772854a122a129565f974e6c5ae84ef1169f7bc4f3a2068bfdc56b548c16169
 name = 'release-workflow'
 source = '.ai-rulez/skills/release-workflow/SKILL.md'
 commit = ''
-digest = 'sha256:e131a420bae77db4e3a4f90635dabd2684dbb117b69ea24c6d9c956fcf4149ea'
+digest = 'sha256:ccffc1351b094881df1199e8554eabcb6feffb7ffb4263a4ffdfd38dc30afbef'
 
 [[served]]
 name = 'scoop-distribution'
@@ -142,7 +142,7 @@ digest = 'sha256:8651ec0982657585e697dd493effee488ec008a92362636b2262db859ab30af
 name = 'testing-conventions'
 source = '.ai-rulez/skills/testing-conventions/SKILL.md'
 commit = ''
-digest = 'sha256:37a1f519ddee7c4a1822ac293669a550d673c97ef5d162866f781dc28a2c92ca'
+digest = 'sha256:eebb097b80b8a10244d3a15e483a9219a628d6b4a0b5125ef225152586fd4af0'
 
 [[served]]
 name = 'tracing-conventions'
@@ -172,13 +172,13 @@ digest = 'sha256:59187d66271fb5e7d102fa801ba5519723e4d40a4964efdb9ea66452f9cb5b1
 kind = 'rule'
 id = 'shell-deltas'
 path = 'rules/shell-deltas.md'
-digest = 'sha256:42037f0d42b4fd99d2032e99450b122841710d64a36549aba1579f6051739580'
+digest = 'sha256:2714990b63716619cc6426b3b1b5c95656a5863b0358a6f77041e6df19273a25'
 
 [[item]]
 kind = 'rule'
 id = 'test-coverage-by-language'
 path = 'rules/test-coverage-by-language.md'
-digest = 'sha256:69cc40144823edc0639cb0026ce34e68ca3cf00593a3183565a5ef53b9f3935e'
+digest = 'sha256:98b5e0188a18c24e7c559ea47ff5e96e077b8a7419283bf0d6b83b279c4ccbe6'
 
 [[item]]
 kind = 'rule'
@@ -195,10 +195,10 @@ digest = 'sha256:0c9a9f6f3f440d1bc8dad96fc41d6458907ae78bd923e8621713ccfdc08a026
 kind = 'skill'
 id = 'release-workflow'
 path = 'skills/release-workflow'
-digest = 'sha256:21ac5478c1134caf38c5fb3a2f752a317f43930c2b9902b9d64f90c4bb06d994'
+digest = 'sha256:641bb373cf8896c35f0bd5250f5bc174f3b4a8960d7c8e0064a0476038855f1c'
 
 [[item]]
 kind = 'skill'
 id = 'testing-conventions'
 path = 'skills/testing-conventions'
-digest = 'sha256:ba1008da316ae88af860a58885a8eadd6982c8e2c14f6fb00f198c089bd3ed50'
+digest = 'sha256:854e2aa7a5b7a74531123f58087b5cc59a2456a62b02af990abd005ef8fc6b2e'

@@ -21,7 +21,7 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 | `setup-chromium` | Non-snap Chromium for headless e2e tests; uses Playwright browser installer; outputs `chromium-path` for direct binary use |
 | [`setup-mise`](setup-mise/README.md) | mise and the tools in `mise.toml`, installed `--locked` against `mise.lock`, with caching |
 | [`check-toolchain`](check-toolchain/README.md) | Fail when `mise.toml` drifts from the xberg-io/toolchains baseline named in `toolchains.toml` |
-| `install-task` | Deprecated: declare `task` in `mise.toml` and use `setup-mise`. [Task](https://taskfile.dev) runner installed through mise (`latest` by default) |
+| `install-task` | Deprecated, removed in a later release: declare `task` in `mise.toml` and use `setup-mise`, or move to mise tasks. [Task](https://taskfile.dev) runner installed through mise (`latest` by default) |
 | `install-alef` | Alef CLI installation. `version` takes a semver tag, `latest` (reads the `alef.toml` pin), or `main`. A pinned version with no release archive and no buildable tag fails the job; set `allow-unreleased: true` to opt in to an unpinned `main` build instead |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 | `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
@@ -268,26 +268,26 @@ index and plugin resources, alongside the native archives and Agent Plugins expo
 
 The plugin test workflow exercises packaging and invalid-source failures. Repository governance
 validation also lints authored skills, commands and configuration. Local Poly hooks validate
-staged sources and shipped plugin artifacts; `task governance:check` checks ignored runtime
+staged sources and shipped plugin artifacts; `mise run governance:check` checks ignored runtime
 files in the live checkout.
 
 ## Development
 
 ```bash
 # Install dependencies
-task setup
+mise run setup
 
 # Run every suite: pytest, Bats, and Pester
-task test
+mise run test
 
 # Run Bash action tests (requires Bats)
-task test:bats
+mise run test:bats
 
 # Run PowerShell action tests (requires PowerShell 7 and Pester)
-task test:pester
+mise run test:pester
 
 # Lint
-task lint
+mise run lint
 ```
 
 Python helpers are tested with pytest; Bash scripts are tested with Bats; PowerShell scripts are tested

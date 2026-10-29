@@ -19,6 +19,7 @@ Set it two ways, and set both, or a suite passes locally and fails in CI:
 
 | Where | How |
 |---|---|
+| mise task | `env = { BATS_LIB_PATH = "{{config_root}}/tests/lib" }` on the `test:bats` task |
 | Taskfile | `env: BATS_LIB_PATH: "{{.ROOT_DIR}}/tests/lib"` on the `test:bats` task |
 | CI | `lib-path: tests/lib` on the `run-bats` step |
 
@@ -84,7 +85,7 @@ versions suppressed. Suites written against an older bats may surface new failur
 ## Linting
 
 `poly` has no engine for the `.bats` extension, so these files are invisible to `poly lint`.
-`task lint:bats` runs `shfmt -ln bats` and `shellcheck -s bash` over them instead. Four codes are
+`mise run lint:bats` runs `shfmt -ln bats` and `shellcheck -s bash` over them instead. Four codes are
 disabled there, all structural to Bats: `SC2016`/`SC2183` (a stub body is single-quoted on
 purpose) and `SC2030`/`SC2031` (`run` forks, so every `setup()` export reads as subshell-local).
 

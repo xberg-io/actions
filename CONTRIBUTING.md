@@ -10,24 +10,25 @@ Please begin by reading our AI section below, followed by the getting started gu
 
 Make sure to have [Git](https://git-scm.com/) and [Python](https://www.python.org/) 3.10+ with [uv](https://docs.astral.sh/uv/) installed on your machine.
 
-1. Install [Task](https://taskfile.dev/installation/) on your machine.
+1. Install [mise](https://mise.jdx.dev/getting-started.html) on your machine.
 2. run:
 
 ```bash
-task setup
+mise install
+mise run setup
 ```
 
 This will setup the dependencies, and pre-commit hooks via `poly`.
 
 ## Quick reference
 
-| Command         | What it does                              |
-| --------------- | ----------------------------------------- |
-| `task setup`    | Install dependencies and pre-commit hooks |
-| `task lint`     | Lint actions and workflows                |
-| `task test`     | Run the action test suite                 |
-| `task test:bats`| Run Bash action tests with Bats           |
-| `task validate` | Validate action and workflow metadata     |
+| Command              | What it does                              |
+| -------------------- | ----------------------------------------- |
+| `mise run setup`     | Install dependencies and pre-commit hooks |
+| `mise run lint`      | Lint actions and workflows                |
+| `mise run test`      | Run the action test suite                 |
+| `mise run test:bats` | Run Bash action tests with Bats           |
+| `mise run validate`  | Validate action and workflow metadata     |
 
 ## What to keep in mind
 
@@ -69,11 +70,11 @@ plugin settings live separately in `config.plugins.toml`.
 ```sh
 ai-rulez validate --no-local
 ai-rulez generate --no-local --strict-config
-task governance:check
+mise run governance:check
 ```
 
 The final command checks the materialized local governance files, including ignored harness
-outputs. Installing governance hooks requires Python 3.11 or newer. Run `task governance:hooks:install` to install the repository's reviewed Poly hooks.
+outputs. Installing governance hooks requires Python 3.11 or newer. Run `mise run governance:hooks:install` to install the repository's reviewed Poly hooks.
 The hooks validate staged sources and verify shipped plugin artifacts where present; CI also
 validates the authored content. Shared convention modules come from `xberg-io/agent-conventions`;
 Git credentials are needed when an included repository requires access.
