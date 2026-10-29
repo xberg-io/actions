@@ -9,7 +9,8 @@ on:
       - "**/tests/**"
       - "install-pester/**"
       - "run-pester/**"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/test-pester.yml"
   pull_request:
     paths:
@@ -17,7 +18,8 @@ on:
       - "**/tests/**"
       - "install-pester/**"
       - "run-pester/**"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/test-pester.yml"
 
 permissions:

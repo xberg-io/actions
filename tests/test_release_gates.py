@@ -26,7 +26,8 @@ def test_unit_workflow_runs_when_reusable_validate_changes():
     for event in ("push", "pull_request"):
         paths = triggers[event]["paths"]
         assert workflow_path in paths
-        assert "Taskfile.yml" in paths
+        assert "mise.toml" in paths
+        assert "mise-tasks/**" in paths
 
 
 def test_validate_versions_workflow_uses_current_alef_schema():

@@ -9,7 +9,8 @@ on:
       - "**/tests/**"
       - "install-bats/**"
       - "run-bats/**"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/test-bats.yml"
   pull_request:
     paths:
@@ -17,14 +18,15 @@ on:
       - "**/tests/**"
       - "install-bats/**"
       - "run-bats/**"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/test-bats.yml"
 
 permissions:
   contents: read
 
-# ~keep One declared version per side of the fence: the workflow passes it to install-bats and the
-# Taskfile names the same number, so a local run and a CI run agree instead of drifting apart.
+# ~keep One declared version per side of the fence: the workflow passes it to install-bats and
+# ~keep mise.toml names the same number, so a local run and a CI run agree instead of drifting apart.
 env:
   BATS_VERSION: "1.14.0"
 
@@ -38,9 +40,6 @@ jobs:
         os: [ubuntu-latest, macos-26]
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install Task
-        uses: ./install-task
 
       - name: Install Bats
         uses: ./install-bats

@@ -18,9 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Task
-        uses: ./install-task
-
       - name: Setup Rust
         uses: ./setup-rust
         with:
@@ -67,7 +64,6 @@ jobs:
         shell: bash
         run: |
           echo "=== Tool Versions ==="
-          task --version
           rustc --version
           cargo --version
           python --version

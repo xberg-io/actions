@@ -15,7 +15,8 @@ on:
       - "uv.lock"
       - "pyproject.toml"
       - "**/pyrefly.toml"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/reusable-validate.yml"
       - ".github/workflows/test-unit.yml"
   pull_request:
@@ -31,7 +32,8 @@ on:
       - "uv.lock"
       - "pyproject.toml"
       - "**/pyrefly.toml"
-      - "Taskfile.yml"
+      - "mise.toml"
+      - "mise-tasks/**"
       - ".github/workflows/reusable-validate.yml"
       - ".github/workflows/test-unit.yml"
 
@@ -84,10 +86,10 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
-      - uses: ./install-task
+      - uses: ./setup-mise
 
       - name: Pyrefly
-        run: task typecheck
+        run: mise run typecheck
 
   actionlint:
     runs-on: ubuntu-latest
