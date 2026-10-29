@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- This repository's `governance:check` and `governance:hooks:install` tasks come from the xberg-io/toolchains
+  v1.7.0 `governance` and `governance-check` task sets instead of local definitions, and its toolchain baseline
+  moves to v1.7.0.
+
 ## [1.36.0] - 2026-10-29
 
 ### Changed

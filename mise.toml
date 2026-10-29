@@ -60,9 +60,5 @@ description = "Run Bats tests for Bash action scripts"
 env = { BATS_LIB_PATH = "{{config_root}}/bats-lib" }
 run = "bats --recursive --print-output-on-failure ."
 
-[tasks."governance:hooks:install"]
-file = "https://raw.githubusercontent.com/xberg-io/toolchains/v1.5.0/tasks/governance/hooks-install.sh"
-
-[tasks."governance:check"]
-description = "Check materialized local governance outputs against shared sources"
-run = "ai-rulez generate --check --no-local --strict-config"
+[task_config]
+includes = ["mise-tasks", "mise-tasks/shared.toml"]
