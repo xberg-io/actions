@@ -95,9 +95,13 @@ stub() {
 }
 
 @test "should_continue_when_sccache_is_not_available" {
-	run env -u SCCACHE_PATH PATH="$BIN:/usr/bin:/bin" "$SCRIPT_DIR/validate-sccache.sh"
+	run env -u SCCACHE_PATH RUSTC_WRAPPER=sccache \
+		PATH="$BIN:/usr/bin:/bin" "$SCRIPT_DIR/validate-sccache.sh"
 	[ "$status" -eq 0 ]
-	[ "$output" = $'Checking sccache installation...\nWarning: sccache not found in PATH and SCCACHE_PATH not set or invalid\nContinuing without sccache' ]
+	local expected=$'Checking sccache runtime...\n'
+	expected+='Warning: sccache runtime is unavailable, continuing with direct compilation'
+	[ "$output" = "$expected" ]
+	[ "$(cat "$GITHUB_ENV")" = $'SCCACHE_GHA_ENABLED=false\nRUSTC_WRAPPER=' ]
 }
 
 @test "should_print_rust_installation_versions_and_matching_target" {

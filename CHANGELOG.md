@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `setup-rust` checks the sccache server before compilation and clears its compiler wrapper when cache startup fails,
+  so cache backend outages do not prevent ordinary Rust builds. Cache diagnostics containing signed URLs stay out of logs.
+
 ### Changed
 
 - This repository's `governance:check` and `governance:hooks:install` tasks come from the xberg-io/toolchains

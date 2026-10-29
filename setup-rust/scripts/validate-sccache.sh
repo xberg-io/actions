@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
-set +e
+set -euo pipefail
 
-echo "Checking sccache installation..."
-if command -v sccache &>/dev/null; then
-  echo "sccache found in PATH"
-  which sccache
-  sccache --version || echo "sccache version check failed"
-elif [ -n "${SCCACHE_PATH:-}" ] && [ -d "${SCCACHE_PATH}" ]; then
-  echo "SCCACHE_PATH is set to: ${SCCACHE_PATH}"
-  if [ -f "${SCCACHE_PATH}/sccache" ]; then
-    echo "sccache executable found at SCCACHE_PATH"
-    "${SCCACHE_PATH}/sccache" --version || echo "sccache version check failed"
-  else
-    echo "sccache executable NOT found at SCCACHE_PATH"
-    ls -la "${SCCACHE_PATH}" || echo "Failed to list SCCACHE_PATH contents"
-  fi
-else
-  echo "Warning: sccache not found in PATH and SCCACHE_PATH not set or invalid"
-  echo "Continuing without sccache"
+echo "Checking sccache runtime..."
+if [ -z "${RUSTC_WRAPPER:-}" ]; then
+  echo "sccache is disabled, continuing with direct compilation"
+  exit 0
 fi
 
-exit 0
+# --start-server checks cache storage; --show-stats can succeed without a server.
+# Cache errors can contain signed URLs, so keep probe diagnostics out of logs. ~keep
+if command -v "$RUSTC_WRAPPER" &>/dev/null && "$RUSTC_WRAPPER" --start-server &>/dev/null; then
+  echo "sccache runtime is ready"
+  exit 0
+fi
+
+echo "Warning: sccache runtime is unavailable, continuing with direct compilation"
+{
+  echo "SCCACHE_GHA_ENABLED=false"
+  echo "RUSTC_WRAPPER="
+} >>"$GITHUB_ENV"
