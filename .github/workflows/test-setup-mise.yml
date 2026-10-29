@@ -77,6 +77,15 @@ jobs:
           [[ "${MISE_RUBY_COMPILE:-}" == "false" ]]
           [[ "${MISE_HTTP_TIMEOUT:-}" == "5m" ]]
 
+      # ~keep pwsh, so the task's shell comes from setup-mise's environment and not from this step's.
+      - name: Run a POSIX inline task on every OS
+        shell: pwsh
+        working-directory: setup-mise/tests/fixtures/locked
+        run: |
+          $output = mise run posix-inline 2>&1 | Out-String
+          Write-Output $output
+          if ($LASTEXITCODE -ne 0 -or $output -notmatch 'posix-inline ok: ci') { throw "inline task did not run under a POSIX shell" }
+
       - name: Verify the install left the fixture and its locks untouched
         shell: bash
         run: |

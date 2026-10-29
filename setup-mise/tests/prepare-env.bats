@@ -18,7 +18,7 @@ teardown() {
 
 # Run with a clean mise environment, so the host's own MISE_* variables cannot decide the result.
 run_script() {
-	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED -u MISE_TASK_RUN_AUTO_INSTALL "$@"
+	run env -u MISE_ENV -u MISE_DATA_DIR -u MISE_RUBY_COMPILE -u MISE_HTTP_TIMEOUT -u MISE_LOCKED -u MISE_TASK_RUN_AUTO_INSTALL -u MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS -u RUNNER_OS "$@"
 }
 
 @test "prepare should_export_the_runner_defaults_when_nothing_is_preset" {
@@ -164,4 +164,21 @@ run_script() {
 
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"install must be true or false"* ]]
+}
+
+@test "prepare should_point_windows_inline_tasks_at_git_bash" {
+	mkdir -p "$TEST_ROOT/bin"
+	printf '#!/bin/sh\necho "C:/Program Files/Git/usr/bin/bash.exe"\n' >"$TEST_ROOT/bin/cygpath"
+	chmod +x "$TEST_ROOT/bin/cygpath"
+	run_script RUNNER_OS=Windows PATH="$TEST_ROOT/bin:$PATH" "$SCRIPT" "$REPO" "" auto
+
+	[ "$status" -eq 0 ]
+	grep -qx 'MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS="C:/Program Files/Git/usr/bin/bash.exe" -o errexit -c' "$GITHUB_ENV"
+}
+
+@test "prepare should_leave_the_inline_shell_alone_off_windows" {
+	run_script RUNNER_OS=Linux "$SCRIPT" "$REPO" "" auto
+
+	[ "$status" -eq 0 ]
+	! grep -q MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS "$GITHUB_ENV"
 }

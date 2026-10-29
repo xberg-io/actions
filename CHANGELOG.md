@@ -6,6 +6,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Changed
 
+- `setup-mise` points mise's Windows inline task shell at Git Bash (`MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS`,
+  unless already set). mise otherwise runs inline `run` strings under `cmd /c`, which breaks the POSIX task bodies
+  ported from go-task, whose built-in shell ran them on every OS.
+
+### Changed
+
 - This repository's `governance:hooks:install` task comes from the shared xberg-io/toolchains v1.5.0 task library
   instead of a local copy, and its toolchain baseline moves to v1.5.0.
 

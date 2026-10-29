@@ -22,6 +22,12 @@ fi
 export_default MISE_RUBY_COMPILE false
 # mise's 30s default connect/read timeout fails repeatedly on loaded runners. ~keep
 export_default MISE_HTTP_TIMEOUT 5m
+# mise runs inline task `run` strings under `cmd /c` on Windows, where go-task used a POSIX shell and the
+# org's tasks are written for one. Point it at Git Bash; mise reads this setting from the environment only. ~keep
+if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
+  export_default MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS "\"$(cygpath -m "$(command -v bash)")\" -o errexit -c"
+fi
+
 # A job that installs only some tools (or none) runs `mise run` with exactly those; mise would otherwise
 # install every tool in mise.toml before the first task. ~keep
 case "$install" in

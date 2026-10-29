@@ -5,3 +5,7 @@ lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "windows-x64"]
 [tools]
 yq = "4.54.1"
 jq = "1.8.2"
+
+# ~keep POSIX-only on purpose: under cmd /c (mise's Windows default) the parameter expansion and `[` fail.
+[tasks.posix-inline]
+run = 'profile="${MISE_ENV:-none}"; [ "$profile" = ci ] && echo "posix-inline ok: $profile"'

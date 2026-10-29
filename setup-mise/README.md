@@ -47,6 +47,8 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 When `install-args` names some tools, or `install` is `false`, the action exports
 `MISE_TASK_RUN_AUTO_INSTALL=false` (unless already set), so a later `mise run` uses exactly the installed tools
 instead of installing the rest of `mise.toml` first.
+On Windows runners it also exports `MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS` for Git Bash (unless already set), so
+inline `run` tasks execute under the same POSIX shell as on Linux and macOS instead of `cmd /c`.
 
 ## Outputs
 
