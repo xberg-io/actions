@@ -41,7 +41,7 @@ lint.ignore = [
   "ASYNC110",
   "BLE001",
   "COM812",
-  "CPY",      # No copyright headers in this repo (matches poly.toml)
+  "CPY", # No copyright headers in this repo (matches poly.toml)
   "D100",
   "D104",
   "D107",
@@ -49,7 +49,7 @@ lint.ignore = [
   "E501",
   "EM",
   "FBT",
-  "FIX",      # We allow todo and fixme comments
+  "FIX", # We allow todo and fixme comments
   "ISC001",
   "PD011",
   "PGH003",
@@ -58,7 +58,7 @@ lint.ignore = [
   "S104",
   "S110",
   "S603",
-  "TD",       # We allow todo and fixme comments
+  "TD", # We allow todo and fixme comments
   "TRY",
 ]
 lint.per-file-ignores."**/scripts/**" = [
@@ -123,6 +123,8 @@ search-path = [
   "publish-github-release/scripts",
   "publish-homebrew-source-formulas/scripts",
   "publish-scoop-manifests/scripts",
+  "publish-maven/scripts",
+  "verify-package-contents/scripts",
 ]
 
 [tool.pytest]
@@ -134,6 +136,8 @@ ini_options.testpaths = [
   "publish-github-release/tests",
   "publish-homebrew-source-formulas/scripts",
   "publish-r-package/tests",
+  "publish-maven/tests",
+  "publish-hex/tests",
 ]
 ini_options.norecursedirs = ["dist", "build", "*.egg"]
 # Every tests/ dir carries an __init__.py, so under the default import mode they all resolve to

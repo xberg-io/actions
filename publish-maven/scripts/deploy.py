@@ -313,6 +313,72 @@ def write_settings_xml(server_id: str, username: str, password: str, gpg_passphr
     return path
 
 
+def run_guarded(
+    pom_file: str, profile: str, extra_args: str, dry_run: bool, server_id: str, *, expected_version: str
+) -> None:
+    from guarded import build_bundle, publish_verified, safe_extra_args
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "verify-package-contents" / "scripts"))
+    from notices import load_notices, verify_archive_bytes
+
+    required = [name.strip() for name in os.environ["INPUT_REQUIRED_NOTICE_FILES"].splitlines() if name.strip()]
+    notices = load_notices(Path(os.environ.get("INPUT_CANONICAL_ROOT", ".")), required)
+    arguments = safe_extra_args(extra_args)
+    if not expected_version:
+        raise ValueError("Guarded Maven publication requires expected-version")
+    passphrase = xml_escape(os.environ.get("MAVEN_GPG_PASSPHRASE", ""))
+    settings = (
+        "<settings><profiles><profile><id>signing</id><properties>"
+        f"<gpg.passphrase>{passphrase}</gpg.passphrase></properties></profile></profiles>"
+        "<activeProfiles><activeProfile>signing</activeProfile></activeProfiles></settings>"
+    )
+    with tempfile.TemporaryDirectory(prefix="central-no-upload-") as directory:
+        settings_path = Path(directory) / "settings.xml"
+        settings_path.write_text(settings)
+        settings_path.chmod(0o600)
+        payload, config = build_bundle(
+            pom_file,
+            profile,
+            arguments,
+            str(settings_path),
+            expected_version,
+            server_id=server_id,
+            timeout=int(os.environ.get("INPUT_DEPLOY_TIMEOUT", "1800")),
+        )
+    publish_verified(
+        payload,
+        config,
+        notices,
+        os.environ.get("MAVEN_USERNAME", ""),
+        os.environ.get("MAVEN_PASSWORD", ""),
+        verifier=verify_archive_bytes,
+        dry_run=dry_run,
+    )
+
+
+def validate_pom_path(pom_file: str) -> None:
+    if not pom_file:
+        print("Error: INPUT_POM_FILE is required", file=sys.stderr)
+        sys.exit(1)
+
+    if not Path(pom_file).is_file():
+        print(f"Error: POM file not found: {pom_file}", file=sys.stderr)
+        sys.exit(1)
+
+
+def maybe_run_guarded(
+    pom_file: str, profile: str, extra_args: str, dry_run: bool, server_id: str, *, expected_version: str
+) -> bool:
+    if not os.environ.get("INPUT_REQUIRED_NOTICE_FILES", ""):
+        return False
+    try:
+        run_guarded(pom_file, profile, extra_args, dry_run, server_id, expected_version=expected_version)
+    except (ValueError, OSError, subprocess.SubprocessError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        sys.exit(1)
+    return True
+
+
 def main() -> None:
     pom_file = os.environ.get("INPUT_POM_FILE", "")
     maven_profile = os.environ.get("INPUT_MAVEN_PROFILE", "publish")
@@ -325,13 +391,10 @@ def main() -> None:
     deploy_timeout = int(os.environ.get("INPUT_DEPLOY_TIMEOUT", "1800"))
     expected_version = normalize_release_version(os.environ.get("INPUT_EXPECTED_VERSION", ""))
 
-    if not pom_file:
-        print("Error: INPUT_POM_FILE is required", file=sys.stderr)
-        sys.exit(1)
+    validate_pom_path(pom_file)
 
-    if not Path(pom_file).is_file():
-        print(f"Error: POM file not found: {pom_file}", file=sys.stderr)
-        sys.exit(1)
+    if maybe_run_guarded(pom_file, maven_profile, extra_args, dry_run, server_id, expected_version=expected_version):
+        return
 
     # ~keep Runs before the dry-run branch below on purpose: a dry run exists to catch a stale
     # checkout before the real release, so it must apply the same version assertion.
@@ -369,10 +432,7 @@ def main() -> None:
             )
         except TimeoutError as e:
             sys.stdout.flush()
-            print(
-                f"Error: {e}",
-                file=sys.stderr,
-            )
+            print(f"Error: {e}", file=sys.stderr)
             print(
                 "Maven deploy exceeded timeout — Central Portal likely stuck on publish confirmation;\n"
                 "check https://central.sonatype.com deployments.\n"

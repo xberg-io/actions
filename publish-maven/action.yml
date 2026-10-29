@@ -64,6 +64,18 @@ inputs:
     required: false
     default: ""
 
+  required-notice-files:
+    description: >
+      Newline-separated canonical filenames. Enables final-byte guarded publication: the audited
+      Central 0.12.0 release provider builds with skipUpload, then the verified bundle is uploaded once.
+      Requires expected-version; supports one component with main, sources and javadoc JARs.
+    required: false
+    default: ""
+  canonical-root:
+    description: "Directory containing the canonical required-notice-files"
+    required: false
+    default: "."
+
 runs:
   using: composite
   steps:
@@ -117,5 +129,7 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_SERVER_ID: ${{ inputs.server-id }}
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
+        INPUT_REQUIRED_NOTICE_FILES: ${{ inputs.required-notice-files }}
+        INPUT_CANONICAL_ROOT: ${{ inputs.canonical-root }}
       run: |
         python3 "${{ github.action_path }}/scripts/deploy.py"
