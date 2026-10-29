@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.35.0] - 2026-10-29
+
 ### Changed
 
 - `setup-mise` points mise's Windows inline task shell at Git Bash (`MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS`,
