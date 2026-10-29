@@ -21,7 +21,6 @@ Shared GitHub Actions composite actions and reusable workflows for the xberg-io 
 | `setup-chromium` | Non-snap Chromium for headless e2e tests; uses Playwright browser installer; outputs `chromium-path` for direct binary use |
 | [`setup-mise`](setup-mise/README.md) | mise and the tools in `mise.toml`, installed `--locked` against `mise.lock`, with caching |
 | [`check-toolchain`](check-toolchain/README.md) | Fail when `mise.toml` drifts from the xberg-io/toolchains baseline named in `toolchains.toml` |
-| `install-task` | Deprecated, removed in a later release: declare `task` in `mise.toml` and use `setup-mise`, or move to mise tasks. [Task](https://taskfile.dev) runner installed through mise (`latest` by default) |
 | `install-alef` | Alef CLI installation. `version` takes a semver tag, `latest` (reads the `alef.toml` pin), or `main`. A pinned version with no release archive and no buildable tag fails the job; set `allow-unreleased: true` to opt in to an unpinned `main` build instead |
 | `install-wasi-sdk` | WASI SDK for WebAssembly |
 | `install-homebrew-linux` | Linuxbrew (Homebrew for Linux) for runners that need to build bottles |
@@ -169,7 +168,6 @@ For repositories with compiled binding workspaces, set `prose-dependency-directo
 | `test-unit.yml` | Unit test suite for helper scripts |
 | `test-bats.yml` | Linux and macOS Bats suite for Bash action scripts |
 | `test-integration.yml` | Integration tests for selected composite actions |
-| `test-install-task.yml` | Cross-platform smoke test for `install-task` |
 | `test-setup-mise.yml` | `setup-mise` on Linux x64/arm64, macOS and Windows, a stale-lock failure, and `check-toolchain` pass/drift |
 | `test-free-disk-space.yml` | Smoke test for disk cleanup |
 | `test-publish-actions.yml` | Publish action test workflow |
