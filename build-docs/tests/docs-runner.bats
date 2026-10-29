@@ -210,3 +210,43 @@ runner() {
 
 	[ "$status" -eq 2 ]
 }
+
+@test "docs-runner should_consume_the_complete_task_listing_after_a_match" {
+	make_task_stub
+	cat >"$STUB_BIN/task" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "task $*" >>"$CALLS"
+if [ "$1" = "--list-all" ]; then
+  printf '{"tasks": [{"name": "docs:build"}],\n"padding": "'
+  head -c 262144 /dev/zero | tr '\0' x
+  printf '"}\n'
+fi
+STUB
+	touch "$REPO/Taskfile.yml"
+	cd "$REPO"
+
+	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
+
+	[ "$status" -eq 0 ]
+	[[ "$output" != *"fallback-ran"* ]]
+	grep -qx "task docs:build" "$CALLS"
+}
+
+@test "docs-runner should_not_accept_a_match_from_a_failed_task_listing" {
+	make_task_stub
+	cat >"$STUB_BIN/task" <<'STUB'
+#!/usr/bin/env bash
+echo "task $*" >>"$CALLS"
+printf '{"tasks": [{"name": "docs:build"}]}\n'
+exit 17
+STUB
+	touch "$REPO/Taskfile.yml"
+	cd "$REPO"
+
+	run_runner /bin/bash "$(runner)" run docs:build echo fallback-ran
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"fallback-ran"* ]]
+	[ "$(grep -c '^task docs:build' "$CALLS")" -eq 0 ]
+}

@@ -25,8 +25,9 @@ taskfile_present() {
 }
 
 task_defines() {
+  # Drain the listing: grep -q can give a successful producer SIGPIPE under pipefail.
   command -v task >/dev/null 2>&1 && taskfile_present &&
-    task --list-all --json 2>/dev/null | grep -Fq "\"name\": \"$1\""
+    task --list-all --json 2>/dev/null | grep -F "\"name\": \"$1\"" >/dev/null
 }
 
 needs_task() {
