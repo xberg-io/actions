@@ -252,3 +252,27 @@ def test_should_report_missing_stdlib_toml_support_only_for_sdist(monkeypatch):
     assert notices.verify_archive_bytes(package_bytes("jar"), "jar", {NOTICE: CONTENT}) is None
     with pytest.raises(notices.NoticeVerificationError, match=r"Python 3\.11"):
         notices.verify_archive_bytes(package_bytes("sdist"), "sdist", {NOTICE: CONTENT})
+
+
+@pytest.mark.parametrize("alias", ["meta-inf", "META-INF ", "META-INF."])
+@pytest.mark.parametrize("kind", [stat.S_IFREG, stat.S_IFLNK, stat.S_IFDIR])
+@pytest.mark.parametrize("canonical_directory", [False, True])
+def test_should_reject_equivalent_notice_ancestors(alias, kind, canonical_directory):
+    extra = [(alias, b"other", kind)]
+    if canonical_directory:
+        extra.append(("META-INF/", b"", stat.S_IFDIR))
+    payload = package_bytes("jar", extra=extra)
+    with pytest.raises(notices.NoticeVerificationError, match="ancestor"):
+        notices.verify_archive_bytes(payload, "jar", {NOTICE: CONTENT})
+
+
+def test_should_accept_explicit_canonical_notice_directories():
+    payload = package_bytes("jar", extra=[("META-INF/", b"", stat.S_IFDIR)])
+    assert notices.verify_archive_bytes(payload, "jar", {NOTICE: CONTENT}) is None
+
+
+@pytest.mark.parametrize("alias", ["FIXTURE-1.0.dist-info", "fixture-1.0.dist-info/licenses."])
+def test_should_reject_aliases_at_every_wheel_notice_ancestor(alias):
+    payload = package_bytes("wheel", extra=[(alias, b"other", stat.S_IFLNK)])
+    with pytest.raises(notices.NoticeVerificationError, match="ancestor"):
+        notices.verify_archive_bytes(payload, "wheel", {NOTICE: CONTENT})

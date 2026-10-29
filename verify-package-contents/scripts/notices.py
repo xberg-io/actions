@@ -120,8 +120,11 @@ def _member(index: Mapping[str, _Member], expected: str) -> _Member:
             raise NoticeVerificationError(f"notice path alias or duplicate for {expected}: {aliases}")
         raise NoticeVerificationError(f"missing packaged notice or container: {expected}")
     for parent in PurePosixPath(expected).parents:
-        ancestor = index.get(parent.as_posix())
-        if ancestor is not None and not ancestor.directory:
+        path = parent.as_posix()
+        aliases = [name for name in index if _notice_key(name) == _notice_key(path)]
+        if aliases and aliases != [path]:
+            raise NoticeVerificationError(f"notice ancestor path alias or duplicate for {parent}: {aliases}")
+        if aliases and not index[path].directory:
             raise NoticeVerificationError(f"notice ancestor is not a regular directory: {parent}")
     entry = index[expected]
     if not entry.regular:
