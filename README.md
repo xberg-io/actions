@@ -65,8 +65,8 @@ It preserves plain Maturin feature selection and lock requirements; conditional 
 
 | Action | Description |
 |--------|-------------|
-| `lint-docs` | Link check (lychee) + prose lint (textlint), with optional `alef snippets` validation of code examples. When `validate-snippets: "true"`, installs the `alef` CLI via `install-alef@v1` and runs `task docs:snippets:validate` (or falls back to `alef snippets validate --snippets docs/snippets --level syntax` when `task` is unavailable). Pin alef via the `alef-ref` input (defaults to `main`). |
-| `build-docs` | Build the documentation site with [zensical](https://zensical.org). Sets up Python via `setup-python-env`, then runs `task docs:build:strict` (or `zensical build --strict --clean` as a fallback). `python-version` defaults to `3.13`; `strict` defaults to `true`. `docs-group` selects the uv dependency group containing the docs builder (default `doc`; pass `docs` for repos that use the plural name). |
+| `lint-docs` | Link check (lychee) + prose lint (textlint), with optional `alef snippets` validation of code examples. When `validate-snippets: "true"`, installs the `alef` CLI via `install-alef@v1` and runs the `docs:snippets:validate` task (or falls back to `alef snippets validate --snippets docs/snippets --level syntax` when neither runner defines it). Each docs task runs through mise when the consumer's mise config defines it, else through go-task when a Taskfile defines it (go-task is installed only then), else the tool runs directly. Pin alef via the `alef-ref` input (defaults to `main`). |
+| `build-docs` | Build the documentation site with [zensical](https://zensical.org). Sets up Python via `setup-python-env`, then runs the `docs:build:strict` task through mise, or through go-task when only a Taskfile defines it (or `zensical build --strict --clean` as a fallback). `python-version` defaults to `3.13`; `strict` defaults to `true`. `docs-group` selects the uv dependency group containing the docs builder (default `doc`; pass `docs` for repos that use the plural name). |
 
 ### Publish
 

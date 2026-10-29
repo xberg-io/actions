@@ -2,6 +2,7 @@ name: Build Documentation
 description: >
   Build the documentation site with zensical.
   Supports strict mode for CI (fail on warnings) vs dev mode (permissive).
+  Runs the consumer's docs:build[:strict] mise task, else its go-task task, else zensical directly.
 
 inputs:
   working-directory:
@@ -27,9 +28,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install Task
-      uses: xberg-io/actions/install-task@v1
-
     # docs-group is woven into a string that becomes another action's install-command,
     # which is itself later executed as shell (setup-python-env's documented, intentional
     # "run arbitrary command" contract). That downstream splice is fine for a value the
@@ -56,6 +54,26 @@ runs:
         python-version: ${{ inputs.python-version }}
         install-command: "uv sync --all-extras --all-packages --group dev --group ${{ steps.validate-docs-group.outputs.docs-group }} --no-install-project --no-install-workspace"
 
+    # ~keep go-task is installed only for a consumer still on a Taskfile whose docs task mise does not define.
+    - name: Resolve docs task runner
+      id: runner
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        DOCS_STRICT: ${{ inputs.strict }}
+      run: |
+        set -euo pipefail
+        docs_task=docs:build
+        if [ "$DOCS_STRICT" = "true" ]; then
+          docs_task=docs:build:strict
+        fi
+        needs_task="$("${{ github.action_path }}/scripts/docs-runner.sh" needs-task "$docs_task")"
+        echo "needs-task=$needs_task" >> "$GITHUB_OUTPUT"
+
+    - name: Install Task
+      if: steps.runner.outputs.needs-task == 'true'
+      uses: xberg-io/actions/install-task@v1
+
     - name: Build documentation
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -63,16 +81,9 @@ runs:
         DOCS_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
+        runner="${{ github.action_path }}/scripts/docs-runner.sh"
         if [ "$DOCS_STRICT" = "true" ]; then
-          if [ -x "$(command -v task)" ]; then
-            task docs:build:strict
-          else
-            zensical build --strict --clean
-          fi
+          "$runner" run docs:build:strict zensical build --strict --clean
         else
-          if [ -x "$(command -v task)" ]; then
-            task docs:build
-          else
-            zensical build --clean
-          fi
+          "$runner" run docs:build zensical build --clean
         fi
