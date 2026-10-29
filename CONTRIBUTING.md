@@ -28,7 +28,6 @@ This will setup the dependencies, and pre-commit hooks via `poly`.
 | `mise run lint`      | Lint actions and workflows                |
 | `mise run test`      | Run the action test suite                 |
 | `mise run test:bats` | Run Bash action tests with Bats           |
-| `mise run validate`  | Validate action and workflow metadata     |
 
 ## What to keep in mind
 

@@ -35,7 +35,7 @@ poly lint .                       # lint clean (also: mise run lint)
 mise run test                     # pytest + Bats + Pester (needs pwsh and Pester 6.2.0)
 ```
 
-Do not proceed if the tree is dirty or any check fails. `mise run validate` (== `mise run lint`) runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
+Do not proceed if the tree is dirty or any check fails. `mise run lint` runs actionlint + shellcheck + shfmt via poly; the action test workflows in `.github/workflows/test-*.yml` are the CI gate — they must be green on `main`.
 
 ### 1. Roll the CHANGELOG and commit
 
@@ -47,6 +47,7 @@ Do not proceed if the tree is dirty or any check fails. `mise run validate` (== 
 ## [X.Y.Z] - YYYY-MM-DD
 
 ### Added
+
 - ... (entries that were under Unreleased)
 ```
 
