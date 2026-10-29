@@ -61,7 +61,7 @@ when the ref has no `mise.toml` either, and when the fetch fails (keep `actions/
 
 ## Matrix versions
 
-Declare every extra version in a profile file such as `mise.ci.toml` (`task = ["3.54.0", "3.51.1"]`) and lock it
+Declare every extra version in a profile file such as `mise.ci.toml` (`yq = ["4.54.1", "4.53.6"]`) and lock it
 with `MISE_ENV=ci mise lock`, which writes `mise.ci.lock` beside `mise.lock`. Select a leg's version with job-level
 env, so `mise install --locked` and every later step resolve the same version:
 
@@ -70,10 +70,10 @@ jobs:
   test:
     strategy:
       matrix:
-        task: ["3.54.0", "3.51.1"]
+        yq: ["4.54.1", "4.53.6"]
     env:
       MISE_ENV: ci
-      MISE_TASK_VERSION: ${{ matrix.task }}
+      MISE_YQ_VERSION: ${{ matrix.yq }}
     steps:
       - uses: actions/checkout@v7
       - uses: xberg-io/actions/setup-mise@v1

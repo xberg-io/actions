@@ -2,60 +2,60 @@
 
 lockfile_version = 3
 
-[[tools.task]]
-version = "3.54.0"
-backend = "aqua:go-task/task"
-specifiers = ["3.54.0"]
+[[tools.yq]]
+version = "4.54.1"
+backend = "aqua:mikefarah/yq"
+specifiers = ["4.54.1"]
 
-[tools.task."platforms.linux-arm64"]
-checksum = "sha256:d7189d439d4a6058e39e1b2acd7c8b27acd4856691b408f23b242e4294e1df5b"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.54.0/task_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/604090041"
+[tools.yq."platforms.linux-arm64"]
+checksum = "sha256:189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b"
+url = "https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_arm64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/597222603"
+provenance = "cosign"
 
-[tools.task."platforms.linux-x64"]
-checksum = "sha256:680859dbb4d881a9c72d4d9a8f510825450849af8567deacd7302c01124416fb"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.54.0/task_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/604090073"
+[tools.yq."platforms.linux-x64"]
+checksum = "sha256:8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f"
+url = "https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/597222595"
+provenance = "cosign"
 
-[tools.task."platforms.macos-arm64"]
-checksum = "sha256:12a69fcf37bb8d5bc9150c44f9a936775b73e59ff044c2c245232f198c135637"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.54.0/task_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/604090068"
+[tools.yq."platforms.macos-arm64"]
+checksum = "sha256:fee511a181bd8b3e6b7da98842b41973bfac8cd3bcd341ed29a584620b5b2844"
+url = "https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_darwin_arm64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/597222609"
+provenance = "cosign"
 
-[tools.task."platforms.windows-x64"]
-checksum = "sha256:837f42f71899ea41d07a47acc81d4d6ea80cb41c68292345f915c656473efcb7"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.54.0/task_windows_amd64.zip"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/604090005"
+[tools.yq."platforms.windows-x64"]
+checksum = "sha256:b645f47ebb3a0d2fbab52998550bbd0a1706f23b5ca5f5b48e638c580bb70928"
+url = "https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_windows_amd64.exe"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/597222575"
+provenance = "cosign"
 
-[[tools.task]]
-version = "3.51.1"
-backend = "aqua:go-task/task"
-specifiers = ["3.51.1"]
+[[tools.yq]]
+version = "4.53.6"
+backend = "aqua:mikefarah/yq"
+specifiers = ["4.53.6"]
 
-[tools.task."platforms.linux-arm64"]
-checksum = "sha256:49c58bb00eff2449a5553f3b3e694fc424e0dc04d5c669d8831126daee1000f8"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.51.1/task_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/422054392"
+[tools.yq."platforms.linux-arm64"]
+checksum = "sha256:88a1016bc1d657375a35864e4f44b6f333df8ff97b559f51bba0adcb2169df09"
+url = "https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_arm64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/522028007"
+provenance = "cosign"
 
-[tools.task."platforms.linux-x64"]
-checksum = "sha256:da7e92f0ff961ef2aae7cfecbad8d1fd2a08d7b09ba968673adf7ff389b243b5"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.51.1/task_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/422054344"
+[tools.yq."platforms.linux-x64"]
+checksum = "sha256:c5f056448f973ae7d39b5401949648a78f2dc1947d6a8eb65be60d5c504b9385"
+url = "https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/522028022"
+provenance = "cosign"
 
-[tools.task."platforms.macos-arm64"]
-checksum = "sha256:a0330f0df20dd1187e323f284a7f365c0ea1f2f271c1e154811e9fc4724bed13"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.51.1/task_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/422054327"
+[tools.yq."platforms.macos-arm64"]
+checksum = "sha256:cceb0b8d71ea5294334121f8429f33f92b920e7217d904a2f9f35443968ac424"
+url = "https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_darwin_arm64"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/522028033"
+provenance = "cosign"
 
-[tools.task."platforms.windows-x64"]
-checksum = "sha256:422d79dff5afd5a55fb46ae1cfacc7350ec96d4ef27a63a3ec77a5c30a7b0f03"
-checksum_source = "mise-versions"
-url = "https://github.com/go-task/task/releases/download/v3.51.1/task_windows_amd64.zip"
-url_api = "https://api.github.com/repos/go-task/task/releases/assets/422054329"
+[tools.yq."platforms.windows-x64"]
+checksum = "sha256:ece3dd8bb50d39f93610506273ea262feb91e5c486bbddbb10abf91b2a6c0f14"
+url = "https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_windows_amd64.exe"
+url_api = "https://api.github.com/repos/mikefarah/yq/releases/assets/522027974"
+provenance = "cosign"

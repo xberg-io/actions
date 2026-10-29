@@ -3,5 +3,5 @@ lockfile = true
 lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "windows-x64"]
 
 [tools]
-task = "3.51.1"
+yq = "4.53.6"
 jq = "1.8.2"

@@ -31,10 +31,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-26, windows-latest]
     runs-on: ${{ matrix.os }}
-    # ~keep mise.ci.toml declares a second task version, locked in mise.ci.lock; a matrix leg selects it the
+    # ~keep mise.ci.toml declares a second yq version, locked in mise.ci.lock; a matrix leg selects it the
     # ~keep way consumers do, at job level so every later step resolves the same version.
     env:
-      MISE_TASK_VERSION: "3.51.1"
+      MISE_YQ_VERSION: "4.53.6"
     steps:
       - uses: actions/checkout@v7
 
@@ -57,11 +57,11 @@ jobs:
         working-directory: setup-mise/tests/fixtures/locked
         run: |
           set -euo pipefail
-          task_version="$(task --version)"
+          yq_version="$(yq --version)"
           jq_version="$(jq --version)"
-          echo "task: $task_version"
+          echo "yq: $yq_version"
           echo "jq: $jq_version"
-          grep -q "3.51.1" <<<"$task_version"
+          grep -q "4.53.6" <<<"$yq_version"
           grep -q "1.8.2" <<<"$jq_version"
 
       - name: Verify the environment setup-mise exports
@@ -93,7 +93,7 @@ jobs:
         shell: bash
         run: echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
 
-      - name: Setup mise against a lock without the pinned task version
+      - name: Setup mise against a lock without the pinned yq version
         id: stale
         continue-on-error: true
         uses: ./setup-mise
@@ -123,7 +123,7 @@ jobs:
             exit 1
           fi
           cat "$RUNNER_TEMP/stale.log"
-          grep -q "task@3.51.1 is not in the lockfile" "$RUNNER_TEMP/stale.log"
+          grep -q "yq@4.53.6 is not in the lockfile" "$RUNNER_TEMP/stale.log"
           git diff --exit-code -- .
 
       # ~keep Control: the same job installs from a lock that does cover its versions, so the failure above
@@ -137,7 +137,7 @@ jobs:
       - name: Verify the control installed its locked version
         shell: bash
         working-directory: setup-mise/tests/fixtures/locked
-        run: task --version | grep -q "3.54.0"
+        run: yq --version | grep -q "4.54.1"
 
   mise-data-dir:
     name: Preset MISE_DATA_DIR is respected
@@ -156,7 +156,7 @@ jobs:
         uses: ./setup-mise
         with:
           working-directory: setup-mise/tests/fixtures/locked
-          install-args: task
+          install-args: yq
 
       - name: Verify caching was skipped and tools landed in the preset directory
         shell: bash
@@ -166,13 +166,13 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$CACHE" == "false" ]] || { echo "::error::cache resolved to '$CACHE' with MISE_DATA_DIR preset"; exit 1; }
-          task_dir="$(mise where task)"
-          echo "task: $task_dir"
+          yq_dir="$(mise where yq)"
+          echo "yq: $yq_dir"
           [[ "$MISE_DATA_DIR" == "$RUNNER_TEMP/preinstalled-mise" ]]
-          [[ "$task_dir" == "$RUNNER_TEMP/preinstalled-mise/"* ]]
-          task --version | grep -q "3.54.0"
+          [[ "$yq_dir" == "$RUNNER_TEMP/preinstalled-mise/"* ]]
+          yq --version | grep -q "4.54.1"
           if mise where jq 2>/dev/null; then
-            echo "::error::install-args: task also installed jq"
+            echo "::error::install-args: yq also installed jq"
             exit 1
           fi
 
@@ -206,7 +206,7 @@ jobs:
             [[ -f "$file" ]] || { echo "::error::$file was not restored"; exit 1; }
           done
           [[ -z "$(git status --porcelain -- .)" ]]
-          task --version | grep -q "3.54.0"
+          yq --version | grep -q "4.54.1"
           jq --version | grep -q "1.8.2"
 
       - name: Setup mise where the ref has no mise.toml either
@@ -275,7 +275,7 @@ jobs:
           [[ -z "$changes" ]] || { echo "::error::restored files show in git status:"; echo "$changes"; exit 1; }
           [[ "$(git rev-parse --is-shallow-repository)" == "false" ]]
           [[ "$(git rev-list --count --all)" -eq "$HISTORY_BEFORE" ]]
-          (cd setup-mise/tests/fixtures/locked && task --version | grep -q "3.54.0")
+          (cd setup-mise/tests/fixtures/locked && yq --version | grep -q "4.54.1")
 
   check-toolchain:
     name: check-toolchain on ${{ matrix.os }}
