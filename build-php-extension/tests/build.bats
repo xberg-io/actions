@@ -3,20 +3,18 @@
 bats_require_minimum_version 1.5.0
 
 setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
+	bats_load_library xberg-bats
+	xberg_setup
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN" "$ROOT/ws"
 	export PATH="$BIN:$PATH" RUNNER_OS=Linux
 	IN="$BATS_TEST_DIRNAME/../scripts/build-in-workspace.sh"
 	OUT="$BATS_TEST_DIRNAME/../scripts/build-out-of-workspace.sh"
 }
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
-}
 
 @test "should_print_workspace_extension_path_after_cargo_build" {
-	stub cargo 'printf "%s\n" "$*" > "'"$ROOT"'/cargo.args"; mkdir -p "'"$ROOT"'/ws/target/release"; touch "'"$ROOT"'/ws/target/release/libextension.so"'
+	xberg_stub cargo 'printf "%s\n" "$*" > "'"$ROOT"'/cargo.args"; mkdir -p "'"$ROOT"'/ws/target/release"; touch "'"$ROOT"'/ws/target/release/libextension.so"'
 	export CARGO_FEATURES=php
 	run bash "$IN" crate extension "$ROOT/ws"
 	[ "$status" -eq 0 ]
@@ -25,7 +23,7 @@ stub() {
 }
 
 @test "should_return_error_when_workspace_build_does_not_create_extension" {
-	stub cargo 'exit 0'
+	xberg_stub cargo 'exit 0'
 	run bash "$IN" crate extension "$ROOT/ws"
 	[ "$status" -eq 1 ]
 	[ "$output" = "Error: cargo build did not produce $ROOT/ws/target/release/libextension.so; check lib-name and crate-type" ]
@@ -41,7 +39,7 @@ stub() {
 	mkdir -p "$ROOT/ws/packages/crate"
 	printf '[package]\nname = "crate"\nversion = "1"\n' >"$ROOT/ws/packages/crate/Cargo.toml"
 	printf '[workspace]\n' >"$ROOT/ws/Cargo.toml"
-	stub cargo 'case "$1" in update) exit 0;; build) mkdir -p target/release; touch target/release/libextension.dylib;; esac'
+	xberg_stub cargo 'case "$1" in update) exit 0;; build) mkdir -p target/release; touch target/release/libextension.dylib;; esac'
 	export RUNNER_OS=macOS
 	run --separate-stderr bash "$OUT" crate extension "$ROOT/ws"
 	[ "$status" -eq 0 ]

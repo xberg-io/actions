@@ -1,15 +1,13 @@
 #!/usr/bin/env bats
 
 setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
+	bats_load_library xberg-bats
+	xberg_setup
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN" "$ROOT/pkg"
 	export PATH="$BIN:$PATH" GITHUB_WORKSPACE="$ROOT" CARGO_TARGET_DIR="$ROOT/target"
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/build.sh"
-}
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
 }
 
 @test "should_describe_debug_dry_run" {
@@ -34,7 +32,7 @@ stub() {
 	printf 'CRATE\n' >"$OUT/my-bridge/my-bridge.h"
 	printf 'extension RustStr: Identifiable {\n' >"$OUT/SwiftBridgeCore.swift"
 	printf 'public func bridge() {}\n' >"$OUT/my-bridge/Bridge.swift"
-	stub cargo 'exit 0'
+	xberg_stub cargo 'exit 0'
 	export INPUT_PACKAGE_DIR="$ROOT/pkg" INPUT_CRATE_NAME=my-bridge
 	run bash "$SCRIPT"
 	[ "$status" -eq 0 ]

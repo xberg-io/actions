@@ -1,15 +1,13 @@
 #!/usr/bin/env bats
 
 setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
+	bats_load_library xberg-bats
+	xberg_setup
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN" "$ROOT/pkg" "$ROOT/target/release"
 	export PATH="$BIN:$PATH" GITHUB_WORKSPACE="$ROOT" CARGO_TARGET_DIR="$ROOT/target" RUNNER_OS=Linux
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/build.sh"
-}
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
 }
 
 @test "should_print_release_dry_run_path_without_running_tools" {
@@ -28,9 +26,9 @@ stub() {
 }
 
 @test "should_use_discovered_library_when_expected_name_is_absent" {
-	stub flutter_rust_bridge_codegen 'exit 0'
-	stub cargo 'if [ "$1" = build ]; then exit 0; fi; printf "{\"target_directory\":\"%s/target\"}\n" "$GITHUB_WORKSPACE"'
-	stub jq 'sed -n "s/.*\"target_directory\":\"\\([^\"]*\\)\".*/\\1/p"'
+	xberg_stub flutter_rust_bridge_codegen 'exit 0'
+	xberg_stub cargo 'if [ "$1" = build ]; then exit 0; fi; printf "{\"target_directory\":\"%s/target\"}\n" "$GITHUB_WORKSPACE"'
+	xberg_stub jq 'sed -n "s/.*\"target_directory\":\"\\([^\"]*\\)\".*/\\1/p"'
 	touch "$ROOT/target/release/libmy_crate_v2.so"
 	export INPUT_PACKAGE_DIR="$ROOT/pkg" INPUT_CRATE_NAME=my-crate GITHUB_OUTPUT="$ROOT/output"
 	run bash "$SCRIPT"

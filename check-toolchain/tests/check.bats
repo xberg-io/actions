@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	TEST_ROOT="$(mktemp -d)"
 	REPO="$TEST_ROOT/repo"
 	mkdir -p "$REPO"

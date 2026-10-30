@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/setup.sh"
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN"
 	export PATH="$BIN:$PATH"
 	export GITHUB_ENV="$BATS_TEST_TMPDIR/github-env"
@@ -13,19 +15,14 @@ setup() {
 	: >"$GITHUB_OUTPUT"
 }
 
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' 'set -eu' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
-}
-
 @test "should_export_ndk_paths_and_add_each_requested_rust_target" {
 	local home="$BATS_TEST_TMPDIR/android"
 	local ndk="$home/ndk/26.3.11579264"
 	local host="linux-x86_64"
 	mkdir -p "$ndk/toolchains/llvm/prebuilt/$host/bin"
-	stub uname '[[ "$1" == "-s" ]] && echo Linux || echo x86_64'
-	stub rustup 'printf "%s\n" "$*" >>"$RUSTUP_CALLS"'
-	stub cargo-ndk 'exit 0'
+	xberg_stub uname 'set -eu' '[[ "$1" == "-s" ]] && echo Linux || echo x86_64'
+	xberg_stub rustup 'set -eu' 'printf "%s\n" "$*" >>"$RUSTUP_CALLS"'
+	xberg_stub cargo-ndk 'set -eu' 'exit 0'
 	export RUSTUP_CALLS="$BATS_TEST_TMPDIR/rustup-calls"
 	export ANDROID_HOME="$home" INPUT_NDK_VERSION=26.3.11579264
 	export INPUT_TARGETS="aarch64-linux-android, x86_64-linux-android"

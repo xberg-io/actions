@@ -1,11 +1,19 @@
 #!/usr/bin/env bats
 
+setup_file() {
+	bats_load_library xberg-bats
+	xberg_shadow_system_path_without sccache
+}
+
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup_isolated
 	SCRIPT_DIR="$(cd "$BATS_TEST_DIRNAME/../scripts" && pwd)"
 	WORK="$BATS_TEST_TMPDIR/work"
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$WORK" "$BIN"
-	export PATH="$BIN:$PATH"
+	PATH="$(xberg_isolated_path)"
+	export PATH
 	export GITHUB_ENV="$BATS_TEST_TMPDIR/github-env"
 	export GITHUB_OUTPUT="$BATS_TEST_TMPDIR/github-output"
 	export GITHUB_PATH="$BATS_TEST_TMPDIR/github-path"
@@ -16,15 +24,8 @@ setup() {
 	: >"$GITHUB_STEP_SUMMARY"
 }
 
-stub() {
-	local name="$1"
-	shift
-	printf '%s\n' '#!/usr/bin/env bash' 'set -eu' "$@" >"$BIN/$name"
-	chmod +x "$BIN/$name"
-}
-
 @test "should_skip_rust_target_install_when_target_is_already_installed" {
-	stub rustup 'if [[ "$*" == "target list" ]]; then echo "aarch64-unknown-linux-gnu (installed)"; else echo "$*" >>"$CALLS"; fi'
+	xberg_stub rustup 'set -eu' 'if [[ "$*" == "target list" ]]; then echo "aarch64-unknown-linux-gnu (installed)"; else echo "$*" >>"$CALLS"; fi'
 	export CALLS="$BATS_TEST_TMPDIR/calls"
 	run "$SCRIPT_DIR/add-target.sh" aarch64-unknown-linux-gnu false
 	[ "$status" -eq 0 ]
@@ -33,7 +34,7 @@ stub() {
 }
 
 @test "should_retry_build_without_sccache_when_sccache_failure_is_reported" {
-	stub build 'if [[ ! -e "$STATE" ]]; then touch "$STATE"; echo "sccache error"; exit 1; fi; printf "%s/%s\\n" "$RUSTC_WRAPPER" "$SCCACHE_GHA_ENABLED"'
+	xberg_stub build 'set -eu' 'if [[ ! -e "$STATE" ]]; then touch "$STATE"; echo "sccache error"; exit 1; fi; printf "%s/%s\\n" "$RUSTC_WRAPPER" "$SCCACHE_GHA_ENABLED"'
 	export STATE="$BATS_TEST_TMPDIR/build-state"
 	run "$SCRIPT_DIR/build-with-sccache-fallback.sh" build
 	[ "$status" -eq 0 ]
@@ -42,7 +43,7 @@ stub() {
 
 @test "should_write_sha256_cargo_lock_hash_when_lock_file_exists" {
 	printf 'lock\n' >"$WORK/Cargo.lock"
-	stub sha256sum 'echo "d8c9f2728aa278ebcd33ccedf3ad309a866870ad5fb93a03526b4b7655c9e911  $1"'
+	xberg_stub sha256sum 'set -eu' 'echo "d8c9f2728aa278ebcd33ccedf3ad309a866870ad5fb93a03526b4b7655c9e911  $1"'
 	run bash -c 'cd "$1" && "$2/cargo-lock-hash.sh"' _ "$WORK" "$SCRIPT_DIR"
 	[ "$status" -eq 0 ]
 	[ "$output" = $'Generated Cargo.lock hash using sha256sum\nUsing Cargo.lock hash: d8c9f2728aa278ebcd33ccedf3ad309a866870ad5fb93a03526b4b7655c9e911' ]
@@ -51,7 +52,7 @@ stub() {
 
 @test "should_remove_incremental_fingerprints_when_cargo_is_healthy" {
 	mkdir -p "$WORK/target/.cargo-ok" "$WORK/target/debug/incremental" "$WORK/target/a/incremental"
-	stub cargo '[[ "$1" == "--version" ]] && echo "cargo 1.0"'
+	xberg_stub cargo 'set -eu' '[[ "$1" == "--version" ]] && echo "cargo 1.0"'
 	run bash -c 'cd "$1" && "$2/cleanup-fingerprints.sh"' _ "$WORK" "$SCRIPT_DIR"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Fingerprint cleanup completed successfully"* ]]
@@ -61,7 +62,7 @@ stub() {
 }
 
 @test "should_disable_sccache_and_write_supported_rust_flags_when_not_requested" {
-	stub rustc 'if [[ "$1" == "-V" ]]; then echo "rustc 1.80"; fi'
+	xberg_stub rustc 'set -eu' 'if [[ "$1" == "-V" ]]; then echo "rustc 1.80"; fi'
 	run "$SCRIPT_DIR/configure-flags.sh" false false
 	[ "$status" -eq 0 ]
 	[ "$(cat "$GITHUB_ENV")" = $'SCCACHE_GHA_ENABLED=false\nRUSTC_WRAPPER=\nRUSTFLAGS=-D warnings -A unpredictable-function-pointer-comparisons -A mismatched-lifetime-syntaxes -A fn_ptr_eq --cfg has_fn_ptr_eq_lint' ]
@@ -79,7 +80,7 @@ stub() {
 }
 
 @test "should_report_exact_sccache_hit_rate_when_wrapper_is_enabled" {
-	stub sccache 'if [[ "$1" == "--show-stats" ]]; then printf "Cache hits: 3\\nCache misses: 1\\n"; fi'
+	xberg_stub sccache 'set -eu' 'if [[ "$1" == "--show-stats" ]]; then printf "Cache hits: 3\\nCache misses: 1\\n"; fi'
 	export RUSTC_WRAPPER=sccache
 	run "$SCRIPT_DIR/report-sccache-stats.sh"
 	[ "$status" -eq 0 ]
@@ -96,7 +97,7 @@ stub() {
 
 @test "should_continue_when_sccache_is_not_available" {
 	run env -u SCCACHE_PATH RUSTC_WRAPPER=sccache \
-		PATH="$BIN:/usr/bin:/bin" "$SCRIPT_DIR/validate-sccache.sh"
+		PATH="$BIN:$XBERG_SYS_BIN" "$SCRIPT_DIR/validate-sccache.sh"
 	[ "$status" -eq 0 ]
 	local expected=$'Checking sccache runtime...\n'
 	expected+='Warning: sccache runtime is unavailable, continuing with direct compilation'
@@ -105,9 +106,9 @@ stub() {
 }
 
 @test "should_print_rust_installation_versions_and_matching_target" {
-	stub rustc 'echo "rustc 1.80.0"'
-	stub cargo 'echo "cargo 1.80.0"'
-	stub rustup 'if [[ "$1" == "--version" ]]; then echo "rustup 1.27.0"; else echo "aarch64-unknown-linux-gnu (installed)"; fi'
+	xberg_stub rustc 'set -eu' 'echo "rustc 1.80.0"'
+	xberg_stub cargo 'set -eu' 'echo "cargo 1.80.0"'
+	xberg_stub rustup 'set -eu' 'if [[ "$1" == "--version" ]]; then echo "rustup 1.27.0"; else echo "aarch64-unknown-linux-gnu (installed)"; fi'
 	run "$SCRIPT_DIR/verify-install.sh" aarch64
 	[ "$status" -eq 0 ]
 	[ "$output" = $'Rust toolchain information:\nrustc 1.80.0\nrustup 1.27.0\ncargo 1.80.0\nAvailable targets:\naarch64-unknown-linux-gnu (installed)' ]

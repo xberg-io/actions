@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT_DIR="$(cd "$BATS_TEST_DIRNAME/../scripts" && pwd)"
 	WORK="$BATS_TEST_TMPDIR/work"
 	mkdir -p "$WORK"

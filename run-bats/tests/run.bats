@@ -3,10 +3,10 @@
 # ~keep Built once per file: the mirror is read-only and identical for every test here, and
 # rebuilding a few thousand symlinks per test is pure wall-clock.
 setup_file() {
-	SYS_ROOT="$(mktemp -d)"
-	SYS_BIN="$SYS_ROOT/sysbin"
-	export SYS_ROOT SYS_BIN
-	shadow_system_path_without "$SYS_BIN" bats
+	bats_load_library xberg-bats
+	export SYS_BIN
+	xberg_shadow_system_path_without bats
+	SYS_BIN="$XBERG_SYS_BIN"
 	# ~keep The whole point of the mirror is that this command is missing from it, and a silent
 	# leak would let run.sh find the host's real Bats -- which, since these tests hand it a
 	# directory of .bats files, would recursively run a second Bats suite instead of the shim
@@ -17,16 +17,14 @@ setup_file() {
 	}
 }
 
-teardown_file() {
-	rm -rf "$SYS_ROOT"
-}
-
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	# ~keep run.sh reports and compares paths after `pwd -P`, and on macOS mktemp hands back
 	# /var/folders/... which is a symlink to /private/var/folders/.... Resolving here keeps the
 	# expected strings equal to what the script prints on both runners.
 	TEST_ROOT="$(cd "$(mktemp -d)" && pwd -P)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	WORKSPACE="$TEST_ROOT/workspace"
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/run.sh"
 	# ~keep CI runs this suite through ./run-bats itself, so the outer action exports its own
@@ -47,47 +45,10 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-# Mirror the host's standard command directories into a private bin, minus the commands whose
-# absence is the point of the test. PATH is then exactly the stub dir plus this mirror.
-#
-# An allow-list was tried first and was the wrong shape. What these tests need is not "the
-# script may use exactly these ten utilities" -- that guesses at an implementation detail and
-# breaks the moment the script reaches for one more, which is how `tar -xzf` shelling out to
-# gzip on GNU tar but not BSD tar slipped through a sibling suite. What they need is "the host
-# does not supply bats", with an otherwise realistic system underneath. Naming the excluded
-# command states that directly.
-#
-# The original `PATH="$STUB_BIN:/usr/bin:/bin"` stated nothing: `run.sh` decides whether to abort
-# by probing `command -v bats`, and ubuntu-latest ships tools in /usr/bin that macOS does not, so
-# the probe outcome differed per runner and the branch under test never ran -- green locally, red
-# in CI. ~keep
-shadow_system_path_without() {
-	local destination="$1"
-	shift
-	local excluded=" $* " directory source name
-	mkdir -p "$destination"
-	for directory in /usr/local/bin /usr/bin /bin /usr/sbin /sbin; do
-		[ -d "$directory" ] || continue
-		for source in "$directory"/*; do
-			[ -x "$source" ] || continue
-			name="${source##*/}"
-			case "$excluded" in *" $name "*) continue ;; esac
-			[ -e "$destination/$name" ] || ln -s "$source" "$destination/$name"
-		done
-	done
-}
-
-make_stub() {
-	local name="$1"
-	shift
-	printf '%s\n' "$@" >"$STUB_BIN/$name"
-	chmod +x "$STUB_BIN/$name"
-}
-
 # Prints one argument per line and exits with BATS_STUB_STATUS, so a test asserts the exact
 # argument vector run.sh assembled and can also drive the failure path. ~keep
 make_bats_stub() {
-	make_stub bats '#!/usr/bin/env bash' \
+	xberg_stub bats '#!/usr/bin/env bash' \
 		'printf "%s\n" "$@"' \
 		'exit "${BATS_STUB_STATUS:-0}"'
 }

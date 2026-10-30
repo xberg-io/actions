@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/install.sh"
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN"
 	export PATH="$BIN:$PATH"
 	export TEXTLINT_DIR="$BATS_TEST_TMPDIR/textlint"

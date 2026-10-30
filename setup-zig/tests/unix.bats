@@ -1,10 +1,12 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/unix.sh"
 	REAL_PYTHON="$(command -v python3)"
 	export REAL_PYTHON
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN"
 	export PATH="$BIN:$PATH"
 	export RUNNER_TEMP="$BATS_TEST_TMPDIR/tmp"
@@ -14,11 +16,6 @@ setup() {
 	export ZIG_EXTRACT_TRACE="$BATS_TEST_TMPDIR/extraction"
 	mkdir -p "$RUNNER_TEMP"
 	: >"$GITHUB_PATH"
-}
-
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' 'set -eu' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
 }
 
 fixture() {
@@ -58,10 +55,10 @@ urllib.request.urlopen = lambda *args, **kwargs: io.BytesIO(pathlib.Path(os.envi
 sys.argv = sys.argv[1:]
 exec(compile(sys.stdin.read(), "installer-stdin", "exec"))
 PY
-	stub uname '[[ "$1" == "-s" ]] && echo Linux || echo x86_64'
-	stub python3 'exec "$REAL_PYTHON" "$BATS_TEST_TMPDIR/python-wrapper.py" "$@"'
-	stub curl 'while [[ "$1" != "--output" ]]; do shift; done; cp "$ZIG_FIXTURE_ARCHIVE" "$2"'
-	stub tar 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "echo 0.14.0" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
+	xberg_stub uname 'set -eu' '[[ "$1" == "-s" ]] && echo Linux || echo x86_64'
+	xberg_stub python3 'set -eu' 'exec "$REAL_PYTHON" "$BATS_TEST_TMPDIR/python-wrapper.py" "$@"'
+	xberg_stub curl 'set -eu' 'while [[ "$1" != "--output" ]]; do shift; done; cp "$ZIG_FIXTURE_ARCHIVE" "$2"'
+	xberg_stub tar 'set -eu' 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "echo 0.14.0" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
 }
 
 @test "should_install_resolved_zig_archive_and_publish_executable_directory" {
@@ -151,7 +148,7 @@ PY
 }
 
 @test "should_return_error_when_operating_system_is_unsupported" {
-	stub uname 'echo Plan9'
+	xberg_stub uname 'set -eu' 'echo Plan9'
 	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 1 ]
 	[ "$output" = "Unsupported OS: Plan9" ]
@@ -159,7 +156,7 @@ PY
 
 @test "should_reject_an_extracted_executable_reporting_the_wrong_version_before_path_update" {
 	fixture valid
-	stub tar 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "echo 0.13.0" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
+	xberg_stub tar 'set -eu' 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "echo 0.13.0" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
 	run /bin/bash "$SCRIPT" 0.14.0
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"Expected Zig 0.14.0, found 0.13.0"* ]]
@@ -168,7 +165,7 @@ PY
 
 @test "should_not_publish_a_path_when_the_extracted_executable_fails_its_version_probe" {
 	fixture valid
-	stub tar 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "exit 94" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
+	xberg_stub tar 'set -eu' 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"; printf "%s\n" "#!/usr/bin/env bash" "exit 94" >"$2/zig-0.14.0/zig"; chmod +x "$2/zig-0.14.0/zig"'
 	run /bin/bash "$SCRIPT" 0.14.0
 	[ "$status" -eq 94 ]
 	[ ! -s "$GITHUB_PATH" ]
@@ -179,7 +176,7 @@ PY
 	mkdir -p "$RUNNER_TEMP/zig/zig-0.14.0"
 	printf '#!/bin/sh\necho 0.14.0\n' >"$RUNNER_TEMP/zig/zig-0.14.0/zig"
 	chmod +x "$RUNNER_TEMP/zig/zig-0.14.0/zig"
-	stub tar 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"'
+	xberg_stub tar 'set -eu' 'echo extract >>"$ZIG_EXTRACT_TRACE"; while [[ "$1" != "-C" ]]; do shift; done; mkdir -p "$2/zig-0.14.0"'
 	run /bin/bash "$SCRIPT" 0.14.0
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"Could not locate extracted zig directory"* ]]

@@ -6,6 +6,9 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Changed
 
+- Use the shared xberg-bats setup, command stubs, and isolated PATH helpers throughout action shell suites.
+  Run Swift manifest checksum and release URL substitution cases through the actual action step.
+
 - Split Maven deployment orchestration into focused helpers and remove the final size baseline suppression.
 
 ## [1.37.0] - 2026-10-30

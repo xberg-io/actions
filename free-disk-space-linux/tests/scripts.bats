@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	mkdir -p "$STUB_BIN"
 	export TEST_ROOT STUB_BIN
 }
@@ -11,27 +13,20 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-make_stub() {
-	local name="$1"
-	shift
-	printf '%s\n' "$@" >"$STUB_BIN/$name"
-	chmod +x "$STUB_BIN/$name"
-}
-
 @test "free-disk-space should_issue_only_targeted_cleanup_commands_and_report_disk_usage" {
-	make_stub sudo '#!/usr/bin/env bash' \
+	xberg_stub sudo '#!/usr/bin/env bash' \
 		'printf "sudo %s\n" "$*" >>"$COMMAND_LOG"' \
 		'exit 0'
-	make_stub docker '#!/usr/bin/env bash' \
+	xberg_stub docker '#!/usr/bin/env bash' \
 		'printf "docker %s\n" "$*" >>"$COMMAND_LOG"' \
 		'exit 0'
-	make_stub df '#!/usr/bin/env bash' \
+	xberg_stub df '#!/usr/bin/env bash' \
 		'if [ "$1" = "-h" ]; then printf "%s\n" "DISK-HUMAN"; else printf "%s\n" "DISK-BYTES"; fi'
 	local command_log="$TEST_ROOT/commands"
 	local bash_env="$TEST_ROOT/bash-env"
 	printf '%s\n' "GLOBIGNORE='*'" >"$bash_env"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" BASH_ENV="$bash_env" HOME="$TEST_ROOT/home" COMMAND_LOG="$command_log" \
+	run env PATH="$STUB_BIN:$PATH" BASH_ENV="$bash_env" HOME="$TEST_ROOT/home" COMMAND_LOG="$command_log" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/free-disk-space.sh"
 
 	[ "$status" -eq 0 ]
@@ -41,20 +36,20 @@ make_stub() {
 }
 
 @test "show-disk-space should_write_label_and_byte_disk_details_to_standard_error" {
-	make_stub df '#!/usr/bin/env bash' \
+	xberg_stub df '#!/usr/bin/env bash' \
 		'if [ "$1" = "-h" ]; then printf "%s\n" "HUMAN"; else printf "%s\n" "HEADER" "BYTES"; fi'
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash "$BATS_TEST_DIRNAME/../scripts/show-disk-space.sh" "Before build"
+	run env PATH="$STUB_BIN:$PATH" /bin/bash "$BATS_TEST_DIRNAME/../scripts/show-disk-space.sh" "Before build"
 
 	[ "$status" -eq 0 ]
 	[ "$output" = $'=== Before build ===\nHUMAN\nDisk info:\nBYTES' ]
 }
 
 @test "free-disk-space should_stop_before_cleanup_when_initial_disk_measurement_fails" {
-	make_stub df '#!/usr/bin/env bash' 'exit 9'
-	make_stub sudo '#!/usr/bin/env bash' 'exit 99'
+	xberg_stub df '#!/usr/bin/env bash' 'exit 9'
+	xberg_stub sudo '#!/usr/bin/env bash' 'exit 99'
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash "$BATS_TEST_DIRNAME/../scripts/free-disk-space.sh"
+	run env PATH="$STUB_BIN:$PATH" /bin/bash "$BATS_TEST_DIRNAME/../scripts/free-disk-space.sh"
 
 	[ "$status" -eq 9 ]
 	[ "$output" = "=== Initial disk usage ===" ]

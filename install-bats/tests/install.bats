@@ -3,12 +3,15 @@
 # ~keep Built once per file: the mirrors are read-only and identical for every test here, and
 # rebuilding a few thousand symlinks per test is pure wall-clock.
 setup_file() {
+	bats_load_library xberg-bats
 	SYS_ROOT="$(mktemp -d)"
 	SYS_BIN="$SYS_ROOT/sysbin"
 	SYS_BIN_WITHOUT_PYTHON3="$SYS_ROOT/sysbin-no-python3"
 	export SYS_ROOT SYS_BIN SYS_BIN_WITHOUT_PYTHON3
-	shadow_system_path_without "$SYS_BIN" curl
-	shadow_system_path_without "$SYS_BIN_WITHOUT_PYTHON3" curl python3
+	xberg_shadow_system_path_without curl
+	SYS_BIN="$XBERG_SYS_BIN"
+	BATS_FILE_TMPDIR="$SYS_ROOT/no-python" xberg_shadow_system_path_without curl python3
+	SYS_BIN_WITHOUT_PYTHON3="$XBERG_SYS_BIN"
 	# ~keep The whole point of the mirrors is that these commands are missing from them, and a
 	# silent leak would put the affected tests back on the host's copies without failing.
 	# python3 is asserted present because install.sh parses release metadata with the real
@@ -33,6 +36,8 @@ teardown_file() {
 }
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	# ~keep CI runs this suite through ./run-bats itself, so the outer action exports its own
 	# INPUT_PATH and INPUT_ARGS into this process -- and `run env FOO=bar ...` ADDS to the
 	# inherited environment rather than replacing it. Without this, the default-path tests read
@@ -43,7 +48,7 @@ setup() {
 		unset "$_leaked_input"
 	done
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	INSTALL_DIR="$TEST_ROOT/install"
 	GITHUB_PATH_FILE="$TEST_ROOT/github-path"
 	CURL_LOG="$TEST_ROOT/curl.log"
@@ -67,51 +72,13 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-# Mirror the host's standard command directories into a private bin, minus the commands whose
-# absence is the point of the test. PATH is then exactly the stub dir plus this mirror.
-#
-# An allow-list was tried first and was the wrong shape. What these tests need is not "the
-# script may use exactly these ten utilities" -- that guesses at an implementation detail and
-# breaks the moment the script reaches for one more, which is how `tar -xzf` shelling out to
-# gzip on GNU tar but not BSD tar slipped through a sibling suite. What they need is "the host
-# does not supply curl", with an otherwise realistic system underneath. Naming the excluded
-# command states that directly.
-#
-# The original `PATH="$STUB_BIN:/usr/bin:/bin"` stated nothing: `install.sh` decides whether to
-# abort by probing `command -v curl`, and ubuntu-latest ships tools in /usr/bin that macOS does
-# not, so the probe outcome differed per runner and the branch under test never ran -- green
-# locally, red in CI. The destination is a parameter because this file needs two mirrors that
-# differ only in which command is absent. ~keep
-shadow_system_path_without() {
-	local destination="$1"
-	shift
-	local excluded=" $* " directory source name
-	mkdir -p "$destination"
-	for directory in /usr/local/bin /usr/bin /bin /usr/sbin /sbin; do
-		[ -d "$directory" ] || continue
-		for source in "$directory"/*; do
-			[ -x "$source" ] || continue
-			name="${source##*/}"
-			case "$excluded" in *" $name "*) continue ;; esac
-			[ -e "$destination/$name" ] || ln -s "$source" "$destination/$name"
-		done
-	done
-}
-
-make_stub() {
-	local name="$1"
-	shift
-	printf '%s\n' "$@" >"$STUB_BIN/$name"
-	chmod +x "$STUB_BIN/$name"
-}
-
 # Serves both curl call sites in install.sh from files chosen by the caller: METADATA_JSON is
 # the release API body, ARCHIVE_FILE the source tarball. Leaving either unset makes that call
 # fail the way `curl --fail` does, which is the only way to reach the download-failure
 # branches. Every invocation is appended to CURL_LOG so a test can assert the URL and headers
 # the script actually sent. ~keep
 make_curl_stub() {
-	make_stub curl '#!/usr/bin/env bash' \
+	xberg_stub curl '#!/usr/bin/env bash' \
 		'url=""' \
 		'output=""' \
 		'previous=""' \
@@ -238,7 +205,7 @@ install_existing_bats() {
 
 @test "install should_return_error_when_operating_system_is_unsupported" {
 	make_curl_stub
-	make_stub uname '#!/usr/bin/env bash' 'printf "%s\n" FreeBSD'
+	xberg_stub uname '#!/usr/bin/env bash' 'printf "%s\n" FreeBSD'
 
 	run env PATH="$STUB_BIN:$SYS_BIN" INPUT_VERSION="1.2.3" INPUT_INSTALL_DIR="$INSTALL_DIR" \
 		GITHUB_PATH="$GITHUB_PATH_FILE" CURL_LOG="$CURL_LOG" /bin/bash "$SCRIPT"

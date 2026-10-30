@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
+	bats_load_library xberg-bats
+	xberg_setup
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN" "$ROOT/licenses"
 	export PATH="$BIN:$PATH" GITHUB_WORKSPACE="$ROOT" GITHUB_OUTPUT="$ROOT/out" CARGO_TARGET_DIR="$ROOT/target"
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_OUTPUT_DIR="$ROOT/dist"
@@ -16,14 +18,9 @@ setup() {
 	done
 	printf 'Copyright\r\nFull conditions and disclaimer\n' >"$ROOT/THIRD_PARTY_LICENSES.md"
 	printf 'Nested notice\r\n\377\000\n' >"$ROOT/licenses/NOTICE.txt"
-	stub cargo 'echo "unexpected cargo invocation" >&2; exit 97'
-	stub rustup 'echo "unexpected rustup invocation" >&2; exit 97'
-	stub swift 'exit 1'
-}
-
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
+	xberg_stub cargo 'echo "unexpected cargo invocation" >&2; exit 97'
+	xberg_stub rustup 'echo "unexpected rustup invocation" >&2; exit 97'
+	xberg_stub swift 'exit 1'
 }
 
 @test "should_embed_required_notice_bytes_in_the_real_zip_before_checksum" {
@@ -144,8 +141,8 @@ PY
 @test "should_stage_only_libraries_in_split_build_mode" {
 	unset INPUT_PREBUILT_LIBS_DIR
 	export INPUT_TARGETS=aarch64-apple-darwin
-	stub rustup 'exit 0'
-	stub cargo 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; printf archive >"$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
+	xberg_stub rustup 'exit 0'
+	xberg_stub cargo 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; printf archive >"$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
 	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 0 ]
 	[ -s "$ROOT/dist/libs/aarch64-apple-darwin/libmy_lib.a" ]

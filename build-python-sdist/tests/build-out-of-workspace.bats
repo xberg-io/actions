@@ -1,17 +1,15 @@
 #!/usr/bin/env bats
 
 setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
+	bats_load_library xberg-bats
+	xberg_setup
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN" "$ROOT/ws"
 	ROOT="$(cd "$ROOT" && pwd -P)"
-	BIN="$ROOT/bin"
+	BIN="$XBERG_STUB_BIN"
 	export PATH="$BIN:$PATH"
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/build-out-of-workspace.sh"
-}
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
 }
 
 @test "should_return_error_when_input_path_does_not_exist" {
@@ -30,8 +28,8 @@ stub() {
 @test "should_isolate_normal_package_and_run_lockfile_then_maturin" {
 	mkdir -p "$ROOT/ws/pkg"
 	printf '[package]\nname = "pkg"\nversion = "1"\n' >"$ROOT/ws/pkg/Cargo.toml"
-	stub cargo 'printf "%s\n" "$*" >> "'"$ROOT"'/calls"'
-	stub maturin 'printf "%s\n" "$*" >> "'"$ROOT"'/calls"'
+	xberg_stub cargo 'printf "%s\n" "$*" >> "'"$ROOT"'/calls"'
+	xberg_stub maturin 'printf "%s\n" "$*" >> "'"$ROOT"'/calls"'
 	run bash "$SCRIPT" pkg "$ROOT/out" "$ROOT/ws"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Building sdist from package: pkg"* ]]
@@ -43,8 +41,8 @@ stub() {
 	printf '[tool.maturin]\nmanifest-path = "../crates/core/Cargo.toml"\n' >"$ROOT/ws/python/pyproject.toml"
 	printf '[package]\nname = "core"\nversion = "1"\n' >"$ROOT/ws/crates/core/Cargo.toml"
 	printf '[workspace]\nresolver = "2"\n' >"$ROOT/ws/Cargo.toml"
-	stub cargo 'exit 0'
-	stub maturin 'printf "%s\n" "$*" > "'"$ROOT"'/maturin.args"'
+	xberg_stub cargo 'exit 0'
+	xberg_stub maturin 'printf "%s\n" "$*" > "'"$ROOT"'/maturin.args"'
 	run bash "$SCRIPT" python "$ROOT/out" "$ROOT/ws"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Split layout detected; isolating $ROOT/ws/python + crate into a single-member workspace"* ]]
@@ -77,7 +75,7 @@ EOF
 @test "should_delegate_workspace_closure_to_original_split_package_without_registry_rewrite" {
 	closure_fixture
 	metadata_only_cargo
-	stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
+	xberg_stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
 	run /bin/bash "$SCRIPT" packages/python "$ROOT/out" "$ROOT/ws" workspace-closure
 	[ "$status" -eq 0 ]
 	[ "$(cat "$ROOT/closure-call")" = "$ROOT/ws/packages/python"$'\n'"sdist --out $ROOT/out" ]
@@ -86,7 +84,7 @@ EOF
 @test "should_pass_original_manifest_path_from_workspace_root_in_closure_mode" {
 	closure_fixture
 	metadata_only_cargo
-	stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
+	xberg_stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
 	run /bin/bash "$SCRIPT" crates/binding/Cargo.toml "$ROOT/out" "$ROOT/ws" workspace-closure
 	[ "$status" -eq 0 ]
 	[ "$(cat "$ROOT/closure-call")" = "$ROOT/ws"$'\n'"sdist --manifest-path $ROOT/ws/crates/binding/Cargo.toml --out $ROOT/out" ]
@@ -95,7 +93,7 @@ EOF
 @test "should_resolve_relative_closure_output_from_workspace_root" {
 	closure_fixture
 	metadata_only_cargo
-	stub maturin 'printf "%s\n" "$*" > "'"$ROOT"'/closure-call"'
+	xberg_stub maturin 'printf "%s\n" "$*" > "'"$ROOT"'/closure-call"'
 	cd "$ROOT/ws"
 	run /bin/bash "$SCRIPT" packages/python dist "$ROOT/ws" workspace-closure
 	[ "$status" -eq 0 ]
@@ -105,7 +103,7 @@ EOF
 @test "should_reject_unknown_source_mode_before_creating_output" {
 	closure_fixture
 	metadata_only_cargo
-	stub maturin 'exit 0'
+	xberg_stub maturin 'exit 0'
 	run /bin/bash "$SCRIPT" packages/python "$ROOT/out" "$ROOT/ws" unknown
 	[ "$status" -eq 1 ]
 	[ "$output" = "Error: unsupported source-dependencies: unknown" ]
@@ -119,7 +117,7 @@ EOF
 	printf '[tool.maturin]\nmanifest-path="Cargo.toml"\n' >"$ROOT/external/pyproject.toml"
 	printf '[package]\nname="external"\nversion="1.0.0"\n' >"$ROOT/external/Cargo.toml"
 	printf 'fn main() {}\n' >"$ROOT/external/src/main.rs"
-	stub maturin 'exit 0'
+	xberg_stub maturin 'exit 0'
 	run /bin/bash "$SCRIPT" ../external "$ROOT/out" "$ROOT/ws" workspace-closure
 	[ "$status" -eq 1 ]
 	[ "$output" = "Error: input resolves outside workspace" ]
@@ -129,7 +127,7 @@ EOF
 @test "should_propagate_real_maturin_failure_in_closure_mode" {
 	closure_fixture
 	metadata_only_cargo
-	stub maturin 'echo package-failed >&2; exit 37'
+	xberg_stub maturin 'echo package-failed >&2; exit 37'
 	run /bin/bash "$SCRIPT" packages/python "$ROOT/out" "$ROOT/ws" workspace-closure
 	[ "$status" -eq 37 ]
 	[[ "$output" == *package-failed* ]]
@@ -139,7 +137,7 @@ EOF
 	closure_fixture
 	metadata_only_cargo
 	ln -s "$ROOT/ws" "$ROOT/workspace-link"
-	stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
+	xberg_stub maturin 'printf "%s\n%s\n" "$PWD" "$*" > "'"$ROOT"'/closure-call"'
 	run /bin/bash "$SCRIPT" crates/binding/Cargo.toml dist "$ROOT/workspace-link" workspace-closure
 	[ "$status" -eq 0 ]
 	[ "$(cat "$ROOT/closure-call")" = "$ROOT/ws"$'\n'"sdist --manifest-path $ROOT/ws/crates/binding/Cargo.toml --out $ROOT/ws/dist" ]

@@ -1,9 +1,11 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	ACTION_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	CLONE_SOURCE="$TEST_ROOT/clone-source"
 	mkdir -p "$STUB_BIN" "$CLONE_SOURCE/Formula"
 	ORIGINAL_PATH="$PATH"

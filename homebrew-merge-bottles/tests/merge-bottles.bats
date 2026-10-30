@@ -1,9 +1,11 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	ACTION_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	mkdir -p "$STUB_BIN" "$TEST_ROOT/tap/Formula" "$TEST_ROOT/json"
 	ORIGINAL_PATH="$PATH"
 	printf '%s\n' '#!/usr/bin/env bash' \

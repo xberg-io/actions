@@ -1,15 +1,18 @@
 #!/usr/bin/env bats
 
-setup() {
-	ROOT="$BATS_TEST_TMPDIR/root"
-	BIN="$ROOT/bin"
-	mkdir -p "$BIN" "$ROOT/home"
-	export PATH="$BIN:/usr/bin:/bin" HOME="$ROOT/home" GITHUB_PATH="$ROOT/path" GITHUB_ENV="$ROOT/env"
-	SCRIPT="$BATS_TEST_DIRNAME/../scripts/configure.sh"
+setup_file() {
+	bats_load_library xberg-bats
+	xberg_shadow_system_path_without gpg2
 }
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
+
+setup() {
+	bats_load_library xberg-bats
+	xberg_setup_isolated
+	ROOT="$XBERG_WORK"
+	BIN="$XBERG_STUB_BIN"
+	mkdir -p "$BIN" "$ROOT/home"
+	export PATH="$BIN:$XBERG_SYS_BIN" HOME="$ROOT/home" GITHUB_PATH="$ROOT/path" GITHUB_ENV="$ROOT/env"
+	SCRIPT="$BATS_TEST_DIRNAME/../scripts/configure.sh"
 }
 
 @test "should_report_default_gpg_when_gpg2_is_not_available" {
@@ -26,8 +29,8 @@ stub() {
 }
 
 @test "should_create_gpg2_wrapper_and_patch_legacy_pom_arguments" {
-	stub gpg2 'exit 0'
-	stub sed 'file="${@: -1}"; printf "%s\n" "<arg>--pinentry-mode=loopback</arg>" >"$file"'
+	xberg_stub gpg2 'exit 0'
+	xberg_stub sed 'file="${@: -1}"; printf "%s\n" "<arg>--pinentry-mode=loopback</arg>" >"$file"'
 	printf '<arg>--pinentry-mode</arg><arg>loopback</arg>\n' >"$ROOT/pom.xml"
 	export INPUT_POM_FILE="$ROOT/pom.xml"
 	run bash "$SCRIPT"

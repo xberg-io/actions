@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT="$BATS_TEST_DIRNAME/../scripts/setup.sh"
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	export RUNNER_TEMP="$BATS_TEST_TMPDIR/tmp"
 	export GITHUB_ENV="$BATS_TEST_TMPDIR/github-env"
 	export GITHUB_OUTPUT="$BATS_TEST_TMPDIR/github-output"

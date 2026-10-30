@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	TEST_ROOT="$(mktemp -d)"
 	REPO="$TEST_ROOT/repo"
 	mkdir -p "$REPO"
@@ -135,7 +137,7 @@ run_script() {
 	run_script "$SCRIPT" "$REPO" "" auto true ""
 
 	[ "$status" -eq 0 ]
-	! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
+	run ! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
 }
 
 @test "prepare should_turn_task_auto_install_off_when_only_some_tools_are_installed" {
@@ -156,7 +158,7 @@ run_script() {
 	run_script MISE_TASK_RUN_AUTO_INSTALL=true "$SCRIPT" "$REPO" "" auto true "node"
 
 	[ "$status" -eq 0 ]
-	! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
+	run ! grep -q MISE_TASK_RUN_AUTO_INSTALL "$GITHUB_ENV"
 }
 
 @test "prepare should_reject_an_install_value_other_than_true_or_false" {
@@ -180,5 +182,5 @@ run_script() {
 	run_script RUNNER_OS=Linux "$SCRIPT" "$REPO" "" auto
 
 	[ "$status" -eq 0 ]
-	! grep -q MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS "$GITHUB_ENV"
+	run ! grep -q MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS "$GITHUB_ENV"
 }

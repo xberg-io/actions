@@ -1,8 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT_DIR="$(cd "$BATS_TEST_DIRNAME/../scripts" && pwd)"
-	BIN="$BATS_TEST_TMPDIR/bin"
+	BIN="$XBERG_STUB_BIN"
 	mkdir -p "$BIN"
 	export PATH="$BIN:$PATH"
 	export GITHUB_ENV="$BATS_TEST_TMPDIR/github-env"
@@ -11,13 +13,8 @@ setup() {
 	: >"$GITHUB_OUTPUT"
 }
 
-stub() {
-	printf '%s\n' '#!/usr/bin/env bash' 'set -eu' "$2" >"$BIN/$1"
-	chmod +x "$BIN/$1"
-}
-
 @test "should_pin_requested_python_version_with_uv" {
-	stub uv 'printf "%s\n" "$*" >"$UV_CALL"'
+	xberg_stub uv 'set -eu' 'printf "%s\n" "$*" >"$UV_CALL"'
 	export UV_CALL="$BATS_TEST_TMPDIR/uv-call"
 	run "$SCRIPT_DIR/pin-python.sh" 3.12
 	[ "$status" -eq 0 ]

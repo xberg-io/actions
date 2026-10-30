@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	script="$BATS_TEST_DIRNAME/../scripts/install-cargo-zigbuild.sh"
 	export RUNNER_TEMP="$BATS_TEST_TMPDIR/runner"
 	export GITHUB_PATH="$BATS_TEST_TMPDIR/github-path"

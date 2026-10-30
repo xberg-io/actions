@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	SCRIPT_DIR="$(cd "$BATS_TEST_DIRNAME/../scripts" && pwd)"
 	export RUNNER_TEMP="$BATS_TEST_TMPDIR/tmp"
 	export GITHUB_WORKSPACE="$BATS_TEST_TMPDIR/work"

@@ -1,8 +1,15 @@
 #!/usr/bin/env bats
 
+setup_file() {
+	bats_load_library xberg-bats
+	xberg_shadow_system_path_without mise task
+}
+
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup_isolated
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	REPO="$TEST_ROOT/repo"
 	CALLS="$TEST_ROOT/calls.log"
 	mkdir -p "$STUB_BIN" "$REPO"
@@ -27,7 +34,7 @@ make_mise_stub() {
 }
 
 run_runner() {
-	run env PATH="$STUB_BIN:/usr/bin:/bin" "$@"
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" "$@"
 }
 
 runner() {

@@ -1,8 +1,15 @@
 #!/usr/bin/env bats
 
+setup_file() {
+	bats_load_library xberg-bats
+	xberg_shadow_system_path_without brew bwrap
+}
+
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup_isolated
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	mkdir -p "$STUB_BIN"
 	export TEST_ROOT STUB_BIN
 }
@@ -11,20 +18,13 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-make_stub() {
-	local name="$1"
-	shift
-	printf '%s\n' "$@" >"$STUB_BIN/$name"
-	chmod +x "$STUB_BIN/$name"
-}
-
 @test "install should_exit_without_installing_when_brew_is_already_on_path" {
-	make_stub brew '#!/usr/bin/env bash' \
+	xberg_stub brew '#!/usr/bin/env bash' \
 		'if [ "$1" = "--version" ]; then printf "%s\n" "Homebrew 4.5.0"; fi'
-	make_stub sudo '#!/usr/bin/env bash' 'exit 99'
-	make_stub curl '#!/usr/bin/env bash' 'exit 99'
+	xberg_stub sudo '#!/usr/bin/env bash' 'exit 99'
+	xberg_stub curl '#!/usr/bin/env bash' 'exit 99'
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" GITHUB_PATH="$TEST_ROOT/github-path" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_PATH="$TEST_ROOT/github-path" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install.sh"
 
 	[ "$status" -eq 0 ]
@@ -33,10 +33,10 @@ make_stub() {
 }
 
 @test "install should_return_installer_failure_after_safely_installing_bubblewrap" {
-	make_stub sudo '#!/usr/bin/env bash' \
+	xberg_stub sudo '#!/usr/bin/env bash' \
 		'printf "sudo %s\n" "$*" >>"$COMMAND_LOG"' \
 		'exit 0'
-	make_stub curl '#!/usr/bin/env bash' 'printf "%s\n" "exit 7"'
+	xberg_stub curl '#!/usr/bin/env bash' 'printf "%s\n" "exit 7"'
 	local command_log="$TEST_ROOT/commands"
 
 	run env PATH="$STUB_BIN:/bin" COMMAND_LOG="$command_log" \

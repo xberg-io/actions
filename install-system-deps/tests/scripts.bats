@@ -6,8 +6,10 @@ setup_file() {
 }
 
 setup() {
+	bats_load_library xberg-bats
+	xberg_setup
 	TEST_ROOT="$(mktemp -d)"
-	STUB_BIN="$TEST_ROOT/bin"
+	STUB_BIN="$XBERG_STUB_BIN"
 	mkdir -p "$STUB_BIN"
 	export TEST_ROOT STUB_BIN
 }
@@ -16,19 +18,12 @@ teardown() {
 	rm -rf "$TEST_ROOT"
 }
 
-make_stub() {
-	local name="$1"
-	shift
-	printf '%s\n' "$@" >"$STUB_BIN/$name"
-	chmod +x "$STUB_BIN/$name"
-}
-
 @test "detect-tesseract-linux should_write_candidate_patch_version_to_github_output" {
-	make_stub apt-cache '#!/usr/bin/env bash' \
+	xberg_stub apt-cache '#!/usr/bin/env bash' \
 		'printf "%s\n" "Candidate: 5.4.1-1build1"'
 	local output_file="$TEST_ROOT/github-output"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" GITHUB_OUTPUT="$output_file" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_OUTPUT="$output_file" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-linux.sh"
 
 	[ "$status" -eq 0 ]
@@ -37,10 +32,10 @@ make_stub() {
 }
 
 @test "detect-tesseract-linux should_write_unknown_when_package_cache_has_no_candidate" {
-	make_stub apt-cache '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub apt-cache '#!/usr/bin/env bash' 'exit 0'
 	local output_file="$TEST_ROOT/github-output"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" GITHUB_OUTPUT="$output_file" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_OUTPUT="$output_file" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-linux.sh"
 
 	[ "$status" -eq 0 ]
@@ -49,11 +44,11 @@ make_stub() {
 }
 
 @test "detect-tesseract-macos should_prefer_json_stable_version" {
-	make_stub brew '#!/usr/bin/env bash' \
+	xberg_stub brew '#!/usr/bin/env bash' \
 		'printf "%s\n" "{\"formulae\":[{\"versions\":{\"stable\":\"5.5.0\"}}]}"'
 	local output_file="$TEST_ROOT/github-output"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" GITHUB_OUTPUT="$output_file" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_OUTPUT="$output_file" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-macos.sh"
 
 	[ "$status" -eq 0 ]
@@ -62,12 +57,12 @@ make_stub() {
 }
 
 @test "detect-tesseract-macos should_fall_back_to_human_readable_brew_info" {
-	make_stub brew '#!/usr/bin/env bash' \
+	xberg_stub brew '#!/usr/bin/env bash' \
 		'if [ "$1" = "info" ] && [ "$2" = "--json=v2" ]; then exit 0; fi' \
 		'printf "%s\n" "tesseract: stable 5.4.1 (bottled)"'
 	local output_file="$TEST_ROOT/github-output"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" GITHUB_OUTPUT="$output_file" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" GITHUB_OUTPUT="$output_file" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/detect-tesseract-macos.sh"
 
 	[ "$status" -eq 0 ]
@@ -76,9 +71,9 @@ make_stub() {
 }
 
 @test "retry should_return_one_after_three_failed_attempts" {
-	make_stub sleep '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub sleep '#!/usr/bin/env bash' 'exit 0'
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash -c \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" /bin/bash -c \
 		'source "$1"; failure_count=0; fail() { failure_count=$((failure_count + 1)); return 42; }; retry_with_backoff fail; exit $?' \
 		_ "$BATS_TEST_DIRNAME/../scripts/retry.sh"
 
@@ -87,9 +82,9 @@ make_stub() {
 }
 
 @test "retry should_return_success_when_command_succeeds_on_second_attempt" {
-	make_stub sleep '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub sleep '#!/usr/bin/env bash' 'exit 0'
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" /bin/bash -c \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" /bin/bash -c \
 		'source "$1"; invocation_count=0; eventually() { invocation_count=$((invocation_count + 1)); [ "$invocation_count" -eq 2 ]; }; retry_with_backoff eventually; printf "attempts=%s\n" "$invocation_count"' \
 		_ "$BATS_TEST_DIRNAME/../scripts/retry.sh"
 
@@ -98,13 +93,13 @@ make_stub() {
 }
 
 @test "install-linux should_fail_when_cmake_is_unavailable_after_safe_package_attempts" {
-	make_stub sudo '#!/usr/bin/env bash' \
+	xberg_stub sudo '#!/usr/bin/env bash' \
 		'printf "sudo %s\n" "$*" >>"$COMMAND_LOG"' \
 		'exit 0'
-	make_stub dpkg '#!/usr/bin/env bash' 'exit 0'
-	make_stub pkg-config '#!/usr/bin/env bash' 'printf "%s\n" "1.23.7"'
-	make_stub ldconfig '#!/usr/bin/env bash' 'exit 0'
-	make_stub apt-cache '#!/usr/bin/env bash' 'exit 1'
+	xberg_stub dpkg '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub pkg-config '#!/usr/bin/env bash' 'printf "%s\n" "1.23.7"'
+	xberg_stub ldconfig '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub apt-cache '#!/usr/bin/env bash' 'exit 1'
 	local prefix="$TEST_ROOT/libheif"
 	mkdir -p "$prefix/lib/pkgconfig"
 	: >"$prefix/lib/pkgconfig/libheif.pc"
@@ -127,11 +122,11 @@ make_stub() {
 	# the assertion below fails; the script simply has nothing to assert there. Skipping is
 	# honest, running it on Linux was not.
 	[ "$(uname -s)" = "Darwin" ] || skip "install-macos.sh only has observable behaviour on macOS"
-	make_stub brew '#!/usr/bin/env bash' \
+	xberg_stub brew '#!/usr/bin/env bash' \
 		'if [ "$1" = "list" ]; then exit 1; fi' \
 		'if [ "$1" = "install" ] && [ "$2" = "cmake" ]; then exit 1; fi' \
 		'exit 0'
-	make_stub sleep '#!/usr/bin/env bash' 'exit 0'
+	xberg_stub sleep '#!/usr/bin/env bash' 'exit 0'
 	local github_path="$TEST_ROOT/github-path"
 	local github_env="$TEST_ROOT/github-env"
 	local bash_env="$TEST_ROOT/bash-env"
@@ -144,7 +139,7 @@ make_stub() {
 		'  return 0' \
 		'}' >"$bash_env"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install-macos.sh"
 
 	[ "$status" -eq 1 ]
@@ -173,7 +168,7 @@ make_stub() {
 		'pkg-config() { case "${2:-}" in tesseract) echo 5.5.4 ;; lept) echo 1.87.0 ;; *) echo 2.3.0 ;; esac; }' \
 		'php() { printf "%s\n" "PHP 8.4.0"; }' >"$bash_env"
 
-	run env PATH="$STUB_BIN:/usr/bin:/bin" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" BASH_ENV="$bash_env" GITHUB_ENV="$github_env" GITHUB_PATH="$github_path" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install-macos.sh"
 
 	[ "$status" -eq 0 ]
