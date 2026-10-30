@@ -5,10 +5,14 @@ on:
     paths:
       - "build-wasm-package/**"
       - ".github/workflows/test-build-wasm-package.yml"
+      - "mise.toml"
+      - "mise.lock"
   pull_request:
     paths:
       - "build-wasm-package/**"
       - ".github/workflows/test-build-wasm-package.yml"
+      - "mise.toml"
+      - "mise.lock"
 
 permissions:
   contents: read
@@ -26,8 +30,9 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        shell: bash
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        uses: ./setup-mise
+        with:
+          install-args: github:rustwasm/wasm-pack
 
       - name: Stage a tiny wasm-bindgen crate
         shell: bash
