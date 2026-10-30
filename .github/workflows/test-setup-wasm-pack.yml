@@ -36,8 +36,8 @@ jobs:
       - name: Setup wasm-pack at another version
         uses: ./setup-wasm-pack
         with:
-          wasm-pack-version: "0.13.1"
+          wasm-pack-version: "0.14.0"
 
       - name: Verify the requested version is first on PATH
         shell: bash
-        run: wasm-pack --version | tee /dev/stderr | grep -q "0.13.1"
+        run: wasm-pack --version | tee /dev/stderr | grep -q "0.14.0"
