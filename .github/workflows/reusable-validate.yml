@@ -27,7 +27,7 @@ on:
         description: "Python version for setup-python-env."
         required: false
         type: string
-        default: "3.13"
+        default: "3.13.18"
       python-extra-projects:
         description: >-
           Newline-separated project directories to install into the synced venv (`uv pip install -e`).
@@ -45,7 +45,7 @@ on:
         description: "JDK version for setup-java (checkstyle 13+ requires 21+; match the binding's maven.compiler.release)."
         required: false
         type: string
-        default: "21"
+        default: "25.0.5+8"
       java-distribution:
         description: "JDK distribution for setup-java."
         required: false
@@ -92,7 +92,7 @@ on:
         description: "Ruby version for setup-ruby."
         required: false
         type: string
-        default: "3.4"
+        default: "3.4.12"
       ruby-working-directory:
         description: "Directory holding the Ruby binding's Gemfile."
         required: false
@@ -142,7 +142,7 @@ on:
         description: "Zig version for setup-zig."
         required: false
         type: string
-        default: "latest"
+        default: "0.17.0"
       setup-r:
         description: "Install R so poly's R checks and alef's R snippet validation can run."
         required: false

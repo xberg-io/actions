@@ -19,6 +19,9 @@ All notable changes to xberg-io/actions are documented in this file.
 - This repository's `governance:check` and `governance:hooks:install` tasks come from the xberg-io/toolchains
   v1.7.0 `governance` and `governance-check` task sets instead of local definitions, and its toolchain baseline
   moves to v1.7.0.
+- `reusable-validate` defaults follow the xberg-io/toolchains baseline: Java 25.0.5+8 (was 21; every
+  binding compiles with `release` 25), Python 3.13.18, Ruby 3.4.12 and Zig 0.17.0 (was `latest`). Go stays on
+  1.26: consumer modules declare `go 1.26`, and the default golangci-lint v2.12.2 panics on the Go 1.27 stdlib.
 
 ## [1.36.0] - 2026-10-29
 
