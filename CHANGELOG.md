@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-validate` takes a `check-adrs` input (default `false`) that installs adrlint from the caller's
+  `mise.toml` and runs `adrlint lint`, `format --check` and `lock --check`, failing when no ADR was checked.
+
 ### Changed
 
 - Use the shared xberg-bats setup, command stubs, and isolated PATH helpers throughout action shell suites.

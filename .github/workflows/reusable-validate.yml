@@ -230,6 +230,13 @@ on:
         required: false
         type: boolean
         default: false
+      check-adrs:
+        description: >-
+          Lint, format-check and lock-check the ADR log with adrlint, failing when it checks no ADR.
+          The caller's mise.toml pins github:Goldziher/adrlint and .adrlint.toml configures the log.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -244,6 +251,24 @@ jobs:
       - name: Check toolchain against the baseline
         if: ${{ inputs.check-toolchain }}
         uses: xberg-io/actions/check-toolchain@v1
+
+      - name: Set up adrlint
+        if: ${{ inputs.check-adrs }}
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          install-args: github:Goldziher/adrlint
+
+      - name: Check the ADR log
+        if: ${{ inputs.check-adrs }}
+        run: |
+          set -euo pipefail
+          adrlint lint --format github
+          summary=$(adrlint lint 2>&1)
+          echo "$summary"
+          checked=$(sed -nE 's/.* in ([0-9]+) files? checked.*/\1/p' <<<"$summary")
+          [ "${checked:-0}" -gt 0 ] || { echo "::error::adrlint checked no ADR files"; exit 1; }
+          adrlint format --check
+          adrlint lock --check
 
       - name: Set up Rust
         if: ${{ inputs.setup-rust }}

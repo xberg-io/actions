@@ -84,3 +84,31 @@ def test_toolchain_gate_runs_check_toolchain_right_after_checkout():
     assert steps[1]["uses"] == "xberg-io/actions/check-toolchain@v1"
     assert steps[1]["if"] == "${{ inputs.check-toolchain }}"
     assert [step for step in steps if "check-toolchain" in str(step.get("if", ""))] == [steps[1]]
+
+
+def test_adr_gate_is_opt_in():
+    inputs = _workflow()[True]["workflow_call"]["inputs"]
+
+    assert inputs["check-adrs"]["type"] == "boolean"
+    assert inputs["check-adrs"]["default"] is False
+
+
+def test_adr_gate_installs_adrlint_from_mise_then_lints_formats_and_checks_the_lock():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    gated = [step for step in steps if "inputs.check-adrs" in str(step.get("if", ""))]
+
+    assert [step.get("uses") for step in gated] == ["xberg-io/actions/setup-mise@v1", None]
+    assert gated[0]["with"]["install-args"] == "github:Goldziher/adrlint"
+    script = gated[1]["run"]
+    commands = ["adrlint lint --format github", "adrlint format --check", "adrlint lock --check"]
+    positions = [script.index(command) for command in commands]
+    assert positions == sorted(positions)
+
+
+def test_adr_gate_fails_when_no_adr_was_checked():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    script = next(step["run"] for step in steps if step.get("name") == "Check the ADR log")
+
+    assert "summary=$(adrlint lint 2>&1)" in script, "adrlint prints its summary on stderr"
+    assert "files? checked" in script
+    assert "-gt 0" in script
