@@ -85,6 +85,27 @@ run_script() {
 	xberg_assert_trace "install MISE_LOCKED=false node@24"
 }
 
+@test "install_tools should_read_a_lock_checked_out_with_crlf_line_endings" {
+	STUB_CURRENT=$'node 26.12.1\n'
+	printf '%s\r\n' '[[tools.node]]' 'version = "26.12.1"' >"$REPO/mise.lock"
+
+	run_script MISE_LOCKED=1 "$SCRIPT" "$REPO" node=26
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 node@26.12.1"
+	[[ "$output" != *"::notice::"* ]]
+}
+
+@test "install_tools should_not_let_a_version_input_start_a_workflow_command" {
+	STUB_CURRENT=$'python 3.13.18\n'
+
+	run_script "$SCRIPT" "$REPO" $'python=3.13\n::warning::injected'
+
+	xberg_assert_status 1
+	[[ "$output" != *$'\n::warning::injected'* ]]
+	xberg_assert_trace_empty
+}
+
 @test "install_tools should_consult_the_lock_of_every_active_profile" {
 	STUB_CURRENT=$'python 3.13.18 3.11.18\n'
 	printf '%s\n' '[[tools.python]]' 'version = "3.13.18"' >"$REPO/mise.lock"

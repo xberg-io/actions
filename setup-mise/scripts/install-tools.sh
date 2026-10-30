@@ -46,7 +46,8 @@ normalize_version() {
     version="${version%.*}"
   done
   if [[ -n "$version" && ! "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]; then
-    echo "::error::'$1' is not a version mise can install" >&2
+    # Newlines are dropped so the input cannot start a workflow command of its own. ~keep
+    echo "::error::'$(tr -d '\r\n' <<<"$1")' is not a version mise can install" >&2
     return 1
   fi
   printf '%s' "$version"
@@ -89,7 +90,8 @@ locked_versions() {
   local id="$1" lockfile
   for lockfile in "${lockfiles[@]}"; do
     [[ -f "$lockfile" ]] || continue
-    awk -v id="$id" '
+    # A lock checked out with CRLF line endings would otherwise match no tool header. ~keep
+    tr -d '\r' <"$lockfile" | awk -v id="$id" '
       /^\[\[tools\./ {
         name = $0
         sub(/^\[\[tools\./, "", name)
@@ -106,7 +108,7 @@ locked_versions() {
         print version
         current = 0
       }
-    ' "$lockfile" | tr -d '\r'
+    '
   done
 }
 
