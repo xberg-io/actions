@@ -33,8 +33,9 @@ Two reasons, both load-bearing:
   another in CI reintroduces exactly the local-green/CI-red class that
   `xberg_shadow_system_path_without` exists to kill.
 
-Refresh a vendored copy with `task test:lib:sync`; `task test:lib:check` fails when it has drifted
-from the pinned `xberg-io/actions` ref.
+Refresh a vendored copy with `mise run test:scripts:lib:sync` (the xberg-io/toolchains `bats-lib`
+task set); `mise run test:scripts:lib:check` fails when it has drifted from the pinned
+`xberg-io/actions` ref.
 
 ## Choosing a PATH strategy
 

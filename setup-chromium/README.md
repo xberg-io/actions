@@ -51,7 +51,7 @@ None required.
   env:
     CHROMIUM_BIN: ${{ steps.chromium.outputs.chromium-path }}
   run: |
-    task brew:e2e:test
+    mise run test:e2e
 ```
 
 ## Supported Platforms
