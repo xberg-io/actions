@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.38.0] - 2026-10-30
+
 ### Added
 
 - `reusable-validate` takes a `check-adrs` input (default `false`) that installs adrlint from the caller's
