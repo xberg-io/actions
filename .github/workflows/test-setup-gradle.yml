@@ -34,8 +34,14 @@ jobs:
 
       - name: Verify Gradle installation
         shell: bash
-        run: gradle --version | tee /dev/stderr | grep -q "Gradle 9.6.0"
+        run: |
+          version="$(gradle --version)"
+          echo "$version"
+          grep -q "Gradle 9.6.0" <<<"$version"
 
       - name: Verify Java installation
         shell: bash
-        run: java -version 2>&1 | tee /dev/stderr | grep -q 'Temurin-21'
+        run: |
+          version="$(java -version 2>&1)"
+          echo "$version"
+          grep -q "Temurin-21" <<<"$version"

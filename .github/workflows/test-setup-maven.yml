@@ -38,7 +38,10 @@ jobs:
 
       - name: Verify Maven installation
         shell: bash
-        run: mvn --version | tee /dev/stderr | grep -q "Apache Maven 3.9.11"
+        run: |
+          version="$(mvn --version)"
+          echo "$version"
+          grep -q "Apache Maven 3.9.11" <<<"$version"
 
       - name: Verify Java installation
         shell: bash

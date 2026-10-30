@@ -297,7 +297,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$JAVA_HOME/bin/java" -version 2>&1 | tee /dev/stderr | grep -q 'Temurin-25'
+          version="$("$JAVA_HOME/bin/java" -version 2>&1)"
+          echo "$version"
+          grep -q "Temurin-25" <<<"$version"
           grep -qF '<id>central</id>' ~/.m2/settings.xml
           # shellcheck disable=SC2016 # settings.xml holds Maven's literal ${env.*} reference
           grep -qF '<password>${env.MAVEN_PASSWORD}</password>' ~/.m2/settings.xml
