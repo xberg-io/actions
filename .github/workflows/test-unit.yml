@@ -16,6 +16,7 @@ on:
       - "pyproject.toml"
       - "**/pyrefly.toml"
       - "mise.toml"
+      - "mise.lock"
       - "mise-tasks/**"
       - ".github/workflows/reusable-validate.yml"
       - ".github/workflows/test-unit.yml"
@@ -33,6 +34,7 @@ on:
       - "pyproject.toml"
       - "**/pyrefly.toml"
       - "mise.toml"
+      - "mise.lock"
       - "mise-tasks/**"
       - ".github/workflows/reusable-validate.yml"
       - ".github/workflows/test-unit.yml"
@@ -56,13 +58,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: ./setup-mise
+        with:
+          install-args: python uv
 
       - name: Install dependencies
         run: uv sync --group dev
 
       - uses: ./setup-ai-rulez
 
+      # BEAM stays on its setup action until mise's Erlang and Elixir builds are evaluated. ~keep
       - name: Set up Erlang and Elixir for Hex metadata tests
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
         with:
@@ -79,7 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: ./setup-mise
 
       - name: Install dependencies
         run: uv sync --group dev
@@ -89,8 +94,6 @@ jobs:
 
       - name: Ruff format check
         run: uv run ruff format --check .
-
-      - uses: ./setup-mise
 
       - name: Pyrefly
         run: mise run typecheck
