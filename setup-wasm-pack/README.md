@@ -1,18 +1,12 @@
 # setup-wasm-pack
 
-Install `wasm-pack` at a pinned version with OS/arch detection. Downloads
-the matching prebuilt release from [rustwasm/wasm-pack][upstream] and places
-the binary on `PATH`.
+Install `wasm-pack` through mise, at the version the caller's `mise.toml` and `mise.lock` select, and put it on
+`PATH`. The caller declares it by its backend, since mise's registry has no `wasm-pack` entry:
 
-Supported targets:
-
-- Linux x86_64 → `x86_64-unknown-linux-musl`
-- Linux aarch64 → `aarch64-unknown-linux-musl`
-- macOS x86_64 → `x86_64-apple-darwin`
-- macOS aarch64 → `aarch64-apple-darwin`
-- Windows x86_64 → `x86_64-pc-windows-msvc`
-
-No-ops if the requested version is already on `PATH`.
+```toml
+[tools]
+"github:rustwasm/wasm-pack" = "0.15.0"
+```
 
 ## Usage
 
@@ -20,18 +14,16 @@ No-ops if the requested version is already on `PATH`.
 - uses: xberg-io/actions/setup-wasm-pack@v1
 ```
 
-With overrides:
+With an override, matched against the caller's mise locks and installed unlocked when no lock covers it:
 
 ```yaml
 - uses: xberg-io/actions/setup-wasm-pack@v1
   with:
-    wasm-pack-version: "0.13.1"
+    wasm-pack-version: "0.15.0"
 ```
 
 ## Inputs
 
-| Name                | Required | Default  | Description                                   |
-| ------------------- | -------- | -------- | --------------------------------------------- |
-| `wasm-pack-version` | no       | `0.13.1` | wasm-pack version (without the leading `v`).  |
-
-[upstream]: https://github.com/rustwasm/wasm-pack
+| Name                | Required | Default | Description                                             |
+| ------------------- | -------- | ------- | ------------------------------------------------------- |
+| `wasm-pack-version` | no       | `""`    | wasm-pack version; empty uses the caller's `mise.toml`. |

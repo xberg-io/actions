@@ -41,6 +41,10 @@ All notable changes to xberg-io/actions are documented in this file.
   `~/.m2/settings.xml` server entry for `server-id` with `${env.MAVEN_USERNAME}`/`${env.MAVEN_PASSWORD}`
   references, and `test-java-ffi` still caches `~/.m2/repository`. `gradle/actions/setup-gradle` stays only for
   Gradle's caches. Callers must declare `java`, plus `maven` for `setup-maven` and `gradle` for `setup-gradle`.
+- `setup-wasm-pack` and `build-wasm-package` install wasm-pack through mise instead of downloading the release
+  archive. `wasm-pack-version` defaults to empty, meaning the caller's `mise.toml` (was `0.15.0` in
+  `setup-wasm-pack` and `0.13.1` in `build-wasm-package`); `skip` still skips the install. Callers must declare
+  `"github:rustwasm/wasm-pack"` (mise's registry has no `wasm-pack`) or pass the version.
 
 ### Fixed
 

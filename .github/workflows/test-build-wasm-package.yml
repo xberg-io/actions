@@ -3,12 +3,14 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "build-wasm-package/**"
       - ".github/workflows/test-build-wasm-package.yml"
       - "mise.toml"
       - "mise.lock"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "build-wasm-package/**"
       - ".github/workflows/test-build-wasm-package.yml"
       - "mise.toml"
@@ -28,11 +30,6 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-unknown-unknown
-
-      - name: Install wasm-pack
-        uses: ./setup-mise
-        with:
-          install-args: github:rustwasm/wasm-pack
 
       - name: Stage a tiny wasm-bindgen crate
         shell: bash

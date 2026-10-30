@@ -14,9 +14,11 @@ inputs:
     required: false
     default: "false"
   wasm-pack-version:
-    description: wasm-pack version to install (or 'skip' to skip install)
+    description: >-
+      wasm-pack version to install through mise, matched against the caller's mise locks, or 'skip' to skip the
+      install. Empty uses the version the caller's mise.toml selects (`"github:rustwasm/wasm-pack"`).
     required: false
-    default: "0.13.1"
+    default: ""
 
 outputs:
   tarball:
@@ -26,11 +28,25 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install wasm-pack
+    - name: Check for mise
+      id: mise
       if: inputs.wasm-pack-version != 'skip'
-      uses: xberg-io/actions/setup-wasm-pack@v1
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.wasm-pack-version != 'skip' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        wasm-pack-version: ${{ inputs.wasm-pack-version }}
+        install: "false"
+
+    - name: Install wasm-pack through mise
+      if: inputs.wasm-pack-version != 'skip'
+      shell: bash
+      env:
+        WASM_PACK_VERSION: ${{ inputs.wasm-pack-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "github:rustwasm/wasm-pack=$WASM_PACK_VERSION"
 
     - name: Build WASM bundle
       shell: bash

@@ -3,10 +3,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-wasm-pack/**"
       - ".github/workflows/test-setup-wasm-pack.yml"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-wasm-pack/**"
       - ".github/workflows/test-setup-wasm-pack.yml"
 
@@ -23,9 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ~keep No version: the repository's mise.toml declares github:rustwasm/wasm-pack, as a caller's does.
       - name: Setup wasm-pack
         uses: ./setup-wasm-pack
 
       - name: Verify installation
         shell: bash
-        run: wasm-pack --version
+        run: wasm-pack --version | tee /dev/stderr | grep -q "$(mise current github:rustwasm/wasm-pack)"
+
+      - name: Setup wasm-pack at another version
+        uses: ./setup-wasm-pack
+        with:
+          wasm-pack-version: "0.13.1"
+
+      - name: Verify the requested version is first on PATH
+        shell: bash
+        run: wasm-pack --version | tee /dev/stderr | grep -q "0.13.1"
