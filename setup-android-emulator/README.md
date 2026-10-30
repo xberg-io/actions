@@ -52,4 +52,4 @@ step (it boots the emulator, runs `script:`, then tears it down).
 - Linux runner with KVM available (default for `ubuntu-latest`). macOS / Windows
   runners can use this action but boot times are significantly slower without
   KVM.
-- A Java toolchain (the action installs Temurin 21).
+- A Java toolchain: the action installs the Java the caller's `mise.toml` declares, through mise.

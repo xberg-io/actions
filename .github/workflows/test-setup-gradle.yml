@@ -3,10 +3,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-gradle/**"
       - ".github/workflows/test-setup-gradle.yml"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-gradle/**"
       - ".github/workflows/test-setup-gradle.yml"
 
@@ -23,15 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ~keep This repository's mise.toml declares neither Java nor Gradle, so both versions are passed.
       - name: Setup Gradle (with Java 21)
         uses: ./setup-gradle
         with:
           java-version: "21"
+          gradle-version: "9.6.0"
 
       - name: Verify Gradle installation
         shell: bash
-        run: gradle --version
+        run: gradle --version | tee /dev/stderr | grep -q "Gradle 9.6.0"
 
       - name: Verify Java installation
         shell: bash
-        run: java -version
+        run: java -version 2>&1 | tee /dev/stderr | grep -q 'Temurin-21'

@@ -30,6 +30,17 @@ All notable changes to xberg-io/actions are documented in this file.
   `registry-url` still writes the `.npmrc` setup-node wrote (`$RUNNER_TEMP/.npmrc`, token read from
   `NODE_AUTH_TOKEN`, exported as `NPM_CONFIG_USERCONFIG`, unset token exported as setup-node's placeholder).
   `publish-npm` installs only pnpm. Callers must declare `node` and `pnpm` (`pnpm` alone for `publish-npm`).
+- The Java composites install Java, Maven and Gradle through mise instead of `actions/setup-java`, a curl of the
+  Maven tarball and `gradle/actions/setup-gradle`'s `gradle-version`: `setup-maven`, `setup-gradle`,
+  `publish-maven`, `publish-maven-gradle`, `test-java-ffi` and `setup-android-emulator`. A `java-version` is
+  prefixed with the distribution (`25` selects the newest locked `temurin-25`). Behavior changes: `java-version`
+  defaults to empty, meaning the caller's `mise.toml` (was `25` in `setup-gradle`, `publish-maven` and
+  `publish-maven-gradle`, `25.0.2+10` in `test-java-ffi`); `setup-maven`'s `version` defaults to empty (was
+  `3.9.11`) and `setup-gradle`'s `gradle-version` to empty (was `9.6.0`); `setup-android-emulator` takes the
+  caller's Java instead of Temurin 25.0.5+8/25.0.4+101. `publish-maven`'s `setup-java` still writes the
+  `~/.m2/settings.xml` server entry for `server-id` with `${env.MAVEN_USERNAME}`/`${env.MAVEN_PASSWORD}`
+  references, and `test-java-ffi` still caches `~/.m2/repository`. `gradle/actions/setup-gradle` stays only for
+  Gradle's caches. Callers must declare `java`, plus `maven` for `setup-maven` and `gradle` for `setup-gradle`.
 
 ### Fixed
 

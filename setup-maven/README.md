@@ -1,25 +1,28 @@
 # setup-maven
 
-Install Maven and Java runtime in a cross-platform way.
+Install Maven through mise, at the version the caller's `mise.toml` and `mise.lock` select. Java must be set up
+first, for example with `setup-mise`.
 
 ## Inputs
 
-- `version` (default: `"3.9.11"`) — Maven version to install
-- `java-version` (default: `"21"`) — Java version to install
+- `version` (default: `""`) — Maven version, matched against the caller's mise locks; empty uses `mise.toml`'s.
 
 ## Example
 
 ```yaml
-- uses: xberg-io/actions/setup-maven@v1
+- uses: xberg-io/actions/setup-mise@v1
   with:
-    version: "3.9.11"
-    java-version: "21"
+    tools: java
+
+- uses: xberg-io/actions/setup-maven@v1
 
 - name: Verify setup
   run: |
     mvn --version
     java -version
 ```
+
+The caller's `mise.toml` declares `maven` (and `java`), e.g. `maven = "3.10.0"`.
 
 ## Platforms
 

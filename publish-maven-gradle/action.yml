@@ -7,9 +7,8 @@ description: >
 
   Auth via env: `MAVEN_USERNAME`, `MAVEN_PASSWORD` (Sonatype Central Portal
   user token), `MAVEN_GPG_PASSPHRASE`. The GPG private key is imported from
-  the `MAVEN_GPG_PRIVATE_KEY` env var (ASCII-armored), or — if you already
-  ran `actions/setup-java@v5` with `gpg-private-key`/`gpg-passphrase` — you
-  can omit it here.
+  the `MAVEN_GPG_PRIVATE_KEY` env var (ASCII-armored), or — if the key is
+  already in the keyring — you can omit it here.
 
 inputs:
   working-directory:
@@ -33,15 +32,17 @@ inputs:
     required: false
     default: "true"
   setup-gradle:
-    description: "Run gradle/actions/setup-gradle. Set to 'false' if already configured."
+    description: "Configure Gradle caching with gradle/actions/setup-gradle. Set to 'false' if already configured."
     required: false
     default: "true"
   java-version:
-    description: "JDK version to install via setup-java (no-op if setup-java is 'false')"
+    description: >-
+      Temurin JDK version to install through mise (e.g. "25" selects the newest locked temurin-25). Empty uses the
+      Java the caller's mise.toml selects. No-op if setup-java is 'false'.
     required: false
-    default: "25"
+    default: ""
   setup-java:
-    description: "Run actions/setup-java@v5. Set to 'false' if already configured."
+    description: "Install Java through mise. Set to 'false' if already configured."
     required: false
     default: "true"
   dry-run:
@@ -65,14 +66,29 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set up JDK
+    - name: Check for mise
+      id: mise
       if: inputs.setup-java == 'true'
-      uses: actions/setup-java@v6
-      with:
-        java-version: ${{ inputs.java-version }}
-        distribution: temurin
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
 
-    - name: Set up Gradle
+    - name: Set up mise
+      if: inputs.setup-java == 'true' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    - name: Install Java through mise
+      if: inputs.setup-java == 'true'
+      shell: bash
+      env:
+        JAVA_SPEC: ${{ inputs.java-version != '' && format('temurin-{0}', inputs.java-version) || '' }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
+
+    # ~keep Installs no Gradle: `gradle` comes from the runner or the caller. The action adds Gradle's dependency
+    # ~keep and build caches.
+    - name: Configure Gradle caching
       if: inputs.setup-gradle == 'true'
       uses: gradle/actions/setup-gradle@v6
 

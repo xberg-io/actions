@@ -1,33 +1,33 @@
 name: Setup Maven
-description: Install Maven in a cross-platform way (Java must be installed by the caller)
+description: Install Maven through mise at the version the caller's mise.toml selects; Java must be set up first
 inputs:
   version:
-    description: Maven version to install
+    description: >-
+      Maven version to install through mise, matched against the caller's mise locks. Empty uses the version the
+      caller's mise.toml selects.
     required: false
-    default: "3.9.11"
+    default: ""
 runs:
   using: composite
   steps:
-    - name: Setup Maven
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    - name: Install Maven through mise
       shell: bash
       env:
         MAVEN_VERSION: ${{ inputs.version }}
-      run: |
-        MAVEN_PRIMARY_URL="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MAVEN_VERSION}/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-        MAVEN_FALLBACK_URL="https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "maven=$MAVEN_VERSION"
 
-        TEMP_DIR="$(pwd)/maven-temp"
-        mkdir -p "$TEMP_DIR"
-
-        if ! curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 \
-          "$MAVEN_PRIMARY_URL" -o "$TEMP_DIR/maven.tar.gz"; then
-          echo "Primary Maven URL failed, falling back to archive.apache.org"
-          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 \
-            "$MAVEN_FALLBACK_URL" -o "$TEMP_DIR/maven.tar.gz"
-        fi
-        tar -xzf "$TEMP_DIR/maven.tar.gz" -C "$TEMP_DIR"
-
-        MAVEN_HOME="$TEMP_DIR/apache-maven-${MAVEN_VERSION}"
-        echo "$MAVEN_HOME/bin" >> "$GITHUB_PATH"
-
-        "$MAVEN_HOME/bin/mvn" --version
+    - name: Show the Maven version
+      shell: bash
+      run: mvn --version

@@ -1,32 +1,51 @@
 name: Setup Gradle
 description: >
-  Install Gradle via `gradle/actions/setup-gradle@v6` with xberg-io
-  defaults. Mirrors the wiring used inside `publish-maven-gradle`.
+  Install Java and Gradle through mise, at the versions the caller's mise.toml
+  selects, and configure Gradle caching with `gradle/actions/setup-gradle@v6`.
 
 inputs:
   gradle-version:
-    description: "Gradle version to install"
+    description: >-
+      Gradle version to install through mise, matched against the caller's mise locks. Empty uses the version the
+      caller's mise.toml selects.
     required: false
-    default: "9.6.0"
+    default: ""
   cache-cleanup:
     description: "Cache cleanup policy passed through to gradle/actions/setup-gradle"
     required: false
     default: "on-success"
   java-version:
-    description: "Java version to install"
+    description: >-
+      Temurin Java version to install through mise (e.g. "25" selects the newest locked temurin-25). Empty uses the
+      Java the caller's mise.toml selects.
     required: false
-    default: "25"
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Set up Java
-      uses: actions/setup-java@v6
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        distribution: temurin
-        java-version: ${{ inputs.java-version }}
-    - name: Set up Gradle
+        install: "false"
+
+    - name: Install Java and Gradle through mise
+      shell: bash
+      env:
+        JAVA_SPEC: ${{ inputs.java-version != '' && format('temurin-{0}', inputs.java-version) || '' }}
+        GRADLE_VERSION: ${{ inputs.gradle-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC" "gradle=$GRADLE_VERSION"
+
+    # ~keep No gradle-version: mise installed Gradle, and this action only adds Gradle's dependency and build
+    # ~keep caches, which mise does not provide.
+    - name: Configure Gradle caching
       uses: gradle/actions/setup-gradle@v6
       with:
-        gradle-version: ${{ inputs.gradle-version }}
         cache-cleanup: ${{ inputs.cache-cleanup }}

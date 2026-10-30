@@ -8,7 +8,7 @@ description: >
   the `MAVEN_GPG_PRIVATE_KEY` env var. Accepts both ASCII-armored format
   (`-----BEGIN PGP PRIVATE KEY BLOCK-----`) and base64-encoded armored
   (auto-detected). If the GPG key is already in the keyring (e.g. you ran
-  `actions/setup-java@v5` with `gpg-private-key`), leave `MAVEN_GPG_PRIVATE_KEY`
+  `actions/setup-java` with `gpg-private-key`), leave `MAVEN_GPG_PRIVATE_KEY`
   unset and this action will skip the import step.
 
 inputs:
@@ -26,19 +26,20 @@ inputs:
     default: ""
   setup-java:
     description: >
-      Run `actions/setup-java@v5`. Required for `mvn deploy` to find a
-      `<server id="${server-id}">` entry in `~/.m2/settings.xml` with the
-      `MAVEN_USERNAME` / `MAVEN_PASSWORD` env-var references. Set to
-      `false` if the caller already ran setup-java with the right
-      `server-id` / `server-username` / `server-password` parameters.
+      Install Java through mise and write the `<server id="${server-id}">`
+      entry of `~/.m2/settings.xml` with the `MAVEN_USERNAME` /
+      `MAVEN_PASSWORD` env-var references, as `actions/setup-java` did. Set
+      to `false` if the caller already set up Java and that entry.
     required: false
     default: "true"
   java-version:
-    description: "JDK version to install via setup-java (ignored when `setup-java=false`)"
+    description: >-
+      JDK version to install through mise, prefixed with `java-distribution` (e.g. "25" selects the newest locked
+      temurin-25). Empty uses the Java the caller's mise.toml selects. Ignored when `setup-java=false`.
     required: false
-    default: "25"
+    default: ""
   java-distribution:
-    description: "JDK distribution for setup-java (ignored when `setup-java=false`)"
+    description: "JDK distribution prefixed to `java-version` (ignored when `java-version` is empty or `setup-java=false`)"
     required: false
     default: "temurin"
   server-id:
@@ -46,7 +47,7 @@ inputs:
       Server id used by the publishing-maven-plugin (must match
       `<publishingServerId>` in the project's pom.xml). Maven Central via
       the Sonatype Central Portal canonically uses `ossrh`; the newer
-      `central-publishing-maven-plugin` defaults to `central`. setup-java
+      `central-publishing-maven-plugin` defaults to `central`. `setup-java`
       writes a `<server id="${server-id}">` block keyed on the
       `MAVEN_USERNAME` / `MAVEN_PASSWORD` env vars.
     required: false
@@ -79,15 +80,32 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Set up Java
+    - name: Check for mise
+      id: mise
       if: inputs.setup-java == 'true'
-      uses: actions/setup-java@v6
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.setup-java == 'true' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        distribution: ${{ inputs.java-distribution }}
-        java-version: ${{ inputs.java-version }}
-        server-id: ${{ inputs.server-id }}
-        server-username: MAVEN_USERNAME
-        server-password: MAVEN_PASSWORD
+        install: "false"
+
+    - name: Install Java through mise
+      if: inputs.setup-java == 'true'
+      shell: bash
+      env:
+        JAVA_SPEC: ${{ inputs.java-version != '' && format('{0}-{1}', inputs.java-distribution, inputs.java-version) || '' }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
+
+    - name: Write the Maven server settings
+      if: inputs.setup-java == 'true'
+      shell: bash
+      env:
+        INPUT_SERVER_ID: ${{ inputs.server-id }}
+      run: python3 "${{ github.action_path }}/scripts/server_settings.py"
 
     - name: Import GPG key
       if: env.MAVEN_GPG_PRIVATE_KEY != ''

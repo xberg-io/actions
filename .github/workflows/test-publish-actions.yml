@@ -269,11 +269,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "25.0.5+8.0.LTS"
-
       - name: Stage a minimal pom.xml
         shell: bash
         run: |
@@ -289,11 +284,23 @@ jobs:
           </project>
           XML
 
+      # ~keep This repository's mise.toml declares no Java, so the version is passed as a caller without one would.
       - name: Test publish-maven (dry-run)
         uses: ./publish-maven
         with:
           pom-file: pkg/pom.xml
+          java-version: "25"
+          server-id: central
           dry-run: "true"
+
+      - name: Verify the JDK and the Maven server settings setup-java used to write
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$JAVA_HOME/bin/java" -version 2>&1 | tee /dev/stderr | grep -q 'Temurin-25'
+          grep -qF '<id>central</id>' ~/.m2/settings.xml
+          # shellcheck disable=SC2016 # settings.xml holds Maven's literal ${env.*} reference
+          grep -qF '<password>${env.MAVEN_PASSWORD}</password>' ~/.m2/settings.xml
 
   test-publish-maven-gradle-dry-run:
     runs-on: ubuntu-latest

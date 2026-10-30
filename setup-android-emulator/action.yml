@@ -52,15 +52,22 @@ runs:
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
 
-    - name: Setup Java (required by sdkmanager + AGP)
-      uses: actions/setup-java@v6
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        distribution: temurin
-        # Temurin 25.0.5+8 currently has only Linux x64 and macOS ARM64 JDK archives. ~keep
-        java-version: >-
-          ${{ ((runner.os == 'Linux' && runner.arch == 'X64') ||
-          (runner.os == 'macOS' && runner.arch == 'ARM64')) &&
-          '25.0.5+8.0.LTS' || '25.0.4+101.0.LTS' }}
+        install: "false"
+
+    - name: Install Java through mise (required by sdkmanager + AGP)
+      shell: bash
+      env:
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . java
 
     # Google removed the legacy `tools` SDK package, but setup-android's `packages` input still
     # defaults to `tools platform-tools`, so the bare invocation now dies on

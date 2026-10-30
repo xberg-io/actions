@@ -18,12 +18,12 @@ The action invokes a single Gradle task. The most common publish setups are:
 
 ## Authentication
 
-| Env var | Purpose |
-|---|---|
-| `MAVEN_USERNAME` | Sonatype Central Portal user token (top half) |
-| `MAVEN_PASSWORD` | Sonatype Central Portal user token (bottom half) |
-| `MAVEN_GPG_PRIVATE_KEY` | ASCII-armored GPG private key for signing |
-| `MAVEN_GPG_PASSPHRASE` | passphrase for the GPG key |
+| Env var                 | Purpose                                          |
+| ----------------------- | ------------------------------------------------ |
+| `MAVEN_USERNAME`        | Sonatype Central Portal user token (top half)    |
+| `MAVEN_PASSWORD`        | Sonatype Central Portal user token (bottom half) |
+| `MAVEN_GPG_PRIVATE_KEY` | ASCII-armored GPG private key for signing        |
+| `MAVEN_GPG_PASSPHRASE`  | passphrase for the GPG key                       |
 
 Auth is read from `env`, **not** from `inputs`, so callers should set them
 at the job/step level:
@@ -66,22 +66,22 @@ jobs:
 - uses: xberg-io/actions/publish-maven-gradle@v1
   with:
     working-directory: packages/kotlin
-    dry-run: 'true'
+    dry-run: "true"
 ```
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `working-directory` | no | `.` | Project root (containing `build.gradle.kts` or `build.gradle`). |
-| `gradle-task` | no | `publishAndReleaseToMavenCentral` | Gradle task to invoke. |
-| `extra-args` | no | `""` | Additional Gradle args. |
-| `no-daemon` | no | `true` | Pass `--no-daemon` to Gradle. |
-| `setup-gradle` | no | `true` | Run `gradle/actions/setup-gradle@v6`. |
-| `setup-java` | no | `true` | Run `actions/setup-java@v5`. |
-| `java-version` | no | `21` | JDK version when `setup-java=true`. |
-| `dry-run` | no | `false` | Print the command without executing. |
-| `expected-version` | no | `""` | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, the version the project would publish — from `gradle.properties`, the resolved `project.version`, or the generated POM — must equal it or the action fails before publishing. |
+| Name                | Required | Default                           | Description                                                                                                                                                                                                                                                  |
+| ------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `working-directory` | no       | `.`                               | Project root (containing `build.gradle.kts` or `build.gradle`).                                                                                                                                                                                              |
+| `gradle-task`       | no       | `publishAndReleaseToMavenCentral` | Gradle task to invoke.                                                                                                                                                                                                                                       |
+| `extra-args`        | no       | `""`                              | Additional Gradle args.                                                                                                                                                                                                                                      |
+| `no-daemon`         | no       | `true`                            | Pass `--no-daemon` to Gradle.                                                                                                                                                                                                                                |
+| `setup-gradle`      | no       | `true`                            | Configure Gradle caching with `gradle/actions/setup-gradle@v6`; `gradle` comes from the runner or the caller.                                                                                                                                                |
+| `setup-java`        | no       | `true`                            | Install Java through mise.                                                                                                                                                                                                                                   |
+| `java-version`      | no       | `""`                              | Temurin JDK version when `setup-java=true`; empty uses the caller's `mise.toml`.                                                                                                                                                                             |
+| `dry-run`           | no       | `false`                           | Print the command without executing.                                                                                                                                                                                                                         |
+| `expected-version`  | no       | `""`                              | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, the version the project would publish — from `gradle.properties`, the resolved `project.version`, or the generated POM — must equal it or the action fails before publishing. |
 
 ## Idempotency
 

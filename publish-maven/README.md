@@ -1,6 +1,9 @@
 # Publish Maven artifacts
 
-The default path runs the project's existing Maven deployment. Set `required-notice-files` to enable a final-byte gate:
+The default path runs the project's existing Maven deployment. With `setup-java: true` (the default) the action
+installs Java through mise, from the caller's `mise.toml` unless `java-version` is set, and writes the
+`~/.m2/settings.xml` server entry for `server-id` that `actions/setup-java` wrote, with `${env.MAVEN_USERNAME}` and
+`${env.MAVEN_PASSWORD}` references. Set `required-notice-files` to enable a final-byte gate:
 
 ```yaml
 with:
