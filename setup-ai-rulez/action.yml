@@ -1,8 +1,8 @@
 name: Setup AI-Rulez
-description: Install an AI-Rulez release (latest by default) through the upstream action, or build an immutable source revision.
+description: Install the latest AI-Rulez release through the upstream action, or build an immutable source revision.
 inputs:
   ai-rulez-version:
-    description: AI-Rulez release to install when source-revision is empty; "latest" installs the newest release.
+    description: Deprecated and ignored; the latest release is always installed. A value other than "latest" warns.
     required: false
     default: "latest"
   source-revision:
@@ -14,13 +14,21 @@ runs:
   steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.3
+    - name: Warn on a deprecated AI-Rulez version
+      if: inputs.ai-rulez-version != 'latest'
+      shell: bash
+      env:
+        AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
+      run: |
+        echo "::warning title=setup-ai-rulez::ai-rulez-version is deprecated and ignored" \
+          "(got '$AI_RULEZ_VERSION'); the latest AI-Rulez release is installed. Remove the input."
     - name: Install AI-Rulez release
       if: inputs.source-revision == ''
-      # ~keep The upstream action installs a sha256-verified, cached release binary; it publishes no floating major tag.
-      # ~keep Its install script stays at this ref while the CLI floats: bump it with the ai-rulez hook revision in poly.toml.
-      uses: Goldziher/ai-rulez@v5.9.2
+      # ~keep The upstream action installs a sha256-verified, cached release binary; `version: latest` resolves
+      # ~keep GitHub's newest stable release. Its install script floats on the v5 major tag, as poly.toml's hook does.
+      uses: Goldziher/ai-rulez@v5
       with:
-        version: ${{ inputs.ai-rulez-version }}
+        version: latest
     - name: Check out pinned AI-Rulez source
       if: inputs.source-revision != ''
       id: source

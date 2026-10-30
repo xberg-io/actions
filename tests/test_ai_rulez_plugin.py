@@ -164,6 +164,26 @@ def test_package_rejects_an_invalid_cursor_marketplace_value(plugin):
     assert "cursor-marketplace must be true or false" in result.stderr
 
 
+def test_release_setup_installs_the_latest_release_through_the_floating_major_tag():
+    action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
+    assert action["inputs"]["ai-rulez-version"]["default"] == "latest"
+    install = next(step for step in action["runs"]["steps"] if step["name"] == "Install AI-Rulez release")
+    assert install["uses"] == "Goldziher/ai-rulez@v5"
+    assert install["with"] == {"version": "latest"}
+
+
+def test_release_setup_warns_that_a_specific_version_is_ignored(tmp_path):
+    action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
+    warn = next(step for step in action["runs"]["steps"] if step["name"] == "Warn on a deprecated AI-Rulez version")
+    assert warn["if"] == "inputs.ai-rulez-version != 'latest'"
+    result = run_step("setup-ai-rulez", warn["name"], tmp_path, {"AI_RULEZ_VERSION": "5.9.2"})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == (
+        "::warning title=setup-ai-rulez::ai-rulez-version is deprecated and ignored (got '5.9.2');"
+        " the latest AI-Rulez release is installed. Remove the input.\n"
+    )
+
+
 def test_source_setup_rejects_unpinned_revision(tmp_path):
     result = run_step(
         "setup-ai-rulez",
