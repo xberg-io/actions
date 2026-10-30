@@ -15,7 +15,7 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.3.3
     - name: Warn on a deprecated AI-Rulez version
-      if: inputs.ai-rulez-version != 'latest'
+      if: inputs.ai-rulez-version != 'latest' && inputs.source-revision == ''
       shell: bash
       env:
         AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}

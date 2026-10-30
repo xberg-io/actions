@@ -175,13 +175,24 @@ def test_release_setup_installs_the_latest_release_through_the_floating_major_ta
 def test_release_setup_warns_that_a_specific_version_is_ignored(tmp_path):
     action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
     warn = next(step for step in action["runs"]["steps"] if step["name"] == "Warn on a deprecated AI-Rulez version")
-    assert warn["if"] == "inputs.ai-rulez-version != 'latest'"
+    assert warn["if"] == "inputs.ai-rulez-version != 'latest' && inputs.source-revision == ''"
     result = run_step("setup-ai-rulez", warn["name"], tmp_path, {"AI_RULEZ_VERSION": "5.9.2"})
     assert result.returncode == 0, result.stderr
     assert result.stdout == (
         "::warning title=setup-ai-rulez::ai-rulez-version is deprecated and ignored (got '5.9.2');"
         " the latest AI-Rulez release is installed. Remove the input.\n"
     )
+
+
+def test_release_setup_does_not_warn_on_a_source_build():
+    action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
+    steps = {step["name"]: step for step in action["runs"]["steps"]}
+    release_guard = steps["Install AI-Rulez release"]["if"]
+    assert release_guard == "inputs.source-revision == ''"
+    assert steps["Warn on a deprecated AI-Rulez version"]["if"].split(" && ") == [
+        "inputs.ai-rulez-version != 'latest'",
+        release_guard,
+    ]
 
 
 def test_verifier_routes_a_legacy_version_to_the_latest_release(tmp_path):
