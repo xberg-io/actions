@@ -26,11 +26,13 @@ inputs:
     required: false
     default: ""
   zig-version:
-    description: "Zig version (passed to mlugg/setup-zig)"
+    description: >-
+      Zig version to install through mise, matched against the caller's mise locks. Empty uses the version the
+      caller's mise.toml selects.
     required: false
-    default: "0.17.0"
+    default: ""
   setup-zig:
-    description: "Install Zig via mlugg/setup-zig. Set to 'false' if Zig is already installed."
+    description: "Install Zig through mise. Set to 'false' if Zig is already installed."
     required: false
     default: "true"
   update-release-notes:
@@ -114,11 +116,25 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set up Zig
+    - name: Check for mise
+      id: mise
       if: inputs.setup-zig == 'true'
-      uses: mlugg/setup-zig@v2
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.setup-zig == 'true' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        version: ${{ inputs.zig-version }}
+        install: "false"
+
+    - name: Install Zig through mise
+      if: inputs.setup-zig == 'true'
+      shell: bash
+      env:
+        ZIG_VERSION: ${{ inputs.zig-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
 
     - name: Resolve tag
       id: tag

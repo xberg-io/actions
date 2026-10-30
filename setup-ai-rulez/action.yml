@@ -47,12 +47,55 @@ runs:
         git -C "$source_directory" -c advice.detachedHead=false checkout --detach FETCH_HEAD
         test "$(git -C "$source_directory" rev-parse HEAD)" = "$SOURCE_REVISION"
         echo "source-directory=$source_directory" >> "$GITHUB_OUTPUT"
-    - name: Set up Go for source build
+    # ~keep The Go version comes from the AI-Rulez source being built, not the caller's mise.toml: its go.mod's
+    # ~keep toolchain directive, else its go directive, as setup-go's go-version-file read it.
+    - name: Read the Go version of the AI-Rulez source
+      id: go
       if: inputs.source-revision != ''
-      uses: actions/setup-go@v7
+      shell: bash
+      env:
+        SOURCE_DIRECTORY: ${{ steps.source.outputs.source-directory }}
+      run: |
+        go_mod="$SOURCE_DIRECTORY/go.mod"
+        version="$(awk '$1 == "toolchain" { sub(/^go/, "", $2); print $2; exit }' "$go_mod")"
+        [[ -n "$version" ]] || version="$(awk '$1 == "go" { print $2; exit }' "$go_mod")"
+        if [[ -z "$version" ]]; then
+          echo "::error::$go_mod declares no Go version" >&2
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        go_sum="$SOURCE_DIRECTORY/go.sum"
+        digest="$( (sha256sum "$go_sum" 2>/dev/null || shasum -a 256 "$go_sum") | cut -d' ' -f1)"
+        echo "go-sum=$digest" >> "$GITHUB_OUTPUT"
+    - name: Check for mise
+      id: mise
+      if: inputs.source-revision != ''
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+    - name: Set up mise
+      if: inputs.source-revision != '' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        go-version-file: ${{ steps.source.outputs.source-directory }}/go.mod
-        cache-dependency-path: ${{ steps.source.outputs.source-directory }}/go.sum
+        install: "false"
+    - name: Install Go through mise for the source build
+      if: inputs.source-revision != ''
+      shell: bash
+      env:
+        GO_VERSION: ${{ steps.go.outputs.version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "go=$GO_VERSION"
+    # ~keep The module and build caches setup-go's cache-dependency-path kept, keyed on the source's go.sum.
+    - name: Cache Go modules for the source build
+      if: inputs.source-revision != ''
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+        key: >-
+          setup-ai-rulez-go-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.version }}-${{
+          steps.go.outputs.go-sum }}
     - name: Build pinned AI-Rulez with static native dependencies
       if: inputs.source-revision != ''
       shell: bash

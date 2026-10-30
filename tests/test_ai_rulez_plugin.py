@@ -301,3 +301,37 @@ def test_package_verifies_root_marketplace_layout(plugin):
     assert (plugin / "dist/plugin/plugins/fixture/fixture-1.0.0.tar.gz").is_file()
     assert (plugin / "dist/plugin/aggregate/SHA256SUMS").is_file()
     assert (plugin / "dist/plugin/aggregate/marketplace/.claude-plugin/marketplace.json").is_file()
+
+
+@pytest.mark.parametrize(
+    ("go_mod", "expected"),
+    [
+        ("module example\n\ngo 1.25.0\n\ntoolchain go1.26.4\n", "1.26.4"),
+        ("module example\n\ngo 1.25\n", "1.25"),
+    ],
+    ids=["toolchain", "go-directive"],
+)
+def test_source_build_installs_the_go_its_go_mod_names_through_mise(tmp_path, go_mod, expected):
+    action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
+    steps = action["runs"]["steps"]
+    assert not [step for step in steps if str(step.get("uses", "")).startswith("actions/setup-go@")]
+    install = next(step for step in steps if step["name"] == "Install Go through mise for the source build")
+    assert install["if"] == "inputs.source-revision != ''"
+    assert install["env"]["GO_VERSION"] == "${{ steps.go.outputs.version }}"
+    assert install["run"].endswith('install-tools.sh" . "go=$GO_VERSION"')
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "go.mod").write_text(go_mod)
+    (source / "go.sum").write_text("example.com/module v1.0.0 h1:abc=\n")
+    output = tmp_path / "github-output"
+    result = run_step(
+        "setup-ai-rulez",
+        "Read the Go version of the AI-Rulez source",
+        tmp_path,
+        {"SOURCE_DIRECTORY": str(source), "GITHUB_OUTPUT": str(output)},
+    )
+    assert result.returncode == 0, result.stderr
+    lines = output.read_text().splitlines()
+    assert lines[0] == f"version={expected}"
+    assert lines[1].startswith("go-sum=")
+    assert len(lines[1].removeprefix("go-sum=")) == 64

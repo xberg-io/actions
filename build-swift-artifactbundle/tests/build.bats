@@ -24,6 +24,7 @@ setup() {
 	xberg_stub rustup 'exit 0'
 	xberg_stub cargo 'exit 0'
 	xberg_stub zig 'echo 0.17.0'
+	xberg_stub cargo-zigbuild 'exit 0'
 	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_OUTPUT_DIR="$ROOT/dist" INPUT_INCLUDE_MACOS_X86_64=false INPUT_INCLUDE_IOS_X86_64=false
 	run /bin/bash "$SCRIPT"
 	[ "$status" -eq 1 ]
@@ -160,4 +161,19 @@ manifest_step() {
 	xberg_assert_status 1
 	xberg_assert_output "Error: Package.swift not found at $ROOT/Package.swift"
 	[ ! -s "$GITHUB_OUTPUT" ]
+}
+
+@test "should_fail_instead_of_installing_an_unpinned_cargo_zigbuild" {
+	xberg_shadow_system_path_without cargo-zigbuild
+	PATH="$(xberg_isolated_path)"
+	export PATH
+	xberg_stub rustup 'exit 0'
+	xberg_stub zig 'echo 0.17.0'
+	xberg_stub cargo 'printf "%s\n" "$*" >>"$GITHUB_WORKSPACE/cargo.log"; exit 0'
+	xberg_stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
+	export INPUT_CRATE_NAME=my-crate INPUT_LIB_NAME=my_lib INPUT_ARTIFACT_NAME=Kit INPUT_TARGETS=aarch64-unknown-linux-gnu
+	run /bin/bash "$SCRIPT"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *'cargo-zigbuild is not on PATH: declare "github:rust-cross/cargo-zigbuild" in mise.toml'* ]]
+	[ ! -e "$GITHUB_WORKSPACE/cargo.log" ]
 }

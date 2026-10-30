@@ -28,21 +28,26 @@ def test_should_forward_optional_notice_files_to_the_bundle_builder():
     ],
     ids=["linux", "all-targets", "apple-only", "dry-run", "assemble-only"],
 )
-def test_should_provision_pinned_zig_only_for_actual_linux_build_steps(inputs, expected):
+def test_should_provision_mise_zig_only_for_actual_linux_build_steps(inputs, expected):
     action = yaml.safe_load(_ACTION.read_text())
-    assert action["inputs"].get("zig-version", {}).get("default") == "0.17.0", "missing pinned Zig release input"
+    assert action["inputs"].get("zig-version", {}).get("default") == "", "zig-version must default to mise.toml's"
     steps = action["runs"]["steps"]
     selected = [step for step in steps if step.get("env", {}).get("ZIG_VERSION") == "${{ inputs.zig-version }}"]
     assert len(selected) == 1, "expected one explicit Zig provisioning step"
     step = selected[0]
-    assert "${{ github.action_path }}/../setup-zig/scripts/unix.sh" in step["run"], (
+    assert step["id"] == "zig"
+    assert "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" in step["run"], (
         "must reuse the same action checkout"
     )
+    assert '"zig=$ZIG_VERSION"' in step["run"]
+    assert "github:rust-cross/cargo-zigbuild" in step["run"]
+    assert "cargo install" not in step["run"]
     assert steps.index(step) < next(i for i, item in enumerate(steps) if item.get("id") == "build")
     build = next(item for item in steps if item.get("id") == "build")
-    assert build["env"]["INPUT_ZIG_VERSION"] == "${{ inputs.zig-version }}"
-    condition = step["if"].strip().removeprefix("${{").removesuffix("}}")
-    condition = re.sub(r"inputs\.([a-z-]+)", lambda match: repr(inputs[match[1]]), condition)
-    condition = condition.replace("&&", " and ").replace("||", " or ")
-    actual = eval(condition, {"__builtins__": {}, "contains": lambda value, part: part in value})
-    assert actual is expected, (inputs, expected, actual)
+    assert build["env"]["INPUT_ZIG_VERSION"] == "${{ steps.zig.outputs.version || inputs.zig-version }}"
+    for gated in [item for item in steps if item.get("id") in {"mise", "zig"}]:
+        condition = gated["if"].strip().removeprefix("${{").removesuffix("}}")
+        condition = re.sub(r"inputs\.([a-z-]+)", lambda match: repr(inputs[match[1]]), condition)
+        condition = condition.replace("&&", " and ").replace("||", " or ")
+        actual = eval(condition, {"__builtins__": {}, "contains": lambda value, part: part in value})
+        assert actual is expected, (gated["name"], inputs, expected, actual)

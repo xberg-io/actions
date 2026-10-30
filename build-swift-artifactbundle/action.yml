@@ -71,9 +71,11 @@ inputs:
     required: false
     default: ""
   zig-version:
-    description: "Exact official Zig release used to cross-compile Linux libraries"
+    description: >-
+      Exact Zig release used to cross-compile Linux libraries, installed through mise. Empty uses the version the
+      caller's mise.toml selects.
     required: false
-    default: "0.17.0"
+    default: ""
   prebuilt-libs-dir:
     description: >
       Directory holding already-built static libraries laid out as
@@ -128,19 +130,44 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install the selected Zig release for Linux cross-compilation
+    - name: Check for mise
+      id: mise
+      if: >-
+        inputs.dry-run != 'true' && inputs.prebuilt-libs-dir == '' &&
+        (inputs.targets == '' || contains(inputs.targets, '-linux-gnu'))
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: >-
+        inputs.dry-run != 'true' && inputs.prebuilt-libs-dir == '' &&
+        (inputs.targets == '' || contains(inputs.targets, '-linux-gnu')) &&
+        steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    # ~keep A cargo-zigbuild already on PATH is kept: setup-rust's cargo-zigbuild-revision installs a verified
+    # ~keep source build that a mise one would shadow.
+    - name: Install the selected Zig release and cargo-zigbuild for Linux cross-compilation
+      id: zig
       if: >-
         inputs.dry-run != 'true' && inputs.prebuilt-libs-dir == '' &&
         (inputs.targets == '' || contains(inputs.targets, '-linux-gnu'))
       shell: bash
       env:
         ZIG_VERSION: ${{ inputs.zig-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
       run: |
-        if [[ ! "$ZIG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ -n "$ZIG_VERSION" && ! "$ZIG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           echo "zig-version must be an exact release version" >&2
           exit 1
         fi
-        bash "${{ github.action_path }}/../setup-zig/scripts/unix.sh" "$ZIG_VERSION"
+        tools=("zig=$ZIG_VERSION")
+        command -v cargo-zigbuild >/dev/null 2>&1 || tools+=(github:rust-cross/cargo-zigbuild)
+        bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "${tools[@]}"
+        selected="$(MISE_LOCKED=false mise exec "zig${ZIG_VERSION:+@$ZIG_VERSION}" -- zig version | tr -d '\r')"
+        echo "version=$selected" >>"$GITHUB_OUTPUT"
 
     - name: Build artifact bundle
       id: build
@@ -158,7 +185,7 @@ runs:
         INPUT_INCLUDE_IOS_X86_64: ${{ inputs.include-ios-x86_64 }}
         INPUT_TARGETS: ${{ inputs.targets }}
         INPUT_PREBUILT_LIBS_DIR: ${{ inputs.prebuilt-libs-dir }}
-        INPUT_ZIG_VERSION: ${{ inputs.zig-version }}
+        INPUT_ZIG_VERSION: ${{ steps.zig.outputs.version || inputs.zig-version }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
       run: |

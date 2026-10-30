@@ -1,28 +1,46 @@
 name: Setup Zig
-description: Install the Zig toolchain by resolving the official ziglang.org download index
+description: >-
+  Install Zig through mise, at the version the caller's mise.toml selects, or the latest nightly from the
+  ziglang.org download index
 inputs:
   version:
     description: >
-      Zig version to install. Accepts a tagged release ("0.17.0"), "master" for
-      the latest nightly, or "latest" to resolve the most recent tagged release
-      from ziglang.org/download/index.json.
+      Zig version to install. A tagged release ("0.17.0") or "latest" installs through mise, matched against the
+      caller's mise locks; "master" installs the latest nightly from ziglang.org/download/index.json, which mise
+      does not provide. Empty uses the version the caller's mise.toml selects.
     required: false
-    default: "latest"
+    default: ""
 runs:
   using: composite
   steps:
-    - name: Install Zig (Unix)
-      if: runner.os != 'Windows'
+    - name: Check for mise
+      id: mise
+      if: inputs.version != 'master'
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.version != 'master' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    - name: Install Zig through mise
+      if: inputs.version != 'master'
       shell: bash
       env:
         ZIG_VERSION: ${{ inputs.version }}
-      run: |
-        "${{ github.action_path }}/scripts/unix.sh" "$ZIG_VERSION"
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
 
-    - name: Install Zig (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      env:
-        ZIG_VERSION: ${{ inputs.version }}
+    - name: Install the Zig nightly (Unix)
+      if: inputs.version == 'master' && runner.os != 'Windows'
+      shell: bash
       run: |
-        & '${{ github.action_path }}/scripts/windows.ps1' "$env:ZIG_VERSION"
+        "${{ github.action_path }}/scripts/unix.sh" master
+
+    - name: Install the Zig nightly (Windows)
+      if: inputs.version == 'master' && runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        & '${{ github.action_path }}/scripts/windows.ps1' master

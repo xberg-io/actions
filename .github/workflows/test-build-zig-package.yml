@@ -3,10 +3,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "build-zig-package/**"
       - ".github/workflows/test-build-zig-package.yml"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "build-zig-package/**"
       - ".github/workflows/test-build-zig-package.yml"
 
@@ -93,12 +95,19 @@ jobs:
           ZON
           cargo generate-lockfile
 
+      # ~keep This repository's mise.toml declares no Zig, so the version is passed as a caller without one would.
       - name: Build Zig package via the action
         id: build
         uses: ./build-zig-package
         with:
           ffi-crate: fixture-ffi
           package-dir: packages/zig
+          zig-version: "0.17.0"
+
+      - name: Verify the requested Zig is on PATH
+        shell: bash
+        run: |
+          [ "$(zig version)" = "0.17.0" ]
 
       - name: Verify FFI library produced
         shell: bash

@@ -113,7 +113,7 @@ lib_for() {
 }
 
 # Assemble mode compiles nothing, so installing toolchains would be pure cost --
-# `cargo install cargo-zigbuild` alone can run for minutes. In build-only mode install
+# installing cargo-zigbuild and Zig alone takes minutes. In build-only mode install
 # only what the requested triples actually need. ~keep
 if [[ -n "$PREBUILT_LIBS_DIR" ]]; then
   echo "=== Assemble mode: skipping Rust target and Zig installation ==="
@@ -155,7 +155,8 @@ else
       exit 1
     fi
     if ! command -v cargo-zigbuild >/dev/null 2>&1; then
-      cargo install --locked cargo-zigbuild 2>/dev/null || true
+      echo "cargo-zigbuild is not on PATH: declare \"github:rust-cross/cargo-zigbuild\" in mise.toml" >&2
+      exit 1
     fi
   else
     echo "=== No Linux target requested; skipping Zig installation ==="

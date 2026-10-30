@@ -45,6 +45,16 @@ All notable changes to xberg-io/actions are documented in this file.
   archive. `wasm-pack-version` defaults to empty, meaning the caller's `mise.toml` (was `0.15.0` in
   `setup-wasm-pack` and `0.13.1` in `build-wasm-package`); `skip` still skips the install. Callers must declare
   `"github:rustwasm/wasm-pack"` (mise's registry has no `wasm-pack`) or pass the version.
+- The Zig composites install Zig through mise instead of `mlugg/setup-zig` and the ziglang.org index script:
+  `setup-zig`, `build-zig-package`, `publish-zig` and `build-swift-artifactbundle`. `zig-version` (`version` in
+  `setup-zig`) defaults to empty, meaning the caller's `mise.toml` (was `0.17.0`, and `latest` in `setup-zig`);
+  `setup-zig`'s `master` still installs the nightly from ziglang.org, which mise does not provide.
+  `build-swift-artifactbundle` installs cargo-zigbuild through mise when none is on PATH, instead of an
+  unpinned `cargo install cargo-zigbuild` whose failure was ignored, and fails when neither is available.
+  Callers must declare `zig`, and `"github:rust-cross/cargo-zigbuild"` for `build-swift-artifactbundle` Linux
+  targets unless setup-rust's `cargo-zigbuild-revision` installed one.
+- `setup-ai-rulez`'s `source-revision` build installs the Go version the AI-Rulez source's `go.mod` names
+  through mise instead of `actions/setup-go`, and caches its modules on that source's `go.sum`.
 
 ### Fixed
 

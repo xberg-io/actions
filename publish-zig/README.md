@@ -28,7 +28,7 @@ jobs:
       - uses: xberg-io/actions/publish-zig@v1
         with:
           working-directory: packages/zig
-          update-release-notes: 'true'
+          update-release-notes: "true"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -39,29 +39,29 @@ can copy-paste the URL + hash into their own `build.zig.zon`.
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `tarball-url` | Release-asset tarball URL suitable for `zig fetch --save` |
-| `zig-hash` | Zig content multihash for `build.zig.zon` `.hash` field |
-| `tarball-sha256` | SHA-256 of the gzipped tarball (secondary reference) |
-| `package-name` | Resolved package name (from input or `build.zig.zon` `.name`) |
+| Name             | Description                                                   |
+| ---------------- | ------------------------------------------------------------- |
+| `tarball-url`    | Release-asset tarball URL suitable for `zig fetch --save`     |
+| `zig-hash`       | Zig content multihash for `build.zig.zon` `.hash` field       |
+| `tarball-sha256` | SHA-256 of the gzipped tarball (secondary reference)          |
+| `package-name`   | Resolved package name (from input or `build.zig.zon` `.name`) |
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `working-directory` | no | `.` | Path to `build.zig.zon`. |
-| `package-name` | no | (parsed from `.name` in `build.zig.zon`) | Package name for the tarball; overrides auto-detection. |
-| `tag` | no | `${GITHUB_REF_NAME}` (when on a tag) | Git tag to publish. |
-| `zig-version` | no | `0.17.0` | Zig version (`mlugg/setup-zig`). |
-| `setup-zig` | no | `true` | Install Zig if not present. |
-| `update-release-notes` | no | `false` | Append fetch snippet to GH release body. Requires `GH_TOKEN`. |
-| `update-existing` | no | `false` | Pass `--clobber` to `gh release upload` (overwrite existing asset). |
-| `dry-run` | no | `false` | Skip asset upload and release-notes update. |
-| `use-alef-package` | no | `false` | Use `alef publish package_zig` for single-target packaging. Requires `target`, `ffi-library-path`, `ffi-header-path`. Mutually exclusive with `multi-platform-ffi-dir`. |
-| `multi-platform-ffi-dir` | no | `""` | Directory containing per-RID FFI artifacts (`{rid}/{libs}` + `include/*.h`). When set, the action bundles each platform's libs into `<working-directory>/lib/<canonical-target-triple>/`, patches `build.zig.zon` `.paths` to allowlist `lib`/`include`, and overwrites `build.zig` with a target-aware build script that selects the right `lib/<rid>` subdir from Zig's compile-time target. Single multi-platform tarball; consumer's `zig fetch --save` works on any supported target. |
-| `module-name` | no (yes when `multi-platform-ffi-dir` set) | `""` | Zig module name exported from the rewritten `build.zig` (e.g., `liter_llm`). |
-| `ffi-lib-name` | no (yes when `multi-platform-ffi-dir` set) | `""` | FFI shared-library basename without `lib` prefix or extension (e.g., `liter_llm_ffi`). Used both for `linkSystemLibrary` and to locate the file inside `multi-platform-ffi-dir`. |
+| Name                     | Required                                   | Default                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------ | ------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `working-directory`      | no                                         | `.`                                      | Path to `build.zig.zon`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `package-name`           | no                                         | (parsed from `.name` in `build.zig.zon`) | Package name for the tarball; overrides auto-detection.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `tag`                    | no                                         | `${GITHUB_REF_NAME}` (when on a tag)     | Git tag to publish.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `zig-version`            | no                                         | `""`                                     | Zig version, installed through mise; empty uses the caller's `mise.toml`.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `setup-zig`              | no                                         | `true`                                   | Install Zig through mise.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `update-release-notes`   | no                                         | `false`                                  | Append fetch snippet to GH release body. Requires `GH_TOKEN`.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `update-existing`        | no                                         | `false`                                  | Pass `--clobber` to `gh release upload` (overwrite existing asset).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `dry-run`                | no                                         | `false`                                  | Skip asset upload and release-notes update.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `use-alef-package`       | no                                         | `false`                                  | Use `alef publish package_zig` for single-target packaging. Requires `target`, `ffi-library-path`, `ffi-header-path`. Mutually exclusive with `multi-platform-ffi-dir`.                                                                                                                                                                                                                                                                                                                    |
+| `multi-platform-ffi-dir` | no                                         | `""`                                     | Directory containing per-RID FFI artifacts (`{rid}/{libs}` + `include/*.h`). When set, the action bundles each platform's libs into `<working-directory>/lib/<canonical-target-triple>/`, patches `build.zig.zon` `.paths` to allowlist `lib`/`include`, and overwrites `build.zig` with a target-aware build script that selects the right `lib/<rid>` subdir from Zig's compile-time target. Single multi-platform tarball; consumer's `zig fetch --save` works on any supported target. |
+| `module-name`            | no (yes when `multi-platform-ffi-dir` set) | `""`                                     | Zig module name exported from the rewritten `build.zig` (e.g., `liter_llm`).                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `ffi-lib-name`           | no (yes when `multi-platform-ffi-dir` set) | `""`                                     | FFI shared-library basename without `lib` prefix or extension (e.g., `liter_llm_ffi`). Used both for `linkSystemLibrary` and to locate the file inside `multi-platform-ffi-dir`.                                                                                                                                                                                                                                                                                                           |
 
 ## Multi-platform packaging
 
@@ -100,5 +100,5 @@ Example:
     module-name: liter_llm
     ffi-lib-name: liter_llm_ffi
     package-name: liter-llm-zig
-    update-release-notes: 'true'
+    update-release-notes: "true"
 ```
