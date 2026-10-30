@@ -62,8 +62,6 @@ jobs:
         run: uv sync --group dev
 
       - uses: ./setup-ai-rulez
-        with:
-          ai-rulez-version: "latest"
 
       - name: Set up Erlang and Elixir for Hex metadata tests
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1

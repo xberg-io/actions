@@ -29,8 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-ai-rulez
-        with:
-          ai-rulez-version: "latest"
       - uses: ./setup-mise
       - name: Test real generation and release artifacts
         run: |
