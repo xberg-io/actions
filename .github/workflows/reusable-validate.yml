@@ -223,6 +223,13 @@ on:
         required: false
         type: string
         default: "latest"
+      check-toolchain:
+        description: >-
+          Run check-toolchain@v1 first, failing when mise.toml drifts from the xberg-io/toolchains
+          baseline named in toolchains.toml. Linux and macOS runners only; needs Python 3.11+.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -233,6 +240,10 @@ jobs:
     runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Check toolchain against the baseline
+        if: ${{ inputs.check-toolchain }}
+        uses: xberg-io/actions/check-toolchain@v1
 
       - name: Set up Rust
         if: ${{ inputs.setup-rust }}

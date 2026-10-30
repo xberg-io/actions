@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 _WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "reusable-validate.yml"
 
 
@@ -62,3 +64,23 @@ def test_every_snippet_gated_step_is_accounted_for():
         "Set up wasm-pack",
         "Validate fixture snippets",
     ]
+
+
+def _workflow() -> dict:
+    return yaml.safe_load(_workflow_content())
+
+
+def test_toolchain_gate_is_opt_in():
+    inputs = _workflow()[True]["workflow_call"]["inputs"]
+
+    assert inputs["check-toolchain"]["type"] == "boolean"
+    assert inputs["check-toolchain"]["default"] is False
+
+
+def test_toolchain_gate_runs_check_toolchain_right_after_checkout():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+
+    assert steps[0]["uses"] == "actions/checkout@v7"
+    assert steps[1]["uses"] == "xberg-io/actions/check-toolchain@v1"
+    assert steps[1]["if"] == "${{ inputs.check-toolchain }}"
+    assert [step for step in steps if "check-toolchain" in str(step.get("if", ""))] == [steps[1]]

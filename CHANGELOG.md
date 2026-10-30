@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-validate` takes a `check-toolchain` input (default `false`) that runs `check-toolchain` before any
+  setup step, so callers get the toolchain drift gate without a separate job.
+
 ### Fixed
 
 - `setup-rust` checks the sccache server before compilation and clears its compiler wrapper when cache startup fails,
