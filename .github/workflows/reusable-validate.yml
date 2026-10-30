@@ -462,6 +462,7 @@ jobs:
           bundler-cache: true
           working-directory: ${{ inputs.ruby-working-directory }}
 
+      # Dart stays on its setup action, outside the mise baseline. ~keep
       - name: Set up Dart
         if: ${{ inputs.setup-dart }}
         uses: dart-lang/setup-dart@v1

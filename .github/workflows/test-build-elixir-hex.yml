@@ -25,6 +25,7 @@ jobs:
         with:
           toolchain: stable
 
+      # BEAM stays on its setup action until mise's Erlang and Elixir builds are evaluated. ~keep
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "v1.20.5"

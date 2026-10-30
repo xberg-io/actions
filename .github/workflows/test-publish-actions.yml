@@ -226,6 +226,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # BEAM stays on its setup action until mise's Erlang and Elixir builds are evaluated. ~keep
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29.1.2"
@@ -248,6 +249,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # BEAM stays on its setup action until mise's Erlang and Elixir builds are evaluated. ~keep
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29.1.2"
@@ -316,6 +318,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Dart stays on its setup action, outside the mise baseline. ~keep
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable

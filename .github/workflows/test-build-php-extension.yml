@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # PHP stays on its setup action, outside the mise baseline. ~keep
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
