@@ -202,6 +202,17 @@ def test_verifier_routes_a_legacy_version_to_the_latest_release(tmp_path):
     )
 
 
+def test_repository_does_not_pin_ai_rulez():
+    assert "ai-rulez" not in (_ROOT / "mise.toml").read_text().split("[tools]", 1)[1].split("\n[", 1)[0]
+    hook_source = (
+        'id = "ai-rulez"\ngit = "https://github.com/Goldziher/ai-rulez.git"\nrevision = "v5"\n'
+        'hooks = ["ai-rulez-validate"]\n'
+    )
+    assert hook_source in (_ROOT / "poly.toml").read_text()
+    workflow = yaml.safe_load((_ROOT / ".github/workflows/test-ai-rulez-plugin.yml").read_text())
+    assert "MISE_DISABLE_TOOLS" not in workflow["jobs"]["test"].get("env", {})
+
+
 def test_source_setup_rejects_unpinned_revision(tmp_path):
     result = run_step(
         "setup-ai-rulez",
