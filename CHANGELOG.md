@@ -53,6 +53,16 @@ All notable changes to xberg-io/actions are documented in this file.
   unpinned `cargo install cargo-zigbuild` whose failure was ignored, and fails when neither is available.
   Callers must declare `zig`, and `"github:rust-cross/cargo-zigbuild"` for `build-swift-artifactbundle` Linux
   targets unless setup-rust's `cargo-zigbuild-revision` installed one.
+- `reusable-validate` installs Python, uv, Java, Go and Ruby through one `setup-mise` call (`tools`) instead
+  of `actions/setup-python`, `astral-sh/setup-uv`, `actions/setup-java`, `actions/setup-go` and
+  `ruby/setup-ruby`, and keeps the Go module cache and the Ruby bundle (`vendor/bundle`, deployment mode when
+  locked) those actions kept. Behavior changes: `python-version`, `java-version`, `ruby-version` and
+  `zig-version` default to empty, meaning the caller's `mise.toml` (were `3.13.18`, `25.0.5+8`, `3.4.12` and
+  `0.17.0`); `go-version` stays `1.26` while golangci-lint v2.12.2 panics on Go 1.27; the Gradle JDK installs
+  through mise; Ruby on Windows stays on `ruby/setup-ruby`. A caller without a `mise.toml` (xberg-enterprise)
+  must add one or pass the versions.
+- `run-test-apps` installs Ruby (except on Windows), Java and Zig from the caller's `mise.toml` through mise
+  instead of `ruby/setup-ruby` 4.0.9, `actions/setup-java` Temurin 25.0.5+8 and `mlugg/setup-zig`.
 - `setup-ai-rulez`'s `source-revision` build installs the Go version the AI-Rulez source's `go.mod` names
   through mise instead of `actions/setup-go`, and caches its modules on that source's `go.sum`.
 

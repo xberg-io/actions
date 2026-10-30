@@ -112,3 +112,37 @@ def test_adr_gate_fails_when_no_adr_was_checked():
     assert "summary=$(adrlint lint 2>&1)" in script, "adrlint prints its summary on stderr"
     assert "files? checked" in script
     assert "-gt 0" in script
+
+
+def test_toolchains_install_through_mise_instead_of_setup_actions():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    uses = [str(step.get("uses", "")) for step in steps]
+    for action in ("actions/setup-python@", "astral-sh/setup-uv@", "actions/setup-java@", "actions/setup-go@"):
+        assert not [ref for ref in uses if ref.startswith(action)], action
+    toolchains = next(step for step in steps if step.get("name") == "Set up the toolchains through mise")
+    assert toolchains["uses"] == "xberg-io/actions/setup-mise@v1"
+    tools = toolchains["with"]["tools"]
+    for fragment in (
+        "format('python={0} uv', inputs.python-version)",
+        "format('{0}-{1}', inputs.java-distribution, inputs.java-version)",
+        "format('go={0}', inputs.go-version)",
+        "runner.os != 'Windows' && format('ruby={0}', inputs.ruby-version)",
+    ):
+        assert fragment in tools, fragment
+
+
+def test_ruby_stays_on_setup_ruby_only_where_mise_has_a_lock_gap():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    setup_ruby = [step for step in steps if str(step.get("uses", "")).startswith("ruby/setup-ruby@")]
+    assert len(setup_ruby) == 1
+    assert setup_ruby[0]["if"] == "${{ inputs.setup-ruby && runner.os == 'Windows' }}"
+    bundle = next(step for step in steps if step.get("name") == "Install the Ruby bundle")
+    assert "runner.os != 'Windows'" in bundle["if"]
+    assert "bundle install" in bundle["run"]
+
+
+def test_toolchain_versions_default_to_the_callers_mise_config():
+    inputs = _workflow()[True]["workflow_call"]["inputs"]
+
+    for name in ("python-version", "java-version", "ruby-version", "zig-version"):
+        assert inputs[name]["default"] == "", name

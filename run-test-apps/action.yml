@@ -71,8 +71,36 @@ runs:
       if: ${{ inputs.setup-toolchain == 'true' && (inputs.language == 'node' || inputs.language == 'wasm') }}
       uses: xberg-io/actions/setup-node-workspace@v1
 
-    - name: Setup Ruby
-      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'ruby' }}
+    - name: Check for mise
+      id: mise
+      if: >-
+        inputs.setup-toolchain == 'true' && (inputs.language == 'java' || inputs.language == 'zig' ||
+        (inputs.language == 'ruby' && runner.os != 'Windows'))
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: >-
+        inputs.setup-toolchain == 'true' && (inputs.language == 'java' || inputs.language == 'zig' ||
+        (inputs.language == 'ruby' && runner.os != 'Windows')) && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    # ~keep ruby, java and zig are also the mise tool names; the version is the caller's mise.toml's.
+    - name: Setup Ruby, Java or Zig through mise
+      if: >-
+        inputs.setup-toolchain == 'true' && (inputs.language == 'java' || inputs.language == 'zig' ||
+        (inputs.language == 'ruby' && runner.os != 'Windows'))
+      shell: bash
+      env:
+        TOOL: ${{ inputs.language }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "$TOOL"
+
+    # ~keep Ruby is a mise lock gap on Windows (org rule toolchain-management), so it stays on setup-ruby there.
+    - name: Setup Ruby (Windows)
+      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'ruby' && runner.os == 'Windows' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: "4.0.9"
@@ -84,17 +112,6 @@ runs:
     - name: Setup Go + CGo
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'go' }}
       uses: xberg-io/actions/setup-go-cgo-env@v1
-
-    - name: Setup Java
-      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'java' }}
-      uses: actions/setup-java@v6
-      with:
-        distribution: "temurin"
-        # Temurin 25.0.5+8 currently has only Linux x64 and macOS ARM64 JDK archives. ~keep
-        java-version: >-
-          ${{ ((runner.os == 'Linux' && runner.arch == 'X64') ||
-          (runner.os == 'macOS' && runner.arch == 'ARM64')) &&
-          '25.0.5+8.0.LTS' || '25.0.4+101.0.LTS' }}
 
     - name: Setup .NET
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
@@ -116,10 +133,6 @@ runs:
     - name: Setup Swift
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'swift' }}
       uses: swift-actions/setup-swift@v3
-
-    - name: Setup Zig
-      if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'zig' }}
-      uses: mlugg/setup-zig@v2
 
     - name: Setup R
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'r' }}

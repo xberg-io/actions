@@ -594,16 +594,20 @@ def test_golangci_lint_version_accepts_semver_and_reaches_curl(tmp_path):
         ),
     )
     called_file = tmp_path / "curl_called"
+    github_path = tmp_path / "github_path"
     env = {
         "PATH": f"{stub_bin}:{os.environ['PATH']}",
         "GOLANGCI_LINT_VERSION": "v2.12.2",
         "CURL_CALLED_FILE": str(called_file),
         "HOME": str(tmp_path),
+        "GITHUB_PATH": str(github_path),
+        "GOPATH": str(tmp_path / "gopath"),
     }
     result = _run_step_script(_install_golangci_lint_step(), env, cwd=tmp_path)
     assert result.returncode == 0, result.stderr
     assert called_file.exists(), "curl never ran for a valid version"
     assert "c0d3ddc9cf3faa61a4e378e879ece580256d76e5" in called_file.read_text()
+    assert github_path.read_text() == f"{tmp_path / 'gopath'}/bin\n", "golangci-lint's directory must reach PATH"
 
 
 def test_install_golangci_lint_routes_version_through_env_not_run_splice():

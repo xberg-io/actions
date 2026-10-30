@@ -24,10 +24,10 @@ on:
         type: boolean
         default: false
       python-version:
-        description: "Python version for setup-python-env."
+        description: "Python version, installed through mise and matched against the caller's mise locks. Empty uses mise.toml's."
         required: false
         type: string
-        default: "3.13.18"
+        default: ""
       python-extra-projects:
         description: >-
           Newline-separated project directories to install into the synced venv (`uv pip install -e`).
@@ -42,12 +42,14 @@ on:
         type: boolean
         default: false
       java-version:
-        description: "JDK version for setup-java (checkstyle 13+ requires 21+; match the binding's maven.compiler.release)."
+        description: >-
+          JDK version, installed through mise with `java-distribution` prefixed (checkstyle 13+ requires 21+; match the
+          binding's maven.compiler.release). Empty uses the Java the caller's mise.toml selects.
         required: false
         type: string
-        default: "25.0.5+8"
+        default: ""
       java-distribution:
-        description: "JDK distribution for setup-java."
+        description: "JDK distribution prefixed to `java-version` and `gradle-java-version`."
         required: false
         type: string
         default: "temurin"
@@ -69,7 +71,9 @@ on:
         type: boolean
         default: false
       go-version:
-        description: "Go version for setup-go."
+        description: >-
+          Go version, installed through mise and matched against the caller's mise locks. It stays 1.26, not the
+          caller's mise.toml, while the default golangci-lint v2.12.2 panics on the Go 1.27 standard library.
         required: false
         type: string
         default: "1.26"
@@ -89,10 +93,12 @@ on:
         type: boolean
         default: false
       ruby-version:
-        description: "Ruby version for setup-ruby."
+        description: >-
+          Ruby version, installed through mise and matched against the caller's mise locks (ruby/setup-ruby on Windows,
+          a mise lock gap). Empty uses the version the caller's mise.toml selects.
         required: false
         type: string
-        default: "3.4.12"
+        default: ""
       ruby-working-directory:
         description: "Directory holding the Ruby binding's Gemfile."
         required: false
@@ -139,10 +145,10 @@ on:
         type: boolean
         default: false
       zig-version:
-        description: "Zig version for setup-zig."
+        description: "Zig version for setup-zig, installed through mise. Empty uses the version the caller's mise.toml selects."
         required: false
         type: string
-        default: "0.17.0"
+        default: ""
       setup-r:
         description: "Install R so poly's R checks and alef's R snippet validation can run."
         required: false
@@ -289,15 +295,18 @@ jobs:
         if: ${{ inputs.setup-rust && inputs.install-system-deps && runner.os == 'Linux' }}
         uses: xberg-io/actions/install-system-deps@v1
 
-      - name: Set up Python
-        if: ${{ inputs.setup-python }}
-        uses: actions/setup-python@v7
+      # ~keep One setup-mise call installs every requested toolchain, so the job restores and saves one mise cache.
+      # ~keep Ruby on Windows is a mise lock gap and stays on ruby/setup-ruby below.
+      - name: Set up the toolchains through mise
+        if: ${{ inputs.setup-python || inputs.setup-java || inputs.setup-go || (inputs.setup-ruby && runner.os != 'Windows') }}
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Set up uv
-        if: ${{ inputs.setup-python }}
-        uses: astral-sh/setup-uv@v10.3.3
+          tools: >-
+            ${{ inputs.setup-python && format('python={0} uv', inputs.python-version) || '' }}
+            ${{ inputs.setup-java && format('java={0}', inputs.java-version != '' && format('{0}-{1}', inputs.java-distribution, inputs.java-version) || '') || '' }}
+            ${{ inputs.setup-go && format('go={0}', inputs.go-version) || '' }}
+            ${{ inputs.setup-ruby && runner.os != 'Windows' && format('ruby={0}', inputs.ruby-version) || '' }}
+          cache: ${{ inputs.check-adrs && 'false' || 'auto' }}
 
       # ~keep --no-install-workspace skips building/installing the workspace's own
       # package(s) (e.g. a maturin-backed extension), which pyrefly never needs — it
@@ -345,25 +354,25 @@ jobs:
             uv pip install -e "$project"
           done <<< "$EXTRA_PROJECTS"
 
-      # ~keep Installed BEFORE the main JDK on purpose. setup-java points JAVA_HOME at whichever
-      # JDK it installed last, so running this one first leaves JAVA_HOME on `java-version` —
-      # Maven and checkstyle keep the JDK they need — while Gradle is redirected by property
-      # below. Its `path` output is used rather than an arch-suffixed JAVA_HOME_<v>_<arch>
-      # variable, because this workflow also runs on arm runners where that name differs.
+      - name: Set up mise for the Gradle JDK
+        if: ${{ inputs.gradle-java-version != '' && !(inputs.setup-python || inputs.setup-java || inputs.setup-go || (inputs.setup-ruby && runner.os != 'Windows')) }}
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          install: "false"
+          cache: ${{ inputs.check-adrs && 'false' || 'auto' }}
+
+      # ~keep Installed into mise without being put on PATH or JAVA_HOME, which stay on `java-version`, so Maven
+      # ~keep and checkstyle keep the JDK they need while Gradle is redirected by property below. Unlocked: a
+      # ~keep reusable workflow cannot reach setup-mise's lock-matching script, and this JDK is a second version.
       - name: Set up the Gradle JDK
         id: gradle-jdk
         if: ${{ inputs.gradle-java-version != '' }}
-        uses: actions/setup-java@v6
-        with:
-          distribution: ${{ inputs.java-distribution }}
-          java-version: ${{ inputs.gradle-java-version }}
-
-      - name: Set up Java
-        if: ${{ inputs.setup-java }}
-        uses: actions/setup-java@v6
-        with:
-          distribution: ${{ inputs.java-distribution }}
-          java-version: ${{ inputs.java-version }}
+        env:
+          GRADLE_JDK: java@${{ inputs.java-distribution }}-${{ inputs.gradle-java-version }}
+        run: |
+          set -euo pipefail
+          MISE_LOCKED=false mise install "$GRADLE_JDK"
+          echo "path=$(MISE_LOCKED=false mise where "$GRADLE_JDK")" >> "$GITHUB_OUTPUT"
 
       # ~keep Written to GRADLE_USER_HOME rather than exported as JAVA_HOME, because the Gradle
       # build is not a step here — it runs inside `alef snippets check`, which drives the Maven
@@ -380,7 +389,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GRADLE_JDK}" ]; then
-            echo "::error::setup-java reported no install path for the Gradle JDK" >&2
+            echo "::error::mise reported no install path for the Gradle JDK" >&2
             exit 1
           fi
           properties="${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties"
@@ -411,12 +420,18 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Set up Go
+      # ~keep The module and build caches setup-go's cache-dependency-path kept.
+      - name: Cache Go modules
         if: ${{ inputs.setup-go }}
-        uses: actions/setup-go@v7
+        uses: actions/cache@v6
         with:
-          go-version: ${{ inputs.go-version }}
-          cache-dependency-path: ${{ inputs.go-working-directory }}/go.sum
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.go-version }}-${{ hashFiles(format('{0}/go.sum', inputs.go-working-directory)) }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.go-version }}-
 
       # Installed as the released binary rather than via golangci-lint-action, which runs the
       # linter itself — here poly is the one that invokes it, so only the binary is wanted on
@@ -453,14 +468,40 @@ jobs:
           curl -sSfL "https://raw.githubusercontent.com/golangci/golangci-lint/c0d3ddc9cf3faa61a4e378e879ece580256d76e5/install.sh" \
             -o /tmp/golangci-lint-install.sh
           sh /tmp/golangci-lint-install.sh -b "$(go env GOPATH)/bin" "$GOLANGCI_LINT_VERSION"
+          # setup-go put GOPATH/bin on PATH; mise's Go does not. ~keep
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Set up Ruby
-        if: ${{ inputs.setup-ruby }}
+      # ~keep Ruby is a mise lock gap on Windows (org rule toolchain-management). An empty ruby-version makes
+      # ~keep setup-ruby read the caller's .ruby-version or .tool-versions; pass ruby-version on Windows otherwise.
+      - name: Set up Ruby (Windows)
+        if: ${{ inputs.setup-ruby && runner.os == 'Windows' }}
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ inputs.ruby-version }}
           bundler-cache: true
           working-directory: ${{ inputs.ruby-working-directory }}
+
+      # ~keep The bundle setup-ruby's bundler-cache installed and cached, for the mise Ruby: gems in vendor/bundle,
+      # ~keep deployment mode when a Gemfile.lock pins them, keyed on the lock and the mise config.
+      - name: Cache the Ruby bundle
+        if: ${{ inputs.setup-ruby && runner.os != 'Windows' && hashFiles(format('{0}/Gemfile', inputs.ruby-working-directory)) != '' }}
+        uses: actions/cache@v6
+        with:
+          path: ${{ inputs.ruby-working-directory }}/vendor/bundle
+          key: >-
+            ruby-bundle-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ruby-version }}-${{
+            hashFiles('mise.toml', 'mise.lock', format('{0}/Gemfile.lock', inputs.ruby-working-directory)) }}
+
+      - name: Install the Ruby bundle
+        if: ${{ inputs.setup-ruby && runner.os != 'Windows' && hashFiles(format('{0}/Gemfile', inputs.ruby-working-directory)) != '' }}
+        working-directory: ${{ inputs.ruby-working-directory }}
+        run: |
+          set -euo pipefail
+          bundle config set --local path vendor/bundle
+          if [ -f Gemfile.lock ]; then
+            bundle config set --local deployment true
+          fi
+          bundle install --jobs 4
 
       # Dart stays on its setup action, outside the mise baseline. ~keep
       - name: Set up Dart

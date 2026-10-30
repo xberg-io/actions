@@ -162,6 +162,16 @@ not step outputs: a composite action propagates only the outputs it declares, so
 `reusable-validate.yml` takes `check-toolchain: true` to run [`check-toolchain`](check-toolchain/README.md) before
 any setup step, failing on drift from the xberg-io/toolchains baseline named in `toolchains.toml`.
 
+## Toolchains through mise
+
+Every composite and reusable workflow here that needs a language or tool installs it through mise with
+[`setup-mise`](setup-mise/README.md), so its version comes from the caller's `mise.toml` and `mise.lock`. A version
+input (`python-version`, `node-version`, `java-version`, `zig-version`, ...) still selects a version: it is matched
+against the caller's locks (`3.12` selects a locked `3.12.x`) and installs unlocked, with a notice, when no lock
+covers it. Empty, the default, takes the version the caller's `mise.toml` declares and fails when it declares none.
+PHP, Swift, R, Android, Dart/Flutter, BEAM, .NET and Rust (`rust-toolchain.toml`) stay on their setup actions, as do
+Ruby on Windows and the actions' own helpers (uv for clang-format, AI-Rulez's installer).
+
 For repositories with compiled binding workspaces, set `prose-dependency-directory: docs-site` on the docs workflow and declare textlint and its rules in that standalone package. The default remains `.`; configuration, ignore files, and document paths stay relative to the repository root. Both setups use frozen installation and fail when prose lint fails.
 
 ## Repository Workflows
