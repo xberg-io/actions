@@ -55,11 +55,25 @@ runs:
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
       run: python3 "${{ github.action_path }}/scripts/publish.py"
 
-    - name: Install uv
-      if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
-      uses: astral-sh/setup-uv@v10.3.3
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: >-
+        inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true' &&
+        steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        enable-cache: false
+        install: "false"
+
+    - name: Install uv through mise
+      if: inputs.dry-run != 'true' && steps.validate.outputs.version_published != 'true'
+      shell: bash
+      env:
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
 
     - name: Publish to PyPI via trusted publishing
       id: upload

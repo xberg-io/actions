@@ -3,9 +3,11 @@ description: Build Python wheels using cibuildwheel
 
 inputs:
   python-version:
-    description: Python version to use for cibuildwheel host
+    description: >-
+      Python version for the cibuildwheel host, installed through mise and matched against the caller's mise
+      locks. Empty uses the version the caller's mise.toml selects.
     required: false
-    default: "3.13"
+    default: ""
   package-dir:
     description: Path to the Python package directory (relative to repo root)
     required: false
@@ -75,10 +77,23 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v7
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        python-version: ${{ inputs.python-version }}
+        install: "false"
+
+    - name: Install Python through mise
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "python=$PYTHON_VERSION"
 
     - name: Install cibuildwheel
       shell: bash

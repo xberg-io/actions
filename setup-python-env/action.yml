@@ -1,9 +1,12 @@
 name: Setup Python Environment
-description: Install uv, set up Python, and cache the local virtual environment
+description: Install Python and uv through mise, and cache the local virtual environment
 inputs:
   python-version:
-    description: Python version spec passed to actions/setup-python
-    required: true
+    description: >-
+      Python version to install through mise, e.g. "3.12"; it selects the newest locked match in the caller's
+      mise locks. Empty uses the version the caller's mise.toml selects.
+    required: false
+    default: ""
   cache-prefix:
     description: Prefix for cache keys
     required: false
@@ -19,7 +22,7 @@ inputs:
 outputs:
   python-version:
     description: Resolved Python version
-    value: ${{ steps.setup-python.outputs.python-version }}
+    value: ${{ steps.python.outputs.version }}
   cache-hit:
     description: Whether the dependency cache was restored
     value: ${{ steps.cache-python.outputs.cache-hit }}
@@ -32,16 +35,28 @@ runs:
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/uv-lock-hash.sh"
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.3
-      with:
-        enable-cache: true
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
 
-    - name: Set up Python
-      id: setup-python
-      uses: actions/setup-python@v7
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        python-version: ${{ inputs.python-version }}
+        install: "false"
+
+    - name: Install Python and uv through mise
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "python=$PYTHON_VERSION" uv
+
+    - name: Resolve the Python version
+      id: python
+      shell: bash
+      run: bash "${GITHUB_ACTION_PATH}/scripts/python-version.sh"
 
     - name: Cache Python dependencies
       id: cache-python
@@ -50,14 +65,14 @@ runs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ inputs.cache-prefix }}-v2-${{ runner.os }}-${{ inputs.python-version }}-${{ steps.uv-lock-hash.outputs.value }}
+        key: ${{ inputs.cache-prefix }}-v2-${{ runner.os }}-${{ steps.python.outputs.version }}-${{ steps.uv-lock-hash.outputs.value }}
         restore-keys: |
-          ${{ inputs.cache-prefix }}-v2-${{ runner.os }}-${{ inputs.python-version }}-
+          ${{ inputs.cache-prefix }}-v2-${{ runner.os }}-${{ steps.python.outputs.version }}-
 
     - name: Pin Python version for uv
       shell: bash
       env:
-        PYTHON_VERSION: ${{ inputs.python-version }}
+        PYTHON_VERSION: ${{ steps.python.outputs.version }}
       run: |
         bash "${GITHUB_ACTION_PATH}/scripts/pin-python.sh" "$PYTHON_VERSION"
 

@@ -75,11 +75,26 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set up Python for canonical notice verification
+    - name: Check for mise
+      id: mise
       if: inputs.required-notice-files != ''
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.required-notice-files != '' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        python-version: "3.15"
+        install: "false"
+
+    # ~keep The notice check parses TOML with tomllib, which needs Python 3.11 or later; the runner's system
+    # ~keep python3 may be older, so the caller's mise.toml Python is installed.
+    - name: Install Python through mise for canonical notice verification
+      if: inputs.required-notice-files != ''
+      shell: bash
+      env:
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . python
 
     - name: Verify package contents
       id: verify

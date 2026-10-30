@@ -14,9 +14,9 @@ inputs:
     required: false
     default: "true"
   python-version:
-    description: "Python version to use for the docs build"
+    description: "Python version for the docs build, through mise. Empty uses the version the caller's mise.toml selects."
     required: false
-    default: "3.13"
+    default: ""
   docs-group:
     description: >
       Name of the uv dependency group that pulls in the docs builder

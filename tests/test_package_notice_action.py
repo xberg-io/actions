@@ -188,14 +188,13 @@ def test_should_reject_empty_canonical_roots_when_opted_in(inputs, value):
     assert "canonical-root" in result.stdout
 
 
-def test_should_provision_a_toml_capable_python_only_for_opted_in_notice_checks():
+def test_should_provision_the_callers_mise_python_only_for_opted_in_notice_checks():
     action = yaml.safe_load((ROOT / "verify-package-contents/action.yml").read_text())
     steps = action["runs"]["steps"]
-    python_steps = [step for step in steps if str(step.get("uses", "")).startswith("actions/setup-python@")]
+    assert not [step for step in steps if str(step.get("uses", "")).startswith("actions/setup-python@")]
+    python_steps = [step for step in steps if "install-tools.sh" in str(step.get("run", ""))]
     assert len(python_steps) == 1
     setup = python_steps[0]
     assert setup["if"] == "inputs.required-notice-files != ''"
-    major, minor = (int(part) for part in str(setup["with"]["python-version"]).split(".")[:2])
-    assert (major, minor) >= (3, 11), "tomllib is stdlib only from Python 3.11"
-    assert len(setup["uses"].split("@", 1)[1]) == 40
+    assert setup["run"].endswith('install-tools.sh" . python')
     assert steps.index(setup) < next(index for index, step in enumerate(steps) if step.get("id") == "verify")

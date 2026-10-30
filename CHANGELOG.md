@@ -12,6 +12,18 @@ All notable changes to xberg-io/actions are documented in this file.
   against `mise.lock` and the active profile locks, so `python=3.12` selects a locked `3.12.x`, and a version no
   lock covers installs unlocked with a notice.
 
+### Changed
+
+- The Python composites install Python and uv through mise instead of `actions/setup-python` and
+  `astral-sh/setup-uv`, so the version comes from the caller's `mise.toml` and `mise.lock`: `setup-python-env`,
+  `build-python-wheels`, `build-docs`, `publish-pypi`, `verify-package-contents` and `reusable-python-publish`.
+  A `python-version` input still selects a version (`3.12` picks the newest locked `3.12.x`).
+  Behavior changes: `setup-python-env`'s `python-version` is no longer required, and empty now means the
+  caller's `mise.toml`; `build-python-wheels` and `build-docs` default `python-version` to empty (was `3.13`);
+  `reusable-python-publish` defaults it to empty (was `3.10`, which it never applied) and now installs it;
+  `verify-package-contents` uses the caller's Python instead of 3.15. Callers must declare `python` (and `uv`
+  for `setup-python-env`, `publish-pypi` and `reusable-python-publish`) in `mise.toml` or pass the version.
+
 ### Fixed
 
 - `setup-mise` installs mise 2026.10.24, which carries the remote file task fix (jdx/mise#15178), and its

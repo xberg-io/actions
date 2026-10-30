@@ -8,10 +8,10 @@ on:
         required: true
         type: string
       python-version:
-        description: "Python version for building"
+        description: "Python version for building, matched against the caller's mise locks. Empty uses mise.toml's."
         required: false
         type: string
-        default: "3.10"
+        default: ""
 
 jobs:
   publish:
@@ -24,7 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Install Python and uv through mise
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: python=${{ inputs.python-version }} uv
 
       - name: Build package
         run: uv build

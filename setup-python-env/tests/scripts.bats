@@ -43,3 +43,13 @@ setup() {
 	[ "$output" = "uv.lock not found, using fallback hash" ]
 	[ "$(cat "$GITHUB_OUTPUT")" = "value=no-uv-lock" ]
 }
+
+@test "should_report_the_version_of_the_python_first_on_path" {
+	xberg_stub python 'printf "3.12.11\r\n"'
+
+	run "$SCRIPT_DIR/python-version.sh"
+
+	[ "$status" -eq 0 ]
+	[ "$output" = "Python 3.12.11 at $BIN/python" ]
+	[ "$(cat "$GITHUB_OUTPUT")" = "version=3.12.11" ]
+}
