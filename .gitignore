@@ -67,7 +67,7 @@ poly.local.toml
 .codex/config.toml
 .opencode/agents/
 .opencode/commands/
-opencode.json
+/opencode.json
 # END ai-rulez
 
 # `Invoke-Pester -CI` turns on NUnit output and defaults its path to ./testResults.xml, so any
