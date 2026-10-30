@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- The `setup-android-emulator` docs name `mise run` e2e tasks instead of go-task `task <lang>:test:e2e` ones.
+
 ## [1.39.0] - 2026-10-30
 
 ### Changed

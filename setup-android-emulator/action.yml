@@ -3,7 +3,7 @@ description: >
   Provision an Android emulator on the runner via
   reactivecircus/android-emulator-runner. Pins the API level, system image
   target, and ABI; exports ANDROID_HOME / ANDROID_SDK_ROOT so downstream
-  `task ...:test:e2e` calls can drive the emulator. Designed for use across
+  `mise run` e2e tasks can drive the emulator. Designed for use across
   xberg-io polyglot repos that ship a kotlin-android binding.
 
   The emulator process itself is started by the consumer step that calls

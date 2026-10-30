@@ -1,7 +1,7 @@
 # setup-android-emulator
 
 Composite GitHub Action that provisions an Android emulator on the runner so
-downstream `task <lang>:test:e2e` invocations can drive instrumented tests
+downstream `mise run` e2e tasks (`mise run kotlin-android:e2e`) can drive instrumented tests
 (`./gradlew connectedDebugAndroidTest`).
 
 Wraps `reactivecircus/android-emulator-runner@v2` (de facto standard runner;
@@ -10,13 +10,13 @@ manages AVD snapshots and KVM acceleration) and exports `ANDROID_HOME` /
 
 ## Inputs
 
-| Name        | Default        | Description                                                |
-|-------------|----------------|------------------------------------------------------------|
-| `api-level` | `34`           | Android API level                                          |
-| `target`    | `google_apis`  | System image: `google_apis` \| `default` \| `google_apis_playstore` |
-| `arch`      | `x86_64`       | ABI: `x86_64` (KVM, GHA Linux) \| `arm64-v8a` (slower)     |
-| `profile`   | `pixel_6`      | AVD hardware profile                                        |
-| `avd-name`  | `xberg-test` | AVD identifier                                            |
+| Name        | Default       | Description                                                         |
+| ----------- | ------------- | ------------------------------------------------------------------- |
+| `api-level` | `34`          | Android API level                                                   |
+| `target`    | `google_apis` | System image: `google_apis` \| `default` \| `google_apis_playstore` |
+| `arch`      | `x86_64`      | ABI: `x86_64` (KVM, GHA Linux) \| `arm64-v8a` (slower)              |
+| `profile`   | `pixel_6`     | AVD hardware profile                                                |
+| `avd-name`  | `xberg-test`  | AVD identifier                                                      |
 
 ## Outputs
 
@@ -40,7 +40,7 @@ manages AVD snapshots and KVM acceleration) and exports `ANDROID_HOME` /
     target: google_apis
     arch: x86_64
     profile: pixel_6
-    script: task kotlin-android:test:e2e
+    script: mise run kotlin-android:e2e
 ```
 
 The action only **provisions** the SDK and warms the AVD cache. The emulator

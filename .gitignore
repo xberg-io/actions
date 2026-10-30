@@ -23,9 +23,6 @@ Thumbs.db
 .env.local
 .mcp.json
 
-# Task runner
-.task/
-
 # Generated
 CLAUDE.md
 AGENTS.md

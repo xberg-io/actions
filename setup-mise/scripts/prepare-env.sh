@@ -22,11 +22,11 @@ fi
 export_default MISE_RUBY_COMPILE false
 # mise's 30s default connect/read timeout fails repeatedly on loaded runners. ~keep
 export_default MISE_HTTP_TIMEOUT 5m
-# go-task printed each command's output raw. mise prefixes lines with the task name once a task has
-# dependencies, which breaks CI steps that grep or count lines of that output. ~keep
+# mise prefixes lines with the task name once a task has dependencies, which breaks CI steps that grep or
+# count lines of a task's output. ~keep
 export_default MISE_TASK_OUTPUT interleave
-# mise runs inline task `run` strings under `cmd /c` on Windows, where go-task used a POSIX shell and the
-# org's tasks are written for one. Point it at Git Bash; mise reads this setting from the environment only. ~keep
+# mise runs inline task `run` strings under `cmd /c` on Windows, but the org's tasks are written for a POSIX
+# shell. Point it at Git Bash; mise reads this setting from the environment only. ~keep
 if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
   export_default MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS "\"$(cygpath -m "$(command -v bash)")\" -o errexit -c"
 fi
