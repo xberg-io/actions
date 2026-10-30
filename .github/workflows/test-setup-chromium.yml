@@ -4,10 +4,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - setup-chromium/**
       - .github/workflows/test-setup-chromium.yml
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - setup-chromium/**
       - .github/workflows/test-setup-chromium.yml
 

@@ -14,10 +14,10 @@ on:
         type: string
         default: "."
       node-version:
-        description: "Node.js version."
+        description: "Node.js version, matched against the caller's mise locks. Empty uses the caller's mise.toml."
         required: false
         type: string
-        default: "26"
+        default: ""
       build-command:
         description: "Command that builds the static site into <working-directory>/dist."
         required: false
@@ -47,13 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
+      - name: Install Node.js and pnpm through mise
+        uses: xberg-io/actions/setup-mise@v1
         with:
-          node-version: ${{ inputs.node-version }}
-
-      - name: Install pnpm
-        run: npm install --global pnpm@12.11.2
+          tools: node=${{ inputs.node-version }} pnpm
 
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}

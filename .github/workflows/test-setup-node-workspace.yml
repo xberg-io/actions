@@ -3,10 +3,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-node-workspace/**"
       - ".github/workflows/test-setup-node-workspace.yml"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "setup-node-workspace/**"
       - ".github/workflows/test-setup-node-workspace.yml"
 
@@ -30,7 +32,7 @@ jobs:
           {
             "name": "test-workspace",
             "private": true,
-            "packageManager": "pnpm@12.11.2"
+            "packageManager": "pnpm@12.15.0"
           }
           JSON
           cat > pnpm-lock.yaml << 'YAML'
@@ -39,13 +41,20 @@ jobs:
             autoInstallPeers: true
           YAML
 
+      # ~keep No node-version: the repository's mise.toml and mise.lock select Node and pnpm, as for a caller.
       - name: Setup Node workspace
         uses: ./setup-node-workspace
         with:
           frozen-lockfile: "false"
+          registry-url: https://registry.npmjs.org
 
       - name: Verify installation
         shell: bash
         run: |
-          node --version
-          pnpm --version
+          set -euo pipefail
+          node --version | tee /dev/stderr | grep -qx "v$(mise current node | cut -d' ' -f1)"
+          pnpm --version | tee /dev/stderr | grep -qx "$(mise current pnpm)"
+          # shellcheck disable=SC2016 # the .npmrc holds the literal variable reference
+          grep -qxF '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' "$NPM_CONFIG_USERCONFIG"
+          grep -qxF 'registry=https://registry.npmjs.org/' "$NPM_CONFIG_USERCONFIG"
+          [[ "$NODE_AUTH_TOKEN" == "XXXXX-XXXXX-XXXXX-XXXXX" ]]

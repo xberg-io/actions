@@ -3,11 +3,13 @@ on:
   push:
     branches: [main]
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "publish-*/**"
       - "wait-for-package/**"
       - ".github/workflows/test-publish-actions.yml"
   pull_request:
     paths:
+      - "setup-mise/scripts/install-tools.sh"
       - "publish-*/**"
       - "wait-for-package/**"
       - ".github/workflows/test-publish-actions.yml"
@@ -21,14 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      # ~keep mise is already set up when publish-npm runs, so it installs pnpm without a second setup-mise.
+      - name: Install Node.js and pnpm through mise
+        uses: ./setup-mise
         with:
-          node-version: "26"
+          tools: node pnpm
 
-      - name: Install pnpm 12
-        shell: bash
-        run: |
-          npm install --global pnpm@12.11.2
       - name: Create dummy npm package
         run: |
           mkdir -p dist

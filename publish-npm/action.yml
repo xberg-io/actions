@@ -48,9 +48,22 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install pnpm 12
+    - name: Check for mise
+      id: mise
       shell: bash
-      run: npm install --global pnpm@12.11.2
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    - name: Install pnpm through mise
+      shell: bash
+      env:
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . pnpm
 
     - name: Publish npm packages
       shell: bash

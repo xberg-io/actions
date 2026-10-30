@@ -1,10 +1,12 @@
 name: Setup Node.js Workspace
-description: Configure Node.js with pnpm and workspace dependencies
+description: Install Node.js and pnpm through mise and install the workspace dependencies
 inputs:
   node-version:
-    description: Node.js version to install
+    description: >-
+      Node.js version to install through mise, e.g. "24"; it selects the newest locked match in the caller's
+      mise locks. Empty uses the version the caller's mise.toml selects.
     required: false
-    default: "26"
+    default: ""
   frozen-lockfile:
     description: Use frozen lockfile for pnpm install
     required: false
@@ -18,21 +20,38 @@ inputs:
     required: false
     default: "false"
   registry-url:
-    description: npm registry URL for authentication (e.g., https://registry.npmjs.org/)
+    description: >-
+      npm registry URL for authentication (e.g., https://registry.npmjs.org/). Writes an .npmrc in RUNNER_TEMP that
+      reads the token from NODE_AUTH_TOKEN and exports it as NPM_CONFIG_USERCONFIG, as actions/setup-node did.
     required: false
     default: ""
 runs:
   using: composite
   steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v7
-      with:
-        node-version: ${{ inputs.node-version }}
-        registry-url: ${{ inputs.registry-url != '' && inputs.registry-url || null }}
-
-    - name: Install pnpm via npm
+    - name: Check for mise
+      id: mise
       shell: bash
-      run: npm install --global pnpm@12.11.2
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+
+    - name: Install Node.js and pnpm through mise
+      shell: bash
+      env:
+        NODE_VERSION: ${{ inputs.node-version }}
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "node=$NODE_VERSION" pnpm
+
+    - name: Configure the npm registry
+      if: inputs.registry-url != ''
+      shell: bash
+      env:
+        REGISTRY_URL: ${{ inputs.registry-url }}
+      run: bash "${{ github.action_path }}/scripts/configure-registry.sh" "$REGISTRY_URL"
 
     - name: Install dependencies
       shell: bash

@@ -2,7 +2,7 @@
 
 setup_file() {
 	bats_load_library xberg-bats
-	# setup-node provides node, npm and npx and nothing else: a pnpm call must fail here as it does on a runner.
+	# mise's Node provides node, npm and npx and nothing else: a pnpm call must fail here as it does on a runner.
 	xberg_shadow_system_path_without pnpm npm npx node corepack
 }
 

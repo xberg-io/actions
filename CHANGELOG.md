@@ -23,6 +23,13 @@ All notable changes to xberg-io/actions are documented in this file.
   `reusable-python-publish` defaults it to empty (was `3.10`, which it never applied) and now installs it;
   `verify-package-contents` uses the caller's Python instead of 3.15. Callers must declare `python` (and `uv`
   for `setup-python-env`, `publish-pypi` and `reusable-python-publish`) in `mise.toml` or pass the version.
+- The Node composites install Node.js and pnpm through mise instead of `actions/setup-node` and
+  `npm install --global pnpm@12.11.2`: `setup-node-workspace`, `setup-textlint`, `setup-chromium`, `publish-npm`
+  and `reusable-docs-deploy`. pnpm now comes from the caller's `mise.toml` instead of 12.11.2, and
+  `node-version` defaults to empty (was `26`), meaning the caller's `mise.toml`. `setup-node-workspace`'s
+  `registry-url` still writes the `.npmrc` setup-node wrote (`$RUNNER_TEMP/.npmrc`, token read from
+  `NODE_AUTH_TOKEN`, exported as `NPM_CONFIG_USERCONFIG`, unset token exported as setup-node's placeholder).
+  `publish-npm` installs only pnpm. Callers must declare `node` and `pnpm` (`pnpm` alone for `publish-npm`).
 
 ### Fixed
 
