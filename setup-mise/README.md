@@ -1,6 +1,6 @@
 # setup-mise
 
-Install [mise][mise] (pinned to 2026.10.21) through [`jdx/mise-action`][action] and the tools declared in the
+Install [mise][mise] (pinned to 2026.10.24) through [`jdx/mise-action`][action] and the tools declared in the
 repository's `mise.toml`. When `mise.lock`, or the `mise.<env>.lock` of an active `MISE_ENV` profile, sits next to
 it, the action exports `MISE_LOCKED=1` for the install and every later step, and the install runs as
 `mise install --locked`: a lock that does not cover the declared versions or the runner's platform fails the job
@@ -34,15 +34,15 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 
 ## Inputs
 
-| Name                | Required | Default                 | Description                                                      |
-| ------------------- | -------- | ----------------------- | ---------------------------------------------------------------- |
-| `working-directory` | no       | `.`                     | Directory holding `mise.toml` and `mise.lock`.                   |
-| `install-args`      | no       | `""`                    | Arguments for `mise install`, e.g. `node python`.                |
-| `install`           | no       | `true`                  | `false` sets up mise without installing tools.                   |
-| `mise-env`          | no       | `""`                    | Exported as `MISE_ENV` for this and later steps.                 |
-| `github-token`      | no       | `${{ github.token }}`   | Token for GitHub release lookups, avoiding API rate limits.      |
-| `config-ref`        | no       | `""`                    | Ref to restore the mise config and `mise-tasks/` from when `mise.toml` is missing. |
-| `cache`             | no       | `auto`                  | `auto`, `true` or `false`; `auto` skips a preset `MISE_DATA_DIR`. |
+| Name                | Required | Default               | Description                                                                        |
+| ------------------- | -------- | --------------------- | ---------------------------------------------------------------------------------- |
+| `working-directory` | no       | `.`                   | Directory holding `mise.toml` and `mise.lock`.                                     |
+| `install-args`      | no       | `""`                  | Arguments for `mise install`, e.g. `node python`.                                  |
+| `install`           | no       | `true`                | `false` sets up mise without installing tools.                                     |
+| `mise-env`          | no       | `""`                  | Exported as `MISE_ENV` for this and later steps.                                   |
+| `github-token`      | no       | `${{ github.token }}` | Token for GitHub release lookups, avoiding API rate limits.                        |
+| `config-ref`        | no       | `""`                  | Ref to restore the mise config and `mise-tasks/` from when `mise.toml` is missing. |
+| `cache`             | no       | `auto`                | `auto`, `true` or `false`; `auto` skips a preset `MISE_DATA_DIR`.                  |
 
 When `install-args` names some tools, or `install` is `false`, the action exports
 `MISE_TASK_RUN_AUTO_INSTALL=false` (unless already set), so a later `mise run` uses exactly the installed tools
@@ -52,9 +52,9 @@ inline `run` tasks execute under the same POSIX shell as on Linux and macOS inst
 
 ## Outputs
 
-| Name    | Description                                                       |
-| ------- | ----------------------------------------------------------------- |
-| `cache` | `true` or `false`: whether the mise data directory was cached.    |
+| Name    | Description                                                    |
+| ------- | -------------------------------------------------------------- |
+| `cache` | `true` or `false`: whether the mise data directory was cached. |
 
 ## Older checkouts
 
