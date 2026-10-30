@@ -8,6 +8,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `setup-ai-rulez` always installs the latest ai-rulez release through `Goldziher/ai-rulez@v5`. Its
   `ai-rulez-version` input is deprecated and ignored: a value other than `latest` logs a warning.
+- `verify-ai-rulez-plugin`'s deprecated `ai-rulez-version` input installs the latest release through
+  `Goldziher/ai-rulez@v5` instead of `uv tool install ai-rulez==<version>`, and warns on a specific version.
 
 ## [1.38.0] - 2026-10-30
 

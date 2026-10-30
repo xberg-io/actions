@@ -184,6 +184,24 @@ def test_release_setup_warns_that_a_specific_version_is_ignored(tmp_path):
     )
 
 
+def test_verifier_routes_a_legacy_version_to_the_latest_release(tmp_path):
+    action = yaml.safe_load((_ROOT / "verify-ai-rulez-plugin/action.yml").read_text())
+    steps = action["runs"]["steps"]
+    assert not [step for step in steps if "uv tool" in step.get("run", "") or "setup-uv" in step.get("uses", "")]
+    install = next(step for step in steps if step["name"] == "Install the latest AI-Rulez release for a legacy caller")
+    assert install["if"] == "inputs.ai-rulez-version != ''"
+    assert install["uses"] == "Goldziher/ai-rulez@v5"
+    assert install["with"] == {"version": "latest"}
+    warn = next(step for step in steps if step["name"] == "Warn on a deprecated AI-Rulez version")
+    assert warn["if"] == "inputs.ai-rulez-version != '' && inputs.ai-rulez-version != 'latest'"
+    result = run_step("verify-ai-rulez-plugin", warn["name"], tmp_path, {"AI_RULEZ_VERSION": "5.9.2"})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == (
+        "::warning title=verify-ai-rulez-plugin::ai-rulez-version is deprecated (got '5.9.2');"
+        " the latest AI-Rulez release is installed. Use setup-ai-rulez instead.\n"
+    )
+
+
 def test_source_setup_rejects_unpinned_revision(tmp_path):
     result = run_step(
         "setup-ai-rulez",

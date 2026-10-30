@@ -2,7 +2,7 @@ name: Verify AI-Rulez Plugin
 description: Verify plugin versions, strict validity, freshness and provenance using an installed AI-Rulez CLI.
 inputs:
   ai-rulez-version:
-    description: Optional legacy release install ("latest" or a version); omit when setup-ai-rulez already installed the CLI.
+    description: Deprecated. Any nonempty value installs the latest release; omit it and run setup-ai-rulez first.
     required: false
     default: ""
   version-sync-script:
@@ -20,22 +20,19 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install uv for a legacy caller
-      if: inputs.ai-rulez-version != ''
-      uses: astral-sh/setup-uv@v10.3.3
-    - name: Install the legacy caller's pinned AI-Rulez release
-      if: inputs.ai-rulez-version != ''
+    - name: Warn on a deprecated AI-Rulez version
+      if: inputs.ai-rulez-version != '' && inputs.ai-rulez-version != 'latest'
       shell: bash
       env:
         AI_RULEZ_VERSION: ${{ inputs.ai-rulez-version }}
       run: |
-        if [ "$AI_RULEZ_VERSION" = "latest" ]; then
-          uv tool install --force --upgrade ai-rulez
-        else
-          uv tool install --force "ai-rulez==$AI_RULEZ_VERSION"
-        fi
-        "$(uv tool dir --bin)/ai-rulez" --version
-        uv tool dir --bin >> "$GITHUB_PATH"
+        echo "::warning title=verify-ai-rulez-plugin::ai-rulez-version is deprecated" \
+          "(got '$AI_RULEZ_VERSION'); the latest AI-Rulez release is installed. Use setup-ai-rulez instead."
+    - name: Install the latest AI-Rulez release for a legacy caller
+      if: inputs.ai-rulez-version != ''
+      uses: Goldziher/ai-rulez@v5
+      with:
+        version: latest
     - name: Verify plugin version tracks core
       shell: bash
       working-directory: ${{ inputs.working-directory }}

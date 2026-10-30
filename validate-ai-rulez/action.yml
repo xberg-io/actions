@@ -26,7 +26,7 @@ inputs:
     required: false
     default: "scripts/sync_public_skills.py"
   working-directory:
-    description: Repository root. Requires an installed pinned AI-Rulez CLI and a clean committed checkout.
+    description: Repository root. Requires an installed AI-Rulez CLI (setup-ai-rulez) and a clean committed checkout.
     required: false
     default: "."
 runs:
