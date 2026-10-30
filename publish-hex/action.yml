@@ -57,7 +57,7 @@ runs:
     - name: Setup Elixir and OTP
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: "v1.20.4"
+        elixir-version: "v1.20.5"
         otp-version: "29.1.2"
 
     - name: Publish verified prebuilt Hex archive

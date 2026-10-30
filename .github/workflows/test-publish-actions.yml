@@ -251,7 +251,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29.1.2"
-          elixir-version: "v1.20.4"
+          elixir-version: "v1.20.5"
 
       - name: Scaffold an Elixir mix project
         run: mix new pkg
