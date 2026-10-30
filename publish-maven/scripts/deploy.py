@@ -379,6 +379,64 @@ def maybe_run_guarded(
     return True
 
 
+def run_deploy_command(mvn_args: list[str], deploy_timeout: int) -> tuple[int, str]:
+    """Run the deployment and report a timed-out Central Portal consistently."""
+    try:
+        returncode, log_content = run_mvn_with_streaming(
+            ["mvn", "clean", "deploy", *mvn_args],
+            deploy_timeout,
+        )
+    except TimeoutError as e:
+        sys.stdout.flush()
+        print(f"Error: {e}", file=sys.stderr)
+        print(
+            "Maven deploy exceeded timeout — Central Portal likely stuck on publish confirmation;\n"
+            "check https://central.sonatype.com deployments.\n"
+            "If waitUntil=published, switch to validated.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return returncode, log_content
+
+
+def deploy_and_cleanup(
+    mvn_args: list[str],
+    deploy_timeout: int,
+    expected_version: str,
+    pom_verified: bool,
+    settings_file: str | None,
+) -> None:
+    """Deploy the configured Maven command and remove temporary logs and credentials."""
+    print("Deploying to Maven Central...")
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        returncode: int
+        log_content: str
+        returncode, log_content = run_deploy_command(mvn_args, deploy_timeout)
+
+        Path(tmp_path).write_text(log_content)
+
+        if returncode == 0:
+            print("Maven deploy completed successfully")
+        elif is_already_published(log_content):
+            if expected_version:
+                assert_already_published_is_release(log_content, expected_version, pom_verified=pom_verified)
+            print("Version already published to Maven Central, skipping")
+            github_actions = os.environ.get("GITHUB_ACTIONS", "")
+            if github_actions:
+                print("::notice::Version already exists on Maven Central")
+        else:
+            print("Maven deploy failed", file=sys.stderr)
+            sys.exit(1)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+        if settings_file:
+            Path(settings_file).unlink(missing_ok=True)
+
+
 def main() -> None:
     pom_file = os.environ.get("INPUT_POM_FILE", "")
     maven_profile = os.environ.get("INPUT_MAVEN_PROFILE", "publish")
@@ -417,48 +475,7 @@ def main() -> None:
         subprocess.run(["mvn", "-f", pom_file, "clean", "verify", "-B", "--no-transfer-progress"], check=False)
         sys.exit(0)
 
-    print("Deploying to Maven Central...")
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as tmp:
-        tmp_path = tmp.name
-
-    try:
-        returncode: int
-        log_content: str
-        try:
-            returncode, log_content = run_mvn_with_streaming(
-                ["mvn", "clean", "deploy", *mvn_args],
-                deploy_timeout,
-            )
-        except TimeoutError as e:
-            sys.stdout.flush()
-            print(f"Error: {e}", file=sys.stderr)
-            print(
-                "Maven deploy exceeded timeout — Central Portal likely stuck on publish confirmation;\n"
-                "check https://central.sonatype.com deployments.\n"
-                "If waitUntil=published, switch to validated.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        Path(tmp_path).write_text(log_content)
-
-        if returncode == 0:
-            print("Maven deploy completed successfully")
-        elif is_already_published(log_content):
-            if expected_version:
-                assert_already_published_is_release(log_content, expected_version, pom_verified=pom_verified)
-            print("Version already published to Maven Central, skipping")
-            github_actions = os.environ.get("GITHUB_ACTIONS", "")
-            if github_actions:
-                print("::notice::Version already exists on Maven Central")
-        else:
-            print("Maven deploy failed", file=sys.stderr)
-            sys.exit(1)
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
-        if settings_file:
-            Path(settings_file).unlink(missing_ok=True)
+    deploy_and_cleanup(mvn_args, deploy_timeout, expected_version, pom_verified, settings_file)
 
 
 if __name__ == "__main__":

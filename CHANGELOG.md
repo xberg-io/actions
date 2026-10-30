@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Split Maven deployment orchestration into focused helpers and remove the final size baseline suppression.
+
 ## [1.37.0] - 2026-10-30
 
 ### Added
