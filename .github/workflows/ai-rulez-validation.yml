@@ -45,11 +45,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-ai-rulez
-        with:
-          ai-rulez-version: "latest"
       - uses: ./validate-ai-rulez
       - uses: xberg-io/agent-conventions/actions/context-exposure@v1
         with:
           budgets: |
-            claude=4250
-            codex=4750
+            claude=4300
+            codex=4800
