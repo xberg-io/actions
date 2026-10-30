@@ -22,17 +22,13 @@ run_script() {
 		'NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX')"
 }
 
-@test "configure_registry should_pass_a_set_token_on_without_writing_it_to_the_npmrc_or_the_log" {
+@test "configure_registry should_keep_a_set_token_out_of_the_npmrc_the_log_and_later_steps" {
 	run_script NODE_AUTH_TOKEN=npm_secret-token "$SCRIPT" https://registry.npmjs.org/
 
 	xberg_assert_status 0
 	[[ "$output" != *"npm_secret-token"* ]]
 	! grep -q "npm_secret-token" "$RUNNER_TEMP/.npmrc"
-	local delimiter
-	delimiter="$(sed -n 's/^NODE_AUTH_TOKEN<<//p' "$GITHUB_ENV")"
-	[[ "$delimiter" =~ ^NODE_AUTH_TOKEN_[0-9a-f]{16}$ ]]
-	xberg_assert_github_env "$(printf '%s\n' "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc" "NODE_AUTH_TOKEN<<$delimiter" \
-		npm_secret-token "$delimiter")"
+	xberg_assert_github_env "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc"
 }
 
 @test "configure_registry should_replace_an_earlier_registry_line_and_keep_other_settings" {

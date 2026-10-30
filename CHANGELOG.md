@@ -28,7 +28,8 @@ All notable changes to xberg-io/actions are documented in this file.
   and `reusable-docs-deploy`. pnpm now comes from the caller's `mise.toml` instead of 12.11.2, and
   `node-version` defaults to empty (was `26`), meaning the caller's `mise.toml`. `setup-node-workspace`'s
   `registry-url` still writes the `.npmrc` setup-node wrote (`$RUNNER_TEMP/.npmrc`, token read from
-  `NODE_AUTH_TOKEN`, exported as `NPM_CONFIG_USERCONFIG`, unset token exported as setup-node's placeholder).
+  `NODE_AUTH_TOKEN`, exported as `NPM_CONFIG_USERCONFIG`, unset token exported as setup-node's placeholder; a
+  set token stays scoped to the caller's step).
   `publish-npm` installs only pnpm. Callers must declare `node` and `pnpm` (`pnpm` alone for `publish-npm`).
 - The Java composites install Java, Maven and Gradle through mise instead of `actions/setup-java`, a curl of the
   Maven tarball and `gradle/actions/setup-gradle`'s `gradle-version`: `setup-maven`, `setup-gradle`,
@@ -60,7 +61,7 @@ All notable changes to xberg-io/actions are documented in this file.
   `zig-version` default to empty, meaning the caller's `mise.toml` (were `3.13.18`, `25.0.5+8`, `3.4.12` and
   `0.17.0`); `go-version` stays `1.26` while golangci-lint v2.12.2 panics on Go 1.27; the Gradle JDK installs
   through mise; Ruby on Windows stays on `ruby/setup-ruby`. A caller without a `mise.toml` (xberg-enterprise)
-  must add one or pass the versions.
+  must add one: `uv` has no version input, so `setup-python` needs it declared.
 - `run-test-apps` installs Ruby (except on Windows), Java and Zig from the caller's `mise.toml` through mise
   instead of `ruby/setup-ruby` 4.0.9, `actions/setup-java` Temurin 25.0.5+8 and `mlugg/setup-zig`.
 - `lint-docs` installs lychee through mise from the caller's `mise.toml` instead of the latest release through

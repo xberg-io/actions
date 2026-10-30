@@ -31,11 +31,9 @@ printf '%s\n' "$contents" >"$npmrc"
 echo "NPM_CONFIG_USERCONFIG=$npmrc" >>"$GITHUB_ENV"
 
 # Like setup-node: npm fails on an unset variable in .npmrc, so an unset token is exported as setup-node's
-# placeholder, which publish-npm treats as unset. A set token is passed on to later steps unchanged. ~keep
+# placeholder, which publish-npm treats as unset. A set token is never written to GITHUB_ENV, so a token the
+# caller scoped to this step does not reach later steps. ~keep
 if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
   echo "NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX" >>"$GITHUB_ENV"
-else
-  delimiter="NODE_AUTH_TOKEN_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
-  printf 'NODE_AUTH_TOKEN<<%s\n%s\n%s\n' "$delimiter" "$NODE_AUTH_TOKEN" "$delimiter" >>"$GITHUB_ENV"
 fi
 echo "Wrote ${scope}registry=${registry_url} to $npmrc"
