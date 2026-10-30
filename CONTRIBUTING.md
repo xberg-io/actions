@@ -19,8 +19,9 @@ mise install
 mise run setup
 ```
 
-mise does not pin ai-rulez: the governance hooks and tasks run the `ai-rulez` on your PATH, so keep it on the
-latest release (`npm install -g ai-rulez@latest`; the package needs Node 22 or later).
+mise does not pin ai-rulez; every use runs the latest release. The poly hooks call the `ai-rulez` on your PATH,
+so install it globally with `npm install -g ai-rulez@latest` and rerun that to update. The package needs Node 22
+or later, which tasks need too when they run it through `npx -y ai-rulez@latest`.
 
 This will setup the dependencies, and pre-commit hooks via `poly`.
 
