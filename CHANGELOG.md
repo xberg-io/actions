@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `setup-mise` takes a `tools` input that installs only the named tools, each `tool` or `tool=version`, and
+  puts the selected versions first on `PATH` (with `JAVA_HOME` for Java and `GOROOT`/`GOBIN` for Go). A tool
+  without a version takes the version `mise.toml` selects and fails when it declares none; a version is matched
+  against `mise.lock` and the active profile locks, so `python=3.12` selects a locked `3.12.x`, and a version no
+  lock covers installs unlocked with a notice.
+
 ### Fixed
 
 - `setup-mise` installs mise 2026.10.24, which carries the remote file task fix (jdx/mise#15178), and its

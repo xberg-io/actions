@@ -18,6 +18,14 @@ inputs:
       "false" sets up mise and the config without installing any tool, for jobs whose `mise run` tasks need none.
     required: false
     default: "true"
+  tools:
+    description: >-
+      Whitespace-separated tools to install instead of the whole config, each `tool` or `tool=version`, e.g.
+      "python=3.12 uv". A tool without a version takes the version mise.toml selects and fails when it declares
+      none; a version is matched against the active locks ("3.12" selects a locked 3.12.x) and installs unlocked,
+      with a notice, when no lock covers it. The selected versions go first on PATH for later steps.
+    required: false
+    default: ""
   mise-env:
     description: >-
       Profile exported as MISE_ENV for this and later steps (e.g. "ci" loads mise.ci.toml and its mise.ci.lock).
@@ -66,7 +74,7 @@ runs:
         INPUT_MISE_ENV: ${{ inputs.mise-env }}
         INPUT_CACHE: ${{ inputs.cache }}
         INPUT_INSTALL: ${{ inputs.install }}
-        INPUT_INSTALL_ARGS: ${{ inputs.install-args }}
+        INPUT_INSTALL_ARGS: ${{ inputs.install-args != '' && inputs.install-args || inputs.tools }}
       run: |
         "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE" \
           "$INPUT_INSTALL" "$INPUT_INSTALL_ARGS"
@@ -76,7 +84,20 @@ runs:
       with:
         version: "2026.10.24"
         working_directory: ${{ inputs.working-directory }}
-        install: ${{ inputs.install }}
+        # ~keep `tools` installs exactly the tools it names in the next step, so the whole config is not installed
+        # ~keep first unless install-args asks for some of it too.
+        install: ${{ (inputs.tools == '' || inputs.install-args != '') && inputs.install || 'false' }}
         install_args: ${{ inputs.install-args }}
         github_token: ${{ inputs.github-token }}
         cache: ${{ steps.env.outputs.cache }}
+
+    - name: Install the requested tools
+      if: inputs.tools != '' && inputs.install == 'true'
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_TOOLS: ${{ inputs.tools }}
+        MISE_GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        read -r -a tools <<<"$(tr '\n' ' ' <<<"$INPUT_TOOLS")"
+        bash "${{ github.action_path }}/scripts/install-tools.sh" "$WORKING_DIRECTORY" "${tools[@]}"

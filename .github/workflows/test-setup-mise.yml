@@ -147,6 +147,56 @@ jobs:
         working-directory: setup-mise/tests/fixtures/locked
         run: yq --version | grep -q "4.54.1"
 
+  tools:
+    name: Selected tools on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-26, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      MISE_ENV: ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Stop mise config discovery at the fixtures
+        shell: bash
+        run: echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+
+      # ~keep yq=4.53 must resolve to the profile's locked 4.53.6, jq to the config's 1.8.2, and only the first
+      # ~keep version of each goes first on PATH. The whole config is not installed: the fixture has no other tools,
+      # ~keep so the PATH check is what proves the selection.
+      - name: Setup mise with selected tools
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          tools: yq=4.53 jq
+          cache: "false"
+
+      - name: Verify the selected versions are first on PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          yq --version | tee /dev/stderr | grep -q "4.53.6"
+          jq --version | tee /dev/stderr | grep -q "1.8.2"
+          [[ "${MISE_LOCKED:-}" == "1" ]]
+
+      - name: Setup mise with a tool the config does not declare
+        id: undeclared
+        continue-on-error: true
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/locked
+          tools: shfmt
+          cache: "false"
+
+      - name: Assert the undeclared tool failed the step
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.undeclared.outcome }}
+        run: |
+          [[ "$OUTCOME" == "failure" ]]
+
   mise-data-dir:
     name: Preset MISE_DATA_DIR is respected
     runs-on: ubuntu-latest

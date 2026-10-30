@@ -39,16 +39,39 @@ Install a subset, with a profile that adds CI-only versions from `mise.ci.toml`:
 | `working-directory` | no       | `.`                   | Directory holding `mise.toml` and `mise.lock`.                                     |
 | `install-args`      | no       | `""`                  | Arguments for `mise install`, e.g. `node python`.                                  |
 | `install`           | no       | `true`                | `false` sets up mise without installing tools.                                     |
+| `tools`             | no       | `""`                  | Install only these tools, each `tool` or `tool=version`; see below.                |
 | `mise-env`          | no       | `""`                  | Exported as `MISE_ENV` for this and later steps.                                   |
 | `github-token`      | no       | `${{ github.token }}` | Token for GitHub release lookups, avoiding API rate limits.                        |
 | `config-ref`        | no       | `""`                  | Ref to restore the mise config and `mise-tasks/` from when `mise.toml` is missing. |
 | `cache`             | no       | `auto`                | `auto`, `true` or `false`; `auto` skips a preset `MISE_DATA_DIR`.                  |
 
-When `install-args` names some tools, or `install` is `false`, the action exports
+When `install-args` or `tools` names some tools, or `install` is `false`, the action exports
 `MISE_TASK_RUN_AUTO_INSTALL=false` (unless already set), so a later `mise run` uses exactly the installed tools
 instead of installing the rest of `mise.toml` first.
 On Windows runners it also exports `MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS` for Git Bash (unless already set), so
 inline `run` tasks execute under the same POSIX shell as on Linux and macOS instead of `cmd /c`.
+
+## Selected tools
+
+`tools` installs only the tools it names, for jobs and actions that need a few of them, and puts the selected
+versions first on `PATH` for later steps (with `JAVA_HOME` for Java and `GOROOT`/`GOBIN` for Go):
+
+```yaml
+- uses: xberg-io/actions/setup-mise@v1
+  with:
+    tools: python=${{ matrix.python }} uv
+```
+
+- `tool` installs the version the config selects: `mise.toml`, the active `MISE_ENV` profiles, or a
+  `MISE_<TOOL>_VERSION` the job exports. A tool the config does not declare fails the step.
+- `tool=version` is matched against `mise.lock` and the active profile locks first: `python=3.12` selects the
+  newest locked `3.12.x` and installs with `--locked`. A version no lock covers installs unlocked with a notice;
+  declare it in a profile such as `mise.ci.toml` and lock it to verify its checksums. A leading `v` and a
+  trailing `.x` are dropped, so `3.x` and `v0.17.0` work.
+- A short name finds the backend the config declares: `wasm-pack` resolves to `github:rustwasm/wasm-pack`.
+
+The composites in this repository that need a language or tool install it the same way, through
+`scripts/install-tools.sh`, and take their version inputs as `tool=version`.
 
 ## Outputs
 
