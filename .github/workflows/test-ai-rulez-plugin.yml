@@ -26,10 +26,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # ~keep The suite runs against the latest ai-rulez that setup-ai-rulez installs; without this mise run
-    # ~keep would put the mise.toml pin first on PATH and test that instead.
-    env:
-      MISE_DISABLE_TOOLS: github:Goldziher/ai-rulez
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-ai-rulez

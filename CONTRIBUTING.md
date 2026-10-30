@@ -14,9 +14,13 @@ Make sure to have [Git](https://git-scm.com/) and [Python](https://www.python.or
 2. run:
 
 ```bash
+npm install -g ai-rulez@latest
 mise install
 mise run setup
 ```
+
+mise does not pin ai-rulez: the governance hooks and tasks run the `ai-rulez` on your PATH, so keep it on the
+latest release (`npm install -g ai-rulez@latest`; the package needs Node 22 or later).
 
 This will setup the dependencies, and pre-commit hooks via `poly`.
 

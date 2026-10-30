@@ -10,6 +10,8 @@ All notable changes to xberg-io/actions are documented in this file.
   `ai-rulez-version` input is deprecated and ignored: a value other than `latest` logs a warning.
 - `verify-ai-rulez-plugin`'s deprecated `ai-rulez-version` input installs the latest release through
   `Goldziher/ai-rulez@v5` instead of `uv tool install ai-rulez==<version>`, and warns on a specific version.
+- This repository no longer pins ai-rulez in `mise.toml`, and its ai-rulez poly hook source follows the floating
+  `v5` tag. Contributors install the CLI with `npm install -g ai-rulez@latest`.
 
 ## [1.38.0] - 2026-10-30
 
