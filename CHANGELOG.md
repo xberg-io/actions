@@ -63,6 +63,8 @@ All notable changes to xberg-io/actions are documented in this file.
   must add one or pass the versions.
 - `run-test-apps` installs Ruby (except on Windows), Java and Zig from the caller's `mise.toml` through mise
   instead of `ruby/setup-ruby` 4.0.9, `actions/setup-java` Temurin 25.0.5+8 and `mlugg/setup-zig`.
+- `lint-docs` installs lychee through mise from the caller's `mise.toml` instead of the latest release through
+  `taiki-e/install-action`; callers must declare `lychee`.
 - `setup-ai-rulez`'s `source-revision` build installs the Go version the AI-Rulez source's `go.mod` names
   through mise instead of `actions/setup-go`, and caches its modules on that source's `go.sum`.
 
