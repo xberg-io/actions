@@ -31,6 +31,7 @@ runs:
           win25-vs2026)   echo "ImageOS=win25"    >> "$GITHUB_ENV" ;;
         esac
 
+    # BEAM stays on erlef/setup-beam until it is evaluated for mise (org rule toolchain-management). ~keep
     - name: Setup Beam
       uses: erlef/setup-beam@v1
       with:

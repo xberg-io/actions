@@ -54,6 +54,7 @@ inputs:
 runs:
   using: composite
   steps:
+    # BEAM stays on erlef/setup-beam until it is evaluated for mise (org rule toolchain-management). ~keep
     - name: Setup Elixir and OTP
       uses: erlef/setup-beam@v1
       with:

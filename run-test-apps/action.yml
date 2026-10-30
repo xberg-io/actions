@@ -113,12 +113,14 @@ runs:
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'go' }}
       uses: xberg-io/actions/setup-go-cgo-env@v1
 
+    # .NET is a mise lock gap and stays on its setup action (org rule toolchain-management). ~keep
     - name: Setup .NET
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'csharp' }}
       uses: actions/setup-dotnet@v6
       with:
         dotnet-version: "10"
 
+    # BEAM stays on erlef/setup-beam until it is evaluated for mise (org rule toolchain-management). ~keep
     - name: Setup Elixir
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'elixir' }}
       uses: erlef/setup-beam@v1
@@ -126,14 +128,17 @@ runs:
         elixir-version: "v1.20.5"
         otp-version: "29.1.2"
 
+    # Dart stays on its setup action, outside the mise baseline (org rule toolchain-management). ~keep
     - name: Setup Dart
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'dart' }}
       uses: dart-lang/setup-dart@v1
 
+    # Swift stays on its setup action, outside the mise baseline (org rule toolchain-management). ~keep
     - name: Setup Swift
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'swift' }}
       uses: swift-actions/setup-swift@v3
 
+    # R stays on its setup action, outside the mise baseline (org rule toolchain-management). ~keep
     - name: Setup R
       if: ${{ inputs.setup-toolchain == 'true' && inputs.language == 'r' }}
       uses: r-lib/actions/setup-r@v2

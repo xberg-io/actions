@@ -44,6 +44,7 @@ outputs:
 runs:
   using: composite
   steps:
+    # Dart stays on its setup action, outside the mise baseline (org rule toolchain-management). ~keep
     - name: Set up Dart SDK
       if: inputs.setup-dart == 'true'
       uses: dart-lang/setup-dart@v1

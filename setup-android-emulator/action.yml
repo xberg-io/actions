@@ -73,6 +73,7 @@ runs:
     # defaults to `tools platform-tools`, so the bare invocation now dies on
     # `Warning: Failed to find package 'tools'` -> sdkmanager exit 1. Request platform-tools
     # explicitly instead of inheriting that default. ~keep
+    # The Android SDK stays on its setup action (org rule toolchain-management). ~keep
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
       with:

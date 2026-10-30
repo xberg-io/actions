@@ -48,6 +48,7 @@ outputs:
 runs:
   using: composite
   steps:
+    # BEAM stays on erlef/setup-beam until it is evaluated for mise (org rule toolchain-management). ~keep
     - name: Set up BEAM (Erlang/OTP + Gleam)
       if: inputs.setup-beam == 'true'
       uses: erlef/setup-beam@v1

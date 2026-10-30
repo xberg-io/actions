@@ -95,6 +95,7 @@ runs:
         fi
         echo "expanded_toolchain=${toolchain}" >> "$GITHUB_ENV"
 
+    # Rust follows rust-toolchain.toml through rustup, never mise (org rule toolchain-management). ~keep
     - name: Install Rust with expanded toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v2
       with:
@@ -229,6 +230,8 @@ runs:
       run: |
         "$GITHUB_ACTION_PATH/scripts/cleanup-fingerprints.sh"
 
+    # Not moved to mise: install-llvm-cov defaults to true for every setup-rust caller, and not every
+    # caller's mise.toml declares cargo-llvm-cov. ~keep
     - name: Install cargo-llvm-cov
       if: inputs.install-llvm-cov == 'true'
       uses: taiki-e/install-action@v2

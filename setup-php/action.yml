@@ -20,6 +20,7 @@ inputs:
 runs:
   using: composite
   steps:
+    # PHP stays on its setup action, outside the mise baseline (org rule toolchain-management). ~keep
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
