@@ -17,10 +17,10 @@ setup() {
 mentions the test file's directory, `bats_load_library_safe` only ever iterates `BATS_LIB_PATH`.
 Set it two ways, and set both, or a suite passes locally and fails in CI:
 
-| Where | How |
-|---|---|
+| Where     | How                                                                             |
+| --------- | ------------------------------------------------------------------------------- |
 | mise task | `env = { BATS_LIB_PATH = "{{config_root}}/tests/lib" }` on the `test:bats` task |
-| CI | `lib-path: tests/lib` on the `run-bats` step |
+| CI        | `lib-path: tests/lib` on the `run-bats` step                                    |
 
 ## Why consumers vendor a copy instead of fetching it
 
@@ -42,9 +42,9 @@ This is the decision the library exists to make explicit, and getting it wrong p
 that passes against broken code.
 
 - **`xberg_setup`** prepends a stub directory to the host `PATH`. Correct when the test is about
-  what the script *does* and the host's real utilities are fine.
+  what the script _does_ and the host's real utilities are fine.
 - **`xberg_setup_isolated` + `xberg_shadow_system_path_without <cmd>`** mirrors the host's system
-  bins minus one command. Required when the script *probes* for a command (`command -v gh`) and
+  bins minus one command. Required when the script _probes_ for a command (`command -v gh`) and
   the branch it takes is the thing under test.
 
 `PATH="$STUB_BIN:/usr/bin:/bin"` is the broken middle ground. It states nothing about what the
@@ -69,7 +69,7 @@ setup_onnx_paths >/dev/null   # RIGHT: call it directly
 [ "$LD_LIBRARY_PATH" = "/opt/ort:" ]
 ```
 
-Use `run` only where the status or the output *is* the contract.
+Use `run` only where the status or the output _is_ the contract.
 
 ## Stub bodies do not get `set -eu`
 

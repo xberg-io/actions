@@ -20,8 +20,8 @@ None required.
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
+| Output          | Description                          |
+| --------------- | ------------------------------------ |
 | `chromium-path` | Absolute path to the Chromium binary |
 
 ## Example Usage
