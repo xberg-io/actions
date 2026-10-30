@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.37.0] - 2026-10-30
+
 ### Added
 
 - `reusable-validate` takes a `check-toolchain` input (default `false`) that runs `check-toolchain` before any
