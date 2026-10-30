@@ -51,6 +51,35 @@ checksum = "sha256:bb537b70b15b732f6d8827dd6578e3d8ce166636ce1f18ea9a074184fcce9
 url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz"
 url_api = "https://api.github.com/repos/bats-core/bats-core/tarball/v1.14.0"
 
+[[tools."github:Goldziher/gh-actions-updater"]]
+version = "0.3.0"
+backend = "github:Goldziher/gh-actions-updater"
+specifiers = ["0.3.0"]
+
+[tools."github:Goldziher/gh-actions-updater"."platforms.linux-arm64"]
+checksum = "sha256:3be1fef411bed1b1fb866d65a7411290b92aff13702bec76666adf3647bd0949"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596123290"
+
+[tools."github:Goldziher/gh-actions-updater"."platforms.linux-x64"]
+checksum = "sha256:c87f19b1b18195a16fa65596fa4960891aa59912d9668f8b2b3f31469d3924c4"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596124184"
+
+[tools."github:Goldziher/gh-actions-updater"."platforms.macos-arm64"]
+checksum = "sha256:a425c20a9e4a5c7a75b902223d57aa54bdc01c7674cf79f75d26050fb505f0c4"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596122298"
+
+[tools."github:Goldziher/gh-actions-updater"."platforms.windows-x64"]
+checksum = "sha256:6e0cd7fc358dac8a09b228a3941b702eef5bcec65f45a46e627c8d751ba99e76"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-x86_64-pc-windows-gnu.zip"
+url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596124468"
+
 [[tools."github:Goldziher/poly"]]
 version = "0.31.2"
 backend = "github:Goldziher/poly"
