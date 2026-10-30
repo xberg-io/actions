@@ -5,10 +5,14 @@ on:
     paths:
       - "build-node-napi/**"
       - ".github/workflows/test-build-node-napi.yml"
+      - "mise.toml"
+      - "mise.lock"
   pull_request:
     paths:
       - "build-node-napi/**"
       - ".github/workflows/test-build-node-napi.yml"
+      - "mise.toml"
+      - "mise.lock"
 
 permissions:
   contents: read
@@ -25,13 +29,10 @@ jobs:
         with:
           toolchain: stable
 
-      - uses: actions/setup-node@v7
+      - name: Install node, pnpm and cargo-zigbuild
+        uses: ./setup-mise
         with:
-          node-version: "26"
-
-      - name: Install pnpm
-        shell: bash
-        run: npm install --global pnpm@12.11.2
+          install-args: node pnpm github:rust-cross/cargo-zigbuild
 
       - name: Stage a tiny NAPI-RS crate
         shell: bash
@@ -144,12 +145,9 @@ jobs:
         with:
           version: "0.17.0"
 
-      - name: Install musl target and cargo-zigbuild
+      - name: Install musl target
         shell: bash
-        run: |
-          set -euo pipefail
-          rustup target add x86_64-unknown-linux-musl
-          command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
+        run: rustup target add x86_64-unknown-linux-musl
 
       # A real matrix leg starts with no .node at the crate root; this job has
       # already run two builds, and the staging loop globs `*.node` there, so
