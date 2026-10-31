@@ -32,11 +32,11 @@ lock_platforms() {
 	run fallback_tools
 	xberg_assert_status 0
 	requests=("${lines[@]}")
-	((${#requests[@]} == 4))
+	((${#requests[@]} == 4)) || false
 	mapfile -t tools < <(printf '%s\n' "${requests[@]}" | sort -u)
-	[[ "${tools[*]}" == "github:taiki-e/cargo-llvm-cov helm uv" ]]
+	[[ "${tools[*]}" == "github:taiki-e/cargo-llvm-cov helm uv" ]] || false
 	mapfile -t platforms < <(lock_platforms)
-	((${#platforms[@]} >= 4))
+	((${#platforms[@]} >= 4)) || false
 
 	current="$(cd "$ROOT" && env -u MISE_ENV MISE_OFFLINE=1 MISE_TRUSTED_CONFIG_PATHS="$ROOT" \
 		MISE_CEILING_PATHS="$(dirname "$ROOT")" \

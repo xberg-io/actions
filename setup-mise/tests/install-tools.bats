@@ -12,10 +12,14 @@ setup() {
 	# The configured tools `mise current` reports, one "<id> <version>" per line.
 	export STUB_CURRENT=""
 	# A stand-in mise: traces install calls with the MISE_LOCKED they ran under, and answers bin-paths and env
-	# from the spec. Its env output always carries a secret-looking [env] value the script must not export.
+	# from the spec. Its env output always carries a secret-looking [env] value the script must not export. Every
+	# call also lands in calls.log with the trust, ceiling, profile and lock settings it ran under.
 	xberg_stub mise \
+		'trust="${MISE_TRUSTED_CONFIG_PATHS:-}" ceiling="${MISE_CEILING_PATHS:-}"' \
+		'printf "%s TRUST=%s CEILING=%s ENV=%s LOCKED=%s IN=%s\n" "$1" "$trust" "$ceiling" "${MISE_ENV:-}" "${MISE_LOCKED:-}" "$PWD" >>"$BATS_TEST_TMPDIR/calls.log"' \
 		'if [ -n "${FALLBACK:-}" ] && [ "$PWD" = "$FALLBACK" ]; then' \
-		'  env | grep -E "^MISE_(ENV|[A-Z0-9_]+_VERSION)=" >>"$BATS_TEST_TMPDIR/fallback-env.log" || true' \
+		'  leaked="^MISE_(ENV|CONFIG_FILE|GLOBAL_CONFIG_FILE|OVERRIDE_CONFIG_FILENAMES|DEFAULT_CONFIG_FILENAME|LOCKFILE|CONFIG_DIR|[A-Z0-9_]+_VERSION)="' \
+		'  env | grep -E "$leaked" >>"$BATS_TEST_TMPDIR/fallback-env.log" || true' \
 		'fi' \
 		'case "$1" in' \
 		'current) if [ -n "${FALLBACK:-}" ] && [ "$PWD" = "$FALLBACK" ]; then printf "%s" "$STUB_FALLBACK_CURRENT"' \
@@ -43,7 +47,7 @@ run_script() {
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 python"
 	xberg_assert_github_path "/installs/python/bin"
-	[[ "$output" != *"::notice::"* ]]
+	[[ "$output" != *"::notice::"* ]] || false
 }
 
 @test "install_tools should_fail_for_a_tool_the_config_does_not_declare_and_no_version_selects" {
@@ -82,8 +86,9 @@ write_fallback_root() {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root
 
-	run_script MISE_ENV=ci MISE_HELM_VERSION=3.0.0 INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" \
-		helm= cargo-llvm-cov
+	run_script MISE_ENV=ci MISE_HELM_VERSION=3.0.0 MISE_CONFIG_FILE=/caller/mise.toml MISE_LOCKFILE=/caller/mise.lock \
+		MISE_OVERRIDE_CONFIG_FILENAMES=caller.toml MISE_CONFIG_DIR=/caller INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" \
+		"$SCRIPT" "$REPO" helm= cargo-llvm-cov
 
 	xberg_assert_status 0
 	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so it installs helm@4.3.1"
@@ -91,6 +96,44 @@ write_fallback_root() {
 	xberg_assert_file "$BATS_TEST_TMPDIR/trust.log" "$FALLBACK from $FALLBACK"
 	xberg_assert_file "$BATS_TEST_TMPDIR/fallback-env.log" ""
 	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
+	ceiling="$(dirname "$FALLBACK")"
+	run grep -c "^current TRUST=$FALLBACK CEILING=$ceiling ENV= LOCKED=1 IN=$FALLBACK\$" "$BATS_TEST_TMPDIR/calls.log"
+	xberg_assert_output "1"
+	run grep -c "^install TRUST=$FALLBACK CEILING=$ceiling ENV= LOCKED=1 IN=$FALLBACK\$" "$BATS_TEST_TMPDIR/calls.log"
+	xberg_assert_output "1"
+	run grep -c "^current TRUST=$REPO CEILING= ENV=ci LOCKED= IN=$REPO\$" "$BATS_TEST_TMPDIR/calls.log"
+	xberg_assert_output "1"
+}
+
+@test "install_tools should_not_read_the_fallback_config_when_every_tool_is_declared" {
+	STUB_CURRENT=$'helm 4.3.1\n'
+	write_fallback_root
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 0
+	run grep -c "IN=$FALLBACK\$" "$BATS_TEST_TMPDIR/calls.log"
+	xberg_assert_output "0"
+}
+
+@test "install_tools should_require_the_platform_entry_under_the_pinned_versions_block" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	# Another uv version's block carries every platform; the pinned 0.13.6 block carries none.
+	{
+		printf '%s\n' '[[tools.uv]]' 'version = "0.12.0"' ''
+		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64; do
+			printf '%s\n' "[tools.uv.\"platforms.$platform\"]" 'url = "https://example.invalid/old-uv"' ''
+		done
+		cat "$FALLBACK/mise.lock"
+	} >"$FALLBACK/combined.lock"
+	mv "$FALLBACK/combined.lock" "$FALLBACK/mise.lock"
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" uv
+
+	xberg_assert_status 1
+	xberg_assert_output_contains " entry for uv@0.13.6"
+	xberg_assert_trace_empty
 }
 
 @test "install_tools should_find_a_platform_entry_early_in_a_fallback_lock_larger_than_a_pipe_buffer" {
@@ -162,7 +205,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 aqua:helm/helm"
-	[[ "$output" != *"::notice::"* ]]
+	[[ "$output" != *"::notice::"* ]] || false
 }
 
 @test "install_tools should_prefer_a_passed_version_over_the_fallback_root" {
@@ -173,7 +216,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=false helm@3.16.0"
-	[[ "$output" != *"is not declared"* ]]
+	[[ "$output" != *"is not declared"* ]] || false
 }
 
 @test "install_tools should_fail_for_a_tool_neither_the_config_nor_the_fallback_root_declares" {
@@ -208,7 +251,7 @@ write_fallback_root() {
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 python@3.13.18"
 	xberg_assert_github_path "/installs/python@3.13.18/bin"
-	[[ "$output" != *"::notice::"* ]]
+	[[ "$output" != *"::notice::"* ]] || false
 }
 
 @test "install_tools should_install_a_version_no_lock_covers_unlocked_with_a_notice" {
@@ -241,7 +284,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 node@26.12.1"
-	[[ "$output" != *"::notice::"* ]]
+	[[ "$output" != *"::notice::"* ]] || false
 }
 
 @test "install_tools should_not_let_a_version_input_start_a_workflow_command" {
@@ -250,7 +293,7 @@ write_fallback_root() {
 	run_script "$SCRIPT" "$REPO" $'python=3.13\n::warning::injected'
 
 	xberg_assert_status 1
-	[[ "$output" != *$'\n::warning::injected'* ]]
+	[[ "$output" != *$'\n::warning::injected'* ]] || false
 	xberg_assert_trace_empty
 }
 
@@ -272,7 +315,7 @@ write_fallback_root() {
 	run_script MISE_LOCKED=1 "$SCRIPT" "$REPO" wasm-pack wasm-pack=0.15
 
 	xberg_assert_status 0
-	xberg_assert_trace "install MISE_LOCKED=1 github:rustwasm/wasm-pack github:rustwasm/wasm-pack@0.15.0"
+	xberg_assert_trace "install MISE_LOCKED=1 github:rustwasm/wasm-pack" "install MISE_LOCKED=1 github:rustwasm/wasm-pack@0.15.0"
 }
 
 @test "install_tools should_install_an_undeclared_tool_by_the_requested_id_when_a_version_is_passed" {
@@ -332,7 +375,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_github_env "JAVA_HOME=/jdk/java@temurin-21"
-	[[ "$output" != *"do-not-export"* ]]
+	[[ "$output" != *"do-not-export"* ]] || false
 }
 
 @test "install_tools should_not_export_gobin_or_goroot_for_go" {
@@ -342,7 +385,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=false go@1.27 java@temurin-25"
-	[[ -f "$GITHUB_ENV" ]]
+	[[ -f "$GITHUB_ENV" ]] || false
 	xberg_assert_github_env "JAVA_HOME=/jdk/java@temurin-25"
 	run grep -E '^(GOROOT|GOBIN)=' "$GITHUB_ENV"
 	xberg_assert_status 1
@@ -374,10 +417,10 @@ write_fallback_root() {
 		MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml" "$SCRIPT" "$REPO" shfmt shfmt=3.10
 
 	xberg_assert_status 0
-	xberg_assert_trace "install MISE_LOCKED=1 shfmt shfmt@3.10.0"
-	[[ "$output" != *"is not declared"* ]]
-	[[ "$output" != *"::notice::"* ]]
-	[[ ! -d "$BATS_TEST_TMPDIR/data/installs/shfmt" ]]
+	xberg_assert_trace "install MISE_LOCKED=1 shfmt" "install MISE_LOCKED=1 shfmt@3.10.0"
+	[[ "$output" != *"is not declared"* ]] || false
+	[[ "$output" != *"::notice::"* ]] || false
+	[[ ! -d "$BATS_TEST_TMPDIR/data/installs/shfmt" ]] || false
 }
 
 @test "install_tools should_read_an_untrusted_caller_config_through_real_mise" {
@@ -393,14 +436,14 @@ write_fallback_root() {
 	isolated=(MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" MISE_CACHE_DIR="$BATS_TEST_TMPDIR/cache"
 		MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml")
 	run env -u MISE_TRUSTED_CONFIG_PATHS "${isolated[@]}" "$REAL_MISE" current --cd "$REPO"
-	[[ "$status" -ne 0 ]]
+	[[ "$status" -ne 0 ]] || false
 
 	run_script "${isolated[@]}" "$SCRIPT" "$REPO" shfmt
 
 	xberg_assert_status 0
 	xberg_assert_trace "install shfmt"
 	run env -u MISE_TRUSTED_CONFIG_PATHS "${isolated[@]}" "$REAL_MISE" current --cd "$REPO"
-	[[ "$status" -ne 0 ]]
+	[[ "$status" -ne 0 ]] || false
 }
 
 @test "install_tools should_not_trust_the_caller_config_on_a_pull_request_target_run" {
@@ -417,7 +460,8 @@ write_fallback_root() {
 		"$SCRIPT" "$REPO" shfmt
 
 	xberg_assert_status 1
-	xberg_assert_output_contains "::error::The mise config in $REPO is not trusted, and a pull_request_target run"
+	xberg_assert_output_contains "::error::The mise config in $REPO is not trusted: this script trusts it implicitly"
+	xberg_assert_output_contains "not on pull_request_target."
 	xberg_assert_output_contains "Set MISE_TRUSTED_CONFIG_PATHS"
 	xberg_assert_trace_empty
 }
@@ -450,4 +494,57 @@ write_fallback_root() {
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 shfmt@3.10.0 from $FALLBACK"
 	xberg_assert_github_path "/installs/shfmt@3.10.0/bin"
+}
+
+@test "install_tools should_install_a_lock_matched_version_locked_when_the_job_did_not_set_mise_locked" {
+	STUB_CURRENT=$'node 26.12.1\n'
+	printf '%s\n' '[[tools.node]]' 'version = "26.12.1"' >"$REPO/mise.lock"
+
+	run_script "$SCRIPT" "$REPO" node=26
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 node@26.12.1"
+}
+
+@test "install_tools should_reject_a_channel_in_place_of_a_version" {
+	STUB_CURRENT=$'helm 4.3.1\n'
+
+	for channel in latest Stable lts nightly x; do
+		run_script "$SCRIPT" "$REPO" "helm=$channel"
+		xberg_assert_status 1
+		xberg_assert_output_contains "::error::'$channel' is a channel, not a version"
+	done
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_reject_a_tool_name_outside_mises_character_set" {
+	STUB_CURRENT=$'python 3.13.18\n'
+
+	for request in '=3.13' 'py thon' '-python' $'python\n::warning::injected=1'; do
+		run_script "$SCRIPT" "$REPO" "$request"
+		xberg_assert_status 1
+		xberg_assert_output_contains "is not a tool name mise can install"
+		[[ "$output" != *$'\n::warning::injected'* ]] || false
+	done
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_trust_the_caller_config_only_on_allowlisted_events" {
+	STUB_CURRENT=$'python 3.13.18\n'
+
+	for event in "" push pull_request schedule workflow_dispatch release merge_group workflow_call; do
+		: >"$BATS_TEST_TMPDIR/calls.log"
+		run_script ${event:+GITHUB_EVENT_NAME=$event} MISE_TRUSTED_CONFIG_PATHS=/job/trusted "$SCRIPT" "$REPO" python
+		xberg_assert_status 0
+		xberg_assert_output_contains "python: /installs/python/bin"
+		run grep -c "^current TRUST=$REPO:/job/trusted CEILING= " "$BATS_TEST_TMPDIR/calls.log"
+		xberg_assert_output "1"
+	done
+	for event in pull_request_target workflow_run issue_comment repository_dispatch; do
+		: >"$BATS_TEST_TMPDIR/calls.log"
+		run_script GITHUB_EVENT_NAME="$event" MISE_TRUSTED_CONFIG_PATHS=/job/trusted "$SCRIPT" "$REPO" python
+		xberg_assert_status 0
+		run grep -c "^current TRUST=/job/trusted CEILING= " "$BATS_TEST_TMPDIR/calls.log"
+		xberg_assert_output "1"
+	done
 }

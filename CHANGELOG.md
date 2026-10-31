@@ -18,8 +18,11 @@ All notable changes to xberg-io/actions are documented in this file.
   caller's mise config does not declare installs the one version that directory's `mise.toml` selects, without
   the caller's `MISE_ENV` or `MISE_<TOOL>_VERSION`, `--locked` against its `mise.lock`, with a notice, instead of
   failing. The composites below pass this repository's root, whose `mise.toml` follows the toolchains baseline and
-  now also declares `helm` and `github:taiki-e/cargo-llvm-cov`. A version that lock lacks, a runner platform it
-  does not cover, or a short name matching more than one of its tools fails with an error.
+  now also declares `helm` and `github:taiki-e/cargo-llvm-cov`. The caller's config-file overrides
+  (`MISE_CONFIG_FILE`, `MISE_GLOBAL_CONFIG_FILE`, `MISE_OVERRIDE_CONFIG_FILENAMES`, `MISE_DEFAULT_CONFIG_FILENAME`,
+  `MISE_LOCKFILE`, `MISE_CONFIG_DIR`) do not apply there either, and the root is read only when a tool needs it. A
+  version that lock lacks, a runner platform its block for that version does not cover, or a short name matching
+  more than one of its tools fails with an error.
 
 ### Fixed
 
@@ -27,14 +30,18 @@ All notable changes to xberg-io/actions are documented in this file.
   install sent every later `go install` there; go finds its root from its own path, as it did under setup-go.
 - `setup-mise/scripts/install-tools.sh` trusts the caller's mise config for its own mise calls, through
   `MISE_TRUSTED_CONFIG_PATHS` and without persisting it, so a config with `[env]` or tasks no longer fails as
-  untrusted when the job did not run `setup-mise` first. On `pull_request_target` and `workflow_run` runs it does
-  not trust the config implicitly: an untrusted config fails with an error asking the caller to set
-  `MISE_TRUSTED_CONFIG_PATHS` itself.
+  untrusted when the job did not run `setup-mise` first. It trusts the config implicitly only on `push`,
+  `pull_request`, `schedule`, `workflow_dispatch`, `release`, `merge_group` and `workflow_call` runs and local runs;
+  on any other event an untrusted config fails with an error asking the caller to set `MISE_TRUSTED_CONFIG_PATHS`.
+- `setup-mise/scripts/install-tools.sh` installs a version matched against a lock with `MISE_LOCKED=1` even when
+  the job did not set it, and rejects a tool name outside mise's character set.
 
 ### Changed
 
 - `setup-mise/scripts/install-tools.sh` notices every `tool=version` install that no lock covers, not only when
   `MISE_LOCKED` is set, since that install skips checksum verification either way.
+- Behavior change: `setup-mise/scripts/install-tools.sh` rejects a channel (`latest`, `stable`, `lts`, `nightly`)
+  in place of a version, so `setup-zig` no longer takes `version: latest`; pass a release or `master`.
 - `publish-helm-chart`, `setup-c-cpp-tools`, `setup-ai-rulez` and `setup-rust` take a `working-directory` input
   (default `.`): the directory whose `mise.toml` and `mise.lock` select the tools they install.
 - `publish-helm-chart` installs Helm through mise instead of `azure/setup-helm`. `helm-version` is matched

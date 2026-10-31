@@ -5,8 +5,8 @@ description: >-
 inputs:
   version:
     description: >
-      Zig version to install. A tagged release ("0.17.0") or "latest" installs through mise, matched against the
-      caller's mise locks; "master" installs the latest nightly from ziglang.org/download/index.json, which mise
+      Zig version to install. A tagged release ("0.17.0") installs through mise, matched against the caller's
+      mise locks; "master" installs the latest nightly from ziglang.org/download/index.json, which mise
       does not provide. Empty uses the version the caller's mise.toml selects.
     required: false
     default: ""

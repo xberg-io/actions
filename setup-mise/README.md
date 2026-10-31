@@ -63,19 +63,38 @@ versions first on `PATH` for later steps (with `JAVA_HOME` for Java):
 ```
 
 - `tool` installs the version the config selects: `mise.toml`, the active `MISE_ENV` profiles, or a
-  `MISE_<TOOL>_VERSION` the job exports. A tool the config does not declare fails the step, unless
-  `scripts/install-tools.sh` runs with `INSTALL_TOOLS_FALLBACK_ROOT` set: the composites pass this repository's
-  root, and the tool then installs the one version this repository's `mise.toml` selects (the caller's `MISE_ENV`
-  and `MISE_<TOOL>_VERSION` do not apply), `--locked` against its `mise.lock`, with a notice. A version that lock
-  lacks, a runner platform it does not cover, or a short name matching two of its tools fails the step.
+  `MISE_<TOOL>_VERSION` the job exports. A tool the config does not declare fails the step, unless a fallback root
+  is set (see below).
 - `tool=version` is matched against `mise.lock` and the active profile locks first: `python=3.12` selects the
-  newest locked `3.12.x` and installs with `--locked`. A version no lock covers installs unlocked with a notice;
-  declare it in a profile such as `mise.ci.toml` and lock it to verify its checksums. A leading `v` and a
-  trailing `.x` are dropped, so `3.x` and `v0.17.0` work.
+  newest locked `3.12.x` and installs with `--locked`, whatever `MISE_LOCKED` the job set. A version no lock covers
+  installs unlocked with a notice; declare it in a profile such as `mise.ci.toml` and lock it to verify its
+  checksums. A leading `v` and a trailing `.x` are dropped, so `3.x` and `v0.17.0` work; a channel such as
+  `latest`, `stable`, `lts` or `nightly` fails, since it names no version a lock can pin.
 - A short name finds the backend the config declares: `wasm-pack` resolves to `github:rustwasm/wasm-pack`.
 
 The composites in this repository that need a language or tool install it the same way, through
 `scripts/install-tools.sh`, and take their version inputs as `tool=version`.
+
+### Fallback root
+
+`INSTALL_TOOLS_FALLBACK_ROOT` names a directory with its own `mise.toml` and `mise.lock`. A tool requested without a
+version that the caller's config does not declare then installs the one version that directory's `mise.toml`
+selects, `--locked` against its `mise.lock`, with a notice. The composites that install a tool callers may not
+declare (helm, uv, cargo-llvm-cov) pass this repository's root, whose `mise.toml` follows the toolchains baseline.
+
+mise reads the fallback root with only its own config: the caller's `MISE_ENV`, `MISE_<TOOL>_VERSION`,
+`MISE_CONFIG_FILE`, `MISE_GLOBAL_CONFIG_FILE`, `MISE_OVERRIDE_CONFIG_FILENAMES`, `MISE_DEFAULT_CONFIG_FILENAME`,
+`MISE_LOCKFILE` and `MISE_CONFIG_DIR` are unset there, and no config above the root applies. The step fails when
+that lock lacks the selected version or the runner's platform for it, when the config selects more than one
+version, or when a short name matches more than one of its tools.
+
+### Trust
+
+The script trusts the caller's working directory for its own mise calls through `MISE_TRUSTED_CONFIG_PATHS`, never
+persisting it; a `MISE_TRUSTED_CONFIG_PATHS` the job sets is appended to, not replaced. It does so only on `push`,
+`pull_request`, `schedule`, `workflow_dispatch`, `release`, `merge_group` and `workflow_call` runs, or with no
+`GITHUB_EVENT_NAME` (a local run). On any other event, such as `pull_request_target` or `workflow_run`, an untrusted
+config fails the step until the job sets `MISE_TRUSTED_CONFIG_PATHS` itself.
 
 ## Outputs
 
