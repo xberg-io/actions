@@ -48,6 +48,10 @@ All notable changes to xberg-io/actions are documented in this file.
   expression.
 - This repository's own AI-Rulez and toolchain gates run the local composites again, so a change to them is tested
   by its own pull request; `test-reusable-governance.yml` calls the two reusables to prove their wiring.
+- The locked-Go container verifier explicitly fails version, executable-path and locked-mode mismatches under
+  Bash 3.2, which does not apply `errexit` to failed `[[ ... ]]` comparisons (#118).
+- The reusable-governance test workflow runs after `.ai-rulez/**` changes and supports manual validation of
+  current main, retaining both required producers and their exposure budgets (#119).
 
 ### Tests
 
