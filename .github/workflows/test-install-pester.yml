@@ -1,5 +1,6 @@
 name: Test install-pester
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -46,6 +47,7 @@ jobs:
               throw "expected install-pester to reject version '$version'"
             }
           }
+          $global:LASTEXITCODE = 0
 
       - name: Install the pinned Pester release
         id: install

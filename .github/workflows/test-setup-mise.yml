@@ -1,5 +1,6 @@
 name: Test setup-mise
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:

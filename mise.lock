@@ -25,6 +25,12 @@ url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_
 url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/384924893"
 provenance = "github-attestations"
 
+[tools.actionlint."platforms.macos-x64"]
+checksum = "sha256:5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644"
+url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/384924880"
+provenance = "github-attestations"
+
 [tools.actionlint."platforms.windows-x64"]
 checksum = "sha256:6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9"
 url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_windows_amd64.zip"
@@ -51,6 +57,11 @@ checksum = "sha256:bb537b70b15b732f6d8827dd6578e3d8ce166636ce1f18ea9a074184fcce9
 url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz"
 url_api = "https://api.github.com/repos/bats-core/bats-core/tarball/v1.14.0"
 
+[tools.bats."platforms.macos-x64"]
+checksum = "sha256:bb537b70b15b732f6d8827dd6578e3d8ce166636ce1f18ea9a074184fcce9177"
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz"
+url_api = "https://api.github.com/repos/bats-core/bats-core/tarball/v1.14.0"
+
 [[tools."github:Goldziher/gh-actions-updater"]]
 version = "0.3.0"
 backend = "github:Goldziher/gh-actions-updater"
@@ -73,6 +84,12 @@ checksum = "sha256:a425c20a9e4a5c7a75b902223d57aa54bdc01c7674cf79f75d26050fb505f
 checksum_source = "mise-versions"
 url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596122298"
+
+[tools."github:Goldziher/gh-actions-updater"."platforms.macos-x64"]
+checksum = "sha256:6fbf11da3ee198a61278d41b0a6357d64880b6adfb81eb6c3f67816d3c5b51c0"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/gh-actions-updater/releases/download/v0.3.0/gh-actions-updater-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/gh-actions-updater/releases/assets/596125509"
 
 [tools."github:Goldziher/gh-actions-updater"."platforms.windows-x64"]
 checksum = "sha256:6e0cd7fc358dac8a09b228a3941b702eef5bcec65f45a46e627c8d751ba99e76"
@@ -103,6 +120,12 @@ checksum_source = "mise-versions"
 url = "https://github.com/Goldziher/poly/releases/download/v0.31.2/poly-0.31.2-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/686270380"
 
+[tools."github:Goldziher/poly"."platforms.macos-x64"]
+checksum = "sha256:20706f42f4cead9778afa20b54b3c63ab954182a54ec155637c51368e173b27a"
+checksum_source = "mise-versions"
+url = "https://github.com/Goldziher/poly/releases/download/v0.31.2/poly-0.31.2-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/poly/releases/assets/686241507"
+
 [tools."github:Goldziher/poly"."platforms.windows-x64"]
 checksum = "sha256:7b6aada1b8f55c97c8907990f73605bb4d160b9de8eb243b8a2d1eb202835407"
 checksum_source = "mise-versions"
@@ -131,6 +154,12 @@ checksum = "sha256:c88f9b9da35cb67b151dad4384614f769b1b2b5d30630e381c4e9c2b28ed3
 checksum_source = "mise-versions"
 url = "https://github.com/rust-cross/cargo-zigbuild/releases/download/v0.24.0/cargo-zigbuild-aarch64-apple-darwin.tar.xz"
 url_api = "https://api.github.com/repos/rust-cross/cargo-zigbuild/releases/assets/662592460"
+
+[tools."github:rust-cross/cargo-zigbuild"."platforms.macos-x64"]
+checksum = "sha256:09ec54ffa7e73f393ed60102b984238d4027147423e36da17fb18d66c56f8dcb"
+checksum_source = "mise-versions"
+url = "https://github.com/rust-cross/cargo-zigbuild/releases/download/v0.24.0/cargo-zigbuild-x86_64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/rust-cross/cargo-zigbuild/releases/assets/662592574"
 
 [tools."github:rust-cross/cargo-zigbuild"."platforms.windows-x64"]
 checksum = "sha256:2f1637f56e2f59ee980fe548650e874c381a664803ce94f146808e5b9a5e2adf"
@@ -161,6 +190,12 @@ checksum_source = "mise-versions"
 url = "https://github.com/rustwasm/wasm-pack/releases/download/v0.15.0/wasm-pack-v0.15.0-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/rustwasm/wasm-pack/releases/assets/420850469"
 
+[tools."github:rustwasm/wasm-pack"."platforms.macos-x64"]
+checksum = "sha256:d3f1a4a33e95f8f0d7801b024e08624c479999ac96aa150908b2394015cd0363"
+checksum_source = "mise-versions"
+url = "https://github.com/rustwasm/wasm-pack/releases/download/v0.15.0/wasm-pack-v0.15.0-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/rustwasm/wasm-pack/releases/assets/420850460"
+
 [tools."github:rustwasm/wasm-pack"."platforms.windows-x64"]
 checksum = "sha256:518dc51180c7bc864699c9279b3bc99025bc109123e0249a34ba34d130a509bf"
 checksum_source = "mise-versions"
@@ -183,6 +218,10 @@ url = "https://nodejs.org/dist/v26.12.1/node-v26.12.1-linux-x64.tar.gz"
 [tools.node."platforms.macos-arm64"]
 checksum = "sha256:1901d539912c02afa10d1cc126943a8855a7eedebe830119463470db5e6c59e8"
 url = "https://nodejs.org/dist/v26.12.1/node-v26.12.1-darwin-arm64.tar.gz"
+
+[tools.node."platforms.macos-x64"]
+checksum = "sha256:b85c2ea4420ad0bc4abf2dc6cf1f55130ed681f1cabf60cf3f526e4c9e2712ff"
+url = "https://nodejs.org/dist/v26.12.1/node-v26.12.1-darwin-x64.tar.gz"
 
 [tools.node."platforms.windows-x64"]
 checksum = "sha256:b3efd5c70cba3308ed46e7e699a9b8aac075bbc6b027fcb39c84c31acc25e2b4"
@@ -211,6 +250,12 @@ url = "https://github.com/pnpm/pnpm/releases/download/v12.15.0/pnpm-darwin-arm64
 url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/662173343"
 provenance = "github-attestations"
 
+[tools.pnpm."platforms.macos-x64"]
+checksum = "sha256:2d7b336884574aee8a765bee48591212e9caf4fcf985fb3279588c1fb73fb47f"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.15.0/pnpm-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/662173347"
+provenance = "github-attestations"
+
 [tools.pnpm."platforms.windows-x64"]
 checksum = "sha256:84cf69db1be19e95bb4e5bef329291a046f2821b390d87e00f5690809d8a2ed7"
 url = "https://github.com/pnpm/pnpm/releases/download/v12.15.0/pnpm-win32-x64.zip"
@@ -235,6 +280,11 @@ provenance = "github-attestations"
 [tools.python."platforms.macos-arm64"]
 checksum = "sha256:8392b6ea51d94391befb2c31ebe75463f045d0b69dfcf5e1bb3234e1f5fa3405"
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18+20261026-aarch64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-x64"]
+checksum = "sha256:7412c19d896c99431b74a18a5643e110449a7f9590fbab179c3e5ab27b9aa9e3"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18+20261026-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.windows-x64"]
@@ -265,6 +315,12 @@ checksum_source = "mise-versions"
 url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.aarch64.tar.xz"
 url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056932"
 
+[tools.shellcheck."platforms.macos-x64"]
+checksum = "sha256:3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6"
+checksum_source = "mise-versions"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.x86_64.tar.xz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056930"
+
 [tools.shellcheck."platforms.windows-x64"]
 checksum = "sha256:8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e740e"
 checksum_source = "mise-versions"
@@ -294,6 +350,12 @@ checksum_source = "mise-versions"
 url = "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_arm64"
 url_api = "https://api.github.com/repos/mvdan/sh/releases/assets/547320930"
 
+[tools.shfmt."platforms.macos-x64"]
+checksum = "sha256:d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6"
+checksum_source = "mise-versions"
+url = "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_amd64"
+url_api = "https://api.github.com/repos/mvdan/sh/releases/assets/547320946"
+
 [tools.shfmt."platforms.windows-x64"]
 checksum = "sha256:13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df"
 checksum_source = "mise-versions"
@@ -321,6 +383,12 @@ provenance = "github-attestations"
 checksum = "sha256:60fbd5c8a1ed681845eea28d9d622fcde03c51e91a43465b64a1e17db1ed3472"
 url = "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/679980393"
+provenance = "github-attestations"
+
+[tools.uv."platforms.macos-x64"]
+checksum = "sha256:63ba17fdda55ad1a230d4b37fc6017ffa10c23688c83818bd3bfdf914c652a02"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/679980609"
 provenance = "github-attestations"
 
 [tools.uv."platforms.windows-x64"]

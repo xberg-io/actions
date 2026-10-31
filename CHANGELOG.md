@@ -73,6 +73,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Reset the Pester rejection step after its five expected child failures, and lock Intel macOS tools for Chromium CI.
 - Provision the pinned Poly formatter in the Python unit-test jobs so the formatting ownership contract runs in CI.
 - Keep Windows tool-version CI checks independent of `/dev/stderr`, preserving mismatched-version failures.
 - `build-node-napi` uses managed Zig linking for GNU ARM64 with glibc 2.17, avoiding the obsolete GCC linker

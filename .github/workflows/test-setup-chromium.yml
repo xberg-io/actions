@@ -1,6 +1,7 @@
 name: test-setup-chromium
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
