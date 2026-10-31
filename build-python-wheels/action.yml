@@ -93,7 +93,7 @@ runs:
       env:
         PYTHON_VERSION: ${{ inputs.python-version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "python=$PYTHON_VERSION"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "python=$PYTHON_VERSION"
 
     - name: Install cibuildwheel
       shell: bash

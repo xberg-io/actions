@@ -43,4 +43,4 @@ runs:
         VERSION_SYNC_SCRIPT: ${{ inputs.version-sync-script }}
         PUBLIC_SKILLS_CHECK_SCRIPT: ${{ inputs.public-skills-check-script }}
         AI_RULEZ_STRICT: "1"
-      run: python3 "${{ github.action_path }}/scripts/validate.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/validate.py"

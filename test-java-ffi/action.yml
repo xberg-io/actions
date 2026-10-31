@@ -38,7 +38,7 @@ runs:
       env:
         JAVA_SPEC: ${{ inputs.java-version != '' && format('temurin-{0}', inputs.java-version) || '' }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
 
     # ~keep The Maven repository cache setup-java's `cache: maven` kept, keyed the same way.
     - name: Cache the Maven repository

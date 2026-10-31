@@ -45,7 +45,7 @@ runs:
     - name: Ensure .NET SDK
       shell: bash
       run: |
-        "${{ github.action_path }}/scripts/ensure-dotnet.sh"
+        "$GITHUB_ACTION_PATH/scripts/ensure-dotnet.sh"
     - name: Publish NuGet packages
       shell: bash
       env:
@@ -58,4 +58,4 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
       run: |
-        python3 "${{ github.action_path }}/scripts/publish.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/publish.py"

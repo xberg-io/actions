@@ -26,7 +26,7 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         ALEF_REQUESTED_VERSION: ${{ inputs.version }}
       run: |
-        "${{ github.action_path }}/scripts/resolve.sh" "$ALEF_REQUESTED_VERSION"
+        "$GITHUB_ACTION_PATH/scripts/resolve.sh" "$ALEF_REQUESTED_VERSION"
 
     - name: Cache alef binary (Unix)
       id: cache-unix
@@ -44,7 +44,7 @@ runs:
         ALEF_ALLOW_UNRELEASED: ${{ inputs.allow-unreleased }}
         ALEF_INSTALL_REF: ${{ steps.meta.outputs.install_ref }}
       run: |
-        "${{ github.action_path }}/scripts/unix.sh" "$ALEF_INSTALL_REF"
+        "$GITHUB_ACTION_PATH/scripts/unix.sh" "$ALEF_INSTALL_REF"
 
     # No Windows cache: actions/cache misplaces home-dir paths on restore, so
     # cache-hit jobs failed with "alef command not found". Always install fresh.
@@ -56,7 +56,7 @@ runs:
         ALEF_ALLOW_UNRELEASED: ${{ inputs.allow-unreleased }}
         ALEF_INSTALL_REF: ${{ steps.meta.outputs.install_ref }}
       run: |
-        & '${{ github.action_path }}/scripts/windows.ps1' "$env:ALEF_INSTALL_REF"
+        & "$env:GITHUB_ACTION_PATH/scripts/windows.ps1" "$env:ALEF_INSTALL_REF"
 
     - name: Add alef to PATH (Unix)
       if: runner.os != 'Windows'

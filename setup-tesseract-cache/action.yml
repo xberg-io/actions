@@ -40,7 +40,7 @@ runs:
       env:
         TESSERACT_LABEL: ${{ inputs.label }}
         TESSERACT_CACHE_DIR_PREFIX: ${{ inputs.cache-dir-prefix }}
-      run: ${{ github.action_path }}/scripts/clean-dirs.sh "$TESSERACT_LABEL" "$TESSERACT_CACHE_DIR_PREFIX"
+      run: '"$GITHUB_ACTION_PATH/scripts/clean-dirs.sh" "$TESSERACT_LABEL" "$TESSERACT_CACHE_DIR_PREFIX"'
 
     - name: Setup cache directories
       if: inputs.enable-cache == 'true'
@@ -48,7 +48,7 @@ runs:
       env:
         TESSERACT_LABEL: ${{ inputs.label }}
         TESSERACT_CACHE_DIR_PREFIX: ${{ inputs.cache-dir-prefix }}
-      run: ${{ github.action_path }}/scripts/setup-dirs.sh "$TESSERACT_LABEL" "$TESSERACT_CACHE_DIR_PREFIX"
+      run: '"$GITHUB_ACTION_PATH/scripts/setup-dirs.sh" "$TESSERACT_LABEL" "$TESSERACT_CACHE_DIR_PREFIX"'
 
     - name: Resolve cache key paths
       id: cache-key-paths
@@ -77,7 +77,7 @@ runs:
       shell: bash
       env:
         TESSERACT_RUST_TARGET: ${{ inputs.rust-target }}
-      run: ${{ github.action_path }}/scripts/clean-target-cache.sh "$TESSERACT_RUST_TARGET"
+      run: '"$GITHUB_ACTION_PATH/scripts/clean-target-cache.sh" "$TESSERACT_RUST_TARGET"'
 
     - name: Set outputs and environment
       id: set-outputs
@@ -86,4 +86,4 @@ runs:
         TESSERACT_LABEL: ${{ inputs.label }}
         TESSERACT_ENABLE_CACHE: ${{ inputs.enable-cache }}
         TESSERACT_CACHE_DIR_PREFIX: ${{ inputs.cache-dir-prefix }}
-      run: ${{ github.action_path }}/scripts/set-outputs.sh "$TESSERACT_LABEL" "$TESSERACT_ENABLE_CACHE" "$TESSERACT_CACHE_DIR_PREFIX"
+      run: '"$GITHUB_ACTION_PATH/scripts/set-outputs.sh" "$TESSERACT_LABEL" "$TESSERACT_ENABLE_CACHE" "$TESSERACT_CACHE_DIR_PREFIX"'

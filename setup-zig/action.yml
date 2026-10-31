@@ -31,16 +31,16 @@ runs:
       env:
         ZIG_VERSION: ${{ inputs.version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
 
     - name: Install the Zig nightly (Unix)
       if: inputs.version == 'master' && runner.os != 'Windows'
       shell: bash
       run: |
-        "${{ github.action_path }}/scripts/unix.sh" master
+        "$GITHUB_ACTION_PATH/scripts/unix.sh" master
 
     - name: Install the Zig nightly (Windows)
       if: inputs.version == 'master' && runner.os == 'Windows'
       shell: pwsh
       run: |
-        & '${{ github.action_path }}/scripts/windows.ps1' master
+        & "$env:GITHUB_ACTION_PATH/scripts/windows.ps1" master

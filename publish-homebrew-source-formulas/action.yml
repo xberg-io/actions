@@ -68,7 +68,7 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_GITHUB_REPO: ${{ inputs.github-repo }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
-      run: python3 "${{ github.action_path }}/scripts/render.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/render.py"
 
     - name: Validate rendered formulas contain version
       shell: bash

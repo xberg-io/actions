@@ -38,4 +38,4 @@ runs:
         INPUT_REQUIRED_CLASSIFIERS: ${{ inputs.required-classifiers }}
         INPUT_LIB_NAME: ${{ inputs.lib-name }}
       run: |
-        python3 "${{ github.action_path }}/scripts/stage.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/stage.py"

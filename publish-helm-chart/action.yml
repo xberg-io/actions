@@ -74,9 +74,10 @@ runs:
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         HELM_VERSION: ${{ inputs.helm-version }}
-        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" "helm=$HELM_VERSION"
+      run: |
+        INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
+          bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" "helm=$HELM_VERSION"
 
     - name: Publish chart
       id: publish

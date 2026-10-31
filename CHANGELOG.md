@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Every composite reaches its own scripts through `$GITHUB_ACTION_PATH` instead of `${{ github.action_path }}`,
+  which expands to the runner host's path and is not mounted inside a `container:` job. The mise fallback root of
+  `setup-ai-rulez`, `setup-c-cpp-tools`, `setup-rust` and `publish-helm-chart` and `build-node-napi`'s Cargo adapter
+  path move from `env:` into the script for the same reason. A test fails on any composite step that uses the
+  expression.
+
 ## [1.41.1] - 2026-10-31
 
 ### Changed

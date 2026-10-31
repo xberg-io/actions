@@ -15,7 +15,9 @@ def test_action_installs_uv_through_mise_for_every_caller() -> None:
     steps = _steps()
     assert not [step for step in steps if str(step.get("uses", "")).startswith("astral-sh/setup-uv@")]
     uv_steps = [
-        step for step in steps if str(step.get("run", "")).endswith(" uv") and "install-tools.sh" in step["run"]
+        step
+        for step in steps
+        if str(step.get("run", "")).rstrip().endswith(" uv") and "install-tools.sh" in step["run"]
     ]
     assert len(uv_steps) == 1
     install = uv_steps[0]

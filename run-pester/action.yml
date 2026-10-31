@@ -52,4 +52,4 @@ runs:
         INPUT_FILTER_TAG: ${{ inputs.filter-tag }}
         INPUT_FILTER_FULL_NAME: ${{ inputs.filter-full-name }}
         INPUT_RESULT_PATH: ${{ inputs.result-path }}
-      run: pwsh -NoProfile -File "${{ github.action_path }}/scripts/run.ps1"
+      run: pwsh -NoProfile -File "$env:GITHUB_ACTION_PATH/scripts/run.ps1"

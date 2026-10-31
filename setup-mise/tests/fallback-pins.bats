@@ -16,7 +16,7 @@ fallback_tools() {
 	for action in "$ROOT"/*/action.yml; do
 		awk '
 			/^    - / { if (fallback && tool != "") print tool; fallback = 0; tool = "" }
-			/INSTALL_TOOLS_FALLBACK_ROOT:/ { fallback = 1 }
+			/INSTALL_TOOLS_FALLBACK_ROOT=/ { fallback = 1 }
 			/install-tools\.sh" / { tool = $NF; gsub(/"/, "", tool); sub(/=.*/, "", tool) }
 			END { if (fallback && tool != "") print tool }
 		' "$action"

@@ -36,7 +36,7 @@ def test_should_provision_mise_zig_only_for_actual_linux_build_steps(inputs, exp
     assert len(selected) == 1, "expected one explicit Zig provisioning step"
     step = selected[0]
     assert step["id"] == "zig"
-    assert "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" in step["run"], (
+    assert "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" in step["run"], (
         "must reuse the same action checkout"
     )
     assert '"zig=$ZIG_VERSION"' in step["run"]

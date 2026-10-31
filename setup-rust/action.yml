@@ -255,9 +255,10 @@ runs:
       shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" github:taiki-e/cargo-llvm-cov
+      run: |
+        INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
+          bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" github:taiki-e/cargo-llvm-cov
 
     - name: Report sccache statistics
       if: inputs.use-sccache == 'true' && inputs.report-stats == 'true' && always()

@@ -102,5 +102,5 @@ runs:
         mkdir -p "$out"
 
         input_path="${INPUT_MANIFEST_PATH:-${INPUT_PACKAGE_DIR}}"
-        bash "${{ github.action_path }}/scripts/build-out-of-workspace.sh" \
+        bash "$GITHUB_ACTION_PATH/scripts/build-out-of-workspace.sh" \
           "$input_path" "$out" "$GITHUB_WORKSPACE" "$INPUT_SOURCE_DEPENDENCIES"

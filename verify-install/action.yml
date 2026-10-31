@@ -77,4 +77,4 @@ runs:
         INPUT_LOCAL_PATH: ${{ inputs.local-path }}
         INPUT_TEST_APPS_DIR: ${{ inputs.test-apps-dir }}
         INPUT_SMOKE_ONLY: ${{ inputs.smoke-only }}
-      run: bash "${{ github.action_path }}/scripts/verify.sh"
+      run: bash "$GITHUB_ACTION_PATH/scripts/verify.sh"

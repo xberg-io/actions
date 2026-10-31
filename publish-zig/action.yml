@@ -134,7 +134,7 @@ runs:
       env:
         ZIG_VERSION: ${{ inputs.zig-version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "zig=$ZIG_VERSION"
 
     - name: Resolve tag
       id: tag
@@ -805,7 +805,7 @@ runs:
         PKG_NAME: ${{ steps.pkg.outputs.package-name }}
         URL: ${{ steps.resolve.outputs.tarball-url }}
         HASH: ${{ steps.resolve.outputs.zig-hash }}
-      run: "${{ github.action_path }}/scripts/append-release-notes.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/append-release-notes.sh"'
 
     - name: Dry-run summary
       if: inputs.dry-run == 'true'

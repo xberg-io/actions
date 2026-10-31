@@ -44,14 +44,14 @@ runs:
       env:
         NODE_VERSION: ${{ inputs.node-version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "node=$NODE_VERSION" pnpm
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "node=$NODE_VERSION" pnpm
 
     - name: Configure the npm registry
       if: inputs.registry-url != ''
       shell: bash
       env:
         REGISTRY_URL: ${{ inputs.registry-url }}
-      run: bash "${{ github.action_path }}/scripts/configure-registry.sh" "$REGISTRY_URL"
+      run: bash "$GITHUB_ACTION_PATH/scripts/configure-registry.sh" "$REGISTRY_URL"
 
     - name: Install dependencies
       shell: bash

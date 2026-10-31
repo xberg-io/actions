@@ -38,4 +38,4 @@ runs:
         JSON_DIR: ${{ inputs.json-dir }}
         FORMULAS: ${{ inputs.formulas }}
         GITHUB_REPO: ${{ inputs.github-repo }}
-      run: "${{ github.action_path }}/scripts/merge-bottles.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/merge-bottles.sh"'

@@ -67,7 +67,7 @@ runs:
       shell: bash
       env:
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . java
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . java
 
     # Google removed the legacy `tools` SDK package, but setup-android's `packages` input still
     # defaults to `tools platform-tools`, so the bare invocation now dies on

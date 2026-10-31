@@ -36,7 +36,7 @@ runs:
         FFI_CRATE_DIR: ${{ inputs.ffi-crate-dir }}
         FFI_LIB_NAME: ${{ inputs.ffi-lib-name }}
       run: >-
-        "${{ github.action_path }}/scripts/unix.sh"
+        "$GITHUB_ACTION_PATH/scripts/unix.sh"
         "$FFI_LIB_DIR" "$FFI_ENABLE_RPATH" "$FFI_CRATE_DIR" "$FFI_LIB_NAME"
 
     - name: Setup Go cgo environment (Windows)
@@ -48,7 +48,7 @@ runs:
         FFI_LIB_NAME: ${{ inputs.ffi-lib-name }}
         FFI_HEADER_PATH: ${{ inputs.ffi-header-path }}
       run: >-
-        & "${{ github.action_path }}/scripts/windows.ps1"
+        & "$env:GITHUB_ACTION_PATH/scripts/windows.ps1"
         "$env:FFI_LIB_DIR" "$env:FFI_CRATE_DIR" "$env:FFI_LIB_NAME" "$env:FFI_HEADER_PATH"
 
     - name: Verify Go cgo configuration
@@ -57,4 +57,4 @@ runs:
         FFI_LIB_DIR: ${{ inputs.ffi-lib-dir }}
         FFI_LIB_NAME: ${{ inputs.ffi-lib-name }}
       run: |
-        "${{ github.action_path }}/scripts/verify.sh" "$FFI_LIB_DIR" "$FFI_LIB_NAME"
+        "$GITHUB_ACTION_PATH/scripts/verify.sh" "$FFI_LIB_DIR" "$FFI_LIB_NAME"

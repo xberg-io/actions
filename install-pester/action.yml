@@ -38,4 +38,4 @@ runs:
       env:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
-      run: pwsh -NoProfile -File "${{ github.action_path }}/scripts/install.ps1"
+      run: pwsh -NoProfile -File "$env:GITHUB_ACTION_PATH/scripts/install.ps1"

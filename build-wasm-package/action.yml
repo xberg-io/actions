@@ -46,7 +46,7 @@ runs:
       env:
         WASM_PACK_VERSION: ${{ inputs.wasm-pack-version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "github:rustwasm/wasm-pack=$WASM_PACK_VERSION"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "github:rustwasm/wasm-pack=$WASM_PACK_VERSION"
 
     - name: Build WASM bundle
       shell: bash

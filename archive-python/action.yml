@@ -63,5 +63,5 @@ runs:
         if [ -n "$ARCHIVE_EXISTING" ]; then
           args+=(--existing-manifests-dir "$ARCHIVE_EXISTING")
         fi
-        python3 "${{ github.action_path }}/scripts/archive.py" \
+        python3 "$GITHUB_ACTION_PATH/scripts/archive.py" \
           --repository "$ARCHIVE_REPOSITORY" --output-dir "$ARCHIVE_OUTPUT" "${args[@]}"

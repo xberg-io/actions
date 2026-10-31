@@ -45,4 +45,4 @@ runs:
         INPUT_BUILD_PROFILE: ${{ inputs.build-profile }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        bash "${{ github.action_path }}/scripts/build.sh"
+        bash "$GITHUB_ACTION_PATH/scripts/build.sh"

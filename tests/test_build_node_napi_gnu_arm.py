@@ -56,7 +56,7 @@ def action_step(
         "CARGO": cargo_command or binary,
         "TRACE": str(trace),
         "NAPI_TRACE": str(tmp_path / "napi.json"),
-        "ACTION_PATH": str(ACTION),
+        "GITHUB_ACTION_PATH": str(ACTION),
         "TARGET": target,
         "USE_NAPI_CROSS": use_cross,
         "CROSS_COMPILE": cross_compile,

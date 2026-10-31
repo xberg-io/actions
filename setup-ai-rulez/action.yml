@@ -32,9 +32,10 @@ runs:
       shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
+      run: |
+        INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
+          bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
     - name: Warn on a deprecated AI-Rulez version
       if: inputs.ai-rulez-version != 'latest' && inputs.source-revision == ''
       shell: bash
@@ -95,7 +96,7 @@ runs:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         GO_VERSION: ${{ steps.go.outputs.version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" "go=$GO_VERSION"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" "go=$GO_VERSION"
     # ~keep The module and build caches setup-go's cache-dependency-path kept, keyed on the source's go.sum.
     - name: Cache Go modules for the source build
       if: inputs.source-revision != ''

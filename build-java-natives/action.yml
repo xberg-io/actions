@@ -55,4 +55,4 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_GLIBC_VERSION: ${{ inputs.glibc-version }}
       run: |
-        python3 "${{ github.action_path }}/scripts/build.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/build.py"

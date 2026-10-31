@@ -75,7 +75,7 @@ runs:
         # extra line carried no `=`, and the runner then rejected the entire file
         # command ("Unable to process file command 'output' successfully").
         extension_path=$( \
-          bash "${{ github.action_path }}/scripts/build-out-of-workspace.sh" \
+          bash "$GITHUB_ACTION_PATH/scripts/build-out-of-workspace.sh" \
           "$CRATE_NAME" "$LIB_NAME" "$GITHUB_WORKSPACE" | tail -n 1
         )
         {
@@ -113,7 +113,7 @@ runs:
         CARGO_FEATURES: ${{ inputs.cargo-features }}
       run: |
         set -euo pipefail
-        extension_path=$(bash "${{ github.action_path }}/scripts/build-in-workspace.sh" \
+        extension_path=$(bash "$GITHUB_ACTION_PATH/scripts/build-in-workspace.sh" \
           "$CRATE_NAME" "$LIB_NAME" "$GITHUB_WORKSPACE")
         {
           echo "extension-path<<GHA_EXTENSION_PATH_EOF"
@@ -172,8 +172,8 @@ runs:
         # 579b492; this branch never did, which is why only `PHP (windows)` failed.
         $cargoToml = Join-Path (Get-Location) "Cargo.toml"
         if (Test-Path $cargoToml) {
-          & "${{ github.action_path }}/scripts/deinherit-workspace.ps1" $cargoToml (Join-Path $workspaceRoot "Cargo.toml")
-          & "${{ github.action_path }}/scripts/strip-internal-paths.ps1" $cargoToml
+          & "$env:GITHUB_ACTION_PATH/scripts/deinherit-workspace.ps1" $cargoToml (Join-Path $workspaceRoot "Cargo.toml")
+          & "$env:GITHUB_ACTION_PATH/scripts/strip-internal-paths.ps1" $cargoToml
         }
 
         # ~keep Seed from the workspace lock so this build tracks the same dependency

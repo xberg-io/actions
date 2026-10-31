@@ -102,7 +102,7 @@ runs:
       shell: bash
       env:
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . lychee
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . lychee
 
     - name: Install textlint + xberg rule set
       uses: xberg-io/actions/setup-textlint@v1
@@ -112,7 +112,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        "${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" run docs:lint:links \
+        "$GITHUB_ACTION_PATH/../build-docs/scripts/docs-runner.sh" run docs:lint:links \
           lychee --offline --no-progress docs/ .github/ || true
 
     - name: Lint documentation prose
@@ -122,7 +122,7 @@ runs:
         DOCS_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
-        runner="${{ github.action_path }}/../build-docs/scripts/docs-runner.sh"
+        runner="$GITHUB_ACTION_PATH/../build-docs/scripts/docs-runner.sh"
         if [ "$DOCS_STRICT" = "true" ]; then
           TEXTLINT_STRICT=1 "$runner" run docs:lint:prose textlint docs/
         else
@@ -141,5 +141,5 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        "${{ github.action_path }}/../build-docs/scripts/docs-runner.sh" run docs:snippets:validate \
+        "$GITHUB_ACTION_PATH/../build-docs/scripts/docs-runner.sh" run docs:snippets:validate \
           alef snippets validate --snippets docs/snippets --level syntax --timeout 120 -j 4

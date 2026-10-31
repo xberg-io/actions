@@ -73,7 +73,7 @@ runs:
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
         INPUT_REPLACE: ${{ inputs.replace }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
-      run: python3 "${{ github.action_path }}/scripts/prebuilt.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/prebuilt.py"
 
     - name: Verify mix.exs carries the release version
       if: inputs.required-notice-files == ''

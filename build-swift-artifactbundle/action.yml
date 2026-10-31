@@ -165,7 +165,7 @@ runs:
         fi
         tools=("zig=$ZIG_VERSION")
         command -v cargo-zigbuild >/dev/null 2>&1 || tools+=(github:rust-cross/cargo-zigbuild)
-        bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "${tools[@]}"
+        bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "${tools[@]}"
         selected="$(MISE_LOCKED=false mise exec "zig${ZIG_VERSION:+@$ZIG_VERSION}" -- zig version | tr -d '\r')"
         echo "version=$selected" >>"$GITHUB_OUTPUT"
 
@@ -189,7 +189,7 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
       run: |
-        bash "${{ github.action_path }}/scripts/build.sh"
+        bash "$GITHUB_ACTION_PATH/scripts/build.sh"
 
     - name: Substitute Package.swift placeholders
       id: substitute-manifest

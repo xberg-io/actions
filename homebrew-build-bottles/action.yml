@@ -57,4 +57,4 @@ runs:
         UPLOAD: ${{ inputs.upload }}
         HOMEBREW_NO_INSTALL_FROM_API: "1"
         HOMEBREW_NO_SANDBOX_LINUX: "1"
-      run: "${{ github.action_path }}/scripts/build-bottles.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/build-bottles.sh"'

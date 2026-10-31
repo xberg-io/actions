@@ -79,7 +79,7 @@ runs:
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 "${{ github.action_path }}/scripts/ensure_release.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/ensure_release.py"
     - name: Upload release artifacts
       if: inputs.artifacts != '' && inputs.dry-run != 'true'
       shell: bash
@@ -93,4 +93,4 @@ runs:
         # ~keep read-after-write race against the creation that just happened.
         INPUT_RELEASE_ID: ${{ steps.ensure-release.outputs.release-id }}
       run: |
-        python3 "${{ github.action_path }}/scripts/upload_artifacts.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/upload_artifacts.py"

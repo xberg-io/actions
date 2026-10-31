@@ -33,4 +33,4 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
       run: >-
-        python3 "${{ github.action_path }}/scripts/render.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/render.py"

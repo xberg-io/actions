@@ -79,9 +79,10 @@ runs:
       shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
+      run: |
+        INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
+          bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
 
     - name: Install C/C++ tools (Linux)
       if: runner.os == 'Linux'
@@ -95,7 +96,7 @@ runs:
         INSTALL_SHFMT: ${{ inputs.install-shfmt }}
         SHFMT_VERSION: ${{ inputs.shfmt-version }}
       run: |
-        "${{ github.action_path }}/scripts/linux.sh"
+        "$GITHUB_ACTION_PATH/scripts/linux.sh"
 
     - name: Install C/C++ tools (macOS)
       if: runner.os == 'macOS'
@@ -109,4 +110,4 @@ runs:
         INSTALL_SHFMT: ${{ inputs.install-shfmt }}
         SHFMT_VERSION: ${{ inputs.shfmt-version }}
       run: |
-        "${{ github.action_path }}/scripts/macos.sh"
+        "$GITHUB_ACTION_PATH/scripts/macos.sh"

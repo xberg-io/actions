@@ -96,7 +96,7 @@ runs:
       env:
         TOOL: ${{ inputs.language }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "$TOOL"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "$TOOL"
 
     # ~keep Ruby is a mise lock gap on Windows (org rule toolchain-management), so it stays on setup-ruby there.
     - name: Setup Ruby (Windows)
@@ -153,7 +153,7 @@ runs:
         INPUT_LANGUAGE: ${{ inputs.language }}
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-      run: python3 "${{ github.action_path }}/scripts/override_version.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/override_version.py"
 
     - name: Pre-run hook
       if: ${{ inputs.pre-run-command != '' }}
@@ -167,4 +167,4 @@ runs:
       env:
         INPUT_LANGUAGE: ${{ inputs.language }}
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-      run: bash "${{ github.action_path }}/scripts/run.sh"
+      run: bash "$GITHUB_ACTION_PATH/scripts/run.sh"

@@ -30,4 +30,4 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_LIB_PATH: ${{ inputs.lib-path }}
         INPUT_ARGS: ${{ inputs.args }}
-      run: bash "${{ github.action_path }}/scripts/run.sh"
+      run: bash "$GITHUB_ACTION_PATH/scripts/run.sh"

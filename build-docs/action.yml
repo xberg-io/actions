@@ -61,7 +61,7 @@ runs:
         DOCS_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
-        runner="${{ github.action_path }}/scripts/docs-runner.sh"
+        runner="$GITHUB_ACTION_PATH/scripts/docs-runner.sh"
         if [ "$DOCS_STRICT" = "true" ]; then
           "$runner" run docs:build:strict zensical build --strict --clean
         else

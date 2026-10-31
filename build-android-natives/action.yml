@@ -59,4 +59,4 @@ runs:
         INPUT_NO_DEFAULT_FEATURES: ${{ inputs.no-default-features }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 "${{ github.action_path }}/scripts/build.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/build.py"

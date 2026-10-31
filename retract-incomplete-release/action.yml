@@ -55,4 +55,4 @@ runs:
         INPUT_CONSUMER_RESULTS: ${{ inputs.consumer-results }}
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
       run: |
-        python3 "${{ github.action_path }}/scripts/retract_incomplete_release.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/retract_incomplete_release.py"

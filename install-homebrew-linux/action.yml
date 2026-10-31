@@ -9,4 +9,4 @@ runs:
     - name: Install Homebrew on Linux
       if: runner.os == 'Linux'
       shell: bash
-      run: "${{ github.action_path }}/scripts/install.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/install.sh"'

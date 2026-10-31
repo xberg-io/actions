@@ -64,7 +64,7 @@ runs:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         CONFIG_REF: ${{ inputs.config-ref }}
       run: |
-        "${{ github.action_path }}/scripts/restore-config.sh" "$WORKING_DIRECTORY" "$CONFIG_REF"
+        "$GITHUB_ACTION_PATH/scripts/restore-config.sh" "$WORKING_DIRECTORY" "$CONFIG_REF"
 
     - name: Prepare mise environment
       id: env
@@ -76,7 +76,7 @@ runs:
         INPUT_INSTALL: ${{ inputs.install }}
         INPUT_INSTALL_ARGS: ${{ inputs.install-args != '' && inputs.install-args || inputs.tools }}
       run: |
-        "${{ github.action_path }}/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE" \
+        "$GITHUB_ACTION_PATH/scripts/prepare-env.sh" "$WORKING_DIRECTORY" "$INPUT_MISE_ENV" "$INPUT_CACHE" \
           "$INPUT_INSTALL" "$INPUT_INSTALL_ARGS"
 
     - name: Install mise and tools
@@ -100,4 +100,4 @@ runs:
         MISE_GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         read -r -a tools <<<"$(tr '\n' ' ' <<<"$INPUT_TOOLS")"
-        bash "${{ github.action_path }}/scripts/install-tools.sh" "$WORKING_DIRECTORY" "${tools[@]}"
+        bash "$GITHUB_ACTION_PATH/scripts/install-tools.sh" "$WORKING_DIRECTORY" "${tools[@]}"

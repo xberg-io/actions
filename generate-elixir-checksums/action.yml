@@ -56,4 +56,4 @@ runs:
         INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
         GH_TOKEN: ${{ inputs.token }}
       run: >-
-        python3 "${{ github.action_path }}/scripts/generate.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/generate.py"

@@ -21,7 +21,7 @@ runs:
       if: runner.os == 'macOS'
       id: detect-tesseract-macos
       shell: bash
-      run: "${{ github.action_path }}/scripts/detect-tesseract-macos.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/detect-tesseract-macos.sh"'
 
     - name: Cache Tesseract & tessdata (macOS)
       if: runner.os == 'macOS'
@@ -41,13 +41,13 @@ runs:
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       shell: bash
-      run: "${{ github.action_path }}/scripts/install-macos.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/install-macos.sh"'
 
     - name: Detect Tesseract version (Linux)
       if: runner.os == 'Linux'
       id: detect-tesseract-linux
       shell: bash
-      run: "${{ github.action_path }}/scripts/detect-tesseract-linux.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/detect-tesseract-linux.sh"'
 
     - name: Cache Tesseract data (Linux)
       if: runner.os == 'Linux'
@@ -111,7 +111,7 @@ runs:
       shell: bash
       env:
         LIBHEIF_VERSION: ${{ inputs.libheif-version }}
-      run: "${{ github.action_path }}/scripts/install-linux.sh"
+      run: '"$GITHUB_ACTION_PATH/scripts/install-linux.sh"'
 
     # Pinned to 5.5.3 with ensure-tesseract-windows.ps1 until upstream ships a 5.5.4 installer. ~keep
     - name: Cache Tesseract (Windows)
@@ -164,4 +164,4 @@ runs:
         LLVM_CACHE_HIT: ${{ steps.cache-llvm-windows.outputs.cache-hit }}
         CMAKE_CACHE_HIT: ${{ steps.cache-cmake-windows.outputs.cache-hit }}
         LIBHEIF_CACHE_HIT: ${{ steps.cache-libheif-windows.outputs.cache-hit }}
-      run: pwsh -File "${{ github.action_path }}/scripts/install-windows.ps1"
+      run: pwsh -File "$env:GITHUB_ACTION_PATH/scripts/install-windows.ps1"

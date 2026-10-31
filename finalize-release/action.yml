@@ -68,4 +68,4 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_REPO: ${{ github.repository }}
       run: |
-        python3 "${{ github.action_path }}/scripts/finalize_release.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/finalize_release.py"

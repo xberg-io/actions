@@ -23,4 +23,4 @@ runs:
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
-        "${{ github.action_path }}/scripts/check.sh" "$WORKING_DIRECTORY"
+        "$GITHUB_ACTION_PATH/scripts/check.sh" "$WORKING_DIRECTORY"

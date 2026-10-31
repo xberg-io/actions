@@ -39,4 +39,4 @@ runs:
         INPUT_MAX_ATTEMPTS: ${{ inputs.max-attempts }}
         INPUT_MAVEN_GROUP_ID: ${{ inputs.maven-group-id }}
       run: |
-        python3 "${{ github.action_path }}/scripts/wait.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/wait.py"

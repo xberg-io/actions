@@ -53,7 +53,7 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_REPOSITORY_URL: ${{ inputs.repository-url }}
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
-      run: python3 "${{ github.action_path }}/scripts/publish.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/publish.py"
 
     - name: Check for mise
       id: mise
@@ -73,7 +73,7 @@ runs:
       shell: bash
       env:
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . uv
 
     - name: Publish to PyPI via trusted publishing
       id: upload
@@ -83,7 +83,7 @@ runs:
         UV_PUBLISH_URL: ${{ inputs.repository-url }}
         PACKAGES_DIR: ${{ inputs.packages-dir }}
         INPUT_FALLBACK_INDEX_URL: ${{ inputs.fallback-index-url }}
-      run: python3 "${{ github.action_path }}/scripts/upload.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/upload.py"
 
     - name: Set output
       id: publish

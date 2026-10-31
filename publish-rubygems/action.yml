@@ -41,4 +41,4 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
       run: |
-        python3 "${{ github.action_path }}/scripts/publish.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/publish.py"

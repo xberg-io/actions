@@ -38,4 +38,4 @@ runs:
         INPUT_DRY_RUN: ${{ inputs.dry-run }}
         INPUT_MANIFEST_PATH: ${{ inputs.manifest-path }}
       run: >-
-        python3 "${{ github.action_path }}/scripts/publish.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/publish.py"

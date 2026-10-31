@@ -94,7 +94,7 @@ runs:
       shell: bash
       env:
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . python
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . python
 
     - name: Verify package contents
       id: verify
@@ -109,4 +109,4 @@ runs:
         INPUT_CANONICAL_ROOT: ${{ inputs.canonical-root }}
         INPUT_ARTIFACT_FORMAT: ${{ inputs.artifact-format }}
         INPUT_EXPECTED_ARTIFACT_COUNT: ${{ inputs.expected-artifact-count }}
-      run: python3 "${{ github.action_path }}/scripts/verify.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/verify.py"

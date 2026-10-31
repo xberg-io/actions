@@ -31,4 +31,4 @@ runs:
         INPUT_TAG: ${{ inputs.tag }}
         GH_TOKEN: ${{ inputs.token }}
       run: >-
-        python3 "${{ github.action_path }}/scripts/retag.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/retag.py"

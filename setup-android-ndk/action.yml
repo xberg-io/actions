@@ -46,4 +46,4 @@ runs:
         INPUT_TARGETS: ${{ inputs.targets }}
         INPUT_INSTALL_CARGO_NDK: ${{ inputs.install-cargo-ndk }}
         INPUT_CARGO_NDK_VERSION: ${{ inputs.cargo-ndk-version }}
-      run: bash "${{ github.action_path }}/scripts/setup.sh"
+      run: bash "$GITHUB_ACTION_PATH/scripts/setup.sh"

@@ -98,14 +98,14 @@ runs:
       env:
         JAVA_SPEC: ${{ inputs.java-version != '' && format('{0}-{1}', inputs.java-distribution, inputs.java-version) || '' }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
+      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . "java=$JAVA_SPEC"
 
     - name: Write the Maven server settings
       if: inputs.setup-java == 'true'
       shell: bash
       env:
         INPUT_SERVER_ID: ${{ inputs.server-id }}
-      run: python3 "${{ github.action_path }}/scripts/server_settings.py"
+      run: python3 "$GITHUB_ACTION_PATH/scripts/server_settings.py"
 
     - name: Import GPG key
       if: env.MAVEN_GPG_PRIVATE_KEY != ''
@@ -150,4 +150,4 @@ runs:
         INPUT_REQUIRED_NOTICE_FILES: ${{ inputs.required-notice-files }}
         INPUT_CANONICAL_ROOT: ${{ inputs.canonical-root }}
       run: |
-        python3 "${{ github.action_path }}/scripts/deploy.py"
+        python3 "$GITHUB_ACTION_PATH/scripts/deploy.py"
