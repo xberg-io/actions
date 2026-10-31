@@ -60,7 +60,7 @@ jobs:
 
       - uses: ./setup-mise
         with:
-          install-args: python uv
+          install-args: python uv github:Goldziher/poly
 
       - name: Install dependencies
         run: uv sync --group dev

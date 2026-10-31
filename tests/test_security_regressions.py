@@ -593,6 +593,8 @@ def test_golangci_lint_version_accepts_semver_and_reaches_curl(tmp_path):
             """
         ),
     )
+    # A go stub keeps `go env GOPATH` independent of whichever Go the runner image ships. ~keep
+    _make_stub_bin(tmp_path, "go", 'echo "$GOPATH"')
     called_file = tmp_path / "curl_called"
     github_path = tmp_path / "github_path"
     env = {
