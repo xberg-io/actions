@@ -65,7 +65,7 @@ url_api = "https://api.github.com/repos/bats-core/bats-core/tarball/v1.14.0"
 [[tools."github:Goldziher/gh-actions-updater"]]
 version = "0.3.1"
 backend = "github:Goldziher/gh-actions-updater"
-specifiers = ["v0.3.1"]
+specifiers = ["0.3.1"]
 
 [tools."github:Goldziher/gh-actions-updater"."platforms.linux-arm64"]
 checksum = "sha256:c442d72047dd0a5f6c4e126f9716e7ea1426a1af79affb8672f58aa2059354c7"
