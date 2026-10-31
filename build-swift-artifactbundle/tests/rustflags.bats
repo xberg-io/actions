@@ -14,6 +14,9 @@ setup() {
 import json, os, sys
 from pathlib import Path
 target = sys.argv[-1]
+expected_command = os.environ.get("EXPECTED_CARGO_COMMAND_JSON")
+if expected_command is not None:
+    assert sys.argv[1:] == json.loads(expected_command), sys.argv[1:]
 encoded = os.environ.get("CARGO_ENCODED_RUSTFLAGS")
 flags = encoded.split("\x1f") if encoded else []
 if encoded is None:
@@ -71,4 +74,13 @@ check_target() {
 	export RUSTFLAGS='-D warnings -C link-arg=-undefined -C link-arg=error'
 	check_target aarch64-apple-ios '["-D","warnings","-C","link-arg=-undefined","-C","link-arg=error"]'
 	[ "$(wc -l <"$XBERG_WORK/calls.jsonl")" -eq 2 ]
+}
+
+@test "should_build_only_static_archives_for_every_apple_target" {
+	export RUSTFLAGS='-D warnings'
+	for target in aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios; do
+		export EXPECTED_CARGO_COMMAND_JSON='["rustc","--locked","-p","my-crate","--release","--lib","--crate-type","staticlib","--target","'"$target"'"]'
+		check_target "$target" '["-D","warnings"]'
+	done
+	[ "$(wc -l <"$XBERG_WORK/calls.jsonl")" -eq 5 ]
 }

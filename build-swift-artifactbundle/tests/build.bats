@@ -18,6 +18,8 @@ setup() {
 	[[ "$output" == *"skip x86_64-apple-darwin (include-macos-x86_64=false)"* ]]
 	[[ "$output" == *"ios-sim uses arm64 only"* ]]
 	[[ "$output" == *"would assemble dist/swift-artifactbundle/MyCrate.artifactbundle"* ]]
+	[[ "$output" == *"cargo rustc --locked -p my-crate --release --lib --crate-type staticlib --target aarch64-apple-darwin"* ]]
+	[[ "$output" != *"cargo build"* ]]
 }
 
 @test "should_return_error_when_a_target_build_does_not_produce_its_static_library" {
@@ -33,7 +35,7 @@ setup() {
 
 @test "should_assemble_disabled_optional_variants_and_write_metadata" {
 	xberg_stub rustup 'exit 0'
-	xberg_stub cargo 'if [ "$1" = build ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
+	xberg_stub cargo 'if [ "$1" = rustc ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
 	xberg_stub zig 'echo 0.17.0'
 	xberg_stub cargo-zigbuild 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
 	xberg_stub df 'printf "fixture 100 1 99 1%% /tmp\n"'
@@ -50,7 +52,7 @@ setup() {
 
 @test "should_build_only_the_requested_targets_and_stage_them_without_assembling" {
 	xberg_stub rustup 'exit 0'
-	xberg_stub cargo 'if [ "$1" = build ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
+	xberg_stub cargo 'if [ "$1" = rustc ] || [ "$1" = zigbuild ]; then target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"; fi'
 	xberg_stub zig 'echo 0.17.0'
 	xberg_stub cargo-zigbuild 'target="${@: -1}"; mkdir -p "$CARGO_TARGET_DIR/$target/release"; touch "$CARGO_TARGET_DIR/$target/release/libmy_lib.a"'
 	xberg_stub df 'printf "fixture 100 1 99 1%% /tmp\n"'

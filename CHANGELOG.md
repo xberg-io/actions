@@ -71,6 +71,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `build-swift-artifactbundle` requests only static archives for Apple targets, avoiding an unused dylib link
+  that conflicts with generated Swift callback allowances while retaining warning gates and callback symbols (#115).
 - `build-swift-artifactbundle` removes inherited macOS `dynamic_lookup` linker flags from cross-target
   builds, preserving macOS behavior and all other warning and security flags (#114).
 - `setup-mise` installs mise 2026.10.24, which carries the remote file task fix (jdx/mise#15178), and its

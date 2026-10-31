@@ -50,16 +50,16 @@ workspace="${GITHUB_WORKSPACE:-$PWD}"
 target_dir="${CARGO_TARGET_DIR:-$workspace/target}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-darwin"
+  echo "[dry-run] cargo rustc --locked -p $CRATE_NAME $profile_flag --lib --crate-type staticlib --target aarch64-apple-darwin"
   if [[ "$INCLUDE_MACOS_X86_64" == "true" ]]; then
-    echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target x86_64-apple-darwin"
+    echo "[dry-run] cargo rustc --locked -p $CRATE_NAME $profile_flag --lib --crate-type staticlib --target x86_64-apple-darwin"
   else
     echo "[dry-run] skip x86_64-apple-darwin (include-macos-x86_64=false)"
   fi
-  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-ios"
-  echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target aarch64-apple-ios-sim"
+  echo "[dry-run] cargo rustc --locked -p $CRATE_NAME $profile_flag --lib --crate-type staticlib --target aarch64-apple-ios"
+  echo "[dry-run] cargo rustc --locked -p $CRATE_NAME $profile_flag --lib --crate-type staticlib --target aarch64-apple-ios-sim"
   if [[ "$INCLUDE_IOS_X86_64" == "true" ]]; then
-    echo "[dry-run] cargo build --locked -p $CRATE_NAME $profile_flag --target x86_64-apple-ios"
+    echo "[dry-run] cargo rustc --locked -p $CRATE_NAME $profile_flag --lib --crate-type staticlib --target x86_64-apple-ios"
     echo "[dry-run] lipo arm64-sim x86_64 -> ios-sim fat"
   else
     echo "[dry-run] skip x86_64-apple-ios (include-ios-x86_64=false) — ios-sim uses arm64 only"
@@ -212,12 +212,13 @@ mkdir -p "$target_dir"
 echo "=== Disk space before building ==="
 df -h "$target_dir" | tail -1
 
+# Only archives are shipped; linking an extra cdylib applies unrelated extension/callback linker policy. ~keep
 echo "=== Building Apple targets ==="
 if should_build aarch64-apple-darwin; then
   echo "Building aarch64-apple-darwin..."
   # shellcheck disable=SC2086
   python3 "$script_dir/target_flags.py" aarch64-apple-darwin \
-    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
+    cargo rustc --locked -p "$CRATE_NAME" $profile_flag --lib --crate-type staticlib --target aarch64-apple-darwin
   prune_target_intermediates aarch64-apple-darwin
 fi
 
@@ -225,7 +226,7 @@ if [[ "$INCLUDE_MACOS_X86_64" == "true" ]] && should_build x86_64-apple-darwin; 
   echo "Building x86_64-apple-darwin..."
   # shellcheck disable=SC2086
   python3 "$script_dir/target_flags.py" x86_64-apple-darwin \
-    cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
+    cargo rustc --locked -p "$CRATE_NAME" $profile_flag --lib --crate-type staticlib --target x86_64-apple-darwin
   prune_target_intermediates x86_64-apple-darwin
 else
   echo "Skipping x86_64-apple-darwin (include-macos-x86_64=false)"
@@ -235,7 +236,7 @@ if should_build aarch64-apple-ios; then
   echo "Building aarch64-apple-ios..."
   # shellcheck disable=SC2086
   python3 "$script_dir/target_flags.py" aarch64-apple-ios \
-    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios
+    cargo rustc --locked -p "$CRATE_NAME" $profile_flag --lib --crate-type staticlib --target aarch64-apple-ios
   prune_target_intermediates aarch64-apple-ios
 fi
 
@@ -243,7 +244,7 @@ if should_build aarch64-apple-ios-sim; then
   echo "Building aarch64-apple-ios-sim..."
   # shellcheck disable=SC2086
   python3 "$script_dir/target_flags.py" aarch64-apple-ios-sim \
-    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
+    cargo rustc --locked -p "$CRATE_NAME" $profile_flag --lib --crate-type staticlib --target aarch64-apple-ios-sim
   prune_target_intermediates aarch64-apple-ios-sim
 fi
 
@@ -251,7 +252,7 @@ if [[ "$INCLUDE_IOS_X86_64" == "true" ]] && should_build x86_64-apple-ios; then
   echo "Building x86_64-apple-ios..."
   # shellcheck disable=SC2086
   python3 "$script_dir/target_flags.py" x86_64-apple-ios \
-    cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
+    cargo rustc --locked -p "$CRATE_NAME" $profile_flag --lib --crate-type staticlib --target x86_64-apple-ios
   prune_target_intermediates x86_64-apple-ios
 else
   echo "Skipping x86_64-apple-ios (include-ios-x86_64=false)"
