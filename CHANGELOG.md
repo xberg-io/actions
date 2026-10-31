@@ -18,7 +18,7 @@ All notable changes to xberg-io/actions are documented in this file.
   caller's mise config does not declare installs the version that directory's `mise.lock` pins, `--locked`
   against that lock, with a notice, instead of failing. The composites below pass this repository's root, whose
   `mise.toml` follows the toolchains baseline and now also declares `helm` and `github:taiki-e/cargo-llvm-cov`.
-  A runner platform that lock does not cover (macos-x64) installs the pinned version unlocked.
+  A runner platform that lock does not cover installs the pinned version unlocked.
 
 ### Fixed
 
