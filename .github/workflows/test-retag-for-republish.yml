@@ -20,9 +20,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: ./setup-mise
         with:
-          python-version: "3.15"
+          tools: python
 
       - name: Compile the retag script (syntax check)
         shell: bash

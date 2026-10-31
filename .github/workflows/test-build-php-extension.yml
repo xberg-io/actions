@@ -136,7 +136,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: ./setup-mise
+        with:
+          tools: python uv
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
