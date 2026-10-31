@@ -58,7 +58,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- Give the manual Ruby fixture a discoverable Cargo workspace and register its gem build task.
+- Give the manual Ruby fixture a discoverable Cargo workspace, register its gem build task, and use
+  Ruby 4-compatible Magnus bindings.
 
 ## [1.40.0] - 2026-10-31
 

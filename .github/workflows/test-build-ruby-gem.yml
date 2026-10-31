@@ -72,7 +72,7 @@ jobs:
           crate-type = ["cdylib"]
 
           [dependencies]
-          magnus = "0.7"
+          magnus = "0.9"
           TOML
           cat >packages/ruby/ext/fixture_magnus/src/lib.rs <<'RS'
           use magnus::{function, prelude::*, Error, Ruby};
