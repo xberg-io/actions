@@ -22,7 +22,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          allowed='^(feat|fix|docs|chore|refactor|test|ci|perf|build|style|revert)(\(.+\))?: .+'
+          allowed='^(feat|fix|docs|chore|refactor|test|ci|perf|build|style|revert)(\(.+\))?!?: .+'
           if echo "$PR_TITLE" | grep -qE "$allowed"; then
             exit 0
           fi
