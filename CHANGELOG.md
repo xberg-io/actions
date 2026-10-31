@@ -38,6 +38,9 @@ All notable changes to xberg-io/actions are documented in this file.
 - `setup-mise/scripts/install-tools.sh` installs a version matched against a lock with `MISE_LOCKED=1` even when
   the job did not set it, and rejects a tool name outside mise's character set.
 
+- Give the manual Ruby fixture a discoverable Cargo workspace, register its gem build task, and use
+  Ruby 4-compatible Magnus bindings.
+
 ### Changed
 
 - `setup-mise/scripts/install-tools.sh` notices every `tool=version` install that no lock covers, not only when
@@ -55,11 +58,6 @@ All notable changes to xberg-io/actions are documented in this file.
   uv 0.13.6 for a caller whose mise config declares no `uv` or that has no mise config.
 - `setup-rust` installs cargo-llvm-cov through mise instead of `taiki-e/install-action`: the caller's
   `mise.toml` version, else this repository's pinned cargo-llvm-cov 0.9.1, instead of the latest release.
-
-### Fixed
-
-- Give the manual Ruby fixture a discoverable Cargo workspace, register its gem build task, and use
-  Ruby 4-compatible Magnus bindings.
 
 ## [1.40.0] - 2026-10-31
 
