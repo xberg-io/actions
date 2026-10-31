@@ -21,6 +21,9 @@ fi
 working_directory="$1"
 shift
 cd "$working_directory"
+# ~keep mise refuses an untrusted config that sets [env] or runs code, and setup-mise need not have run first, so
+# ~keep the caller's config, whose tools this installs, is trusted here.
+mise trust --quiet "$PWD"
 
 # Variables mise sets for an active tool that other build tools read: Maven and Gradle find the JDK by
 # JAVA_HOME. Only the requested tools' variables are exported. Go's are not: go finds its root from its own path,

@@ -17,7 +17,7 @@ setup() {
 		'case "$1" in' \
 		'current) printf "%s" "$STUB_CURRENT" ;;' \
 		'install) shift; printf "install MISE_LOCKED=%s %s%s\n" "${MISE_LOCKED:-}" "${MISE_ENV:+MISE_ENV=$MISE_ENV }" "$*" >>"$XBERG_TRACE" ;;' \
-		'trust) shift; printf "trust %s from %s\n" "$*" "$PWD" >>"$XBERG_TRACE" ;;' \
+		'trust) shift; printf "trust %s from %s\n" "$*" "$PWD" >>"$BATS_TEST_TMPDIR/trust.log" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2"; [ -z "${STUB_EXTRA_PATH:-}" ] || printf "%s\n" "$STUB_EXTRA_PATH" ;;' \
 		'env) shift 2; echo "API_TOKEN=do-not-export"' \
 		'  for spec in "$@"; do' \
@@ -79,8 +79,9 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so it installs helm@4.3.1"
-	xberg_assert_trace "trust --quiet $FALLBACK from $FALLBACK" \
-		"install MISE_LOCKED=1 helm@4.3.1 github:taiki-e/cargo-llvm-cov@0.9.1"
+	xberg_assert_trace "install MISE_LOCKED=1 helm@4.3.1 github:taiki-e/cargo-llvm-cov@0.9.1"
+	xberg_assert_file "$BATS_TEST_TMPDIR/trust.log" "$(printf '%s\n' "trust --quiet $REPO from $REPO" \
+		"trust --quiet $FALLBACK from $FALLBACK")"
 	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
 }
 
@@ -316,4 +317,25 @@ write_fallback_root() {
 	[[ "$output" != *"is not declared"* ]]
 	[[ "$output" != *"::notice::"* ]]
 	[[ ! -d "$BATS_TEST_TMPDIR/data/installs/shfmt" ]]
+}
+
+@test "install_tools should_read_an_untrusted_caller_config_through_real_mise" {
+	[[ -n "$REAL_MISE" ]] || skip "mise is not on PATH"
+	printf '%s\n' '[env]' 'CALLER_VALUE = "set"' '[tools]' 'shfmt = "3.10.0"' >"$REPO/mise.toml"
+	xberg_stub mise \
+		'case "$1" in' \
+		'current | trust) exec "$REAL_MISE" "$@" ;;' \
+		'install) shift; printf "install %s\n" "$*" >>"$XBERG_TRACE" ;;' \
+		'bin-paths) printf "/installs/%s/bin\n" "$2" ;;' \
+		'*) exit 64 ;;' \
+		'esac'
+	isolated=(MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" MISE_CACHE_DIR="$BATS_TEST_TMPDIR/cache"
+		MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml")
+	run env -u MISE_TRUSTED_CONFIG_PATHS "${isolated[@]}" "$REAL_MISE" current --cd "$REPO"
+	[[ "$status" -ne 0 ]]
+
+	run_script "${isolated[@]}" "$SCRIPT" "$REPO" shfmt
+
+	xberg_assert_status 0
+	xberg_assert_trace "install shfmt"
 }
