@@ -50,6 +50,37 @@ run_script() {
 	xberg_assert_github_path ""
 }
 
+@test "install_tools should_install_the_undeclared_version_unlocked_for_a_tool_the_config_does_not_declare" {
+	STUB_CURRENT=$'python 3.13.18\n'
+
+	run_script MISE_LOCKED=1 INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm=
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so helm@latest installs."
+	xberg_assert_trace "install MISE_LOCKED=false helm@latest"
+	xberg_assert_github_path "/installs/helm@latest/bin"
+}
+
+@test "install_tools should_prefer_the_configured_version_over_the_undeclared_version" {
+	STUB_CURRENT=$'aqua:helm/helm 4.3.1\n'
+
+	run_script MISE_LOCKED=1 INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 aqua:helm/helm"
+	[[ "$output" != *"::notice::"* ]]
+}
+
+@test "install_tools should_prefer_a_passed_version_over_the_undeclared_version" {
+	STUB_CURRENT=$'python 3.13.18\n'
+
+	run_script INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm=v3.16.0
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=false helm@3.16.0"
+	[[ "$output" != *"is not declared"* ]]
+}
+
 @test "install_tools should_select_the_newest_locked_version_under_a_requested_prefix" {
 	STUB_CURRENT=$'python 3.13.18 3.11.18\n'
 	printf '%s\n' '[[tools.python]]' 'version = "3.13.18"' '' '[tools.python."platforms.linux-x64"]' \

@@ -14,6 +14,10 @@ All notable changes to xberg-io/actions are documented in this file.
 - `reusable-toolchain.yml` runs the Toolchain job copied across the org: `check-toolchain` against the baseline,
   then `setup-mise` installing from the lock, on the `runner` input (default `ubuntu-latest`). Triggers and
   concurrency stay in the caller, as for `reusable-ai-rulez-validation.yml`.
+- `setup-mise/scripts/install-tools.sh` reads `INSTALL_TOOLS_UNDECLARED_VERSION`: a tool without a version that
+  the caller's mise config does not declare installs that version (e.g. `latest`) unlocked, with a notice,
+  instead of failing. Composites that installed the newest release before moving to mise use it to stay
+  compatible with callers that do not declare the tool.
 
 ## [1.40.0] - 2026-10-31
 

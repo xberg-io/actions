@@ -7,6 +7,9 @@
 # MISE_ENV profiles, or a MISE_<TOOL>_VERSION the job exports. A tool the config does not declare fails. A
 # version is matched against the active locks first, so "3.13" selects a locked 3.13.x and keeps the locked
 # install; a version no lock covers installs unlocked, with a notice.
+#
+# INSTALL_TOOLS_UNDECLARED_VERSION, when set, is the version a tool without one installs when the config does
+# not declare it, e.g. "latest" for a composite that installed the newest release before it moved to mise.
 set -euo pipefail
 
 if (($# < 2)); then
@@ -122,6 +125,7 @@ locked_match() {
   done | sort -V | tail -n 1
 }
 
+undeclared_version="$(normalize_version "${INSTALL_TOOLS_UNDECLARED_VERSION:-}")"
 locked_specs=()
 unlocked_specs=()
 for request in "$@"; do
@@ -134,6 +138,12 @@ for request in "$@"; do
   fi
   requested="$(normalize_version "$requested")"
   id="$(configured_id "$tool")"
+
+  if [[ -z "$requested" && -z "$id" && -n "$undeclared_version" ]]; then
+    echo "::notice::$tool is not declared in the mise config for $PWD, so $tool@$undeclared_version installs." \
+      "Add it to mise.toml (then run mise lock) to pin it."
+    requested="$undeclared_version"
+  fi
 
   if [[ -z "$requested" ]]; then
     if [[ -z "$id" ]]; then
