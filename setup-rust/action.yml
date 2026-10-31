@@ -230,13 +230,27 @@ runs:
       run: |
         "$GITHUB_ACTION_PATH/scripts/cleanup-fingerprints.sh"
 
-    # Not moved to mise: install-llvm-cov defaults to true for every setup-rust caller, and not every
-    # caller's mise.toml declares cargo-llvm-cov. ~keep
-    - name: Install cargo-llvm-cov
+    - name: Check for mise
+      id: mise
       if: inputs.install-llvm-cov == 'true'
-      uses: taiki-e/install-action@v2
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: inputs.install-llvm-cov == 'true' && steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        tool: cargo-llvm-cov
+        install: "false"
+
+    # ~keep install-llvm-cov defaults to true for every caller, and not every caller's mise.toml declares
+    # ~keep cargo-llvm-cov: those get the latest release, as taiki-e/install-action installed before.
+    - name: Install cargo-llvm-cov through mise
+      if: inputs.install-llvm-cov == 'true'
+      shell: bash
+      env:
+        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . github:taiki-e/cargo-llvm-cov
 
     - name: Report sccache statistics
       if: inputs.use-sccache == 'true' && inputs.report-stats == 'true' && always()

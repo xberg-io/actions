@@ -28,6 +28,8 @@ All notable changes to xberg-io/actions are documented in this file.
   the caller's `mise.toml` version, or the latest release when it declares no `uv`.
 - `setup-ai-rulez` installs uv through mise instead of `astral-sh/setup-uv`, with the same fallback to the latest
   release for a caller whose mise config declares no `uv` or that has no mise config.
+- `setup-rust` installs cargo-llvm-cov through mise instead of `taiki-e/install-action`: the caller's
+  `mise.toml` version, or the latest release when it declares no cargo-llvm-cov.
 
 ## [1.40.0] - 2026-10-31
 
