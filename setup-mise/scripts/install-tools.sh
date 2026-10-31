@@ -70,13 +70,6 @@ short_name() {
   printf '%s' "${id##*/}"
 }
 
-is_true() {
-  case "${1:-}" in
-  1 | true | yes | on) return 0 ;;
-  *) return 1 ;;
-  esac
-}
-
 # "v1.2" -> "1.2", "3.x" -> "3"; a value outside a version's character set is rejected, not passed on. ~keep
 normalize_version() {
   local version="$1"
@@ -296,10 +289,8 @@ for request in "$@"; do
     locked_specs+=("$target@$match")
   else
     unlocked_specs+=("$target@$requested")
-    if is_true "${MISE_LOCKED:-}"; then
-      echo "::notice::$target@$requested is not in the active mise lock, so it installs unlocked." \
-        "Declare it in a profile such as mise.ci.toml and lock it to verify its checksums."
-    fi
+    echo "::notice::$target@$requested is not in the active mise lock, so it installs unlocked." \
+      "Declare it in a profile such as mise.ci.toml and lock it to verify its checksums."
   fi
 done
 

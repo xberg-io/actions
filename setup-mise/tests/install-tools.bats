@@ -268,7 +268,7 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=false github:rustwasm/wasm-pack@0.13.1"
-	[[ "$output" != *"::notice::"* ]]
+	xberg_assert_output_contains "::notice::github:rustwasm/wasm-pack@0.13.1 is not in the active mise lock"
 }
 
 @test "install_tools should_fail_when_a_short_name_matches_two_configured_tools" {
