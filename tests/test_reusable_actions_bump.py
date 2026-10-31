@@ -73,12 +73,65 @@ def test_rejects_an_unknown_mode_before_doing_anything():
     assert "exit 1" in first["run"]
 
 
-def test_checks_out_the_default_branch_with_the_push_token():
-    checkout = _job()["steps"][1]
+_PUSH_TOKEN = "${{ steps.token.outputs.token || github.token }}"
 
-    assert checkout["uses"] == "actions/checkout@v7"
+
+def test_declares_only_the_optional_app_secrets():
+    secrets = _triggers(_workflow())["workflow_call"]["secrets"]
+
+    assert set(secrets) == {"app-id", "app-private-key"}
+    assert all(spec["required"] is False for spec in secrets.values())
+
+
+def test_app_presence_check_reads_both_secrets_and_rejects_one_alone():
+    step = _step("Check for an app token")
+
+    assert step["id"] == "app"
+    assert step["env"] == {"APP_ID": "${{ secrets.app-id }}", "APP_PRIVATE_KEY": "${{ secrets.app-private-key }}"}
+    assert 'echo "present=true"' in step["run"]
+    assert 'echo "present=false"' in step["run"]
+    assert "exit 1" in step["run"], "one secret without the other must fail"
+
+
+def test_mints_an_app_token_scoped_to_the_caller_only_when_the_secrets_are_set():
+    mint = _step("Mint an app token")
+
+    assert mint["id"] == "token"
+    assert mint["if"] == "steps.app.outputs.present == 'true'"
+    assert mint["uses"] == "actions/create-github-app-token@v3"
+    assert mint["with"] == {
+        "app-id": "${{ secrets.app-id }}",
+        "private-key": "${{ secrets.app-private-key }}",
+        "owner": "${{ github.repository_owner }}",
+        "repositories": "${{ github.event.repository.name }}",
+        "permission-contents": "write",
+        "permission-pull-requests": "write",
+        "permission-workflows": "write",
+    }
+    assert _step_index("Check for an app token") < _step_index("Mint an app token")
+
+
+def test_checkout_push_and_pull_request_use_the_app_token_or_github_token():
+    checkout = next(
+        step for step in _job()["steps"] if step.get("uses") == "actions/checkout@v7" and "ref" in step.get("with", {})
+    )
+
     assert checkout["with"]["ref"] == "${{ github.event.repository.default_branch }}"
-    assert checkout["with"]["token"] == "${{ secrets.token || github.token }}"
+    assert checkout["with"]["token"] == _PUSH_TOKEN
+    assert _step_index("Mint an app token") < _job()["steps"].index(checkout)
+    assert _step("Open or refresh the pull request")["env"]["GH_TOKEN"] == _PUSH_TOKEN
+    assert "secrets.token" not in _WORKFLOW.read_text()
+
+
+def test_fails_fast_on_a_workflow_change_without_an_app_token():
+    step = _step("Check the push token can change workflows")
+    guard = _step_index("Check the push token can change workflows")
+
+    assert step["if"] == "steps.diff.outputs.changed == 'true' && steps.app.outputs.present != 'true'"
+    assert "git diff --name-only -- .github/workflows/" in step["run"]
+    assert "::error::" in step["run"]
+    assert "exit 1" in step["run"]
+    assert _step_index("Detect changes") < guard < _step_index("Commit the bump")
 
 
 def test_installs_gau_and_actionlint_with_this_repository_config_as_fallback():
@@ -144,7 +197,6 @@ def test_pr_mode_refreshes_one_branch_with_a_lease_and_opens_one_pull_request():
     step = _step("Open or refresh the pull request")
     script = step["run"]
 
-    assert step["env"]["GH_TOKEN"] == "${{ secrets.token || github.token }}"
     assert "--force-with-lease=" in script
     assert "--force " not in script
     assert "gh pr list --head" in script
@@ -169,6 +221,10 @@ def test_dogfood_calls_the_reusable_weekly_in_pr_mode():
     assert "concurrency" in dogfood
     assert job["uses"] == "./.github/workflows/reusable-actions-bump.yml"
     assert job["with"] == {"mode": "pr"}
+    assert job["secrets"] == {
+        "app-id": "${{ secrets.BOT_APP_ID }}",
+        "app-private-key": "${{ secrets.BOT_APP_PRIVATE_KEY }}",
+    }
     assert job["permissions"] == {"contents": "write", "pull-requests": "write"}
 
 

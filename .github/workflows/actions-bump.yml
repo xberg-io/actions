@@ -20,3 +20,6 @@ jobs:
     uses: ./.github/workflows/reusable-actions-bump.yml
     with:
       mode: pr
+    secrets:
+      app-id: ${{ secrets.BOT_APP_ID }}
+      app-private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}

@@ -28,11 +28,14 @@ on:
         type: string
         default: "ci: move actions to their latest major version"
     secrets:
-      token:
+      app-id:
         description: >-
-          Token to push and open the pull request with, in place of GITHUB_TOKEN. GitHub rejects a push from
-          GITHUB_TOKEN that changes a file under .github/workflows, so a bump that touches a workflow needs a
-          token with the workflows permission.
+          ID of a GitHub App with contents, pull-requests and workflows write on the caller. With app-private-key,
+          the job pushes and opens the pull request with an installation token of that app instead of GITHUB_TOKEN,
+          which GitHub refuses for a push that changes .github/workflows.
+        required: false
+      app-private-key:
+        description: "Private key of the app-id GitHub App."
         required: false
 
 permissions:
@@ -58,10 +61,40 @@ jobs:
             *) echo "::error::mode must be push or pr, got '$MODE'" >&2; exit 1 ;;
           esac
 
+      # ~keep A secret cannot appear in an `if:`, so this step turns its presence into an output.
+      - name: Check for an app token
+        id: app
+        env:
+          APP_ID: ${{ secrets.app-id }}
+          APP_PRIVATE_KEY: ${{ secrets.app-private-key }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "present=true" >>"$GITHUB_OUTPUT"
+          elif [ -n "$APP_ID" ] || [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "::error::pass both app-id and app-private-key, or neither" >&2
+            exit 1
+          else
+            echo "present=false" >>"$GITHUB_OUTPUT"
+            echo "No app-id secret: pushing with GITHUB_TOKEN, which cannot change .github/workflows."
+          fi
+
+      - name: Mint an app token
+        id: token
+        if: steps.app.outputs.present == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
-          token: ${{ secrets.token || github.token }}
+          token: ${{ steps.token.outputs.token || github.token }}
 
       # ~keep setup-mise installs a tool the caller's mise.toml does not declare from INSTALL_TOOLS_FALLBACK_ROOT,
       # ~keep a directory with its own mise.toml and mise.lock. A called workflow has no path to this repository's
@@ -132,6 +165,19 @@ jobs:
           fi
           actionlint "${workflows[@]}"
 
+      - name: Check the push token can change workflows
+        if: steps.diff.outputs.changed == 'true' && steps.app.outputs.present != 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t workflows < <(git diff --name-only -- .github/workflows/)
+          if [ "${#workflows[@]}" -gt 0 ]; then
+            printf '  %s\n' "${workflows[@]}"
+            echo "::error::the bump changes ${#workflows[@]} file(s) under .github/workflows, and GitHub rejects" \
+              "that push from GITHUB_TOKEN; pass the app-id and app-private-key secrets of a GitHub App with" \
+              "contents, pull-requests and workflows write" >&2
+            exit 1
+          fi
+
       - name: Commit the bump
         if: steps.diff.outputs.changed == 'true'
         env:
@@ -155,7 +201,7 @@ jobs:
           BRANCH: ci/actions-bump
           COMMIT_MESSAGE: ${{ inputs.commit-message }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ secrets.token || github.token }}
+          GH_TOKEN: ${{ steps.token.outputs.token || github.token }}
         run: |
           set -euo pipefail
           git fetch --depth=1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true

@@ -170,8 +170,12 @@ tag, through `gau --lint-pins` (gh-actions-updater 0.4.0 or newer in the caller'
 major tag goes in `allow_full` in `.gh-actions-updater.toml`.
 
 `reusable-actions-bump.yml` needs a caller that grants `contents: write` and `pull-requests: write` and owns the
-schedule. GitHub rejects a push from `GITHUB_TOKEN` that changes a file under `.github/workflows`, so pass a token
-with the workflows permission as the `token` secret. Pull requests opened with `GITHUB_TOKEN` trigger no workflows.
+schedule. GitHub rejects a push from `GITHUB_TOKEN` that changes a file under `.github/workflows`, so pass the
+`app-id` and `app-private-key` secrets of a GitHub App with contents, pull-requests and workflows write on the
+caller: the job mints an installation token scoped to the caller repository and checks out, pushes and opens the
+pull request with it. A pull request opened with the app token triggers the caller's CI; one opened with
+`GITHUB_TOKEN` triggers no workflow. Without the secrets the job uses `GITHUB_TOKEN` and fails before pushing when
+the bump changes a workflow.
 
 ```yaml
 on:
@@ -192,7 +196,8 @@ jobs:
     with:
       mode: pr
     secrets:
-      token: ${{ secrets.WORKFLOW_TOKEN }}
+      app-id: ${{ secrets.BOT_APP_ID }}
+      app-private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
 ```
 
 `reusable-ai-rulez-validation.yml` and `reusable-toolchain.yml` hold only the job. The caller keeps its triggers and
