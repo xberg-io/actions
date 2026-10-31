@@ -40,6 +40,14 @@ run = ["poly lint .", """poly fmt --check . \
     --exclude '/.ai-rulez/skills/release-workflow/index.md' \
     --exclude '/.ai-rulez/skills/testing-conventions/index.md'""", { task = "lint:bats" }]
 
+[tasks."lint:python"]
+description = "Lint and format-check Python with ruff"
+run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks."lint:actionlint"]
+description = "Lint GitHub Actions workflows with actionlint and its shellcheck integration"
+run = "actionlint"
+
 [tasks.typecheck]
 description = "Check Python types with Pyrefly"
 run = "uv run --frozen pyrefly check . --verbose --project-excludes 'tests/**' --project-excludes '**/tests/**'"
@@ -59,6 +67,10 @@ run = "uv run pytest tests/test_validate_ai_rulez.py -v"
 [tasks."test:unit"]
 description = "Run pytest unit tests"
 run = "uv run pytest -v"
+
+[tasks."test:php-extension-workspace"]
+description = "Test build-php-extension against an unpublished workspace dependency and a locked build"
+run = "uv run pytest tests/test_build_php_extension.py -k workspace_build -v"
 
 [tasks."test:bats"]
 description = "Run Bats tests for Bash action scripts"

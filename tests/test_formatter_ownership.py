@@ -114,7 +114,7 @@ def assert_pytest_tools(workflow):
     position, setup = setups[0]
     tools = shlex.split(setup["with"]["install-args"])
     assert {"python", "uv", "github:Goldziher/poly"}.issubset(tools)
-    runs = [index for index, step in enumerate(steps) if step.get("run") == "uv run pytest -v"]
+    runs = [index for index, step in enumerate(steps) if step.get("run") == "mise run test:unit"]
     assert len(runs) == 1
     assert position < runs[0]
     assert "if" not in setup

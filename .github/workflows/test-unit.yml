@@ -62,9 +62,6 @@ jobs:
         with:
           install-args: python uv github:Goldziher/poly
 
-      - name: Install dependencies
-        run: uv sync --group dev
-
       - uses: ./setup-ai-rulez
 
       # BEAM stays on its setup action until mise's Erlang and Elixir builds are evaluated. ~keep
@@ -77,7 +74,7 @@ jobs:
       # No explicit path: an argument overrides `testpaths`, which is how the per-action
       # tests/ directories went uncollected for so long.
       - name: Run tests
-        run: uv run pytest -v
+        run: mise run test:unit
 
   lint:
     runs-on: ubuntu-latest
@@ -86,14 +83,8 @@ jobs:
 
       - uses: ./setup-mise
 
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Ruff check
-        run: uv run ruff check .
-
-      - name: Ruff format check
-        run: uv run ruff format --check .
+      - name: Ruff
+        run: mise run lint:python
 
       - name: Pyrefly
         run: mise run typecheck
@@ -103,5 +94,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./setup-mise
+        with:
+          tools: actionlint shellcheck
+
       - name: Run actionlint
-        uses: rhysd/actionlint@v1.7.12
+        run: mise run lint:actionlint
