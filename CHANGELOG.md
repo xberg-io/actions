@@ -25,6 +25,9 @@ All notable changes to xberg-io/actions are documented in this file.
   default). A caller whose `mise.toml` does not declare gau or actionlint gets this repository's pins. Callers own
   the schedule and concurrency. A bump that changes a workflow file needs the `token` secret: GitHub rejects such a
   push from `GITHUB_TOKEN`.
+- `reusable-validate.yml` takes `lint-action-pins: true` to run `gau --lint-pins` over `.github` and each tracked
+  `action.yml` and `action.yaml`, honouring the caller's `.gh-actions-updater.toml`, and fails when it scans no
+  file. It needs gh-actions-updater 0.4.0 or newer in the caller's `mise.toml`.
 - `actions-bump.yml` runs the bump here weekly in `pr` mode, and `.gh-actions-updater.toml` lists the upstreams
   with no major tag in `allow_full`.
 

@@ -165,6 +165,10 @@ not step outputs: a composite action propagates only the outputs it declares, so
 `reusable-validate.yml` takes `check-toolchain: true` to run [`check-toolchain`](check-toolchain/README.md) before
 any setup step, failing on drift from the xberg-io/toolchains baseline named in `toolchains.toml`.
 
+`reusable-validate.yml` takes `lint-action-pins: true` to fail on any remote `uses:` ref that is not a bare major
+tag, through `gau --lint-pins` (gh-actions-updater 0.4.0 or newer in the caller's `mise.toml`). An upstream with no
+major tag goes in `allow_full` in `.gh-actions-updater.toml`.
+
 `reusable-actions-bump.yml` needs a caller that grants `contents: write` and `pull-requests: write` and owns the
 schedule. GitHub rejects a push from `GITHUB_TOKEN` that changes a file under `.github/workflows`, so pass a token
 with the workflows permission as the `token` secret. Pull requests opened with `GITHUB_TOKEN` trigger no workflows.

@@ -243,6 +243,15 @@ on:
         required: false
         type: boolean
         default: false
+      lint-action-pins:
+        description: >-
+          Run `gau --lint-pins` over .github and every tracked action.yml and action.yaml, failing on any remote
+          `uses:` ref that is not a bare major tag `@vN`. `allow_full` in .gh-actions-updater.toml permits a full
+          tag for an upstream with no major tag. The caller's mise.toml pins github:Goldziher/gh-actions-updater
+          0.4.0 or newer.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -275,6 +284,29 @@ jobs:
           [ "${checked:-0}" -gt 0 ] || { echo "::error::adrlint checked no ADR files"; exit 1; }
           adrlint format --check
           adrlint lock --check
+
+      - name: Set up gh-actions-updater
+        if: ${{ inputs.lint-action-pins }}
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          tools: github:Goldziher/gh-actions-updater
+
+      - name: Lint the action pins
+        if: ${{ inputs.lint-action-pins }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths=()
+          [ -d .github ] && paths+=(.github)
+          while IFS= read -r file; do
+            paths+=("$file")
+          done < <(git ls-files -- ':(glob)**/action.yml' ':(glob)**/action.yaml' ':(exclude,glob).github/**')
+          [ "${#paths[@]}" -gt 0 ] || { echo "::error::no .github directory or action.yml to lint" >&2; exit 1; }
+          status=0
+          gau --lint-pins "${paths[@]}" | tee "$RUNNER_TEMP/lint-pins.txt" || status=$?
+          scanned=$(sed -nE 's/.* across ([0-9]+) file\(s\)$/\1/p' "$RUNNER_TEMP/lint-pins.txt")
+          [ "${scanned:-0}" -gt 0 ] || { echo "::error::gau --lint-pins scanned no files" >&2; exit 1; }
+          exit "$status"
 
       - name: Set up Rust
         if: ${{ inputs.setup-rust }}

@@ -146,3 +146,33 @@ def test_toolchain_versions_default_to_the_callers_mise_config():
 
     for name in ("python-version", "java-version", "ruby-version", "zig-version"):
         assert inputs[name]["default"] == "", name
+
+
+def test_action_pin_lint_is_opt_in():
+    inputs = _workflow()[True]["workflow_call"]["inputs"]
+
+    assert inputs["lint-action-pins"]["type"] == "boolean"
+    assert inputs["lint-action-pins"]["default"] is False
+
+
+def test_action_pin_lint_installs_gau_then_lints_github_and_every_action_file():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    gated = [step for step in steps if "inputs.lint-action-pins" in str(step.get("if", ""))]
+
+    assert [step.get("uses") for step in gated] == ["xberg-io/actions/setup-mise@v1", None]
+    assert gated[0]["with"]["tools"] == "github:Goldziher/gh-actions-updater"
+    script = gated[1]["run"]
+    assert gated[1]["shell"] == "bash"
+    assert 'gau --lint-pins "${paths[@]}"' in script
+    assert "paths+=(.github)" in script
+    assert "':(glob)**/action.yml' ':(glob)**/action.yaml'" in script
+    assert "--config" not in script, "an explicit --config would skip the caller's .gh-actions-updater.toml"
+
+
+def test_action_pin_lint_fails_when_no_file_was_scanned():
+    steps = _workflow()["jobs"]["validate"]["steps"]
+    script = next(step["run"] for step in steps if step.get("name") == "Lint the action pins")
+
+    assert "across ([0-9]+) file" in script
+    assert '[ "${scanned:-0}" -gt 0 ]' in script
+    assert 'exit "$status"' in script
