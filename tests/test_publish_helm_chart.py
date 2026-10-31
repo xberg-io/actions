@@ -4,6 +4,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.mise_install_steps import assert_installs_through_mise
+
 _ROOT = Path(__file__).resolve().parents[1]
 _SCRIPT_PATH = _ROOT / "publish-helm-chart" / "scripts" / "publish.py"
 
@@ -167,7 +169,6 @@ def test_action_installs_helm_through_mise_before_publishing():
     helm_steps = [step for step in steps if "install-tools.sh" in str(step.get("run", ""))]
     assert len(helm_steps) == 1
     install = helm_steps[0]
-    assert install["run"].endswith('install-tools.sh" . "helm=$HELM_VERSION"')
     assert install["env"]["HELM_VERSION"] == "${{ inputs.helm-version }}"
-    assert install["env"]["INSTALL_TOOLS_FALLBACK_ROOT"] == "${{ github.action_path }}/.."
+    assert_installs_through_mise("publish-helm-chart", install, '"helm=$HELM_VERSION"')
     assert steps.index(install) < next(index for index, step in enumerate(steps) if step.get("id") == "publish")

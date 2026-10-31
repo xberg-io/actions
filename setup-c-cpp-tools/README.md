@@ -46,3 +46,4 @@ miss builds it from source on Linux:
 | `install-clang-format` | no       | `true`   | Install clang-format. Set to `false` to skip.                                   |
 | `install-cppcheck`     | no       | `true`   | Install cppcheck. Set to `false` to skip.                                       |
 | `install-shellcheck`   | no       | `true`   | Install shellcheck. Set to `false` to skip.                                     |
+| `working-directory`    | no       | `.`      | Directory whose mise config selects uv; else this repository's pinned uv.       |

@@ -35,6 +35,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `setup-mise/scripts/install-tools.sh` notices every `tool=version` install that no lock covers, not only when
   `MISE_LOCKED` is set, since that install skips checksum verification either way.
+- `publish-helm-chart`, `setup-c-cpp-tools`, `setup-ai-rulez` and `setup-rust` take a `working-directory` input
+  (default `.`): the directory whose `mise.toml` and `mise.lock` select the tools they install.
 - `publish-helm-chart` installs Helm through mise instead of `azure/setup-helm`. `helm-version` is matched
   against the caller's mise locks. Behavior change: an empty `helm-version` installs the caller's `mise.toml`
   helm, else this repository's pinned helm 4.3.1, instead of the latest release.

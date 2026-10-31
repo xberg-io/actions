@@ -318,7 +318,7 @@ def test_source_build_installs_the_go_its_go_mod_names_through_mise(tmp_path, go
     install = next(step for step in steps if step["name"] == "Install Go through mise for the source build")
     assert install["if"] == "inputs.source-revision != ''"
     assert install["env"]["GO_VERSION"] == "${{ steps.go.outputs.version }}"
-    assert install["run"].endswith('install-tools.sh" . "go=$GO_VERSION"')
+    assert install["run"].endswith('install-tools.sh" "$WORKING_DIRECTORY" "go=$GO_VERSION"')
     source = tmp_path / "source"
     source.mkdir()
     (source / "go.mod").write_text(go_mod)

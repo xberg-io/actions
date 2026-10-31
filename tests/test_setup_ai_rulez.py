@@ -2,6 +2,8 @@ from pathlib import Path
 
 import yaml
 
+from tests.mise_install_steps import WORKING_DIRECTORY, assert_installs_through_mise
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -12,11 +14,19 @@ def _steps() -> list[dict]:
 def test_action_installs_uv_through_mise_for_every_caller() -> None:
     steps = _steps()
     assert not [step for step in steps if str(step.get("uses", "")).startswith("astral-sh/setup-uv@")]
-    uv_steps = [step for step in steps if str(step.get("run", "")).endswith('install-tools.sh" . uv')]
+    uv_steps = [
+        step for step in steps if str(step.get("run", "")).endswith(" uv") and "install-tools.sh" in step["run"]
+    ]
     assert len(uv_steps) == 1
     install = uv_steps[0]
     assert "if" not in install
-    assert install["env"]["INSTALL_TOOLS_FALLBACK_ROOT"] == "${{ github.action_path }}/.."
+    assert_installs_through_mise("setup-ai-rulez", install, "uv")
+
+
+def test_source_build_go_installs_in_the_working_directory() -> None:
+    go = next(step for step in _steps() if 'install-tools.sh" ' in str(step.get("run", "")) and "go=" in step["run"])
+    assert go["run"].endswith('install-tools.sh" "$WORKING_DIRECTORY" "go=$GO_VERSION"')
+    assert go["env"]["WORKING_DIRECTORY"] == WORKING_DIRECTORY
 
 
 def test_mise_is_set_up_once_before_the_first_mise_install() -> None:

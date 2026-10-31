@@ -45,6 +45,11 @@ inputs:
     required: false
     default: "3.14.1"
 
+  working-directory:
+    description: Directory holding the mise.toml and mise.lock that select the tool versions this installs.
+    required: false
+    default: "."
+
 runs:
   using: composite
   steps:
@@ -66,15 +71,17 @@ runs:
       if: ${{ inputs.install-clang-format == 'true' && steps.mise.outputs.present != 'true' }}
       uses: xberg-io/actions/setup-mise@v1
       with:
+        working-directory: ${{ inputs.working-directory }}
         install: "false"
 
     - name: Install uv through mise
       if: ${{ inputs.install-clang-format == 'true' }}
       shell: bash
       env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
 
     - name: Install C/C++ tools (Linux)
       if: runner.os == 'Linux'

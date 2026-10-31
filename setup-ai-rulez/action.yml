@@ -9,6 +9,10 @@ inputs:
     description: Optional full 40-character Goldziher/ai-rulez commit SHA to build instead of installing a release.
     required: false
     default: ""
+  working-directory:
+    description: Directory holding the mise.toml and mise.lock that select the tool versions this installs.
+    required: false
+    default: "."
 runs:
   using: composite
   steps:
@@ -20,15 +24,17 @@ runs:
       if: steps.mise.outputs.present != 'true'
       uses: xberg-io/actions/setup-mise@v1
       with:
+        working-directory: ${{ inputs.working-directory }}
         install: "false"
     # ~keep A caller whose mise config declares no uv, or that has no mise config, gets the uv this repository's
     # ~keep mise.lock pins.
     - name: Install uv through mise
       shell: bash
       env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" uv
     - name: Warn on a deprecated AI-Rulez version
       if: inputs.ai-rulez-version != 'latest' && inputs.source-revision == ''
       shell: bash
@@ -86,9 +92,10 @@ runs:
       if: inputs.source-revision != ''
       shell: bash
       env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
         GO_VERSION: ${{ steps.go.outputs.version }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "go=$GO_VERSION"
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" "go=$GO_VERSION"
     # ~keep The module and build caches setup-go's cache-dependency-path kept, keyed on the source's go.sum.
     - name: Cache Go modules for the source build
       if: inputs.source-revision != ''
