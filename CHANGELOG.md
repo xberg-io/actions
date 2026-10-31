@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.42.0] - 2026-10-31
+
 ### Added
 
 - `reusable-pubdev-publish.yml` runs the pub.dev publish job copied across the org: a tag-ref guard, then the
@@ -32,16 +34,6 @@ All notable changes to xberg-io/actions are documented in this file.
 - `actions-bump.yml` runs the bump here weekly in `pr` mode with the `BOT_APP_ID` app, and `.gh-actions-updater.toml` lists the upstreams
   with no major tag in `allow_full`.
 
-### Fixed
-
-- Every composite reaches its own scripts through `$GITHUB_ACTION_PATH` instead of `${{ github.action_path }}`,
-  which expands to the runner host's path and is not mounted inside a `container:` job. The mise fallback root of
-  `setup-ai-rulez`, `setup-c-cpp-tools`, `setup-rust` and `publish-helm-chart` and `build-node-napi`'s Cargo adapter
-  path move from `env:` into the script for the same reason. A test fails on any composite step that uses the
-  expression.
-
-## [1.41.1] - 2026-10-31
-
 ### Changed
 
 - `setup-ai-rulez` builds a pinned `source-revision` with `mise-tasks/build.sh` when the source has it, and keeps the
@@ -49,12 +41,17 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Every composite reaches its own scripts through `$GITHUB_ACTION_PATH` instead of `${{ github.action_path }}`,
+  which expands to the runner host's path and is not mounted inside a `container:` job. The mise fallback root of
+  `setup-ai-rulez`, `setup-c-cpp-tools`, `setup-rust` and `publish-helm-chart` and `build-node-napi`'s Cargo adapter
+  path move from `env:` into the script for the same reason. A test fails on any composite step that uses the
+  expression.
 - This repository's own AI-Rulez and toolchain gates run the local composites again, so a change to them is tested
   by its own pull request; `test-reusable-governance.yml` calls the two reusables to prove their wiring.
 
 ### Tests
 
-- `test-setup-mise.yml` runs a locked Go install inside a `debian:bookworm` container on both Linux architectures.
+- `test-setup-mise.yml` runs a locked Go install inside a `debian:trixie` container on both Linux architectures.
 - The test workflows install Python, uv, Node and Ruby through `setup-mise`, build the pure-Rust fixtures on
   `setup-rust`, and run pytest, ruff and actionlint through mise tasks.
 
