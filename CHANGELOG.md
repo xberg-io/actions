@@ -9,6 +9,7 @@ All notable changes to xberg-io/actions are documented in this file.
 ### Fixed
 
 - Accept breaking-change markers in scoped and unscoped conventional PR titles.
+- Use the locked Actions UV pin when publishing Python artifacts without a source checkout.
 
 ## [1.42.0] - 2026-10-31
 
