@@ -8,10 +8,11 @@
 # version is matched against the active locks first, so "3.13" selects a locked 3.13.x and keeps the locked
 # install; a version no lock covers installs unlocked, with a notice.
 #
-# INSTALL_TOOLS_FALLBACK_ROOT, when set, is a directory whose mise.lock pins a tool without a version that the
-# config does not declare: the composites pass this repository's root, so such a tool installs the version this
-# repository locks, --locked against its lock, with a notice. A runner platform that lock does not cover installs
-# that pinned version unlocked.
+# INSTALL_TOOLS_FALLBACK_ROOT, when set, is a directory whose mise config selects a tool without a version that
+# the caller's config does not declare: the composites pass this repository's root, so such a tool installs the
+# one version this repository's mise.toml selects, --locked against its mise.lock, with a notice. The caller's
+# MISE_ENV and MISE_<TOOL>_VERSION do not apply there. A fallback version that lock lacks, or lacks for the runner's
+# platform, fails, as does a short name that matches more than one of its tools.
 set -euo pipefail
 
 if (($# < 2)); then
@@ -163,11 +164,6 @@ locked_versions() {
   done
 }
 
-lock_ids() {
-  tr -d '\r' <"$1" | awk '/^\[\[tools\./ { name = $0; sub(/^\[\[tools\./, "", name); sub(/\]\]$/, "", name)
-    gsub(/^"|"$/, "", name); print name }' | sort -u
-}
-
 # mise's name for this runner's platform, as lock files key their per-platform entries.
 runner_platform() {
   local os arch
@@ -191,19 +187,39 @@ lock_covers_platform() {
   tr -d '\r' <"$lock" | grep -Fxq -e "[tools.$id.\"platforms.$platform\"]" -e "[tools.\"$id\".\"platforms.$platform\"]"
 }
 
-# The fallback lock's id for a requested tool: the same id, or the one id with the same short name.
-fallback_id() {
-  local tool="$1" want id matches=()
+# Run a command in the fallback root with only its own config in effect: no caller profile or version override.
+fallback_run() {
+  local name unset_args=(-u MISE_ENV)
+  while IFS= read -r name; do
+    [[ "$name" == MISE_*_VERSION ]] && unset_args+=(-u "$name")
+  done < <(compgen -e)
+  (
+    cd "$fallback_root"
+    env "${unset_args[@]}" MISE_TRUSTED_CONFIG_PATHS="$(trusted_paths "$fallback_root")" "$@"
+  )
+}
+
+# "<id> <version>..." for the fallback config's tool a requested tool refers to: the same id, or the one tool
+# with the same short name. Prints nothing when it declares no such tool.
+fallback_pin() {
+  local tool="$1" want id versions matches=() ids=()
   want="$(short_name "$tool")"
-  while read -r id; do
+  while read -r id versions; do
+    [[ -n "$id" ]] || continue
     if [[ "$id" == "$tool" ]]; then
-      printf '%s' "$id"
+      printf '%s %s' "$id" "$versions"
       return 0
     fi
-    [[ "$(short_name "$id")" == "$want" ]] && matches+=("$id")
-  done < <(lock_ids "$fallback_lock")
-  ((${#matches[@]} == 1)) && printf '%s' "${matches[0]}"
-  return 0
+    if [[ "$(short_name "$id")" == "$want" ]]; then
+      matches+=("$id $versions")
+      ids+=("$id")
+    fi
+  done < <(tr -d '\r' <<<"$fallback_current")
+  if ((${#matches[@]} > 1)); then
+    echo "::error::$tool matches more than one tool in $fallback_root/mise.toml (${ids[*]}); request one by id" >&2
+    return 1
+  fi
+  printf '%s' "${matches[0]:-}"
 }
 
 # The newest locked version equal to the request or under it as a prefix ("3.13" -> "3.13.18").
@@ -224,6 +240,7 @@ if [[ -n "${INSTALL_TOOLS_FALLBACK_ROOT:-}" ]]; then
     echo "::error::INSTALL_TOOLS_FALLBACK_ROOT $fallback_root has no mise.lock" >&2
     exit 1
   fi
+  fallback_current="$(fallback_run mise current)"
 fi
 locked_specs=()
 unlocked_specs=()
@@ -240,18 +257,25 @@ for request in "$@"; do
   id="$(configured_id "$tool")"
 
   if [[ -z "$requested" && -z "$id" && -n "$fallback_lock" ]]; then
-    pinned_id="$(fallback_id "$tool")"
-    pinned="$([[ -z "$pinned_id" ]] || locked_versions "$pinned_id" "$fallback_lock" | sort -V | tail -n 1)"
-    if [[ -n "$pinned" ]]; then
-      echo "::notice::$tool is not declared in the mise config for $PWD, so it installs $pinned_id@$pinned," \
-        "the version $fallback_lock pins. Add it to mise.toml (then run mise lock) to choose its version."
-      if lock_covers_platform "$fallback_lock" "$pinned_id" "$(runner_platform)"; then
-        fallback_specs+=("$pinned_id@$pinned")
-      else
-        echo "::notice::$fallback_lock has no $(runner_platform) entry for $pinned_id," \
-          "so $pinned installs unlocked."
-        unlocked_specs+=("$pinned_id@$pinned")
+    pin="$(fallback_pin "$tool")"
+    if [[ -n "$pin" ]]; then
+      read -r pinned_id pinned extra <<<"$pin"
+      if [[ -z "$pinned" || -n "$extra" ]]; then
+        echo "::error::$pinned_id resolves to '${pinned:-} ${extra:-}' in $fallback_root, not one version" >&2
+        exit 1
       fi
+      if ! locked_versions "$pinned_id" "$fallback_lock" | grep -Fxq -- "$pinned"; then
+        echo "::error::$fallback_lock does not lock $pinned_id@$pinned; run mise lock in $fallback_root" >&2
+        exit 1
+      fi
+      if ! lock_covers_platform "$fallback_lock" "$pinned_id" "$(runner_platform)"; then
+        echo "::error::$fallback_lock has no $(runner_platform) entry for $pinned_id@$pinned; add the platform" \
+          "to lockfile_platforms and run mise lock, or declare $tool in the mise config for $PWD" >&2
+        exit 1
+      fi
+      echo "::notice::$tool is not declared in the mise config for $PWD, so it installs $pinned_id@$pinned," \
+        "the version $fallback_root/mise.toml selects. Add it to mise.toml (then run mise lock) to choose its version."
+      fallback_specs+=("$pinned_id@$pinned")
       continue
     fi
   fi
@@ -285,14 +309,9 @@ fi
 if ((${#unlocked_specs[@]})); then
   MISE_LOCKED=false caller_mise install "${unlocked_specs[@]}"
 fi
-# ~keep From the fallback root, so mise verifies the install against that lock; its config is this repository's,
-# ~keep trusted like the caller's, and the caller's profiles do not apply to it.
+# ~keep From the fallback root, so mise verifies the install against that lock.
 if ((${#fallback_specs[@]})); then
-  (
-    cd "$fallback_root"
-    env -u MISE_ENV MISE_LOCKED=1 MISE_TRUSTED_CONFIG_PATHS="$(trusted_paths "$fallback_root")" \
-      mise install "${fallback_specs[@]}"
-  )
+  fallback_run MISE_LOCKED=1 mise install "${fallback_specs[@]}"
 fi
 
 all_specs=(${locked_specs[@]+"${locked_specs[@]}"} ${unlocked_specs[@]+"${unlocked_specs[@]}"}

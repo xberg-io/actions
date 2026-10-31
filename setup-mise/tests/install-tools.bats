@@ -14,8 +14,12 @@ setup() {
 	# A stand-in mise: traces install calls with the MISE_LOCKED they ran under, and answers bin-paths and env
 	# from the spec. Its env output always carries a secret-looking [env] value the script must not export.
 	xberg_stub mise \
+		'if [ -n "${FALLBACK:-}" ] && [ "$PWD" = "$FALLBACK" ]; then' \
+		'  env | grep -E "^MISE_(ENV|[A-Z0-9_]+_VERSION)=" >>"$BATS_TEST_TMPDIR/fallback-env.log" || true' \
+		'fi' \
 		'case "$1" in' \
-		'current) printf "%s" "$STUB_CURRENT" ;;' \
+		'current) if [ -n "${FALLBACK:-}" ] && [ "$PWD" = "$FALLBACK" ]; then printf "%s" "$STUB_FALLBACK_CURRENT"' \
+		'  else printf "%s" "$STUB_CURRENT"; fi ;;' \
 		'install) shift; printf "%s from %s\n" "${MISE_TRUSTED_CONFIG_PATHS:-}" "$PWD" >>"$BATS_TEST_TMPDIR/trust.log"' \
 		'  printf "install MISE_LOCKED=%s %s%s\n" "${MISE_LOCKED:-}" "${MISE_ENV:+MISE_ENV=$MISE_ENV }" "$*" >>"$XBERG_TRACE" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2"; [ -z "${STUB_EXTRA_PATH:-}" ] || printf "%s\n" "$STUB_EXTRA_PATH" ;;' \
@@ -53,7 +57,8 @@ run_script() {
 	xberg_assert_github_path ""
 }
 
-# A fallback root holding a lock for helm on every platform mise locks here, and one for uv on none.
+# A fallback root whose config selects helm, cargo-llvm-cov and uv, locked on every platform for the first two and
+# on none for uv.
 write_fallback_root() {
 	FALLBACK="$BATS_TEST_TMPDIR/actions"
 	mkdir -p "$FALLBACK"
@@ -68,31 +73,71 @@ write_fallback_root() {
 		done
 		printf '%s\n' '[[tools.uv]]' 'version = "0.13.6"'
 	} >"$FALLBACK/mise.lock"
-	export FALLBACK
+	STUB_FALLBACK_CURRENT=$'helm 4.3.1\ngithub:taiki-e/cargo-llvm-cov 0.9.1\nuv 0.13.6\n'
+	export FALLBACK STUB_FALLBACK_CURRENT
 }
 
 @test "install_tools should_install_the_fallback_roots_locked_version_for_a_tool_the_config_does_not_declare" {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root
 
-	run_script MISE_ENV=ci INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm= cargo-llvm-cov
+	run_script MISE_ENV=ci MISE_HELM_VERSION=3.0.0 INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" \
+		helm= cargo-llvm-cov
 
 	xberg_assert_status 0
 	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so it installs helm@4.3.1"
 	xberg_assert_trace "install MISE_LOCKED=1 helm@4.3.1 github:taiki-e/cargo-llvm-cov@0.9.1"
 	xberg_assert_file "$BATS_TEST_TMPDIR/trust.log" "$FALLBACK from $FALLBACK"
+	xberg_assert_file "$BATS_TEST_TMPDIR/fallback-env.log" ""
 	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
 }
 
-@test "install_tools should_install_the_pinned_fallback_version_unlocked_where_its_lock_lacks_the_platform" {
+@test "install_tools should_fail_where_the_fallback_lock_lacks_the_runners_platform" {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root
 
 	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" uv
 
-	xberg_assert_status 0
-	xberg_assert_output_contains "entry for uv, so 0.13.6 installs unlocked."
-	xberg_assert_trace "install MISE_LOCKED=false uv@0.13.6"
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::$FALLBACK/mise.lock has no "
+	xberg_assert_output_contains " entry for uv@0.13.6"
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_fail_when_the_fallback_lock_lacks_the_version_its_config_selects" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	STUB_FALLBACK_CURRENT=$'helm 4.4.0\n'
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::$FALLBACK/mise.lock does not lock helm@4.4.0"
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_fail_when_the_fallback_config_selects_more_than_one_version" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	STUB_FALLBACK_CURRENT=$'helm 4.3.1 3.19.0\n'
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "not one version"
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_fail_when_a_short_name_matches_two_fallback_tools" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	STUB_FALLBACK_CURRENT=$'aqua:helm/helm 4.3.1\nasdf:helm 4.3.1\n'
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::helm matches more than one tool in $FALLBACK/mise.toml (aqua:helm/helm asdf:helm)"
+	xberg_assert_trace_empty
 }
 
 @test "install_tools should_prefer_the_configured_version_over_the_fallback_root" {
@@ -358,4 +403,32 @@ write_fallback_root() {
 	xberg_assert_output_contains "::error::The mise config in $REPO is not trusted, and a pull_request_target run"
 	xberg_assert_output_contains "Set MISE_TRUSTED_CONFIG_PATHS"
 	xberg_assert_trace_empty
+}
+
+@test "install_tools should_install_the_fallback_for_a_caller_directory_without_a_mise_config_through_real_mise" {
+	[[ -n "$REAL_MISE" ]] || skip "mise is not on PATH"
+	FALLBACK="$BATS_TEST_TMPDIR/actions"
+	mkdir -p "$FALLBACK"
+	printf '%s\n' '[tools]' 'shfmt = "3.10.0"' >"$FALLBACK/mise.toml"
+	{
+		printf '%s\n' '[[tools.shfmt]]' 'version = "3.10.0"' 'backend = "aqua:mvdan/sh"' ''
+		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64; do
+			printf '%s\n' "[tools.shfmt.\"platforms.$platform\"]" 'url = "https://example.invalid/shfmt"' ''
+		done
+	} >"$FALLBACK/mise.lock"
+	xberg_stub mise \
+		'case "$1" in' \
+		'current) exec "$REAL_MISE" "$@" ;;' \
+		'install) shift; printf "install MISE_LOCKED=%s %s from %s\n" "${MISE_LOCKED:-}" "$*" "$PWD" >>"$XBERG_TRACE" ;;' \
+		'bin-paths) printf "/installs/%s/bin\n" "$2" ;;' \
+		'*) exit 64 ;;' \
+		'esac'
+
+	run_script MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" MISE_CACHE_DIR="$BATS_TEST_TMPDIR/cache" \
+		MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml" \
+		INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" shfmt
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 shfmt@3.10.0 from $FALLBACK"
+	xberg_assert_github_path "/installs/shfmt@3.10.0/bin"
 }

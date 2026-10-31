@@ -15,10 +15,11 @@ All notable changes to xberg-io/actions are documented in this file.
   then `setup-mise` installing from the lock, on the `runner` input (default `ubuntu-latest`). Triggers and
   concurrency stay in the caller, as for `reusable-ai-rulez-validation.yml`.
 - `setup-mise/scripts/install-tools.sh` reads `INSTALL_TOOLS_FALLBACK_ROOT`: a tool without a version that the
-  caller's mise config does not declare installs the version that directory's `mise.lock` pins, `--locked`
-  against that lock, with a notice, instead of failing. The composites below pass this repository's root, whose
-  `mise.toml` follows the toolchains baseline and now also declares `helm` and `github:taiki-e/cargo-llvm-cov`.
-  A runner platform that lock does not cover installs the pinned version unlocked.
+  caller's mise config does not declare installs the one version that directory's `mise.toml` selects, without
+  the caller's `MISE_ENV` or `MISE_<TOOL>_VERSION`, `--locked` against its `mise.lock`, with a notice, instead of
+  failing. The composites below pass this repository's root, whose `mise.toml` follows the toolchains baseline and
+  now also declares `helm` and `github:taiki-e/cargo-llvm-cov`. A version that lock lacks, a runner platform it
+  does not cover, or a short name matching more than one of its tools fails with an error.
 
 ### Fixed
 

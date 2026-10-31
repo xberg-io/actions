@@ -65,8 +65,9 @@ versions first on `PATH` for later steps (with `JAVA_HOME` for Java):
 - `tool` installs the version the config selects: `mise.toml`, the active `MISE_ENV` profiles, or a
   `MISE_<TOOL>_VERSION` the job exports. A tool the config does not declare fails the step, unless
   `scripts/install-tools.sh` runs with `INSTALL_TOOLS_FALLBACK_ROOT` set: the composites pass this repository's
-  root, and the tool then installs the version this repository's `mise.lock` pins, `--locked` against it, with a
-  notice. A platform that lock does not cover installs that pinned version unlocked.
+  root, and the tool then installs the one version this repository's `mise.toml` selects (the caller's `MISE_ENV`
+  and `MISE_<TOOL>_VERSION` do not apply), `--locked` against its `mise.lock`, with a notice. A version that lock
+  lacks, a runner platform it does not cover, or a short name matching two of its tools fails the step.
 - `tool=version` is matched against `mise.lock` and the active profile locks first: `python=3.12` selects the
   newest locked `3.12.x` and installs with `--locked`. A version no lock covers installs unlocked with a notice;
   declare it in a profile such as `mise.ci.toml` and lock it to verify its checksums. A leading `v` and a
