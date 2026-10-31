@@ -73,7 +73,9 @@ runs:
       shell: bash
       env:
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
-      run: bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . uv
+      run: |
+        INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
+          bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" . uv
 
     - name: Publish to PyPI via trusted publishing
       id: upload

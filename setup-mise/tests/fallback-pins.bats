@@ -32,7 +32,7 @@ lock_platforms() {
 	run fallback_tools
 	xberg_assert_status 0
 	requests=("${lines[@]}")
-	((${#requests[@]} == 4)) || false
+	((${#requests[@]} == 5)) || false
 	tools=()
 	while IFS= read -r tool; do
 		tools+=("$tool")
