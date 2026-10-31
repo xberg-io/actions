@@ -92,6 +92,19 @@ write_fallback_root() {
 	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
 }
 
+@test "install_tools should_find_a_platform_entry_early_in_a_fallback_lock_larger_than_a_pipe_buffer" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	for index in $(seq 1 4000); do
+		printf '%s\n' "[[tools.\"github:example/padding-$index\"]]" 'version = "1.0.0"' ''
+	done >>"$FALLBACK/mise.lock"
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 helm@4.3.1"
+}
+
 @test "install_tools should_fail_where_the_fallback_lock_lacks_the_runners_platform" {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root

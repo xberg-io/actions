@@ -176,11 +176,14 @@ runner_platform() {
 
 # Whether <lock> has an entry for <id> on <platform>; mise quotes an id holding ':' or '/'.
 lock_covers_platform() {
-  local lock="$1" id="$2" platform="$3"
-  tr -d '\r' <"$lock" | grep -Fxq -e "[tools.$id.\"platforms.$platform\"]" -e "[tools.\"$id\".\"platforms.$platform\"]"
+  local lock="$1" id="$2" platform="$3" content
+  # ~keep Read whole, not piped into grep -q: grep exits at the first match, and pipefail would fail the pipeline.
+  content="$(tr -d '\r' <"$lock")"
+  grep -Fxq -e "[tools.$id.\"platforms.$platform\"]" -e "[tools.\"$id\".\"platforms.$platform\"]" <<<"$content"
 }
 
-# Run a command in the fallback root with only its own config in effect: no caller profile or version override.
+# Run a command in the fallback root with only its own config in effect: no caller profile or version override,
+# and no config from a directory above it.
 fallback_run() {
   local name unset_args=(-u MISE_ENV)
   while IFS= read -r name; do
@@ -188,7 +191,8 @@ fallback_run() {
   done < <(compgen -e)
   (
     cd "$fallback_root"
-    env "${unset_args[@]}" MISE_TRUSTED_CONFIG_PATHS="$(trusted_paths "$fallback_root")" "$@"
+    env "${unset_args[@]}" MISE_TRUSTED_CONFIG_PATHS="$(trusted_paths "$fallback_root")" \
+      MISE_CEILING_PATHS="$(native_path "$(dirname "$fallback_root")")" "$@"
   )
 }
 
@@ -257,7 +261,7 @@ for request in "$@"; do
         echo "::error::$pinned_id resolves to '${pinned:-} ${extra:-}' in $fallback_root, not one version" >&2
         exit 1
       fi
-      if ! locked_versions "$pinned_id" "$fallback_lock" | grep -Fxq -- "$pinned"; then
+      if ! grep -Fxq -- "$pinned" <<<"$(locked_versions "$pinned_id" "$fallback_lock")"; then
         echo "::error::$fallback_lock does not lock $pinned_id@$pinned; run mise lock in $fallback_root" >&2
         exit 1
       fi
