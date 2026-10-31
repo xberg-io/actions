@@ -35,6 +35,7 @@ jobs:
           php-version: "8.3"
           tools: none
 
+      # ~keep A bare toolchain isolates this build action from setup-rust's cache, sccache and RUSTFLAGS.
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
@@ -139,6 +140,7 @@ jobs:
       - uses: ./setup-mise
         with:
           tools: python uv
+      # ~keep A bare toolchain isolates this build action from setup-rust's cache, sccache and RUSTFLAGS.
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable

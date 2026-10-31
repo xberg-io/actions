@@ -130,6 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ~keep A bare toolchain isolates this publish action from setup-rust's cache, sccache and RUSTFLAGS.
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
