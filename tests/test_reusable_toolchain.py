@@ -64,3 +64,13 @@ def test_install_covers_the_whole_lock():
 
     for narrowing in ("install-args", "tools", "install"):
         assert narrowing not in install.get("with", {}), narrowing
+
+
+def test_own_ci_calls_the_local_reusable():
+    """This repository's own toolchain gate is the reusable's dogfood caller. ~keep"""
+    caller = yaml.safe_load((_WORKFLOW.parent / "toolchain.yml").read_text())
+    triggers = _triggers(caller)
+
+    assert caller["jobs"] == {"check-toolchain": {"uses": "./.github/workflows/reusable-toolchain.yml"}}
+    for event in ("push", "pull_request"):
+        assert ".github/workflows/reusable-toolchain.yml" in triggers[event]["paths"], event

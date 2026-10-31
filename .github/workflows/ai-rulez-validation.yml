@@ -16,6 +16,7 @@ on:
       - "package.json"
       - ".gitignore"
       - ".github/workflows/ai-rulez-validation.yml"
+      - ".github/workflows/reusable-ai-rulez-validation.yml"
       - "setup-ai-rulez/**"
       - "validate-ai-rulez/**"
       - "tests/test_validate_ai_rulez.py"
@@ -34,6 +35,7 @@ on:
       - "package.json"
       - ".gitignore"
       - ".github/workflows/ai-rulez-validation.yml"
+      - ".github/workflows/reusable-ai-rulez-validation.yml"
       - "setup-ai-rulez/**"
       - "validate-ai-rulez/**"
       - "tests/test_validate_ai_rulez.py"
@@ -41,13 +43,8 @@ permissions:
   contents: read
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./setup-ai-rulez
-      - uses: ./validate-ai-rulez
-      - uses: xberg-io/agent-conventions/actions/context-exposure@v1
-        with:
-          budgets: |
-            claude=4300
-            codex=4800
+    uses: ./.github/workflows/reusable-ai-rulez-validation.yml
+    with:
+      budgets: |
+        claude=4300
+        codex=4800

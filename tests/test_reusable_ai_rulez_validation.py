@@ -104,3 +104,18 @@ def test_mise_tools_install_only_when_requested_and_before_ai_rulez():
 def test_runner_defaults_to_github_hosted_ubuntu():
     assert _workflow()["jobs"]["validate"]["runs-on"] == "${{ inputs.runner }}"
     assert _inputs()["runner"]["default"] == "ubuntu-latest"
+
+
+def test_own_ci_calls_the_local_reusable_with_its_budgets():
+    """This repository's own governance gate is the reusable's dogfood caller. ~keep"""
+    caller = yaml.safe_load((_WORKFLOW.parent / "ai-rulez-validation.yml").read_text())
+    triggers = _triggers(caller)
+
+    assert caller["jobs"] == {
+        "validate": {
+            "uses": "./.github/workflows/reusable-ai-rulez-validation.yml",
+            "with": {"budgets": "claude=4300\ncodex=4800\n"},
+        }
+    }
+    for event in ("push", "pull_request"):
+        assert ".github/workflows/reusable-ai-rulez-validation.yml" in triggers[event]["paths"], event
