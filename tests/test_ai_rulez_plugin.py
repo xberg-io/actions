@@ -235,20 +235,28 @@ def test_source_setup_rejects_unpinned_revision(tmp_path):
     assert "full 40-character commit SHA" in result.stderr
 
 
-def test_source_build_installs_the_pinned_go_task_outside_path(tmp_path):
+_STUB_AI_RULEZ = (
+    "mkdir -p bin\nprintf '#!/bin/sh\\necho ai-rulez version 0.0.0\\n' >bin/ai-rulez\nchmod +x bin/ai-rulez\n"
+)
+
+
+def _source_build_step():
     action = yaml.safe_load((_ROOT / "setup-ai-rulez/action.yml").read_text())
     assert not [step for step in action["runs"]["steps"] if "install-task" in str(step.get("uses", ""))]
-    build = next(step for step in action["runs"]["steps"] if step["name"].startswith("Build pinned AI-Rulez"))
-    assert build["env"]["GO_TASK_MODULE"] == "github.com/go-task/task/v3/cmd/task@v3.54.0"
+    return next(step for step in action["runs"]["steps"] if step["name"].startswith("Build pinned AI-Rulez"))
+
+
+def _run_source_build(tmp_path, build_script=None):
+    build = _source_build_step()
     stubs, source, runner_temp = tmp_path / "stubs", tmp_path / "source", tmp_path / "runner"
     for directory in (stubs, source, runner_temp):
         directory.mkdir()
+    if build_script is not None:
+        (source / "mise-tasks").mkdir()
+        (source / "mise-tasks/build.sh").write_text(build_script)
     calls = tmp_path / "calls.log"
     task_stub = tmp_path / "task"
-    task_stub.write_text(
-        '#!/usr/bin/env bash\necho "task $*" >>"$CALLS"\nmkdir -p bin\n'
-        "printf '#!/bin/sh\\necho ai-rulez version 0.0.0\\n' >bin/ai-rulez\nchmod +x bin/ai-rulez\n"
-    )
+    task_stub.write_text('#!/usr/bin/env bash\necho "task $*" >>"$CALLS"\n' + _STUB_AI_RULEZ)
     go = stubs / "go"
     go.write_text(
         '#!/usr/bin/env bash\necho "go $* GOBIN=$GOBIN" >>"$CALLS"\ninstall -m 755 "$TASK_STUB" "$GOBIN/task"\n'
@@ -268,8 +276,32 @@ def test_source_build_installs_the_pinned_go_task_outside_path(tmp_path):
             "GO_TASK_MODULE": build["env"]["GO_TASK_MODULE"],
         },
     )
+    log = calls.read_text().splitlines() if calls.exists() else []
+    return result, log, source, runner_temp, github_path
+
+
+def test_source_build_runs_the_mise_build_script_without_go_task(tmp_path):
+    script = 'echo "build.sh $* in $PWD" >>"$CALLS"\n' + _STUB_AI_RULEZ
+    result, log, source, runner_temp, github_path = _run_source_build(tmp_path, script)
     assert result.returncode == 0, result.stderr
-    go_call, task_call = calls.read_text().splitlines()
+    assert log == [f"build.sh  in {source}"]
+    assert list(runner_temp.iterdir()) == []
+    assert "ai-rulez version 0.0.0" in result.stdout
+    assert github_path.read_text() == f"{source}/bin\n"
+
+
+def test_source_build_fails_when_the_mise_build_script_produces_no_binary(tmp_path):
+    result, log, _, _, github_path = _run_source_build(tmp_path, 'echo "build.sh" >>"$CALLS"\n')
+    assert result.returncode != 0
+    assert log == ["build.sh"]
+    assert not github_path.exists()
+
+
+def test_source_build_falls_back_to_the_pinned_go_task_outside_path(tmp_path):
+    assert _source_build_step()["env"]["GO_TASK_MODULE"] == "github.com/go-task/task/v3/cmd/task@v3.54.0"
+    result, log, source, runner_temp, github_path = _run_source_build(tmp_path)
+    assert result.returncode == 0, result.stderr
+    go_call, task_call = log
     assert go_call.startswith("go install github.com/go-task/task/v3/cmd/task@v3.54.0 GOBIN=" + str(runner_temp))
     assert task_call == "task build"
     assert "ai-rulez version 0.0.0" in result.stdout
