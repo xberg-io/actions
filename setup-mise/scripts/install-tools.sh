@@ -23,11 +23,11 @@ shift
 cd "$working_directory"
 
 # Variables mise sets for an active tool that other build tools read: Maven and Gradle find the JDK by
-# JAVA_HOME. Only the requested tools' variables are exported. ~keep
+# JAVA_HOME. Only the requested tools' variables are exported. Go's are not: go finds its root from its own path,
+# and a GOBIN inside mise's install would send every later `go install` there, which setup-go never did. ~keep
 tool_variables() {
   case "$(short_name "$1")" in
   java) printf '%s\n' JAVA_HOME ;;
-  go) printf '%s\n' GOROOT GOBIN ;;
   esac
 }
 

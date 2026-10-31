@@ -54,7 +54,7 @@ inline `run` tasks execute under the same POSIX shell as on Linux and macOS inst
 ## Selected tools
 
 `tools` installs only the tools it names, for jobs and actions that need a few of them, and puts the selected
-versions first on `PATH` for later steps (with `JAVA_HOME` for Java and `GOROOT`/`GOBIN` for Go):
+versions first on `PATH` for later steps (with `JAVA_HOME` for Java):
 
 ```yaml
 - uses: xberg-io/actions/setup-mise@v1

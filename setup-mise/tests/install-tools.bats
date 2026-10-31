@@ -276,6 +276,16 @@ write_fallback_root() {
 	[[ "$output" != *"do-not-export"* ]]
 }
 
+@test "install_tools should_not_export_gobin_or_goroot_for_go" {
+	STUB_CURRENT=$'go 1.27.3\n'
+
+	run_script "$SCRIPT" "$REPO" go=1.27
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=false go@1.27"
+	[[ ! -s "$GITHUB_ENV" ]]
+}
+
 @test "install_tools should_require_at_least_one_tool" {
 	run_script "$SCRIPT" "$REPO"
 

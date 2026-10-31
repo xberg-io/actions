@@ -20,6 +20,11 @@ All notable changes to xberg-io/actions are documented in this file.
   `mise.toml` follows the toolchains baseline and now also declares `helm` and `github:taiki-e/cargo-llvm-cov`.
   A runner platform that lock does not cover (macos-x64) installs the pinned version unlocked.
 
+### Fixed
+
+- `setup-mise/scripts/install-tools.sh` no longer exports `GOROOT` and `GOBIN` for Go. A `GOBIN` inside mise's Go
+  install sent every later `go install` there; go finds its root from its own path, as it did under setup-go.
+
 ### Changed
 
 - `publish-helm-chart` installs Helm through mise instead of `azure/setup-helm`. `helm-version` is matched
