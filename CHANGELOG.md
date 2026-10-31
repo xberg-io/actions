@@ -4,6 +4,21 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-pubdev-publish.yml` runs the pub.dev publish job copied across the org: a tag-ref guard, then the
+  package from an artifact (`artifact-name`, optionally from another run with `run-id`) or from a git checkout of
+  `ref`, then `publish-pub` over OIDC. A downloaded package must hold `pubspec.yaml`, and with
+  `require-native-libraries` a native library. `expected-version` defaults to the tag, so a stale pubspec fails
+  instead of skipping as already published. The caller grants `contents: read`, `id-token: write` and
+  `actions: read`.
+- `reusable-plugin-release.yml` runs the plugin artifact job copied across the org: `setup-ai-rulez`, the public
+  skill check, `package-ai-rulez-plugin`, a deterministic `<product>-plugins-<tag>.tar.gz` with its checksum, and
+  `upload-release-assets`. The tag is required; `ref`, `product` (default the repository name), the version sync and
+  public skill scripts, the config directory, the Cursor marketplace, `clobber` and an optional `provenance-script`
+  bundled as `source-provenance.json` are inputs. The caller grants `contents: write` and keeps its triggers and
+  concurrency.
+
 ### Fixed
 
 - Every composite reaches its own scripts through `$GITHUB_ACTION_PATH` instead of `${{ github.action_path }}`,

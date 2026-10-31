@@ -1,0 +1,129 @@
+name: Plugin release artifacts (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Existing release tag to package and attach the plugin artifacts to."
+        required: true
+        type: string
+      ref:
+        description: >-
+          Commit or ref to package. Empty packages the tag. When provenance-script is set this is the source
+          commit it verifies against the tag.
+        required: false
+        type: string
+        default: ""
+      product:
+        description: "Archive name prefix, `<product>-plugins-<tag>.tar.gz`. Empty uses the repository name."
+        required: false
+        type: string
+        default: ""
+      version-sync-script:
+        description: "Plugin version sync script supporting a read-only --check flag."
+        required: false
+        type: string
+        default: "scripts/sync_plugin_version.py"
+      public-skills-check-script:
+        description: "Public skill export script supporting --check. Empty skips the check."
+        required: false
+        type: string
+        default: "scripts/sync_public_skills.py"
+      config-directory:
+        description: "Plugin authoring configuration directory."
+        required: false
+        type: string
+        default: ".ai-rulez"
+      cursor-marketplace:
+        description: "Also export a Cursor team marketplace."
+        required: false
+        type: boolean
+        default: true
+      provenance-script:
+        description: >-
+          Script, read from the caller's workflow commit, run in the release checkout as
+          `python3 <script> <tag> <ref>`. Its stdout is bundled as source-provenance.json. Empty skips it.
+        required: false
+        type: string
+        default: ""
+      clobber:
+        description: "Overwrite release assets that already exist."
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package plugin artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || inputs.tag }}
+          fetch-depth: 0
+
+      # ~keep The script comes from the caller's workflow commit, not the source it verifies, and is written
+      # ~keep outside the workspace so the release checkout stays clean.
+      - name: Verify the release source provenance
+        if: ${{ inputs.provenance-script != '' }}
+        env:
+          PLUGIN_TAG: ${{ inputs.tag }}
+          SOURCE_REF: ${{ inputs.ref }}
+          PROVENANCE_SCRIPT: ${{ inputs.provenance-script }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "$WORKFLOW_SHA^{commit}" 2>/dev/null \
+            || git fetch --no-tags --depth=1 origin "$WORKFLOW_SHA"
+          git show "$WORKFLOW_SHA:$PROVENANCE_SCRIPT" > "$RUNNER_TEMP/verify-provenance.py"
+          python3 "$RUNNER_TEMP/verify-provenance.py" "$PLUGIN_TAG" "$SOURCE_REF" \
+            > "$RUNNER_TEMP/plugin-source-provenance.json"
+          cat "$RUNNER_TEMP/plugin-source-provenance.json"
+
+      # ~keep ai-rulez runs at its latest release, never a mise pin (org ADR-0015).
+      - name: Install ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@v1
+
+      - name: Verify public skill exports
+        if: ${{ inputs.public-skills-check-script != '' }}
+        env:
+          SCRIPT: ${{ inputs.public-skills-check-script }}
+        run: python3 "$SCRIPT" --check
+
+      - name: Package all supported plugin runtimes
+        uses: xberg-io/actions/package-ai-rulez-plugin@v1
+        with:
+          cursor-marketplace: ${{ inputs.cursor-marketplace }}
+          tag: ${{ inputs.tag }}
+          config-directory: ${{ inputs.config-directory }}
+          version-sync-script: ${{ inputs.version-sync-script }}
+
+      - name: Archive verified runtime bundles and marketplace indexes
+        shell: bash
+        env:
+          PLUGIN_TAG: ${{ inputs.tag }}
+          PLUGIN_PRODUCT: ${{ inputs.product || github.event.repository.name }}
+          WITH_PROVENANCE: ${{ inputs.provenance-script != '' }}
+        run: |
+          set -euo pipefail
+          test -n "$PLUGIN_TAG"
+          test -n "$PLUGIN_PRODUCT"
+          if [[ "$WITH_PROVENANCE" == "true" ]]; then
+            cp "$RUNNER_TEMP/plugin-source-provenance.json" dist/plugin/source-provenance.json
+          fi
+          bundle="dist/${PLUGIN_PRODUCT}-plugins-${PLUGIN_TAG//\//-}.tar.gz"
+          tar --sort=name --mtime="@$(git show -s --format=%ct HEAD)" \
+            --owner=0 --group=0 --numeric-owner -cf - -C dist/plugin . | gzip -n > "$bundle"
+          (cd dist && sha256sum "$(basename "$bundle")") > "$bundle.sha256"
+
+      - name: Attach verified plugin archive and metadata
+        uses: xberg-io/actions/upload-release-assets@v1
+        with:
+          tag: ${{ inputs.tag }}
+          clobber: ${{ inputs.clobber }}
+          assets: |
+            dist/*-plugins-*.tar.gz
+            dist/*-plugins-*.tar.gz.sha256

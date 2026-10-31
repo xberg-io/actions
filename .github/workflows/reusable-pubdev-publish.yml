@@ -1,0 +1,121 @@
+name: Publish pub.dev (Reusable)
+
+# ~keep pub.dev OIDC trusted publishing accepts only a token from a `push` or `workflow_dispatch` run on a
+# ~keep 'tag' refType, so the caller runs on a tag push or is dispatched with `--ref <tag>`. A called workflow's
+# ~keep token carries the caller's repository, event and ref, so pub.dev sees the caller's run.
+on:
+  workflow_call:
+    inputs:
+      package-dir:
+        description: "Directory holding pubspec.yaml, relative to the workspace."
+        required: false
+        type: string
+        default: "packages/dart"
+      artifact-name:
+        description: >-
+          Artifact holding the assembled package, downloaded into package-dir. Empty checks out the
+          repository instead and publishes package-dir from git.
+        required: false
+        type: string
+        default: ""
+      run-id:
+        description: "Run that uploaded artifact-name. Empty downloads from the current run."
+        required: false
+        type: string
+        default: ""
+      ref:
+        description: "Ref to check out when artifact-name is empty. Empty uses the dispatched tag."
+        required: false
+        type: string
+        default: ""
+      expected-version:
+        description: >-
+          Release version the pubspec.yaml version must equal (a leading `v` and a `-dryrun-<sha>` suffix are
+          stripped). Empty uses the dispatched tag.
+        required: false
+        type: string
+        default: ""
+      require-native-libraries:
+        description: "Fail unless the downloaded package bundles a .so, .dylib or .dll under lib/src/native."
+        required: false
+        type: boolean
+        default: false
+      dry-run:
+        description: "Run `dart pub publish --dry-run` instead of publishing."
+        required: false
+        type: boolean
+        default: false
+      timeout-minutes:
+        description: "Job timeout."
+        required: false
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  publish-pub:
+    name: Publish pub.dev
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      # ~keep Fail fast: pub.dev refuses a 'branch' refType token, but only after the package is built.
+      - name: Require a tag ref
+        if: ${{ github.ref_type != 'tag' }}
+        env:
+          REF: ${{ github.ref }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          echo "::error::Run this on a release tag (gh workflow run <workflow> --ref <tag>). pub.dev's OIDC gate only accepts a 'tag' refType; got ref_type='$REF_TYPE' ref='$REF'." >&2
+          exit 1
+
+      - name: Check out the package source
+        if: ${{ inputs.artifact-name == '' }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref_name }}
+          submodules: recursive
+
+      - name: Download the package from the current run
+        if: ${{ inputs.artifact-name != '' && inputs.run-id == '' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.package-dir }}
+
+      - name: Download the package from another run
+        if: ${{ inputs.artifact-name != '' && inputs.run-id != '' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.package-dir }}
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ~keep download-artifact does not fail on an empty artifact, and an empty package-dir makes
+      # ~keep `dart pub publish` fail with an opaque error.
+      - name: Verify the downloaded package
+        if: ${{ inputs.artifact-name != '' }}
+        env:
+          PACKAGE_DIR: ${{ inputs.package-dir }}
+          ARTIFACT: ${{ inputs.artifact-name }}
+          REQUIRE_NATIVES: ${{ inputs.require-native-libraries }}
+        run: |
+          set -euo pipefail
+          test -f "$PACKAGE_DIR/pubspec.yaml" \
+            || { echo "::error::$PACKAGE_DIR/pubspec.yaml missing; artifact '$ARTIFACT' is empty or wrong."; exit 1; }
+          if [[ "$REQUIRE_NATIVES" == "true" ]] && ! find "$PACKAGE_DIR/lib/src/native" -type f \
+              \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' \) -print -quit 2>/dev/null | grep -q .; then
+            echo "::error::no native libraries under $PACKAGE_DIR/lib/src/native; refusing to publish a Dart package that cannot load."
+            exit 1
+          fi
+
+      - name: Publish to pub.dev
+        uses: xberg-io/actions/publish-pub@v1
+        with:
+          package-dir: ${{ inputs.package-dir }}
+          expected-version: ${{ inputs.expected-version || github.ref_name }}
+          dry-run: ${{ inputs.dry-run }}
