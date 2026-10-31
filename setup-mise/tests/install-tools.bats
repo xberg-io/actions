@@ -2,6 +2,8 @@
 
 setup() {
 	bats_load_library xberg-bats
+	REAL_MISE="$(command -v mise || true)"
+	export REAL_MISE
 	xberg_setup
 	REPO="$BATS_TEST_TMPDIR/repo"
 	mkdir -p "$REPO"
@@ -279,4 +281,29 @@ write_fallback_root() {
 
 	xberg_assert_status 2
 	xberg_assert_trace_empty
+}
+
+# ~keep The stub's `mise current` is an assumption about mise; this one asks the real binary, in isolated data and
+# ~keep cache directories so the declared tool is certainly not installed, and stubs only install and bin-paths.
+@test "install_tools should_resolve_a_declared_locked_uninstalled_tool_through_real_mise_current" {
+	[[ -n "$REAL_MISE" ]] || skip "mise is not on PATH"
+	printf '%s\n' '[tools]' 'shfmt = "3.10.0"' >"$REPO/mise.toml"
+	printf '%s\n' '[[tools.shfmt]]' 'version = "3.10.0"' 'backend = "aqua:mvdan/sh"' >"$REPO/mise.lock"
+	xberg_stub mise \
+		'case "$1" in' \
+		'current | trust) exec "$REAL_MISE" "$@" ;;' \
+		'install) shift; printf "install MISE_LOCKED=%s %s\n" "${MISE_LOCKED:-}" "$*" >>"$XBERG_TRACE" ;;' \
+		'bin-paths) printf "/installs/%s/bin\n" "$2" ;;' \
+		'*) exit 64 ;;' \
+		'esac'
+
+	run_script MISE_LOCKED=1 MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" \
+		MISE_CACHE_DIR="$BATS_TEST_TMPDIR/cache" MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" \
+		MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml" "$SCRIPT" "$REPO" shfmt shfmt=3.10
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 shfmt shfmt@3.10.0"
+	[[ "$output" != *"is not declared"* ]]
+	[[ "$output" != *"::notice::"* ]]
+	[[ ! -d "$BATS_TEST_TMPDIR/data/installs/shfmt" ]]
 }
