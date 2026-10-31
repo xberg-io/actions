@@ -177,8 +177,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          yq --version | tee /dev/stderr | grep -q "4.53.6"
-          jq --version | tee /dev/stderr | grep -q "1.8.2"
+          yq_version="$(yq --version)"
+          printf '%s\n' "$yq_version" >&2
+          grep -q "4.53.6" <<<"$yq_version"
+          jq_version="$(jq --version)"
+          printf '%s\n' "$jq_version" >&2
+          grep -q "1.8.2" <<<"$jq_version"
           [[ "${MISE_LOCKED:-}" == "1" ]]
 
       - name: Setup mise with a tool the config does not declare

@@ -52,8 +52,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --version | tee /dev/stderr | grep -qx "v$(mise current node | cut -d' ' -f1)"
-          pnpm --version | tee /dev/stderr | grep -qx "$(mise current pnpm)"
+          node_version="$(node --version)"
+          printf '%s\n' "$node_version" >&2
+          grep -qx "v$(mise current node | cut -d' ' -f1)" <<<"$node_version"
+          pnpm_version="$(pnpm --version)"
+          printf '%s\n' "$pnpm_version" >&2
+          grep -qx "$(mise current pnpm)" <<<"$pnpm_version"
           # shellcheck disable=SC2016 # the .npmrc holds the literal variable reference
           grep -qxF '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' "$NPM_CONFIG_USERCONFIG"
           grep -qxF 'registry=https://registry.npmjs.org/' "$NPM_CONFIG_USERCONFIG"
