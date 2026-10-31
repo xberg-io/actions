@@ -27,7 +27,8 @@ run_script() {
 
 	xberg_assert_status 0
 	[[ "$output" != *"npm_secret-token"* ]]
-	! grep -q "npm_secret-token" "$RUNNER_TEMP/.npmrc"
+	run grep -q "npm_secret-token" "$RUNNER_TEMP/.npmrc"
+	xberg_assert_status 1
 	xberg_assert_github_env "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc"
 }
 
