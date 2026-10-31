@@ -15,6 +15,8 @@ actionlint = "1.7.12"
 bats = "1.14.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
+helm = "4.3.1"
+"github:taiki-e/cargo-llvm-cov" = "0.9.1"
 
 [tasks.default]
 description = "Show available tasks"

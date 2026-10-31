@@ -29,7 +29,7 @@ inputs:
   helm-version:
     description: >-
       Helm version to install through mise (e.g. v3.16.0), matched against the caller's mise locks. Empty uses
-      the version the caller's mise.toml selects, or the latest release when it declares no helm.
+      the version the caller's mise.toml selects, or the helm this repository's mise.lock pins when it declares none.
     required: false
     default: ""
   dry-run:
@@ -62,12 +62,12 @@ runs:
       with:
         install: "false"
 
-    # ~keep A caller without helm in mise.toml gets the latest release, as azure/setup-helm installed before.
+    # ~keep A caller without helm in mise.toml gets the helm this repository's mise.lock pins.
     - name: Install Helm through mise
       shell: bash
       env:
         HELM_VERSION: ${{ inputs.helm-version }}
-        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
       run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "helm=$HELM_VERSION"
 

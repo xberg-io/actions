@@ -21,12 +21,12 @@ runs:
       uses: xberg-io/actions/setup-mise@v1
       with:
         install: "false"
-    # ~keep A caller whose mise config declares no uv, or that has no mise config, gets the latest release, as
-    # ~keep astral-sh/setup-uv installed before.
+    # ~keep A caller whose mise config declares no uv, or that has no mise config, gets the uv this repository's
+    # ~keep mise.lock pins.
     - name: Install uv through mise
       shell: bash
       env:
-        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
       run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
     - name: Warn on a deprecated AI-Rulez version

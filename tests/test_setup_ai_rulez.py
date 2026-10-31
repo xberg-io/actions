@@ -16,7 +16,7 @@ def test_action_installs_uv_through_mise_for_every_caller() -> None:
     assert len(uv_steps) == 1
     install = uv_steps[0]
     assert "if" not in install
-    assert install["env"]["INSTALL_TOOLS_UNDECLARED_VERSION"] == "latest"
+    assert install["env"]["INSTALL_TOOLS_FALLBACK_ROOT"] == "${{ github.action_path }}/.."
 
 
 def test_mise_is_set_up_once_before_the_first_mise_install() -> None:

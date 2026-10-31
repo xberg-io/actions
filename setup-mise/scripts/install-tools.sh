@@ -8,8 +8,10 @@
 # version is matched against the active locks first, so "3.13" selects a locked 3.13.x and keeps the locked
 # install; a version no lock covers installs unlocked, with a notice.
 #
-# INSTALL_TOOLS_UNDECLARED_VERSION, when set, is the version a tool without one installs when the config does
-# not declare it, e.g. "latest" for a composite that installed the newest release before it moved to mise.
+# INSTALL_TOOLS_FALLBACK_ROOT, when set, is a directory whose mise.lock pins a tool without a version that the
+# config does not declare: the composites pass this repository's root, so such a tool installs the version this
+# repository locks, --locked against its lock, with a notice. A runner platform that lock does not cover installs
+# that pinned version unlocked.
 set -euo pipefail
 
 if (($# < 2)); then
@@ -89,9 +91,12 @@ for profile in ${profiles[@]+"${profiles[@]}"}; do
   [[ -n "$profile" ]] && lockfiles+=("mise.${profile}.lock")
 done
 
+# The versions <id> has in each lock file named after it, or in the active locks when none is named.
 locked_versions() {
   local id="$1" lockfile
-  for lockfile in "${lockfiles[@]}"; do
+  shift
+  (($#)) || set -- "${lockfiles[@]}"
+  for lockfile in "$@"; do
     [[ -f "$lockfile" ]] || continue
     # A lock checked out with CRLF line endings would otherwise match no tool header. ~keep
     tr -d '\r' <"$lockfile" | awk -v id="$id" '
@@ -115,6 +120,49 @@ locked_versions() {
   done
 }
 
+lock_ids() {
+  tr -d '\r' <"$1" | awk '/^\[\[tools\./ { name = $0; sub(/^\[\[tools\./, "", name); sub(/\]\]$/, "", name)
+    gsub(/^"|"$/, "", name); print name }' | sort -u
+}
+
+# mise's name for this runner's platform, as lock files key their per-platform entries.
+runner_platform() {
+  local os arch
+  case "$(uname -s)" in
+  Linux) os=linux ;;
+  Darwin) os=macos ;;
+  MINGW* | MSYS* | CYGWIN*) os=windows ;;
+  *) os="$(uname -s)" ;;
+  esac
+  case "$(uname -m)" in
+  x86_64 | amd64) arch=x64 ;;
+  aarch64 | arm64) arch=arm64 ;;
+  *) arch="$(uname -m)" ;;
+  esac
+  printf '%s-%s' "$os" "$arch"
+}
+
+# Whether <lock> has an entry for <id> on <platform>; mise quotes an id holding ':' or '/'.
+lock_covers_platform() {
+  local lock="$1" id="$2" platform="$3"
+  tr -d '\r' <"$lock" | grep -Fxq -e "[tools.$id.\"platforms.$platform\"]" -e "[tools.\"$id\".\"platforms.$platform\"]"
+}
+
+# The fallback lock's id for a requested tool: the same id, or the one id with the same short name.
+fallback_id() {
+  local tool="$1" want id matches=()
+  want="$(short_name "$tool")"
+  while read -r id; do
+    if [[ "$id" == "$tool" ]]; then
+      printf '%s' "$id"
+      return 0
+    fi
+    [[ "$(short_name "$id")" == "$want" ]] && matches+=("$id")
+  done < <(lock_ids "$fallback_lock")
+  ((${#matches[@]} == 1)) && printf '%s' "${matches[0]}"
+  return 0
+}
+
 # The newest locked version equal to the request or under it as a prefix ("3.13" -> "3.13.18").
 locked_match() {
   local id="$1" requested="$2" version
@@ -125,9 +173,18 @@ locked_match() {
   done | sort -V | tail -n 1
 }
 
-undeclared_version="$(normalize_version "${INSTALL_TOOLS_UNDECLARED_VERSION:-}")"
+fallback_lock=""
+if [[ -n "${INSTALL_TOOLS_FALLBACK_ROOT:-}" ]]; then
+  fallback_root="$(cd "$INSTALL_TOOLS_FALLBACK_ROOT" && pwd)"
+  fallback_lock="$fallback_root/mise.lock"
+  if [[ ! -f "$fallback_lock" ]]; then
+    echo "::error::INSTALL_TOOLS_FALLBACK_ROOT $fallback_root has no mise.lock" >&2
+    exit 1
+  fi
+fi
 locked_specs=()
 unlocked_specs=()
+fallback_specs=()
 for request in "$@"; do
   tool="${request%%=*}"
   requested=""
@@ -139,10 +196,21 @@ for request in "$@"; do
   requested="$(normalize_version "$requested")"
   id="$(configured_id "$tool")"
 
-  if [[ -z "$requested" && -z "$id" && -n "$undeclared_version" ]]; then
-    echo "::notice::$tool is not declared in the mise config for $PWD, so $tool@$undeclared_version installs." \
-      "Add it to mise.toml (then run mise lock) to pin it."
-    requested="$undeclared_version"
+  if [[ -z "$requested" && -z "$id" && -n "$fallback_lock" ]]; then
+    pinned_id="$(fallback_id "$tool")"
+    pinned="$([[ -z "$pinned_id" ]] || locked_versions "$pinned_id" "$fallback_lock" | sort -V | tail -n 1)"
+    if [[ -n "$pinned" ]]; then
+      echo "::notice::$tool is not declared in the mise config for $PWD, so it installs $pinned_id@$pinned," \
+        "the version $fallback_lock pins. Add it to mise.toml (then run mise lock) to choose its version."
+      if lock_covers_platform "$fallback_lock" "$pinned_id" "$(runner_platform)"; then
+        fallback_specs+=("$pinned_id@$pinned")
+      else
+        echo "::notice::$fallback_lock has no $(runner_platform) entry for $pinned_id," \
+          "so $pinned installs unlocked."
+        unlocked_specs+=("$pinned_id@$pinned")
+      fi
+      continue
+    fi
   fi
 
   if [[ -z "$requested" ]]; then
@@ -174,8 +242,18 @@ fi
 if ((${#unlocked_specs[@]})); then
   MISE_LOCKED=false mise install "${unlocked_specs[@]}"
 fi
+# ~keep From the fallback root, so mise verifies the install against that lock; its config is this repository's,
+# ~keep trusted like the caller's, and the caller's profiles do not apply to it.
+if ((${#fallback_specs[@]})); then
+  (
+    cd "$fallback_root"
+    mise trust --quiet "$fallback_root"
+    env -u MISE_ENV MISE_LOCKED=1 mise install "${fallback_specs[@]}"
+  )
+fi
 
-all_specs=(${locked_specs[@]+"${locked_specs[@]}"} ${unlocked_specs[@]+"${unlocked_specs[@]}"})
+all_specs=(${locked_specs[@]+"${locked_specs[@]}"} ${unlocked_specs[@]+"${unlocked_specs[@]}"}
+  ${fallback_specs[@]+"${fallback_specs[@]}"})
 paths=()
 for spec in "${all_specs[@]}"; do
   spec_paths=()

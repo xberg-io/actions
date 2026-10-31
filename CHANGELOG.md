@@ -14,22 +14,23 @@ All notable changes to xberg-io/actions are documented in this file.
 - `reusable-toolchain.yml` runs the Toolchain job copied across the org: `check-toolchain` against the baseline,
   then `setup-mise` installing from the lock, on the `runner` input (default `ubuntu-latest`). Triggers and
   concurrency stay in the caller, as for `reusable-ai-rulez-validation.yml`.
-- `setup-mise/scripts/install-tools.sh` reads `INSTALL_TOOLS_UNDECLARED_VERSION`: a tool without a version that
-  the caller's mise config does not declare installs that version (e.g. `latest`) unlocked, with a notice,
-  instead of failing. Composites that installed the newest release before moving to mise use it to stay
-  compatible with callers that do not declare the tool.
+- `setup-mise/scripts/install-tools.sh` reads `INSTALL_TOOLS_FALLBACK_ROOT`: a tool without a version that the
+  caller's mise config does not declare installs the version that directory's `mise.lock` pins, `--locked`
+  against that lock, with a notice, instead of failing. The composites below pass this repository's root, whose
+  `mise.toml` follows the toolchains baseline and now also declares `helm` and `github:taiki-e/cargo-llvm-cov`.
+  A runner platform that lock does not cover (macos-x64) installs the pinned version unlocked.
 
 ### Changed
 
 - `publish-helm-chart` installs Helm through mise instead of `azure/setup-helm`. `helm-version` is matched
-  against the caller's mise locks; empty uses the caller's `mise.toml` and, when it declares no `helm`, the
-  latest release as before.
-- `setup-c-cpp-tools` installs uv (for the clang-format wheel) through mise instead of `astral-sh/setup-uv`:
-  the caller's `mise.toml` version, or the latest release when it declares no `uv`.
-- `setup-ai-rulez` installs uv through mise instead of `astral-sh/setup-uv`, with the same fallback to the latest
-  release for a caller whose mise config declares no `uv` or that has no mise config.
+  against the caller's mise locks. Behavior change: an empty `helm-version` installs the caller's `mise.toml`
+  helm, else this repository's pinned helm 4.3.1, instead of the latest release.
+- `setup-c-cpp-tools` installs uv (for the clang-format wheel) through mise instead of `astral-sh/setup-uv`: the
+  caller's `mise.toml` uv, else this repository's pinned uv 0.13.6, instead of the latest release.
+- `setup-ai-rulez` installs uv through mise instead of `astral-sh/setup-uv`, with the same fallback to the pinned
+  uv 0.13.6 for a caller whose mise config declares no `uv` or that has no mise config.
 - `setup-rust` installs cargo-llvm-cov through mise instead of `taiki-e/install-action`: the caller's
-  `mise.toml` version, or the latest release when it declares no cargo-llvm-cov.
+  `mise.toml` version, else this repository's pinned cargo-llvm-cov 0.9.1, instead of the latest release.
 
 ## [1.40.0] - 2026-10-31
 

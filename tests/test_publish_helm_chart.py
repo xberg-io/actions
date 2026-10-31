@@ -169,5 +169,5 @@ def test_action_installs_helm_through_mise_before_publishing():
     install = helm_steps[0]
     assert install["run"].endswith('install-tools.sh" . "helm=$HELM_VERSION"')
     assert install["env"]["HELM_VERSION"] == "${{ inputs.helm-version }}"
-    assert install["env"]["INSTALL_TOOLS_UNDECLARED_VERSION"] == "latest"
+    assert install["env"]["INSTALL_TOOLS_FALLBACK_ROOT"] == "${{ github.action_path }}/.."
     assert steps.index(install) < next(index for index, step in enumerate(steps) if step.get("id") == "publish")

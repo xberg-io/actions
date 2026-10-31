@@ -14,7 +14,8 @@ setup() {
 	xberg_stub mise \
 		'case "$1" in' \
 		'current) printf "%s" "$STUB_CURRENT" ;;' \
-		'install) shift; printf "install MISE_LOCKED=%s %s\n" "${MISE_LOCKED:-}" "$*" >>"$XBERG_TRACE" ;;' \
+		'install) shift; printf "install MISE_LOCKED=%s %s%s\n" "${MISE_LOCKED:-}" "${MISE_ENV:+MISE_ENV=$MISE_ENV }" "$*" >>"$XBERG_TRACE" ;;' \
+		'trust) shift; printf "trust %s from %s\n" "$*" "$PWD" >>"$XBERG_TRACE" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2"; [ -z "${STUB_EXTRA_PATH:-}" ] || printf "%s\n" "$STUB_EXTRA_PATH" ;;' \
 		'env) shift 2; echo "API_TOKEN=do-not-export"' \
 		'  for spec in "$@"; do' \
@@ -50,35 +51,90 @@ run_script() {
 	xberg_assert_github_path ""
 }
 
-@test "install_tools should_install_the_undeclared_version_unlocked_for_a_tool_the_config_does_not_declare" {
-	STUB_CURRENT=$'python 3.13.18\n'
-
-	run_script MISE_LOCKED=1 INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm=
-
-	xberg_assert_status 0
-	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so helm@latest installs."
-	xberg_assert_trace "install MISE_LOCKED=false helm@latest"
-	xberg_assert_github_path "/installs/helm@latest/bin"
+# A fallback root holding a lock for helm on every platform mise locks here, and one for uv on none.
+write_fallback_root() {
+	FALLBACK="$BATS_TEST_TMPDIR/actions"
+	mkdir -p "$FALLBACK"
+	{
+		printf '%s\n' '[[tools.helm]]' 'version = "4.3.1"' 'backend = "aqua:helm/helm"' ''
+		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64; do
+			printf '%s\n' "[tools.helm.\"platforms.$platform\"]" 'url = "https://example.invalid/helm"' ''
+		done
+		printf '%s\n' '[[tools."github:taiki-e/cargo-llvm-cov"]]' 'version = "0.9.1"' ''
+		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64; do
+			printf '%s\n' "[tools.\"github:taiki-e/cargo-llvm-cov\".\"platforms.$platform\"]" 'url = "https://example.invalid/c"' ''
+		done
+		printf '%s\n' '[[tools.uv]]' 'version = "0.13.6"'
+	} >"$FALLBACK/mise.lock"
+	export FALLBACK
 }
 
-@test "install_tools should_prefer_the_configured_version_over_the_undeclared_version" {
-	STUB_CURRENT=$'aqua:helm/helm 4.3.1\n'
+@test "install_tools should_install_the_fallback_roots_locked_version_for_a_tool_the_config_does_not_declare" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
 
-	run_script MISE_LOCKED=1 INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm
+	run_script MISE_ENV=ci INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm= cargo-llvm-cov
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so it installs helm@4.3.1"
+	xberg_assert_trace "trust --quiet $FALLBACK from $FALLBACK" \
+		"install MISE_LOCKED=1 helm@4.3.1 github:taiki-e/cargo-llvm-cov@0.9.1"
+	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
+}
+
+@test "install_tools should_install_the_pinned_fallback_version_unlocked_where_its_lock_lacks_the_platform" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" uv
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "entry for uv, so 0.13.6 installs unlocked."
+	xberg_assert_trace "install MISE_LOCKED=false uv@0.13.6"
+}
+
+@test "install_tools should_prefer_the_configured_version_over_the_fallback_root" {
+	STUB_CURRENT=$'aqua:helm/helm 3.19.0\n'
+	write_fallback_root
+
+	run_script MISE_LOCKED=1 INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 aqua:helm/helm"
 	[[ "$output" != *"::notice::"* ]]
 }
 
-@test "install_tools should_prefer_a_passed_version_over_the_undeclared_version" {
+@test "install_tools should_prefer_a_passed_version_over_the_fallback_root" {
 	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
 
-	run_script INSTALL_TOOLS_UNDECLARED_VERSION=latest "$SCRIPT" "$REPO" helm=v3.16.0
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm=v3.16.0
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=false helm@3.16.0"
 	[[ "$output" != *"is not declared"* ]]
+}
+
+@test "install_tools should_fail_for_a_tool_neither_the_config_nor_the_fallback_root_declares" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" pnpm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::pnpm is not declared in the mise config for $REPO"
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_fail_when_the_fallback_root_has_no_lock" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	mkdir -p "$BATS_TEST_TMPDIR/nolock"
+
+	run_script INSTALL_TOOLS_FALLBACK_ROOT="$BATS_TEST_TMPDIR/nolock" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "has no mise.lock"
+	xberg_assert_trace_empty
 }
 
 @test "install_tools should_select_the_newest_locked_version_under_a_requested_prefix" {
@@ -145,7 +201,7 @@ run_script() {
 	run_script MISE_LOCKED=1 MISE_ENV=ci "$SCRIPT" "$REPO" python=3.11
 
 	xberg_assert_status 0
-	xberg_assert_trace "install MISE_LOCKED=1 python@3.11.18"
+	xberg_assert_trace "install MISE_LOCKED=1 MISE_ENV=ci python@3.11.18"
 }
 
 @test "install_tools should_resolve_a_short_name_to_the_backend_id_the_config_declares" {

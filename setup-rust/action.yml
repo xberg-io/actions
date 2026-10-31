@@ -243,12 +243,12 @@ runs:
         install: "false"
 
     # ~keep install-llvm-cov defaults to true for every caller, and not every caller's mise.toml declares
-    # ~keep cargo-llvm-cov: those get the latest release, as taiki-e/install-action installed before.
+    # ~keep cargo-llvm-cov: those get the version this repository's mise.toml declares and mise.lock pins.
     - name: Install cargo-llvm-cov through mise
       if: inputs.install-llvm-cov == 'true'
       shell: bash
       env:
-        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
       run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . github:taiki-e/cargo-llvm-cov
 

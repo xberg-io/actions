@@ -55,7 +55,7 @@ runs:
     # separately run setup-python — an undeclared dependency that took xberg-enterprise's
     # Validate down at "Set up clang-format". uv builds the venv itself and fetches its own
     # interpreter when none is suitable, so the install no longer depends on the caller. It comes
-    # from the caller's mise.toml, or is the latest release when that declares no uv.
+    # from the caller's mise.toml, or is the one this repository's mise.lock pins when that declares no uv.
     - name: Check for mise
       id: mise
       if: ${{ inputs.install-clang-format == 'true' }}
@@ -72,7 +72,7 @@ runs:
       if: ${{ inputs.install-clang-format == 'true' }}
       shell: bash
       env:
-        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.action_path }}/..
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
       run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
 

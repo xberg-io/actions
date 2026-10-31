@@ -13,6 +13,6 @@ def test_action_installs_uv_through_mise_before_clang_format() -> None:
     install = uv_steps[0]
     assert install["if"] == "${{ inputs.install-clang-format == 'true' }}"
     assert install["run"].endswith('install-tools.sh" . uv')
-    assert install["env"]["INSTALL_TOOLS_UNDECLARED_VERSION"] == "latest"
+    assert install["env"]["INSTALL_TOOLS_FALLBACK_ROOT"] == "${{ github.action_path }}/.."
     first_install = next(index for index, step in enumerate(steps) if "scripts/linux.sh" in str(step.get("run", "")))
     assert steps.index(install) < first_install
