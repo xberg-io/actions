@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.41.0] - 2026-10-31
+
 ### Added
 
 - `reusable-ai-rulez-validation.yml` runs the AI-Rulez validation job copied across the org: `setup-ai-rulez`,
@@ -53,6 +55,10 @@ All notable changes to xberg-io/actions are documented in this file.
   uv 0.13.6 for a caller whose mise config declares no `uv` or that has no mise config.
 - `setup-rust` installs cargo-llvm-cov through mise instead of `taiki-e/install-action`: the caller's
   `mise.toml` version, else this repository's pinned cargo-llvm-cov 0.9.1, instead of the latest release.
+
+### Fixed
+
+- Give the manual Ruby fixture a discoverable Cargo workspace and register its gem build task.
 
 ## [1.40.0] - 2026-10-31
 
@@ -123,7 +129,6 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
-- Give the manual Ruby fixture a discoverable Cargo workspace and register its gem build task.
 - Reset the Pester rejection step after its five expected child failures, and lock Intel macOS tools for Chromium CI.
 - Provision the pinned Poly formatter in the Python unit-test jobs so the formatting ownership contract runs in CI.
 - Keep Windows tool-version CI checks independent of `/dev/stderr`, preserving mismatched-version failures.
