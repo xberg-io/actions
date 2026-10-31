@@ -5,11 +5,11 @@ requires = ["hatchling"]
 [project]
 maintainers = [
   { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
-  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+  { name = "Tobias Perelstein", email = "tobias@xberg.io" },
 ]
 authors = [
   { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
-  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+  { name = "Tobias Perelstein", email = "tobias@xberg.io" },
 ]
 name = "xberg-actions"
 version = "0.0.0"
