@@ -26,6 +26,8 @@ All notable changes to xberg-io/actions are documented in this file.
   latest release as before.
 - `setup-c-cpp-tools` installs uv (for the clang-format wheel) through mise instead of `astral-sh/setup-uv`:
   the caller's `mise.toml` version, or the latest release when it declares no `uv`.
+- `setup-ai-rulez` installs uv through mise instead of `astral-sh/setup-uv`, with the same fallback to the latest
+  release for a caller whose mise config declares no `uv` or that has no mise config.
 
 ## [1.40.0] - 2026-10-31
 

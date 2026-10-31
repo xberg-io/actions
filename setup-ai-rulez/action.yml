@@ -12,10 +12,23 @@ inputs:
 runs:
   using: composite
   steps:
-    # uv stays on setup-uv, not mise: callers without a mise config, such as xberg-enterprise, run this
-    # action. ~keep
-    - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.3
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install: "false"
+    # ~keep A caller whose mise config declares no uv, or that has no mise config, gets the latest release, as
+    # ~keep astral-sh/setup-uv installed before.
+    - name: Install uv through mise
+      shell: bash
+      env:
+        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . uv
     - name: Warn on a deprecated AI-Rulez version
       if: inputs.ai-rulez-version != 'latest' && inputs.source-revision == ''
       shell: bash
@@ -69,16 +82,6 @@ runs:
         go_sum="$SOURCE_DIRECTORY/go.sum"
         digest="$( (sha256sum "$go_sum" 2>/dev/null || shasum -a 256 "$go_sum") | cut -d' ' -f1)"
         echo "go-sum=$digest" >> "$GITHUB_OUTPUT"
-    - name: Check for mise
-      id: mise
-      if: inputs.source-revision != ''
-      shell: bash
-      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
-    - name: Set up mise
-      if: inputs.source-revision != '' && steps.mise.outputs.present != 'true'
-      uses: xberg-io/actions/setup-mise@v1
-      with:
-        install: "false"
     - name: Install Go through mise for the source build
       if: inputs.source-revision != ''
       shell: bash
