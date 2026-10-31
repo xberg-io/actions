@@ -84,6 +84,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Give the manual Ruby fixture a discoverable Cargo workspace and register its gem build task.
 - Reset the Pester rejection step after its five expected child failures, and lock Intel macOS tools for Chromium CI.
 - Provision the pinned Poly formatter in the Python unit-test jobs so the formatting ownership contract runs in CI.
 - Keep Windows tool-version CI checks independent of `/dev/stderr`, preserving mismatched-version failures.

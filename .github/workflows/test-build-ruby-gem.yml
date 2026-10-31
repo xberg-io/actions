@@ -43,6 +43,7 @@ jobs:
           end
           RB
           cat >packages/ruby/Rakefile <<'RB'
+          require "bundler/gem_tasks"
           require "rake/extensiontask"
           require "rb_sys/extensiontask"
           GEMSPEC = Gem::Specification.load("fixture_magnus.gemspec")
@@ -55,6 +56,11 @@ jobs:
           require "rb_sys/mkmf"
           create_rust_makefile("fixture_magnus/fixture_magnus")
           RB
+          cat >packages/ruby/Cargo.toml <<'TOML'
+          [workspace]
+          members = ["ext/fixture_magnus"]
+          resolver = "2"
+          TOML
           cat >packages/ruby/ext/fixture_magnus/Cargo.toml <<'TOML'
           [package]
           name = "fixture_magnus"
