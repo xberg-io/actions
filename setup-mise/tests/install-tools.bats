@@ -336,13 +336,16 @@ write_fallback_root() {
 }
 
 @test "install_tools should_not_export_gobin_or_goroot_for_go" {
-	STUB_CURRENT=$'go 1.27.3\n'
+	STUB_CURRENT=$'go 1.27.3\njava temurin-25.0.5+8.0.LTS\n'
 
-	run_script "$SCRIPT" "$REPO" go=1.27
+	run_script "$SCRIPT" "$REPO" go=1.27 java=temurin-25
 
 	xberg_assert_status 0
-	xberg_assert_trace "install MISE_LOCKED=false go@1.27"
-	[[ ! -s "$GITHUB_ENV" ]]
+	xberg_assert_trace "install MISE_LOCKED=false go@1.27 java@temurin-25"
+	[[ -f "$GITHUB_ENV" ]]
+	xberg_assert_github_env "JAVA_HOME=/jdk/java@temurin-25"
+	run grep -E '^(GOROOT|GOBIN)=' "$GITHUB_ENV"
+	xberg_assert_status 1
 }
 
 @test "install_tools should_require_at_least_one_tool" {
