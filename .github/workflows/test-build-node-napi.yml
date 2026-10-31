@@ -202,3 +202,92 @@ jobs:
             exit 1
           fi
           echo "guard rejected the combination as expected"
+
+  gnu-arm:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup warning-denied Rust ARM build
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: "1.99.1"
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install managed ARM acceptance tools
+        uses: ./setup-mise
+        with:
+          install-args: node pnpm python zig github:rust-cross/cargo-zigbuild
+
+      - name: Stage GNU ARM NAPI fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          mkdir -p packages/gnu-arm/src .cargo
+          cat >pnpm-workspace.yaml <<'YAML'
+          packages:
+            - "packages/*"
+          YAML
+          cat >package.json <<'JSON'
+          {"private":true,"packageManager":"pnpm@12.15.0"}
+          JSON
+          cat >packages/gnu-arm/Cargo.toml <<'TOML'
+          [package]
+          name = "fixture-arm"
+          version = "0.0.1"
+          edition = "2021"
+          publish = false
+          [lib]
+          crate-type = ["cdylib"]
+          [dependencies]
+          napi = { version = "2", default-features = false, features = ["napi4"] }
+          napi-derive = "2"
+          [build-dependencies]
+          napi-build = "2"
+          TOML
+          cat >packages/gnu-arm/build.rs <<'RS'
+          fn main() { napi_build::setup(); }
+          RS
+          cat >packages/gnu-arm/src/lib.rs <<'RS'
+          use napi_derive::napi;
+          #[napi]
+          pub fn add(a: i32, b: i32) -> i32 { a + b }
+          RS
+          cat >packages/gnu-arm/package.json <<'JSON'
+          {
+            "name":"fixture-arm",
+            "version":"0.0.1",
+            "main":"index.js",
+            "napi":{
+              "binaryName":"fixture-arm",
+              "targets":["aarch64-unknown-linux-gnu","x86_64-unknown-linux-gnu"]
+            },
+            "devDependencies":{"@napi-rs/cli":"3.10.9"}
+          }
+          JSON
+          cat >.cargo/config.toml <<'TOML'
+          [build]
+          warnings = "deny"
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          TOML
+          cargo generate-lockfile --manifest-path packages/gnu-arm/Cargo.toml
+
+      - name: Build GNU ARM via the public cross-link path
+        uses: ./build-node-napi
+        with:
+          crate-dir: packages/gnu-arm
+          target: aarch64-unknown-linux-gnu
+          use-napi-cross: "true"
+
+      - name: Verify ARM ELF, glibc floor and actual Node API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build-node-napi/scripts/verify-gnu-arm.py \
+            packages/gnu-arm/npm/linux-arm64-gnu/fixture-arm.linux-arm64-gnu.node
