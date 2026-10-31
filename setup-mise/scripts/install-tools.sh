@@ -231,7 +231,7 @@ locked_match() {
 
 fallback_lock=""
 if [[ -n "${INSTALL_TOOLS_FALLBACK_ROOT:-}" ]]; then
-  fallback_root="$(cd "$INSTALL_TOOLS_FALLBACK_ROOT" && pwd)"
+  fallback_root="$(cd "$INSTALL_TOOLS_FALLBACK_ROOT" && pwd -P)"
   fallback_lock="$fallback_root/mise.lock"
   if [[ ! -f "$fallback_lock" ]]; then
     echo "::error::INSTALL_TOOLS_FALLBACK_ROOT $fallback_root has no mise.lock" >&2

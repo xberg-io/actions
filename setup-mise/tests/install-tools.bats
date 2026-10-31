@@ -60,8 +60,9 @@ run_script() {
 # A fallback root whose config selects helm, cargo-llvm-cov and uv, locked on every platform for the first two and
 # on none for uv.
 write_fallback_root() {
-	FALLBACK="$BATS_TEST_TMPDIR/actions"
-	mkdir -p "$FALLBACK"
+	mkdir -p "$BATS_TEST_TMPDIR/actions"
+	# The script resolves the root physically; macOS's temporary directory sits behind a symlink.
+	FALLBACK="$(cd "$BATS_TEST_TMPDIR/actions" && pwd -P)"
 	{
 		printf '%s\n' '[[tools.helm]]' 'version = "4.3.1"' 'backend = "aqua:helm/helm"' ''
 		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64; do
@@ -420,8 +421,10 @@ write_fallback_root() {
 
 @test "install_tools should_install_the_fallback_for_a_caller_directory_without_a_mise_config_through_real_mise" {
 	[[ -n "$REAL_MISE" ]] || skip "mise is not on PATH"
-	FALLBACK="$BATS_TEST_TMPDIR/actions"
-	mkdir -p "$FALLBACK"
+	mkdir -p "$BATS_TEST_TMPDIR/polyrepo/actions"
+	FALLBACK="$(cd "$BATS_TEST_TMPDIR/polyrepo/actions" && pwd -P)"
+	# An untrusted config above the fallback root, as a polyrepo root's is, must not be read.
+	printf '%s\n' '[env]' 'PARENT_VALUE = "set"' '[tools]' 'shfmt = "3.9.0"' >"$BATS_TEST_TMPDIR/polyrepo/mise.toml"
 	printf '%s\n' '[tools]' 'shfmt = "3.10.0"' >"$FALLBACK/mise.toml"
 	{
 		printf '%s\n' '[[tools.shfmt]]' 'version = "3.10.0"' 'backend = "aqua:mvdan/sh"' ''
@@ -439,7 +442,7 @@ write_fallback_root() {
 
 	run_script MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" MISE_CACHE_DIR="$BATS_TEST_TMPDIR/cache" \
 		MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml" \
-		INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" shfmt
+		INSTALL_TOOLS_FALLBACK_ROOT="$BATS_TEST_TMPDIR/polyrepo/actions" "$SCRIPT" "$REPO" shfmt
 
 	xberg_assert_status 0
 	xberg_assert_trace "install MISE_LOCKED=1 shfmt@3.10.0 from $FALLBACK"
