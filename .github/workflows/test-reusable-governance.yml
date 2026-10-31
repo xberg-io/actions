@@ -1,13 +1,16 @@
 name: Test reusable governance workflows
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - ".ai-rulez/**"
       - ".github/workflows/reusable-ai-rulez-validation.yml"
       - ".github/workflows/reusable-toolchain.yml"
       - ".github/workflows/test-reusable-governance.yml"
   pull_request:
     paths:
+      - ".ai-rulez/**"
       - ".github/workflows/reusable-ai-rulez-validation.yml"
       - ".github/workflows/reusable-toolchain.yml"
       - ".github/workflows/test-reusable-governance.yml"
