@@ -23,7 +23,10 @@ inputs:
     required: false
     default: ""
   use-napi-cross:
-    description: Pass `--use-napi-cross` to napi build for cross-compilation (only used when `target` is set).
+    description: >-
+      Cross-compile Linux GNU targets with a glibc 2.17 floor. ARM64 uses the caller's
+      mise-pinned Zig and cargo-zigbuild; other targets use napi's prebuilt GCC toolchain.
+      Only used when `target` is set.
     required: false
     default: "false"
   cross-compile:
@@ -105,11 +108,18 @@ runs:
         set -euo pipefail
         ${{ inputs.build-command }}
 
+    - name: Install managed GNU ARM cross-link tools
+      if: inputs.use-napi-cross == 'true' && inputs.target == 'aarch64-unknown-linux-gnu' && inputs.cross-compile != 'true'
+      uses: xberg-io/actions/setup-mise@v1
+      with:
+        install-args: zig github:rust-cross/cargo-zigbuild
+
     - name: Build NAPI-RS bindings (target)
       if: inputs.target != ''
       shell: bash
       working-directory: ${{ inputs.crate-dir }}
       env:
+        ACTION_PATH: ${{ github.action_path }}
         TARGET: ${{ inputs.target }}
         USE_NAPI_CROSS: ${{ inputs.use-napi-cross }}
         CROSS_COMPILE: ${{ inputs.cross-compile }}
@@ -145,13 +155,31 @@ runs:
         if [ "${RELEASE}" = "true" ]; then
           napi_args+=(--release)
         fi
+        managed_arm=false
         if [ "${USE_NAPI_CROSS}" = "true" ]; then
-          napi_args+=(--use-napi-cross)
+          if [ "${TARGET}" = "aarch64-unknown-linux-gnu" ]; then
+            managed_arm=true
+            for tool in zig cargo-zigbuild; do
+              command -v "${tool}" >/dev/null 2>&1 || {
+                echo "::error::build-node-napi: managed GNU ARM cross-linking requires ${tool}."
+                exit 1
+              }
+            done
+            napi_args+=(-x)
+          else
+            napi_args+=(--use-napi-cross)
+          fi
         fi
         if [ "${CROSS_COMPILE}" = "true" ]; then
           napi_args+=(-x)
         fi
-        pnpm exec "${napi_args[@]}"
+        if [ "${managed_arm}" = "true" ]; then
+          # Keep NAPI's platform name canonical; only the Cargo adapter selects glibc 2.17. ~keep
+          XBERG_NAPI_REAL_CARGO="$(command -v "${CARGO:-cargo}")" \
+            CARGO="${ACTION_PATH}/scripts/cargo-gnu17.cjs" pnpm exec "${napi_args[@]}"
+        else
+          pnpm exec "${napi_args[@]}"
+        fi
         if [ "${COLLECT_ARTIFACTS}" = "true" ]; then
           # `napi artifacts` validates against EVERY target listed in package.json's
           # `napi.targets` and aborts with "Missing artifacts for configured targets"

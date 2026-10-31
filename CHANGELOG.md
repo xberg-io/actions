@@ -71,6 +71,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `build-node-napi` uses managed Zig linking for GNU ARM64 with glibc 2.17, avoiding the obsolete GCC linker
+  metadata failure on Rust 1.99 while preserving warning denial and canonical npm platform names (#116).
 - `build-swift-artifactbundle` requests only static archives for Apple targets, avoiding an unused dylib link
   that conflicts with generated Swift callback allowances while retaining warning gates and callback symbols (#115).
 - `build-swift-artifactbundle` removes inherited macOS `dynamic_lookup` linker flags from cross-target
