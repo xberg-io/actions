@@ -4,6 +4,24 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.41.1] - 2026-10-31
+
+### Changed
+
+- `setup-ai-rulez` builds a pinned `source-revision` with `mise-tasks/build.sh` when the source has it, and keeps the
+  pinned go-task build for revisions that predate ai-rulez's move to mise.
+
+### Fixed
+
+- This repository's own AI-Rulez and toolchain gates run the local composites again, so a change to them is tested
+  by its own pull request; `test-reusable-governance.yml` calls the two reusables to prove their wiring.
+
+### Tests
+
+- `test-setup-mise.yml` runs a locked Go install inside a `debian:bookworm` container on both Linux architectures.
+- The test workflows install Python, uv, Node and Ruby through `setup-mise`, build the pure-Rust fixtures on
+  `setup-rust`, and run pytest, ruff and actionlint through mise tasks.
+
 ## [1.41.0] - 2026-10-31
 
 ### Added
