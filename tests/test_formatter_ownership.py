@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 import tomllib
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEXES = {
@@ -104,3 +105,30 @@ def test_real_formatter_still_rejects_authored_markdown_and_lints_all_indexes(tm
     failed = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True, check=False)
     assert failed.returncode == 1, failed.stdout + failed.stderr
     assert "would reformat ./README.md" in failed.stdout
+
+
+def assert_pytest_tools(workflow):
+    steps = workflow["jobs"]["pytest"]["steps"]
+    setups = [(index, step) for index, step in enumerate(steps) if step.get("uses") == "./setup-mise"]
+    assert len(setups) == 1
+    position, setup = setups[0]
+    tools = shlex.split(setup["with"]["install-args"])
+    assert {"python", "uv", "github:Goldziher/poly"}.issubset(tools)
+    runs = [index for index, step in enumerate(steps) if step.get("run") == "uv run pytest -v"]
+    assert len(runs) == 1
+    assert position < runs[0]
+    assert "if" not in setup
+    assert setup.get("continue-on-error", False) is False
+
+
+def test_pytest_workflow_provisions_the_real_formatter_from_managed_tools():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/test-unit.yml").read_text())
+    assert_pytest_tools(workflow)
+
+
+def test_pytest_tool_contract_rejects_a_missing_formatter():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/test-unit.yml").read_text())
+    setup = next(step for step in workflow["jobs"]["pytest"]["steps"] if step.get("uses") == "./setup-mise")
+    setup["with"]["install-args"] = "python uv"
+    with pytest.raises(AssertionError):
+        assert_pytest_tools(workflow)

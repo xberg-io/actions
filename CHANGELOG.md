@@ -73,6 +73,7 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- Provision the pinned Poly formatter in the Python unit-test jobs so the formatting ownership contract runs in CI.
 - Keep Windows tool-version CI checks independent of `/dev/stderr`, preserving mismatched-version failures.
 - `build-node-napi` uses managed Zig linking for GNU ARM64 with glibc 2.17, avoiding the obsolete GCC linker
   metadata failure on Rust 1.99 while preserving warning denial and canonical npm platform names (#116).
