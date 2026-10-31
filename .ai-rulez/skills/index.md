@@ -1,4 +1,4 @@
 # Subdirectories
 
-* [release-workflow](release-workflow/index.md)
-* [testing-conventions](testing-conventions/index.md)
+- [release-workflow](release-workflow/index.md)
+- [testing-conventions](testing-conventions/index.md)
