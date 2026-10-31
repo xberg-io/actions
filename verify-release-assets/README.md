@@ -8,20 +8,20 @@ minimum-size check catches empty uploads.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `tag` | yes | — | Git tag for the release. |
-| `expected-assets` | yes | — | Newline-separated list of expected asset filenames or fnmatch patterns. Lines starting with `#` are comments. |
-| `min-size-bytes` | no | `0` | Fail any asset smaller than this many bytes (0 disables). |
-| `dry-run` | no | `false` | Print findings but do not exit non-zero on mismatches. |
-| `token` | no | `${{ github.token }}` | GitHub token for `gh release view`. |
+| Name              | Required | Default               | Description                                                                                                   |
+| ----------------- | -------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `tag`             | yes      | —                     | Git tag for the release.                                                                                      |
+| `expected-assets` | yes      | —                     | Newline-separated list of expected asset filenames or fnmatch patterns. Lines starting with `#` are comments. |
+| `min-size-bytes`  | no       | `0`                   | Fail any asset smaller than this many bytes (0 disables).                                                     |
+| `dry-run`         | no       | `false`               | Print findings but do not exit non-zero on mismatches.                                                        |
+| `token`           | no       | `${{ github.token }}` | GitHub token for `gh release view`.                                                                           |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `verified-count` | Number of expected patterns that matched at least one asset. |
-| `missing` | Newline-separated list of expected patterns with no matching asset. Empty when all matched. |
+| Name             | Description                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `verified-count` | Number of expected patterns that matched at least one asset.                                |
+| `missing`        | Newline-separated list of expected patterns with no matching asset. Empty when all matched. |
 
 ## Usage
 

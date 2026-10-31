@@ -27,22 +27,22 @@ Archives produced by this action have a standardized layout for consumption by
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
-| `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `header-path` | no | `crates/xberg-ffi/include/xberg.h` | C header to bundle alongside the library. |
-| `output-dir` | no | `dist/go-ffi` | Directory for the staging tree and archive. |
-| `archive-name` | no | `{lib-name}-{target}.tar.gz` | Override the default archive filename. |
-| `dry-run` | no | `false` | Skip cargo build and emit a plan only. |
+| Name           | Required | Default                            | Description                                          |
+| -------------- | -------- | ---------------------------------- | ---------------------------------------------------- |
+| `target`       | yes      | —                                  | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
+| `crate-name`   | no       | `xberg-ffi`                        | Cargo package name to build.                         |
+| `lib-name`     | no       | `crate-name` with `-` → `_`        | Base name of the produced library.                   |
+| `header-path`  | no       | `crates/xberg-ffi/include/xberg.h` | C header to bundle alongside the library.            |
+| `output-dir`   | no       | `dist/go-ffi`                      | Directory for the staging tree and archive.          |
+| `archive-name` | no       | `{lib-name}-{target}.tar.gz`       | Override the default archive filename.               |
+| `dry-run`      | no       | `false`                            | Skip cargo build and emit a plan only.               |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `archive-path` | Absolute path to the produced tar.gz archive. |
-| `archive-sha256` | Hex-encoded SHA256 digest of the archive. |
+| Name             | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `archive-path`   | Absolute path to the produced tar.gz archive. |
+| `archive-sha256` | Hex-encoded SHA256 digest of the archive.     |
 
 ## Usage
 

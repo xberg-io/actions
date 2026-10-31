@@ -37,7 +37,7 @@ jobs:
 - uses: xberg-io/actions/publish-pub@v1
   with:
     package-dir: packages/dart
-    dry-run: 'true'
+    dry-run: "true"
 ```
 
 ### Skip Dart setup if already installed
@@ -45,27 +45,27 @@ jobs:
 ```yaml
 - uses: dart-lang/setup-dart@v1
   with:
-    sdk: '3.5.0'
+    sdk: "3.5.0"
 - uses: xberg-io/actions/publish-pub@v1
   with:
     package-dir: packages/dart
-    setup-dart: 'false'
+    setup-dart: "false"
 ```
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `package-dir` | no | `.` | Directory containing `pubspec.yaml`. |
-| `dart-version` | no | `stable` | Dart SDK version (passed to `dart-lang/setup-dart`). |
-| `setup-dart` | no | `true` | Whether to invoke `dart-lang/setup-dart`. Set to `false` when Dart is already installed. |
-| `dry-run` | no | `false` | Skip the actual publish; only run validation. |
-| `expected-version` | no | `""` | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, `pubspec.yaml` must declare it or the action fails before publishing. |
+| Name               | Required | Default  | Description                                                                                                                                          |
+| ------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package-dir`      | no       | `.`      | Directory containing `pubspec.yaml`.                                                                                                                 |
+| `dart-version`     | no       | `stable` | Dart SDK version (passed to `dart-lang/setup-dart`).                                                                                                 |
+| `setup-dart`       | no       | `true`   | Whether to invoke `dart-lang/setup-dart`. Set to `false` when Dart is already installed.                                                             |
+| `dry-run`          | no       | `false`  | Skip the actual publish; only run validation.                                                                                                        |
+| `expected-version` | no       | `""`     | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, `pubspec.yaml` must declare it or the action fails before publishing. |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name      | Description                                                  |
+| --------- | ------------------------------------------------------------ |
 | `skipped` | `true` when the version was already published (idempotency). |
 
 ## Idempotency

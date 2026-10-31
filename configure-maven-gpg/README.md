@@ -7,11 +7,11 @@ Prepare the GPG environment for Maven publishing. Two concerns rolled into one a
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `pom-file` | no | `packages/java/pom.xml` | Path to the `pom.xml` to patch. |
-| `patch-pom` | no | `true` | Whether to patch the pom. |
-| `prefer-gpg2` | no | `true` | Whether to install a `gpg2` shim. |
+| Name          | Required | Default                 | Description                       |
+| ------------- | -------- | ----------------------- | --------------------------------- |
+| `pom-file`    | no       | `packages/java/pom.xml` | Path to the `pom.xml` to patch.   |
+| `patch-pom`   | no       | `true`                  | Whether to patch the pom.         |
+| `prefer-gpg2` | no       | `true`                  | Whether to install a `gpg2` shim. |
 
 ## Example
 

@@ -12,17 +12,17 @@ Designed for reuse across `xberg-io` Rust libraries with Android binding targets
 
 ## Inputs
 
-| Name | Default | Description |
-|------|---------|-------------|
-| `ndk-version` | `""` | Specific NDK directory under `$ANDROID_HOME/ndk/`. Empty picks the highest semver-sorted dir. |
-| `targets` | `aarch64-linux-android,x86_64-linux-android` | Comma-separated Rust targets to add via `rustup`. |
-| `install-cargo-ndk` | `true` | Install `cargo-ndk` (no-op if already present). |
-| `cargo-ndk-version` | `""` | Specific `cargo-ndk` version; empty uses the latest stable. |
+| Name                | Default                                      | Description                                                                                   |
+| ------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `ndk-version`       | `""`                                         | Specific NDK directory under `$ANDROID_HOME/ndk/`. Empty picks the highest semver-sorted dir. |
+| `targets`           | `aarch64-linux-android,x86_64-linux-android` | Comma-separated Rust targets to add via `rustup`.                                             |
+| `install-cargo-ndk` | `true`                                       | Install `cargo-ndk` (no-op if already present).                                               |
+| `cargo-ndk-version` | `""`                                         | Specific `cargo-ndk` version; empty uses the latest stable.                                   |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
+| Name       | Description                             |
+| ---------- | --------------------------------------- |
 | `ndk-home` | Absolute path to the resolved NDK root. |
 
 ## Example

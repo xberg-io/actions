@@ -14,21 +14,21 @@ checksum mismatch — on download or when reusing a cached object — fails the 
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `path` | no | `test_documents` | Directory where the `test_documents` submodule is checked out. |
-| `include` | no | `**` | Newline-separated glob patterns matched against manifest paths (e.g. `pdf/**`). |
-| `bucket` | no | `xberg-test-documents` | GCS bucket serving objects at `https://storage.googleapis.com/<bucket>/objects/<sha256>`. |
-| `cache` | no | `true` | Cache downloaded objects via `actions/cache`, keyed by the normalised include patterns and the manifest content, with a `restore-keys` fallback on the include-pattern prefix. |
-| `concurrency` | no | `8` | Number of objects to download in parallel. |
+| Name          | Required | Default                | Description                                                                                                                                                                    |
+| ------------- | -------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `path`        | no       | `test_documents`       | Directory where the `test_documents` submodule is checked out.                                                                                                                 |
+| `include`     | no       | `**`                   | Newline-separated glob patterns matched against manifest paths (e.g. `pdf/**`).                                                                                                |
+| `bucket`      | no       | `xberg-test-documents` | GCS bucket serving objects at `https://storage.googleapis.com/<bucket>/objects/<sha256>`.                                                                                      |
+| `cache`       | no       | `true`                 | Cache downloaded objects via `actions/cache`, keyed by the normalised include patterns and the manifest content, with a `restore-keys` fallback on the include-pattern prefix. |
+| `concurrency` | no       | `8`                    | Number of objects to download in parallel.                                                                                                                                     |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `cache-hit` | Whether the object cache was restored on an *exact* key match. A `restore-keys` prefix match reports `false` here while still seeding the object store, so a delta fetch looks like `cache-hit: false` with a small `objects-fetched`. |
-| `objects-fetched` | Number of unique objects downloaded from the bucket this run (`0` on a full cache hit). |
-| `bytes-fetched` | Total bytes downloaded from the bucket this run. |
+| Name              | Description                                                                                                                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cache-hit`       | Whether the object cache was restored on an _exact_ key match. A `restore-keys` prefix match reports `false` here while still seeding the object store, so a delta fetch looks like `cache-hit: false` with a small `objects-fetched`. |
+| `objects-fetched` | Number of unique objects downloaded from the bucket this run (`0` on a full cache hit).                                                                                                                                                |
+| `bytes-fetched`   | Total bytes downloaded from the bucket this run.                                                                                                                                                                                       |
 
 ## Example
 

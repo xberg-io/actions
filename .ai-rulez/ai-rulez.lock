@@ -2,9 +2,9 @@
 # Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
 
 version = 1
-ai_rulez_version = '5.9.6'
+ai_rulez_version = '5.9.7'
 scope = 'all'
-tree = 'sha256:a7b9e30dfb61d2d497664b35d77c2a44b19539e6a0b32428cdcd22f329e14a4c'
+tree = 'sha256:c24f20408010fe8ac01f06abb480e9f6f55a42e8ae79fd4a4cfa450b4a3f11c9'
 
 [[include]]
 name = 'xberg-cicd'
@@ -124,7 +124,7 @@ digest = 'sha256:772854a122a129565f974e6c5ae84ef1169f7bc4f3a2068bfdc56b548c16169
 name = 'release-workflow'
 source = '.ai-rulez/skills/release-workflow/SKILL.md'
 commit = ''
-digest = 'sha256:38efb0aa537248238e1fa0810dd27ccffa0e26ac5325e6dc0d03e8559fa530f6'
+digest = 'sha256:426d32167afb3f2a4b77aafaef1909c4120d0f4a0eebf47ca7f1f8fb57832880'
 
 [[served]]
 name = 'scoop-distribution'
@@ -148,7 +148,7 @@ digest = 'sha256:8651ec0982657585e697dd493effee488ec008a92362636b2262db859ab30af
 name = 'testing-conventions'
 source = '.ai-rulez/skills/testing-conventions/SKILL.md'
 commit = ''
-digest = 'sha256:eebb097b80b8a10244d3a15e483a9219a628d6b4a0b5125ef225152586fd4af0'
+digest = 'sha256:1a29fe41b333854c17d0e466cac6aba182b0db5418784b4839817a31bed20bb4'
 
 [[served]]
 name = 'tracing-conventions'
@@ -201,10 +201,10 @@ digest = 'sha256:0c9a9f6f3f440d1bc8dad96fc41d6458907ae78bd923e8621713ccfdc08a026
 kind = 'skill'
 id = 'release-workflow'
 path = 'skills/release-workflow'
-digest = 'sha256:6ede0d56f83b69b6f8a955806d6f644021abc1c2dda909206db2e1713f025ccf'
+digest = 'sha256:e1ee46462b76226c3302a977efb2945dc772cc823cd9348c59abc98016e4b22d'
 
 [[item]]
 kind = 'skill'
 id = 'testing-conventions'
 path = 'skills/testing-conventions'
-digest = 'sha256:854e2aa7a5b7a74531123f58087b5cc59a2456a62b02af990abd005ef8fc6b2e'
+digest = 'sha256:39a67fa2e29113fbf8504edba37045b5e169344f6b9264931af5124191c129c5'

@@ -28,14 +28,14 @@ With overrides:
 
 ## Inputs
 
-| Name             | Required | Default  | Description                                                                                                                                |
-| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name             | Required | Default  | Description                                                                                                                                       |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `chrome-version` | no       | `stable` | Chrome channel (`stable`, `beta`, `dev`) or an explicit Chrome-for-Testing version. Ignored on linux-arm64, where the chromium snap is installed. |
 
 ## Outputs
 
-| Name          | Description                                                   |
-| ------------- | ------------------------------------------------------------- |
+| Name          | Description                                                  |
+| ------------- | ------------------------------------------------------------ |
 | `chrome-path` | Absolute path to the installed Chrome-compatible executable. |
 
 [upstream]: https://github.com/browser-actions/setup-chrome

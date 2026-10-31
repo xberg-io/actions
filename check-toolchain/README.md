@@ -20,8 +20,8 @@ present on GitHub-hosted images.
 
 ## Inputs
 
-| Name                | Required | Default | Description                                         |
-| ------------------- | -------- | ------- | --------------------------------------------------- |
+| Name                | Required | Default | Description                                                |
+| ------------------- | -------- | ------- | ---------------------------------------------------------- |
 | `working-directory` | no       | `.`     | Repository root holding `mise.toml` and `toolchains.toml`. |
 
 [toolchains]: https://github.com/xberg-io/toolchains

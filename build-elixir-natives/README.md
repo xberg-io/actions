@@ -11,24 +11,24 @@ target installed) and `setup-elixir@v1`.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `nif-crate-name` | no | `xberg_nif` | Cargo package name of the NIF crate. |
-| `nif-crate-path` | no | `packages/elixir/native/xberg_nif` | Path to the NIF crate's manifest directory. |
-| `package-dir` | no | `packages/elixir` | Path to the Elixir package (containing `mix.exs`). |
-| `nif-version` | yes | — | Package version embedded in the artifact name (e.g. `5.0.0`). |
-| `nif-api-version` | no | `""` | Erlang NIF API version (e.g. `2.16`). Empty → auto-detect via `erl`. |
-| `output-dir` | no | `dist/elixir-natives` | Directory for the staging tree and archive. |
-| `dry-run` | no | `false` | Skip cargo build and emit a plan only. |
+| Name              | Required | Default                            | Description                                                          |
+| ----------------- | -------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `target`          | yes      | —                                  | Rust target triple, e.g. `x86_64-unknown-linux-gnu`.                 |
+| `nif-crate-name`  | no       | `xberg_nif`                        | Cargo package name of the NIF crate.                                 |
+| `nif-crate-path`  | no       | `packages/elixir/native/xberg_nif` | Path to the NIF crate's manifest directory.                          |
+| `package-dir`     | no       | `packages/elixir`                  | Path to the Elixir package (containing `mix.exs`).                   |
+| `nif-version`     | yes      | —                                  | Package version embedded in the artifact name (e.g. `5.0.0`).        |
+| `nif-api-version` | no       | `""`                               | Erlang NIF API version (e.g. `2.16`). Empty → auto-detect via `erl`. |
+| `output-dir`      | no       | `dist/elixir-natives`              | Directory for the staging tree and archive.                          |
+| `dry-run`         | no       | `false`                            | Skip cargo build and emit a plan only.                               |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `archive-path` | Absolute path to the produced `.tar.gz`. |
-| `archive-sha256` | Hex-encoded SHA256 of the archive. |
-| `archive-name` | Filename of the archive (RustlerPrecompiled-conformant). |
+| Name             | Description                                              |
+| ---------------- | -------------------------------------------------------- |
+| `archive-path`   | Absolute path to the produced `.tar.gz`.                 |
+| `archive-sha256` | Hex-encoded SHA256 of the archive.                       |
+| `archive-name`   | Filename of the archive (RustlerPrecompiled-conformant). |
 
 ## Usage
 

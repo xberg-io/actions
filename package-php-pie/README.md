@@ -96,32 +96,32 @@ jobs:
 ### Windows example
 
 ```yaml
-      - name: Package as PIE archive (Windows)
-        uses: xberg-io/actions/package-php-pie@v1
-        with:
-          php-version: "8.4"
-          php-ts: "nts"
-          target: x86_64-pc-windows-msvc
-          windows-compiler: vs17
-          output-dir: dist/php-package
+- name: Package as PIE archive (Windows)
+  uses: xberg-io/actions/package-php-pie@v1
+  with:
+    php-version: "8.4"
+    php-ts: "nts"
+    target: x86_64-pc-windows-msvc
+    windows-compiler: vs17
+    output-dir: dist/php-package
 ```
 
 ## Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `php-version` | yes | — | PHP minor version, e.g. `"8.4"` |
-| `php-ts` | no | `nts` | Thread-safety mode: `nts` or `ts` |
-| `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu` |
-| `windows-compiler` | no* | `""` | Windows compiler tag, e.g. `vs17`. Required when `target` contains `windows`. |
-| `php-libc` | no | `""` | Linux libc override: `glibc` or `musl`. Auto-detected from target if absent. |
-| `output-dir` | no | `dist/php-package` | Directory to place the archive in |
-| `version` | no | `""` | Version string. Auto-detected from `Cargo.toml` if absent. |
+| Input              | Required | Default            | Description                                                                   |
+| ------------------ | -------- | ------------------ | ----------------------------------------------------------------------------- |
+| `php-version`      | yes      | —                  | PHP minor version, e.g. `"8.4"`                                               |
+| `php-ts`           | no       | `nts`              | Thread-safety mode: `nts` or `ts`                                             |
+| `target`           | yes      | —                  | Rust target triple, e.g. `x86_64-unknown-linux-gnu`                           |
+| `windows-compiler` | no*      | `""`               | Windows compiler tag, e.g. `vs17`. Required when `target` contains `windows`. |
+| `php-libc`         | no       | `""`               | Linux libc override: `glibc` or `musl`. Auto-detected from target if absent.  |
+| `output-dir`       | no       | `dist/php-package` | Directory to place the archive in                                             |
+| `version`          | no       | `""`               | Version string. Auto-detected from `Cargo.toml` if absent.                    |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
+| Output         | Description                                        |
+| -------------- | -------------------------------------------------- |
 | `archive-path` | Full path to the produced `.tgz` or `.zip` archive |
-| `archive-name` | Filename only (no directory component) |
-| `sha256` | Hex-encoded SHA-256 of the archive |
+| `archive-name` | Filename only (no directory component)             |
+| `sha256`       | Hex-encoded SHA-256 of the archive                 |

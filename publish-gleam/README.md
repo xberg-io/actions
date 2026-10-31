@@ -43,7 +43,7 @@ jobs:
 - uses: xberg-io/actions/publish-gleam@v1
   with:
     package-dir: packages/gleam
-    dry-run: 'true'
+    dry-run: "true"
 ```
 
 ### Skip BEAM setup if already installed
@@ -51,30 +51,30 @@ jobs:
 ```yaml
 - uses: erlef/setup-beam@v1
   with:
-    otp-version: '27'
-    gleam-version: '1.18'
+    otp-version: "27"
+    gleam-version: "1.18"
 - uses: xberg-io/actions/publish-gleam@v1
   env:
     HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
   with:
     package-dir: packages/gleam
-    setup-beam: 'false'
+    setup-beam: "false"
 ```
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `package-dir` | no | `.` | Directory containing `gleam.toml`. |
-| `setup-beam` | no | `true` | Whether to install Erlang/OTP + Gleam via `erlef/setup-beam@v1`. |
-| `otp-version` | no | `27` | Erlang/OTP version. |
-| `gleam-version` | no | `1.18` | Gleam version. |
-| `replace` | no | `true` | Pass `--replace` to allow replacing an existing version. |
-| `dry-run` | no | `false` | Skip the actual publish; print what would happen. |
-| `expected-version` | no | `""` | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, `gleam.toml` must declare it or the action fails before publishing. |
+| Name               | Required | Default | Description                                                                                                                                        |
+| ------------------ | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package-dir`      | no       | `.`     | Directory containing `gleam.toml`.                                                                                                                 |
+| `setup-beam`       | no       | `true`  | Whether to install Erlang/OTP + Gleam via `erlef/setup-beam@v1`.                                                                                   |
+| `otp-version`      | no       | `27`    | Erlang/OTP version.                                                                                                                                |
+| `gleam-version`    | no       | `1.18`  | Gleam version.                                                                                                                                     |
+| `replace`          | no       | `true`  | Pass `--replace` to allow replacing an existing version.                                                                                           |
+| `dry-run`          | no       | `false` | Skip the actual publish; print what would happen.                                                                                                  |
+| `expected-version` | no       | `""`    | Release version (leading `v` and a `-dryrun-<sha>` suffix stripped). When set, `gleam.toml` must declare it or the action fails before publishing. |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name      | Description                                                  |
+| --------- | ------------------------------------------------------------ |
 | `skipped` | `true` when the version was already published (idempotency). |

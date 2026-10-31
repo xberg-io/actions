@@ -24,12 +24,12 @@ guesswork into verification.
 
 ## Response targets
 
-| Stage | Target |
-|-------|--------|
-| Acknowledgement of your report | 2 business days |
-| Initial assessment and severity | 5 business days |
-| Fix released — Critical / High | 14 calendar days |
-| Fix released — Medium / Low | 30 calendar days |
+| Stage                           | Target           |
+| ------------------------------- | ---------------- |
+| Acknowledgement of your report  | 2 business days  |
+| Initial assessment and severity | 5 business days  |
+| Fix released — Critical / High  | 14 calendar days |
+| Fix released — Medium / Low     | 30 calendar days |
 
 If a fix will take longer than the target, we will tell you why and give a revised
 date rather than let the report go quiet.

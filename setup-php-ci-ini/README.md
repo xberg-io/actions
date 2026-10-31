@@ -35,19 +35,19 @@ With overrides:
 
 ## Inputs
 
-| Name                 | Required | Default                                       | Description                                                                                  |
-| -------------------- | -------- | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `crate-name`         | yes      | —                                             | ext-php-rs crate name (`kreuzcrawl-php`). Library file derived via `s/-/_/g` plus OS suffix. |
-| `output-dir`         | no       | `.`                                           | Directory to write the ini into.                                                             |
-| `output-name`        | no       | `php-kreuzcrawl.ini`                          | Ini filename written under `output-dir`.                                                     |
-| `extensions`         | no       | `ctype dom libxml mbstring tokenizer xml xmlwriter` | Space-separated PHP bundled extensions to preload.                                  |
-| `build-dir-priority` | no       | `target/release target/debug`                 | Space-separated build dirs to search. First hit wins.                                        |
+| Name                 | Required | Default                                             | Description                                                                                  |
+| -------------------- | -------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `crate-name`         | yes      | —                                                   | ext-php-rs crate name (`kreuzcrawl-php`). Library file derived via `s/-/_/g` plus OS suffix. |
+| `output-dir`         | no       | `.`                                                 | Directory to write the ini into.                                                             |
+| `output-name`        | no       | `php-kreuzcrawl.ini`                                | Ini filename written under `output-dir`.                                                     |
+| `extensions`         | no       | `ctype dom libxml mbstring tokenizer xml xmlwriter` | Space-separated PHP bundled extensions to preload.                                           |
+| `build-dir-priority` | no       | `target/release target/debug`                       | Space-separated build dirs to search. First hit wins.                                        |
 
 ## Outputs
 
-| Name       | Description                            |
-| ---------- | -------------------------------------- |
-| `ini-path` | Absolute path to the generated ini.    |
+| Name       | Description                         |
+| ---------- | ----------------------------------- |
+| `ini-path` | Absolute path to the generated ini. |
 
 ## Notes
 

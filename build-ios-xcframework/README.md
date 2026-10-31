@@ -10,23 +10,23 @@ Must run on `macos-26`.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `crate-name` | yes | — | Cargo package name to build. |
-| `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `xcframework-name` | no | `lib-name` PascalCase | XCFramework name. |
-| `header-path` | no | — | Optional path to C header directory to embed. |
-| `output-dir` | no | `dist/ios-xcframework` | Output directory for the XCFramework. |
-| `build-profile` | no | `release` | Cargo build profile (dev, release, or custom). |
-| `dry-run` | no | `false` | Skip build steps and emit a plan only. |
+| Name               | Required | Default                     | Description                                    |
+| ------------------ | -------- | --------------------------- | ---------------------------------------------- |
+| `crate-name`       | yes      | —                           | Cargo package name to build.                   |
+| `lib-name`         | no       | `crate-name` with `-` → `_` | Base name of the produced library.             |
+| `xcframework-name` | no       | `lib-name` PascalCase       | XCFramework name.                              |
+| `header-path`      | no       | —                           | Optional path to C header directory to embed.  |
+| `output-dir`       | no       | `dist/ios-xcframework`      | Output directory for the XCFramework.          |
+| `build-profile`    | no       | `release`                   | Cargo build profile (dev, release, or custom). |
+| `dry-run`          | no       | `false`                     | Skip build steps and emit a plan only.         |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name               | Description                                            |
+| ------------------ | ------------------------------------------------------ |
 | `xcframework-path` | Absolute path to the created `.xcframework` directory. |
-| `xcframework-zip` | Absolute path to the zipped `.xcframework`. |
-| `checksum` | SHA256 checksum for Swift Package Manager. |
+| `xcframework-zip`  | Absolute path to the zipped `.xcframework`.            |
+| `checksum`         | SHA256 checksum for Swift Package Manager.             |
 
 ## Usage
 

@@ -17,20 +17,20 @@ published.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `bucket-dir` | yes | — | Path to a checked-out Scoop bucket repository. Must contain `bucket/`. |
-| `config-file` | yes | — | Path, relative to the source repo, of the JSON config describing each manifest. |
-| `tag` | yes | — | Git tag for the release (e.g. `v3.4.0-rc.42`). |
-| `version` | yes | — | Semantic version (e.g. `3.4.0-rc.42`). Scoop versions carry no `v` prefix. |
-| `github-repo` | yes | — | Source repository for `gh release download` (e.g. `xberg-io/html-to-markdown`). |
-| `dry-run` | no | `false` | Tolerate a missing release or asset: substitute a zero-SHA placeholder and warn, so the rendered shape can be diffed before the release exists. |
-| `token` | no | `${{ github.token }}` | GitHub token with read access for `gh release download`. |
+| Name          | Required | Default               | Description                                                                                                                                     |
+| ------------- | -------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bucket-dir`  | yes      | —                     | Path to a checked-out Scoop bucket repository. Must contain `bucket/`.                                                                          |
+| `config-file` | yes      | —                     | Path, relative to the source repo, of the JSON config describing each manifest.                                                                 |
+| `tag`         | yes      | —                     | Git tag for the release (e.g. `v3.4.0-rc.42`).                                                                                                  |
+| `version`     | yes      | —                     | Semantic version (e.g. `3.4.0-rc.42`). Scoop versions carry no `v` prefix.                                                                      |
+| `github-repo` | yes      | —                     | Source repository for `gh release download` (e.g. `xberg-io/html-to-markdown`).                                                                 |
+| `dry-run`     | no       | `false`               | Tolerate a missing release or asset: substitute a zero-SHA placeholder and warn, so the rendered shape can be diffed before the release exists. |
+| `token`       | no       | `${{ github.token }}` | GitHub token with read access for `gh release download`.                                                                                        |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name                | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
 | `manifests-changed` | Newline-separated list of manifest paths written into `bucket-dir/bucket/`. |
 
 ## Config schema

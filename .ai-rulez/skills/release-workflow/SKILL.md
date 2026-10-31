@@ -30,8 +30,7 @@ git fetch origin
 git status --porcelain            # must be EMPTY — no uncommitted/untracked changes
 git log --oneline origin/main -1  # confirm local main == remote tip
 
-poly fmt --check .                # formatting clean
-poly lint .                       # lint clean (also: mise run lint)
+mise run lint                     # lint, format and Bats checks; canonical generated-file policy
 mise run test                     # pytest + Bats + Pester (needs pwsh and Pester 6.2.0)
 ```
 

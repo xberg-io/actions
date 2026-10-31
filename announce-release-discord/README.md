@@ -75,7 +75,7 @@ from a workflow that doesn't pre-compute that flag.
   with:
     tag: v1.2.3
     webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-    dry-run: 'true'
+    dry-run: "true"
 ```
 
 Prints the payload it would POST and skips both the network call and the
@@ -83,21 +83,21 @@ marker upload.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `tag` | yes | — | Tag like `v1.2.3`. Anything else is treated as prerelease and skipped. |
-| `webhook-url` | yes | — | Discord webhook URL — pass via secrets. |
-| `repo` | no | `${{ github.repository }}` | `owner/name`, used for the release URL and embed footer. |
-| `project-name` | no | repo name | Display name in the embed title. |
-| `notes` | no | empty | Override the release body. When empty, fetched from the GitHub Release log. |
-| `color` | no | `0x5865F2` | Embed accent color (decimal, `0xHEX`, or `#HEX`). |
-| `dry-run` | no | `false` | Render the payload to logs without posting. |
-| `token` | no | `${{ github.token }}` | Used by `gh release view` and the marker asset upload. |
+| Name           | Required | Default                    | Description                                                                 |
+| -------------- | -------- | -------------------------- | --------------------------------------------------------------------------- |
+| `tag`          | yes      | —                          | Tag like `v1.2.3`. Anything else is treated as prerelease and skipped.      |
+| `webhook-url`  | yes      | —                          | Discord webhook URL — pass via secrets.                                     |
+| `repo`         | no       | `${{ github.repository }}` | `owner/name`, used for the release URL and embed footer.                    |
+| `project-name` | no       | repo name                  | Display name in the embed title.                                            |
+| `notes`        | no       | empty                      | Override the release body. When empty, fetched from the GitHub Release log. |
+| `color`        | no       | `0x5865F2`                 | Embed accent color (decimal, `0xHEX`, or `#HEX`).                           |
+| `dry-run`      | no       | `false`                    | Render the payload to logs without posting.                                 |
+| `token`        | no       | `${{ github.token }}`      | Used by `gh release view` and the marker asset upload.                      |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name     | Description                                                                      |
+| -------- | -------------------------------------------------------------------------------- |
 | `posted` | `true`, `false` (dry-run), `skipped-prerelease`, or `skipped-already-announced`. |
 
 ## Dedup mechanics

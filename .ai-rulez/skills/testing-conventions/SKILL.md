@@ -39,7 +39,7 @@ Both were real product bugs the suite was correctly reporting; they had been dis
 
 ### Isolating from the host
 
-**Exclude, do not allow-list.** Mirror the host's command directories into a private directory *minus* the one command whose absence is the point, then assert the mirror really lacks it so a leak fails loudly instead of quietly restoring the host's copy.
+**Exclude, do not allow-list.** Mirror the host's command directories into a private directory _minus_ the one command whose absence is the point, then assert the mirror really lacks it so a leak fails loudly instead of quietly restoring the host's copy.
 
 An allow-list ("link in the utilities this script needs") guesses at an implementation detail and breaks on the first indirect dependency: GNU `tar -xzf` shells out to `gzip`, BSD `tar` does not, so a curated bin that omits `gzip` fails on Linux and passes on macOS.
 

@@ -40,9 +40,9 @@ miss builds it from source on Linux:
 
 ## Inputs
 
-| Name                   | Required | Default   | Description                                                                                    |
-| ---------------------- | -------- | --------- | ---------------------------------------------------------------------------------------------- |
-| `cppcheck-version`     | no       | `2.20.0`  | cppcheck version to install. Must match the pin in `xberg-io/pre-commit-hooks`.           |
-| `install-clang-format` | no       | `true`    | Install clang-format. Set to `false` to skip.                                                  |
-| `install-cppcheck`     | no       | `true`    | Install cppcheck. Set to `false` to skip.                                                      |
-| `install-shellcheck`   | no       | `true`    | Install shellcheck. Set to `false` to skip.                                                    |
+| Name                   | Required | Default  | Description                                                                     |
+| ---------------------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| `cppcheck-version`     | no       | `2.20.0` | cppcheck version to install. Must match the pin in `xberg-io/pre-commit-hooks`. |
+| `install-clang-format` | no       | `true`   | Install clang-format. Set to `false` to skip.                                   |
+| `install-cppcheck`     | no       | `true`   | Install cppcheck. Set to `false` to skip.                                       |
+| `install-shellcheck`   | no       | `true`   | Install shellcheck. Set to `false` to skip.                                     |

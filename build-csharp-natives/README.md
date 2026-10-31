@@ -11,21 +11,21 @@ installed.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
-| `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `rid` | yes | — | .NET RID, e.g. `linux-x64`, `linux-arm64`, `linux-musl-x64`, `osx-arm64`, `win-x64`. |
-| `output-dir` | no | `dist/csharp-natives` | Staging root directory. |
-| `dry-run` | no | `false` | Skip cargo build and emit a plan only. |
+| Name         | Required | Default                     | Description                                                                          |
+| ------------ | -------- | --------------------------- | ------------------------------------------------------------------------------------ |
+| `target`     | yes      | —                           | Rust target triple, e.g. `x86_64-unknown-linux-gnu`.                                 |
+| `crate-name` | no       | `xberg-ffi`                 | Cargo package name to build.                                                         |
+| `lib-name`   | no       | `crate-name` with `-` → `_` | Base name of the produced library.                                                   |
+| `rid`        | yes      | —                           | .NET RID, e.g. `linux-x64`, `linux-arm64`, `linux-musl-x64`, `osx-arm64`, `win-x64`. |
+| `output-dir` | no       | `dist/csharp-natives`       | Staging root directory.                                                              |
+| `dry-run`    | no       | `false`                     | Skip cargo build and emit a plan only.                                               |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `library-path` | Absolute path to the staged native library. |
-| `staging-dir` | Absolute path to `{output-dir}/runtimes/{rid}/native/`. |
+| Name           | Description                                             |
+| -------------- | ------------------------------------------------------- |
+| `library-path` | Absolute path to the staged native library.             |
+| `staging-dir`  | Absolute path to `{output-dir}/runtimes/{rid}/native/`. |
 
 ## Usage
 

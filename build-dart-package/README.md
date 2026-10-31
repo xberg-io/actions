@@ -27,28 +27,28 @@ Skip the Flutter setup if the workflow already installed it:
 ```yaml
 - uses: subosito/flutter-action@v2
   with:
-    flutter-version: '3.27.0'
+    flutter-version: "3.27.0"
 - uses: xberg-io/actions/build-dart-package@v1
   with:
-    setup-flutter: 'false'
+    setup-flutter: "false"
 ```
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `package-dir` | no | `packages/dart` | Directory containing `pubspec.yaml` and the FRB config. |
-| `crate-name` | no | `xberg-dart` | Cargo crate name of the Rust binding crate. |
-| `build-profile` | no | `release` | Cargo profile (`release`, `dev`, or a custom named profile). |
-| `setup-flutter` | no | `true` | Install Flutter via `subosito/flutter-action`. |
-| `flutter-version` | no | `3.27.0` | Flutter version, passed to `subosito/flutter-action`. |
-| `frb-codegen-version` | no | `2.12.0` | `flutter_rust_bridge_codegen` version installed via cargo. |
-| `dry-run` | no | `false` | Print the planned commands and exit without building. |
+| Name                  | Required | Default         | Description                                                  |
+| --------------------- | -------- | --------------- | ------------------------------------------------------------ |
+| `package-dir`         | no       | `packages/dart` | Directory containing `pubspec.yaml` and the FRB config.      |
+| `crate-name`          | no       | `xberg-dart`    | Cargo crate name of the Rust binding crate.                  |
+| `build-profile`       | no       | `release`       | Cargo profile (`release`, `dev`, or a custom named profile). |
+| `setup-flutter`       | no       | `true`          | Install Flutter via `subosito/flutter-action`.               |
+| `flutter-version`     | no       | `3.27.0`        | Flutter version, passed to `subosito/flutter-action`.        |
+| `frb-codegen-version` | no       | `2.12.0`        | `flutter_rust_bridge_codegen` version installed via cargo.   |
+| `dry-run`             | no       | `false`         | Print the planned commands and exit without building.        |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name           | Description                                                                    |
+| -------------- | ------------------------------------------------------------------------------ |
 | `library-path` | Absolute path to the built dynamic/static library (`.so` / `.dylib` / `.dll`). |
 
 ## Notes

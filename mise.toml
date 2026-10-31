@@ -30,7 +30,13 @@ run = ["uv sync --group dev --upgrade", "gau --update ."]
 
 [tasks.lint]
 description = "Run all linters and formatting checks via poly"
-run = ["poly lint .", "poly fmt --check .", { task = "lint:bats" }]
+run = ["poly lint .", """poly fmt --check . \
+    --exclude '/.ai-rulez/index.md' \
+    --exclude '/.ai-rulez/context/index.md' \
+    --exclude '/.ai-rulez/rules/index.md' \
+    --exclude '/.ai-rulez/skills/index.md' \
+    --exclude '/.ai-rulez/skills/release-workflow/index.md' \
+    --exclude '/.ai-rulez/skills/testing-conventions/index.md'""", { task = "lint:bats" }]
 
 [tasks.typecheck]
 description = "Check Python types with Pyrefly"

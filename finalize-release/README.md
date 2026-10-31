@@ -6,20 +6,20 @@ and writes a step summary. Idempotent — safe to re-run.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `tag` | yes | — | Git tag for the release. |
-| `is-prerelease` | no | `auto` | `true`/`false` to force, or `auto` to derive from tag suffix (`-rc`/`-alpha`/`-beta`/`-pre`). |
-| `go-module-path` | no | `""` | If set (e.g. `packages/go/v5`), additionally creates the tag `{path}/{tag}` for Go module consumers. |
-| `dry-run` | no | `false` | Print intended actions without modifying the release. |
-| `token` | no | `${{ github.token }}` | GitHub token. |
+| Name             | Required | Default               | Description                                                                                          |
+| ---------------- | -------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `tag`            | yes      | —                     | Git tag for the release.                                                                             |
+| `is-prerelease`  | no       | `auto`                | `true`/`false` to force, or `auto` to derive from tag suffix (`-rc`/`-alpha`/`-beta`/`-pre`).        |
+| `go-module-path` | no       | `""`                  | If set (e.g. `packages/go/v5`), additionally creates the tag `{path}/{tag}` for Go module consumers. |
+| `dry-run`        | no       | `false`               | Print intended actions without modifying the release.                                                |
+| `token`          | no       | `${{ github.token }}` | GitHub token.                                                                                        |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `finalized` | `true` (just finalized), `false` (dry-run), or `already-finalized`. |
-| `prerelease-flag` | Resolved prerelease flag as `true` or `false`. |
+| Name              | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `finalized`       | `true` (just finalized), `false` (dry-run), or `already-finalized`. |
+| `prerelease-flag` | Resolved prerelease flag as `true` or `false`.                      |
 
 ## Usage
 

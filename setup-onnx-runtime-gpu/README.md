@@ -4,15 +4,15 @@ Download the GPU/CUDA build of ONNX Runtime, extract it under `$RUNNER_TEMP`, an
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `version` | yes |  | ORT release version, e.g. `1.24.2`. |
-| `platform` | no | `linux-x64-gpu` | Tarball platform suffix matching upstream naming (e.g. `linux-aarch64-gpu`). |
+| Name       | Required | Default         | Description                                                                  |
+| ---------- | -------- | --------------- | ---------------------------------------------------------------------------- |
+| `version`  | yes      |                 | ORT release version, e.g. `1.24.2`.                                          |
+| `platform` | no       | `linux-x64-gpu` | Tarball platform suffix matching upstream naming (e.g. `linux-aarch64-gpu`). |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name      | Description                                       |
+| --------- | ------------------------------------------------- |
 | `lib-dir` | Absolute path to the staged ORT `lib/` directory. |
 
 ## Example

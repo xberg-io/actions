@@ -23,17 +23,17 @@ runs, the package is ready for a Git tag.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `package-dir` | no | `packages/swift` | Directory containing `Package.swift`. |
-| `crate-name` | no | `xberg-swift` | Cargo crate name of the Rust binding crate. |
-| `build-profile` | no | `release` | Cargo profile (`release`, `dev`, or a custom named profile). |
-| `dry-run` | no | `false` | Print the planned commands and exit without building or syncing. |
+| Name            | Required | Default          | Description                                                      |
+| --------------- | -------- | ---------------- | ---------------------------------------------------------------- |
+| `package-dir`   | no       | `packages/swift` | Directory containing `Package.swift`.                            |
+| `crate-name`    | no       | `xberg-swift`    | Cargo crate name of the Rust binding crate.                      |
+| `build-profile` | no       | `release`        | Cargo profile (`release`, `dev`, or a custom named profile).     |
+| `dry-run`       | no       | `false`          | Print the planned commands and exit without building or syncing. |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name          | Description                             |
+| ------------- | --------------------------------------- |
 | `package-dir` | Passthrough of the `package-dir` input. |
 
 ## Notes

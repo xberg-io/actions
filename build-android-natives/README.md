@@ -10,19 +10,19 @@ The action expects the caller to have already checked out the repo, run
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `crate-name` | yes | — | Cargo package name to build. |
-| `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `abis` | no | `arm64-v8a,x86_64` | Comma-separated Android ABIs. |
-| `api-level` | no | `21` | Android API level for cargo-ndk. |
-| `output-dir` | no | `dist/android-natives` | Staging root directory. |
-| `dry-run` | no | `false` | Skip cargo build and emit a plan only. |
+| Name         | Required | Default                     | Description                            |
+| ------------ | -------- | --------------------------- | -------------------------------------- |
+| `crate-name` | yes      | —                           | Cargo package name to build.           |
+| `lib-name`   | no       | `crate-name` with `-` → `_` | Base name of the produced library.     |
+| `abis`       | no       | `arm64-v8a,x86_64`          | Comma-separated Android ABIs.          |
+| `api-level`  | no       | `21`                        | Android API level for cargo-ndk.       |
+| `output-dir` | no       | `dist/android-natives`      | Staging root directory.                |
+| `dry-run`    | no       | `false`                     | Skip cargo build and emit a plan only. |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name         | Description                                  |
+| ------------ | -------------------------------------------- |
 | `output-dir` | Absolute path to the staging root directory. |
 
 ## Usage

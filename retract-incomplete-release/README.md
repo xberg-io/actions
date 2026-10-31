@@ -24,18 +24,18 @@ release verdict, and a retraction problem is reported rather than stacked on top
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `tag` | yes | — | Git tag of the release to retract. |
-| `consumer-results` | no | `""` | Results of the jobs publishing a channel that resolves `.../releases/download/<tag>/...`. Comma- or newline-separated; entries may be bare (`success`) or named (`homebrew=success`). Any `success` blocks retraction. Empty means no such consumers, so retraction always proceeds. |
-| `dry-run` | no | `false` | Print the intended action without modifying the release. |
-| `token` | no | `${{ github.token }}` | GitHub token. |
+| Name               | Required | Default               | Description                                                                                                                                                                                                                                                                          |
+| ------------------ | -------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tag`              | yes      | —                     | Git tag of the release to retract.                                                                                                                                                                                                                                                   |
+| `consumer-results` | no       | `""`                  | Results of the jobs publishing a channel that resolves `.../releases/download/<tag>/...`. Comma- or newline-separated; entries may be bare (`success`) or named (`homebrew=success`). Any `success` blocks retraction. Empty means no such consumers, so retraction always proceeds. |
+| `dry-run`          | no       | `false`               | Print the intended action without modifying the release.                                                                                                                                                                                                                             |
+| `token`            | no       | `${{ github.token }}` | GitHub token.                                                                                                                                                                                                                                                                        |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `retracted` | `true`, `blocked`, `dry-run`, or `error`. |
+| Name                 | Description                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| `retracted`          | `true`, `blocked`, `dry-run`, or `error`.                       |
 | `blocking-consumers` | Comma-separated names of the consumers that blocked retraction. |
 
 ## Usage

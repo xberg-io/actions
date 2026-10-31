@@ -4,17 +4,17 @@ Build a single `cargo test --no-run` binary with JSON message output, then extra
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `package` | yes |  | Cargo package (`-p <package>`). |
-| `test-name` | yes |  | Test target name (`--test <name>`). |
-| `features` | no | `` | Comma-separated cargo features to enable. |
-| `output-name` | no | `gpu-test-binary` | Filename for the staged binary. |
+| Name          | Required | Default           | Description                               |
+| ------------- | -------- | ----------------- | ----------------------------------------- |
+| `package`     | yes      |                   | Cargo package (`-p <package>`).           |
+| `test-name`   | yes      |                   | Test target name (`--test <name>`).       |
+| `features`    | no       | ``                | Comma-separated cargo features to enable. |
+| `output-name` | no       | `gpu-test-binary` | Filename for the staged binary.           |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
+| Name          | Description                         |
+| ------------- | ----------------------------------- |
 | `binary-path` | Absolute path to the staged binary. |
 
 ## Example

@@ -10,21 +10,21 @@ installed. It does not install any toolchains itself.
 
 ## Inputs
 
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `target` | yes | — | Rust target triple, e.g. `x86_64-unknown-linux-gnu`. |
-| `crate-name` | no | `xberg-ffi` | Cargo package name to build. |
-| `lib-name` | no | `crate-name` with `-` → `_` | Base name of the produced library. |
-| `classifier` | yes | — | Maven classifier, e.g. `linux-x86_64`, `linux-aarch64-musl`, `darwin-aarch64`, `windows-x86_64`. |
-| `output-dir` | no | `dist/java-natives` | Staging root directory. |
-| `dry-run` | no | `false` | Skip cargo build and emit a plan only. |
+| Name         | Required | Default                     | Description                                                                                      |
+| ------------ | -------- | --------------------------- | ------------------------------------------------------------------------------------------------ |
+| `target`     | yes      | —                           | Rust target triple, e.g. `x86_64-unknown-linux-gnu`.                                             |
+| `crate-name` | no       | `xberg-ffi`                 | Cargo package name to build.                                                                     |
+| `lib-name`   | no       | `crate-name` with `-` → `_` | Base name of the produced library.                                                               |
+| `classifier` | yes      | —                           | Maven classifier, e.g. `linux-x86_64`, `linux-aarch64-musl`, `darwin-aarch64`, `windows-x86_64`. |
+| `output-dir` | no       | `dist/java-natives`         | Staging root directory.                                                                          |
+| `dry-run`    | no       | `false`                     | Skip cargo build and emit a plan only.                                                           |
 
 ## Outputs
 
-| Name | Description |
-|---|---|
-| `library-path` | Absolute path to the staged library. |
-| `staging-dir` | Absolute path to `{output-dir}/native/{classifier}/`. |
+| Name           | Description                                           |
+| -------------- | ----------------------------------------------------- |
+| `library-path` | Absolute path to the staged library.                  |
+| `staging-dir`  | Absolute path to `{output-dir}/native/{classifier}/`. |
 
 ## Usage
 
