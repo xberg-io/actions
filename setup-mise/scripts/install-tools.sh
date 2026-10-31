@@ -21,9 +21,39 @@ fi
 working_directory="$1"
 shift
 cd "$working_directory"
-# ~keep mise refuses an untrusted config that sets [env] or runs code, and setup-mise need not have run first, so
-# ~keep the caller's config, whose tools this installs, is trusted here.
-mise trust --quiet "$PWD"
+
+# A directory as mise reads it in MISE_TRUSTED_CONFIG_PATHS, and that list's separator: Windows paths and ";"
+# under Git Bash, whose POSIX paths a native mise does not understand.
+native_path() {
+  case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*) cygpath -w "$1" ;;
+  *) printf '%s' "$1" ;;
+  esac
+}
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*) path_separator=";" ;;
+*) path_separator=":" ;;
+esac
+
+# ~keep mise refuses an untrusted config that sets [env] or runs code, and setup-mise need not have run first. The
+# ~keep caller's config, whose tools this installs, is trusted for these mise calls only, never persisted. Events
+# ~keep that run the base repository's workflow on untrusted input do not trust it implicitly.
+trusted_paths() {
+  local path paths=()
+  for path in "$@"; do
+    paths+=("$(native_path "$path")")
+  done
+  [[ -z "${MISE_TRUSTED_CONFIG_PATHS:-}" ]] || paths+=("$MISE_TRUSTED_CONFIG_PATHS")
+  local IFS="$path_separator"
+  printf '%s' "${paths[*]-}"
+}
+case "${GITHUB_EVENT_NAME:-}" in
+pull_request_target | workflow_run) caller_trust="$(trusted_paths)" ;;
+*) caller_trust="$(trusted_paths "$PWD")" ;;
+esac
+caller_mise() {
+  MISE_TRUSTED_CONFIG_PATHS="$caller_trust" mise "$@"
+}
 
 # Variables mise sets for an active tool that other build tools read: Maven and Gradle find the JDK by
 # JAVA_HOME. Only the requested tools' variables are exported. Go's are not: go finds its root from its own path,
@@ -61,7 +91,17 @@ normalize_version() {
   printf '%s' "$version"
 }
 
-current_tools="$(mise current)"
+current_error="$(mktemp)"
+if ! current_tools="$(caller_mise current 2>"$current_error")"; then
+  if grep -q "not trusted" "$current_error"; then
+    echo "::error::The mise config in $PWD is not trusted, and a ${GITHUB_EVENT_NAME:-} run does not trust it" \
+      "implicitly. Set MISE_TRUSTED_CONFIG_PATHS to its directory if this job may run it." >&2
+  fi
+  cat "$current_error" >&2
+  rm -f "$current_error"
+  exit 1
+fi
+rm -f "$current_error"
 configured=()
 while read -r id _; do
   [[ -n "$id" ]] && configured+=("$id")
@@ -240,18 +280,18 @@ for request in "$@"; do
 done
 
 if ((${#locked_specs[@]})); then
-  mise install "${locked_specs[@]}"
+  caller_mise install "${locked_specs[@]}"
 fi
 if ((${#unlocked_specs[@]})); then
-  MISE_LOCKED=false mise install "${unlocked_specs[@]}"
+  MISE_LOCKED=false caller_mise install "${unlocked_specs[@]}"
 fi
 # ~keep From the fallback root, so mise verifies the install against that lock; its config is this repository's,
 # ~keep trusted like the caller's, and the caller's profiles do not apply to it.
 if ((${#fallback_specs[@]})); then
   (
     cd "$fallback_root"
-    mise trust --quiet "$fallback_root"
-    env -u MISE_ENV MISE_LOCKED=1 mise install "${fallback_specs[@]}"
+    env -u MISE_ENV MISE_LOCKED=1 MISE_TRUSTED_CONFIG_PATHS="$(trusted_paths "$fallback_root")" \
+      mise install "${fallback_specs[@]}"
   )
 fi
 
@@ -262,7 +302,7 @@ for spec in "${all_specs[@]}"; do
   spec_paths=()
   while IFS= read -r path; do
     [[ -n "$path" ]] && spec_paths+=("$path")
-  done < <(MISE_LOCKED=false mise bin-paths "$spec" | tr -d '\r')
+  done < <(MISE_LOCKED=false caller_mise bin-paths "$spec" | tr -d '\r')
   if ((${#spec_paths[@]} == 0)); then
     echo "::error::mise resolved no bin directory for $spec" >&2
     exit 1
@@ -286,7 +326,7 @@ for spec in "${all_specs[@]}"; do
   done < <(tool_variables "${spec%@*}")
 done
 if ((${#variables[@]})); then
-  tool_env="$(MISE_LOCKED=false mise env --dotenv "${all_specs[@]}")"
+  tool_env="$(MISE_LOCKED=false caller_mise env --dotenv "${all_specs[@]}")"
   pattern="^($(IFS='|' && echo "${variables[*]}"))="
   { tr -d '\r' <<<"$tool_env" | grep -E "$pattern" || true; } |
     sed -E "s/^([A-Z_]+)=[\"']?([^\"']*)[\"']?\$/\\1=\\2/" >>"$GITHUB_ENV"

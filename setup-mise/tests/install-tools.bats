@@ -16,8 +16,8 @@ setup() {
 	xberg_stub mise \
 		'case "$1" in' \
 		'current) printf "%s" "$STUB_CURRENT" ;;' \
-		'install) shift; printf "install MISE_LOCKED=%s %s%s\n" "${MISE_LOCKED:-}" "${MISE_ENV:+MISE_ENV=$MISE_ENV }" "$*" >>"$XBERG_TRACE" ;;' \
-		'trust) shift; printf "trust %s from %s\n" "$*" "$PWD" >>"$BATS_TEST_TMPDIR/trust.log" ;;' \
+		'install) shift; printf "%s from %s\n" "${MISE_TRUSTED_CONFIG_PATHS:-}" "$PWD" >>"$BATS_TEST_TMPDIR/trust.log"' \
+		'  printf "install MISE_LOCKED=%s %s%s\n" "${MISE_LOCKED:-}" "${MISE_ENV:+MISE_ENV=$MISE_ENV }" "$*" >>"$XBERG_TRACE" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2"; [ -z "${STUB_EXTRA_PATH:-}" ] || printf "%s\n" "$STUB_EXTRA_PATH" ;;' \
 		'env) shift 2; echo "API_TOKEN=do-not-export"' \
 		'  for spec in "$@"; do' \
@@ -28,7 +28,7 @@ setup() {
 }
 
 run_script() {
-	run env -u MISE_ENV -u MISE_LOCKED "$@"
+	run env -u MISE_ENV -u MISE_LOCKED -u GITHUB_EVENT_NAME -u MISE_TRUSTED_CONFIG_PATHS "$@"
 }
 
 @test "install_tools should_install_a_configured_tool_from_the_config_when_no_version_is_passed" {
@@ -80,8 +80,7 @@ write_fallback_root() {
 	xberg_assert_status 0
 	xberg_assert_output_contains "::notice::helm is not declared in the mise config for $REPO, so it installs helm@4.3.1"
 	xberg_assert_trace "install MISE_LOCKED=1 helm@4.3.1 github:taiki-e/cargo-llvm-cov@0.9.1"
-	xberg_assert_file "$BATS_TEST_TMPDIR/trust.log" "$(printf '%s\n' "trust --quiet $REPO from $REPO" \
-		"trust --quiet $FALLBACK from $FALLBACK")"
+	xberg_assert_file "$BATS_TEST_TMPDIR/trust.log" "$FALLBACK from $FALLBACK"
 	xberg_assert_github_path $'/installs/github:taiki-e/cargo-llvm-cov@0.9.1/bin\n/installs/helm@4.3.1/bin'
 }
 
@@ -302,7 +301,7 @@ write_fallback_root() {
 	printf '%s\n' '[[tools.shfmt]]' 'version = "3.10.0"' 'backend = "aqua:mvdan/sh"' >"$REPO/mise.lock"
 	xberg_stub mise \
 		'case "$1" in' \
-		'current | trust) exec "$REAL_MISE" "$@" ;;' \
+		'current) exec "$REAL_MISE" "$@" ;;' \
 		'install) shift; printf "install MISE_LOCKED=%s %s\n" "${MISE_LOCKED:-}" "$*" >>"$XBERG_TRACE" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2" ;;' \
 		'*) exit 64 ;;' \
@@ -324,7 +323,7 @@ write_fallback_root() {
 	printf '%s\n' '[env]' 'CALLER_VALUE = "set"' '[tools]' 'shfmt = "3.10.0"' >"$REPO/mise.toml"
 	xberg_stub mise \
 		'case "$1" in' \
-		'current | trust) exec "$REAL_MISE" "$@" ;;' \
+		'current) exec "$REAL_MISE" "$@" ;;' \
 		'install) shift; printf "install %s\n" "$*" >>"$XBERG_TRACE" ;;' \
 		'bin-paths) printf "/installs/%s/bin\n" "$2" ;;' \
 		'*) exit 64 ;;' \
@@ -338,4 +337,25 @@ write_fallback_root() {
 
 	xberg_assert_status 0
 	xberg_assert_trace "install shfmt"
+	run env -u MISE_TRUSTED_CONFIG_PATHS "${isolated[@]}" "$REAL_MISE" current --cd "$REPO"
+	[[ "$status" -ne 0 ]]
+}
+
+@test "install_tools should_not_trust_the_caller_config_on_a_pull_request_target_run" {
+	[[ -n "$REAL_MISE" ]] || skip "mise is not on PATH"
+	printf '%s\n' '[env]' 'CALLER_VALUE = "set"' '[tools]' 'shfmt = "3.10.0"' >"$REPO/mise.toml"
+	xberg_stub mise \
+		'case "$1" in' \
+		'current) exec "$REAL_MISE" "$@" ;;' \
+		'*) printf "%s\n" "$*" >>"$XBERG_TRACE" ;;' \
+		'esac'
+
+	run_script GITHUB_EVENT_NAME=pull_request_target MISE_OFFLINE=1 MISE_DATA_DIR="$BATS_TEST_TMPDIR/data" \
+		MISE_STATE_DIR="$BATS_TEST_TMPDIR/state" MISE_GLOBAL_CONFIG_FILE="$BATS_TEST_TMPDIR/global.toml" \
+		"$SCRIPT" "$REPO" shfmt
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::The mise config in $REPO is not trusted, and a pull_request_target run"
+	xberg_assert_output_contains "Set MISE_TRUSTED_CONFIG_PATHS"
+	xberg_assert_trace_empty
 }

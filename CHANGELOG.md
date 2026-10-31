@@ -24,8 +24,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 - `setup-mise/scripts/install-tools.sh` no longer exports `GOROOT` and `GOBIN` for Go. A `GOBIN` inside mise's Go
   install sent every later `go install` there; go finds its root from its own path, as it did under setup-go.
-- `setup-mise/scripts/install-tools.sh` trusts the caller's mise config before reading it, so a config with
-  `[env]` or tasks no longer fails as untrusted when the job did not run `setup-mise` first.
+- `setup-mise/scripts/install-tools.sh` trusts the caller's mise config for its own mise calls, through
+  `MISE_TRUSTED_CONFIG_PATHS` and without persisting it, so a config with `[env]` or tasks no longer fails as
+  untrusted when the job did not run `setup-mise` first. On `pull_request_target` and `workflow_run` runs it does
+  not trust the config implicitly: an untrusted config fails with an error asking the caller to set
+  `MISE_TRUSTED_CONFIG_PATHS` itself.
 
 ### Changed
 
