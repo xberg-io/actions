@@ -79,7 +79,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-notice_helper="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/notices.py"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+notice_helper="$script_dir/notices.py"
 if [[ -n "$ADDITIONAL_LICENSE_FILES" ]]; then
   python3 "$notice_helper" validate "$workspace"
 fi
@@ -215,14 +216,16 @@ echo "=== Building Apple targets ==="
 if should_build aarch64-apple-darwin; then
   echo "Building aarch64-apple-darwin..."
   # shellcheck disable=SC2086
-  cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
+  python3 "$script_dir/target_flags.py" aarch64-apple-darwin \
+    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-darwin
   prune_target_intermediates aarch64-apple-darwin
 fi
 
 if [[ "$INCLUDE_MACOS_X86_64" == "true" ]] && should_build x86_64-apple-darwin; then
   echo "Building x86_64-apple-darwin..."
   # shellcheck disable=SC2086
-  cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
+  python3 "$script_dir/target_flags.py" x86_64-apple-darwin \
+    cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-darwin
   prune_target_intermediates x86_64-apple-darwin
 else
   echo "Skipping x86_64-apple-darwin (include-macos-x86_64=false)"
@@ -231,21 +234,24 @@ fi
 if should_build aarch64-apple-ios; then
   echo "Building aarch64-apple-ios..."
   # shellcheck disable=SC2086
-  cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios
+  python3 "$script_dir/target_flags.py" aarch64-apple-ios \
+    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios
   prune_target_intermediates aarch64-apple-ios
 fi
 
 if should_build aarch64-apple-ios-sim; then
   echo "Building aarch64-apple-ios-sim..."
   # shellcheck disable=SC2086
-  cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
+  python3 "$script_dir/target_flags.py" aarch64-apple-ios-sim \
+    cargo build --locked -p "$CRATE_NAME" $profile_flag --target aarch64-apple-ios-sim
   prune_target_intermediates aarch64-apple-ios-sim
 fi
 
 if [[ "$INCLUDE_IOS_X86_64" == "true" ]] && should_build x86_64-apple-ios; then
   echo "Building x86_64-apple-ios..."
   # shellcheck disable=SC2086
-  cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
+  python3 "$script_dir/target_flags.py" x86_64-apple-ios \
+    cargo build --locked -p "$CRATE_NAME" $profile_flag --target x86_64-apple-ios
   prune_target_intermediates x86_64-apple-ios
 else
   echo "Skipping x86_64-apple-ios (include-ios-x86_64=false)"
@@ -256,13 +262,15 @@ echo "=== Building Linux targets (cargo-zigbuild) ==="
 if should_build aarch64-unknown-linux-gnu; then
   echo "Building aarch64-unknown-linux-gnu..."
   # shellcheck disable=SC2086
-  cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
+  python3 "$script_dir/target_flags.py" aarch64-unknown-linux-gnu \
+    cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target aarch64-unknown-linux-gnu
   prune_target_intermediates aarch64-unknown-linux-gnu
 fi
 if should_build x86_64-unknown-linux-gnu; then
   echo "Building x86_64-unknown-linux-gnu..."
   # shellcheck disable=SC2086
-  cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
+  python3 "$script_dir/target_flags.py" x86_64-unknown-linux-gnu \
+    cargo zigbuild --locked -p "$CRATE_NAME" $profile_flag --target x86_64-unknown-linux-gnu
   prune_target_intermediates x86_64-unknown-linux-gnu
 fi
 # Build-only mode: the caller asked for a subset of triples, so this job's job is done.
