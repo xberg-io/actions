@@ -1,0 +1,88 @@
+name: AI-Rulez validation (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      budgets:
+        description: >-
+          Context-exposure budgets, one `preset=tokens` per line (e.g. `claude=5250`): the --measure-mcp
+          ai-rulez measurement plus about 5%. Re-measure on every agent-conventions pin bump.
+        required: true
+        type: string
+      expected-config-count:
+        description: "Number of root and module ai-rulez configurations validate-ai-rulez must find."
+        required: false
+        type: string
+        default: "1"
+      additional-config-directories:
+        description: "Newline-separated module configuration directories to validate, such as plugin/.ai-rulez."
+        required: false
+        type: string
+        default: ""
+      verify-plugin:
+        description: "Verify committed plugin outputs, plugin version sync and public skills."
+        required: false
+        type: boolean
+        default: false
+      version-sync-script:
+        description: "Plugin version script supporting --check, used when verify-plugin is true."
+        required: false
+        type: string
+        default: "scripts/sync_plugin_version.py"
+      public-skills-check-script:
+        description: "Public skill export script supporting --check, used when verify-plugin is true."
+        required: false
+        type: string
+        default: "scripts/sync_public_skills.py"
+      repo-name:
+        description: "Name the repository is listed under in agent-conventions' domains.toml. Empty uses the repository name."
+        required: false
+        type: string
+        default: ""
+      mise-install-args:
+        description: >-
+          Tools to install through mise before validating, such as `python` when a sync script needs the
+          caller's pinned interpreter. Empty installs nothing.
+        required: false
+        type: string
+        default: ""
+      runner:
+        description: "Runner label to run on."
+        required: false
+        type: string
+        default: "ubuntu-latest"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate AI-Rulez
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tools through mise
+        if: ${{ inputs.mise-install-args != '' }}
+        uses: xberg-io/actions/setup-mise@v1
+        with:
+          install-args: ${{ inputs.mise-install-args }}
+
+      # ~keep ai-rulez runs at its latest release, never a mise pin (org ADR-0015).
+      - name: Install AI-Rulez
+        uses: xberg-io/actions/setup-ai-rulez@v1
+
+      - name: Validate AI-Rulez
+        uses: xberg-io/actions/validate-ai-rulez@v1
+        with:
+          expected-config-count: ${{ inputs.expected-config-count }}
+          additional-config-directories: ${{ inputs.additional-config-directories }}
+          verify-plugin: ${{ inputs.verify-plugin }}
+          version-sync-script: ${{ inputs.version-sync-script }}
+          public-skills-check-script: ${{ inputs.public-skills-check-script }}
+
+      - name: Check context exposure
+        uses: xberg-io/agent-conventions/actions/context-exposure@v1
+        with:
+          repo-name: ${{ inputs.repo-name || github.event.repository.name }}
+          budgets: ${{ inputs.budgets }}

@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-ai-rulez-validation.yml` runs the AI-Rulez validation job copied across the org: `setup-ai-rulez`,
+  `validate-ai-rulez` and the agent-conventions `context-exposure` gate. `budgets` is required; module directories,
+  the expected config count, plugin verification and its scripts, `repo-name`, a mise pre-install and the runner
+  are inputs. Triggers and concurrency stay in the caller: the reusable sets no `concurrency`, since a called job's
+  block would override the caller's.
+
 ## [1.40.0] - 2026-10-31
 
 ### Added
