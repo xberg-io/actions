@@ -27,7 +27,9 @@ inputs:
     description: "Registry password / token (e.g. GITHUB_TOKEN for GHCR)"
     required: true
   helm-version:
-    description: "Helm version to install (e.g. v3.16.0). Defaults to latest stable."
+    description: >-
+      Helm version to install through mise (e.g. v3.16.0), matched against the caller's mise locks. Empty uses
+      the version the caller's mise.toml selects, or the latest release when it declares no helm.
     required: false
     default: ""
   dry-run:
@@ -49,10 +51,25 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set up Helm
-      uses: azure/setup-helm@v5
+    - name: Check for mise
+      id: mise
+      shell: bash
+      run: echo "present=$(command -v mise >/dev/null 2>&1 && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+    - name: Set up mise
+      if: steps.mise.outputs.present != 'true'
+      uses: xberg-io/actions/setup-mise@v1
       with:
-        version: ${{ inputs.helm-version || 'latest' }}
+        install: "false"
+
+    # ~keep A caller without helm in mise.toml gets the latest release, as azure/setup-helm installed before.
+    - name: Install Helm through mise
+      shell: bash
+      env:
+        HELM_VERSION: ${{ inputs.helm-version }}
+        INSTALL_TOOLS_UNDECLARED_VERSION: latest
+        MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+      run: bash "${{ github.action_path }}/../setup-mise/scripts/install-tools.sh" . "helm=$HELM_VERSION"
 
     - name: Publish chart
       id: publish

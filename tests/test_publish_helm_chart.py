@@ -2,8 +2,10 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+import yaml
 
-_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "publish-helm-chart" / "scripts" / "publish.py"
+_ROOT = Path(__file__).resolve().parents[1]
+_SCRIPT_PATH = _ROOT / "publish-helm-chart" / "scripts" / "publish.py"
 
 
 def _import_script(name: str, path: Path):
@@ -157,3 +159,15 @@ def test_write_outputs_handles_missing_env(
 
     captured = capsys.readouterr()
     assert "::set-output name=published::true" in captured.out
+
+
+def test_action_installs_helm_through_mise_before_publishing():
+    steps = yaml.safe_load((_ROOT / "publish-helm-chart" / "action.yml").read_text())["runs"]["steps"]
+    assert not [step for step in steps if str(step.get("uses", "")).startswith("azure/setup-helm@")]
+    helm_steps = [step for step in steps if "install-tools.sh" in str(step.get("run", ""))]
+    assert len(helm_steps) == 1
+    install = helm_steps[0]
+    assert install["run"].endswith('install-tools.sh" . "helm=$HELM_VERSION"')
+    assert install["env"]["HELM_VERSION"] == "${{ inputs.helm-version }}"
+    assert install["env"]["INSTALL_TOOLS_UNDECLARED_VERSION"] == "latest"
+    assert steps.index(install) < next(index for index, step in enumerate(steps) if step.get("id") == "publish")

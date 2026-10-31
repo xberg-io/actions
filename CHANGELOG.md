@@ -19,6 +19,12 @@ All notable changes to xberg-io/actions are documented in this file.
   instead of failing. Composites that installed the newest release before moving to mise use it to stay
   compatible with callers that do not declare the tool.
 
+### Changed
+
+- `publish-helm-chart` installs Helm through mise instead of `azure/setup-helm`. `helm-version` is matched
+  against the caller's mise locks; empty uses the caller's `mise.toml` and, when it declares no `helm`, the
+  latest release as before.
+
 ## [1.40.0] - 2026-10-31
 
 ### Added
