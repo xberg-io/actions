@@ -107,7 +107,7 @@ def test_should_mount_cwd_and_pin_the_alpine_image_when_building_in_docker(recor
         "/src",
         "-e",
     ]
-    assert "rust:1-alpine3.21" in cmd
+    assert "rust:1.99.1-alpine3.24" in cmd
     assert cmd[-3:-1] == ["sh", "-c"]
     assert recorder.kwargs[0] == {"check": True}
 

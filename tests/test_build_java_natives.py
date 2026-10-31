@@ -391,7 +391,7 @@ def test_build_in_docker_should_mount_the_cwd_and_run_cargo_in_the_alpine_image(
     assert docker_cmd[3:5] == ["--platform", "linux/aarch64"]
     assert docker_cmd[5:7] == ["-v", f"{tmp_path.resolve()}:/src"]
     assert docker_cmd[7:9] == ["-w", "/src"]
-    assert docker_cmd[-4:-1] == ["rust:1-alpine3.21", "sh", "-c"]
+    assert docker_cmd[-4:-1] == ["rust:1.99.1-alpine3.24", "sh", "-c"]
     assert kwargs == {"check": True}
 
 

@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Pull image that must survive cleanup
-        run: docker pull alpine:3.23
+        run: docker pull alpine:3.24
 
       - name: Record initial disk space
         run: |
@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Verify prepared Docker action images survive cleanup
-        run: docker image inspect alpine:3.23
+        run: docker image inspect alpine:3.24
 
       # Regression guard: the cleanup used to delete /usr/local/lib/node_modules, which left
       # /usr/local/bin/npm as a dangling symlink. `npm` stayed on PATH and every call failed with

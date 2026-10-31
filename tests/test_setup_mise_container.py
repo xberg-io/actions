@@ -24,7 +24,7 @@ def _step(name):
 
 def test_container_job_runs_setup_mise_with_go_in_debian_on_both_linux_arches():
     job = _job()
-    assert job["container"] == "debian:bookworm"
+    assert job["container"] == "debian:trixie"
     assert job["runs-on"] == "${{ matrix.os }}"
     assert job["strategy"]["matrix"]["os"] == ["ubuntu-latest", "ubuntu-24.04-arm"]
     names = [step.get("name", step.get("uses")) for step in job["steps"]]

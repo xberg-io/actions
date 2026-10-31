@@ -20,13 +20,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Pull alpine image
-        run: docker pull alpine:3.20
+        run: docker pull alpine:3.24
 
       - name: Check size below threshold
         id: ok
         uses: ./check-docker-image-size
         with:
-          image: alpine:3.20
+          image: alpine:3.24
           warn-mb: "100"
           label: "alpine"
 
@@ -42,7 +42,7 @@ jobs:
       - name: Threshold below size triggers warn (still exit 0)
         uses: ./check-docker-image-size
         with:
-          image: alpine:3.20
+          image: alpine:3.24
           warn-mb: "1"
           label: "alpine-warn"
 
@@ -51,7 +51,7 @@ jobs:
         uses: ./check-docker-image-size
         continue-on-error: true
         with:
-          image: alpine:3.20
+          image: alpine:3.24
           fail-mb: "1"
           label: "alpine-fail"
 

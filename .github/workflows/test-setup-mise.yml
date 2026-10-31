@@ -205,13 +205,13 @@ jobs:
   # ~keep Release builds run setup-mise inside a Debian container, which has none of the hosted runner's tools.
   # ~keep The preamble installs what ai-rulez's publish job installs before it.
   container:
-    name: Selected tools in debian:bookworm on ${{ matrix.os }}
+    name: Selected tools in debian:trixie on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
-    container: debian:bookworm
+    container: debian:trixie
     steps:
       - name: Install the container prerequisites
         shell: bash
