@@ -11,6 +11,9 @@ All notable changes to xberg-io/actions are documented in this file.
   the expected config count, plugin verification and its scripts, `repo-name`, a mise pre-install and the runner
   are inputs. Triggers and concurrency stay in the caller: the reusable sets no `concurrency`, since a called job's
   block would override the caller's.
+- `reusable-toolchain.yml` runs the Toolchain job copied across the org: `check-toolchain` against the baseline,
+  then `setup-mise` installing from the lock, on the `runner` input (default `ubuntu-latest`). Triggers and
+  concurrency stay in the caller, as for `reusable-ai-rulez-validation.yml`.
 
 ## [1.40.0] - 2026-10-31
 

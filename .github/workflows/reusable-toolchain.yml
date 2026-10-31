@@ -1,0 +1,27 @@
+name: Toolchain (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: "Runner label to run on."
+        required: false
+        type: string
+        default: "ubuntu-latest"
+
+permissions:
+  contents: read
+
+jobs:
+  check-toolchain:
+    name: Toolchain baseline
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check toolchain against the baseline
+        uses: xberg-io/actions/check-toolchain@v1
+
+      # ~keep Installing proves every locked tool resolves, which the baseline comparison alone does not.
+      - name: Install from the lock
+        uses: xberg-io/actions/setup-mise@v1

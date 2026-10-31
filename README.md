@@ -159,13 +159,14 @@ not step outputs: a composite action propagates only the outputs it declares, so
 | `reusable-python-lint.yml`         | Python linting via uv + prek                                                                                                                                                                                            |
 | `reusable-docs-deploy.yml`         | Build an Astro Starlight docs site and deploy it to GitHub Pages                                                                                                                                                        |
 | `reusable-ai-rulez-validation.yml` | AI-Rulez validation (setup-ai-rulez, validate-ai-rulez, optional plugin verification) and the agent-conventions context-exposure budget gate                                                                            |
+| `reusable-toolchain.yml`           | Check the toolchain against the xberg-io/toolchains baseline (`check-toolchain`) and install from the lock (`setup-mise`)                                                                                               |
 
 `reusable-validate.yml` takes `check-toolchain: true` to run [`check-toolchain`](check-toolchain/README.md) before
 any setup step, failing on drift from the xberg-io/toolchains baseline named in `toolchains.toml`.
 
-`reusable-ai-rulez-validation.yml` holds only the job. The caller keeps its triggers and owns concurrency: the
-reusable sets none, because a job-level `concurrency` in a called workflow overrides the caller's. Its steps use
-`xberg-io/actions/*@v1`, so it needs a `v1` that already contains those composites.
+`reusable-ai-rulez-validation.yml` and `reusable-toolchain.yml` hold only the job. The caller keeps its triggers and
+owns concurrency: neither sets any, because a job-level `concurrency` in a called workflow overrides the caller's.
+Their steps use `xberg-io/actions/*@v1`, so they need a `v1` that already contains those composites.
 
 ```yaml
 jobs:
