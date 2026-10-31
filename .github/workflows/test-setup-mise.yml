@@ -243,9 +243,9 @@ jobs:
           [[ -n "$locked" ]] || { echo "::error::mise.lock locks no Go version"; exit 1; }
           go_version="$(go version)"
           echo "go: $go_version (locked $locked)"
-          [[ "$go_version" == "go version go$locked linux/"* ]]
-          [[ "$(command -v go)" == "$(mise where go)/"* ]]
-          [[ "${MISE_LOCKED:-}" == "1" ]]
+          [[ "$go_version" == "go version go$locked linux/"* ]] || exit 1
+          [[ "$(command -v go)" == "$(mise where go)/"* ]] || exit 1
+          [[ "${MISE_LOCKED:-}" == "1" ]] || exit 1
 
   mise-data-dir:
     name: Preset MISE_DATA_DIR is respected
