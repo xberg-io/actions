@@ -1,13 +1,16 @@
 name: Test setup-python-env
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - "setup-python-env/**"
+      - "setup-mise/scripts/install-tools.sh"
       - ".github/workflows/test-setup-python-env.yml"
   pull_request:
     paths:
       - "setup-python-env/**"
+      - "setup-mise/scripts/install-tools.sh"
       - ".github/workflows/test-setup-python-env.yml"
 
 permissions:

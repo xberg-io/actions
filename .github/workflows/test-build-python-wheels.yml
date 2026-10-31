@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "build-python-wheels/**"
+      - "setup-mise/scripts/install-tools.sh"
       - "tests/native/**"
       - ".github/workflows/test-build-python-wheels.yml"
   workflow_dispatch:
