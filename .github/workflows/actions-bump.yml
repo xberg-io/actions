@@ -1,0 +1,22 @@
+name: Actions Bump
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actions-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-actions-bump.yml
+    with:
+      mode: pr

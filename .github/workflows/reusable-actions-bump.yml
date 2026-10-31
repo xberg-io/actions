@@ -1,0 +1,169 @@
+name: Actions Bump (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: >-
+          "pr" commits to the ci/actions-bump branch and opens a pull request against the default branch, or
+          refreshes the open one; "push" commits straight to the default branch.
+        required: false
+        type: string
+        default: "pr"
+      runner:
+        description: "Runner label to run on."
+        required: false
+        type: string
+        default: "ubuntu-latest"
+      paths:
+        description: >-
+          Whitespace-separated paths gau scans besides .github and every tracked action.yml and action.yaml,
+          relative to the repository root.
+        required: false
+        type: string
+        default: ""
+      commit-message:
+        description: "Commit message, and the pull request title in pr mode."
+        required: false
+        type: string
+        default: "ci: move actions to their latest major version"
+    secrets:
+      token:
+        description: >-
+          Token to push and open the pull request with, in place of GITHUB_TOKEN. GitHub rejects a push from
+          GITHUB_TOKEN that changes a file under .github/workflows, so a bump that touches a workflow needs a
+          token with the workflows permission.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    name: Bump action pins
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check the mode
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            push | pr) ;;
+            *) echo "::error::mode must be push or pr, got '$MODE'" >&2; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.token || github.token }}
+
+      # ~keep setup-mise installs a tool the caller's mise.toml does not declare from INSTALL_TOOLS_FALLBACK_ROOT,
+      # ~keep a directory with its own mise.toml and mise.lock. A called workflow has no path to this repository's
+      # ~keep files, so check out the two at the tag the steps below pin.
+      - name: Check out the fallback mise config
+        uses: actions/checkout@v7
+        with:
+          repository: xberg-io/actions
+          ref: v1
+          path: .xberg-actions-fallback
+          persist-credentials: false
+          sparse-checkout: |
+            mise.toml
+            mise.lock
+          sparse-checkout-cone-mode: false
+
+      - name: Set up gh-actions-updater and actionlint
+        uses: xberg-io/actions/setup-mise@v1
+        env:
+          INSTALL_TOOLS_FALLBACK_ROOT: ${{ github.workspace }}/.xberg-actions-fallback
+        with:
+          tools: github:Goldziher/gh-actions-updater actionlint
+
+      - name: Remove the fallback mise config
+        run: rm -rf .xberg-actions-fallback
+
+      # ~keep Absolute paths: with relative ones gau 0.3.1 cannot resolve the repository root and reports every
+      # ~keep local `uses:` as missing.
+      - name: Move every action to its latest major version
+        env:
+          EXTRA_PATHS: ${{ inputs.paths }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          paths=()
+          [ -d .github ] && paths+=("$GITHUB_WORKSPACE/.github")
+          while IFS= read -r file; do
+            paths+=("$GITHUB_WORKSPACE/$file")
+          done < <(git ls-files -- ':(glob)**/action.yml' ':(glob)**/action.yaml' ':(exclude,glob).github/**')
+          read -r -a extra <<<"$(tr '\n' ' ' <<<"$EXTRA_PATHS")"
+          for path in "${extra[@]}"; do
+            paths+=("$GITHUB_WORKSPACE/$path")
+          done
+          [ "${#paths[@]}" -gt 0 ] || { echo "::error::no .github directory or action.yml to scan" >&2; exit 1; }
+          echo "Scanning ${#paths[@]} path(s)"
+          gau --update --latest-tag --pin-style major --validate "${paths[@]}"
+
+      - name: Detect changes
+        id: diff
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+            echo "Every action is already on its latest major version."
+          else
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+            git diff --stat
+          fi
+
+      - name: Lint the changed workflows
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t workflows < <(git diff --name-only -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          if [ "${#workflows[@]}" -eq 0 ]; then
+            echo "No workflow changed; actionlint has nothing to check."
+            exit 0
+          fi
+          actionlint "${workflows[@]}"
+
+      - name: Commit the bump
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --update
+          git commit --message "$COMMIT_MESSAGE"
+
+      - name: Push to the default branch
+        if: steps.diff.outputs.changed == 'true' && inputs.mode == 'push'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git push origin "HEAD:refs/heads/$DEFAULT_BRANCH"
+
+      - name: Open or refresh the pull request
+        if: steps.diff.outputs.changed == 'true' && inputs.mode == 'pr'
+        env:
+          BRANCH: ci/actions-bump
+          COMMIT_MESSAGE: ${{ inputs.commit-message }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ secrets.token || github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
+          git push --force-with-lease="refs/heads/$BRANCH" origin "HEAD:refs/heads/$BRANCH"
+          open=$(gh pr list --head "$BRANCH" --base "$DEFAULT_BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            echo "Refreshed pull request #$open."
+          else
+            gh pr create --base "$DEFAULT_BRANCH" --head "$BRANCH" --title "$COMMIT_MESSAGE" \
+              --body "Moves every \`uses:\` ref to its latest major version with gh-actions-updater."
+          fi

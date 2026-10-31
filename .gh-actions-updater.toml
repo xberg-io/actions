@@ -1,0 +1,8 @@
+# Upstreams that publish no major tag; gau keeps their full tag and --lint-pins accepts it.
+[update]
+allow_full = [
+  "cargo-bins/cargo-binstall",
+  "mozilla-actions/sccache-action",
+  "pypa/gh-action-pypi-publish",
+  "rubygems/configure-rubygems-credentials",
+]

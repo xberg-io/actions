@@ -160,9 +160,36 @@ not step outputs: a composite action propagates only the outputs it declares, so
 | `reusable-docs-deploy.yml`         | Build an Astro Starlight docs site and deploy it to GitHub Pages                                                                                                                                                        |
 | `reusable-ai-rulez-validation.yml` | AI-Rulez validation (setup-ai-rulez, validate-ai-rulez, optional plugin verification) and the agent-conventions context-exposure budget gate                                                                            |
 | `reusable-toolchain.yml`           | Check the toolchain against the xberg-io/toolchains baseline (`check-toolchain`) and install from the lock (`setup-mise`)                                                                                               |
+| `reusable-actions-bump.yml`        | Move every `uses:` ref to its latest major version with gh-actions-updater, run actionlint, then push to the default branch or open a pull request (`mode: push` or `pr`)                                               |
 
 `reusable-validate.yml` takes `check-toolchain: true` to run [`check-toolchain`](check-toolchain/README.md) before
 any setup step, failing on drift from the xberg-io/toolchains baseline named in `toolchains.toml`.
+
+`reusable-actions-bump.yml` needs a caller that grants `contents: write` and `pull-requests: write` and owns the
+schedule. GitHub rejects a push from `GITHUB_TOKEN` that changes a file under `.github/workflows`, so pass a token
+with the workflows permission as the `token` secret. Pull requests opened with `GITHUB_TOKEN` trigger no workflows.
+
+```yaml
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: actions-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: xberg-io/actions/.github/workflows/reusable-actions-bump.yml@v1
+    with:
+      mode: pr
+    secrets:
+      token: ${{ secrets.WORKFLOW_TOKEN }}
+```
 
 `reusable-ai-rulez-validation.yml` and `reusable-toolchain.yml` hold only the job. The caller keeps its triggers and
 owns concurrency: neither sets any, because a job-level `concurrency` in a called workflow overrides the caller's.
@@ -212,6 +239,7 @@ For repositories with compiled binding workspaces, set `prose-dependency-directo
 | `test-validate.yml`                | Validation workflow tests                                                                                  |
 | `validate-pr.yml`                  | Repository PR validation                                                                                   |
 | `validate-issues.yml`              | Repository issue validation                                                                                |
+| `actions-bump.yml`                 | Weekly `reusable-actions-bump.yml` run in `pr` mode                                                        |
 
 ## Usage
 

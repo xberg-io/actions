@@ -18,6 +18,15 @@ All notable changes to xberg-io/actions are documented in this file.
   public skill scripts, the config directory, the Cursor marketplace, `clobber` and an optional `provenance-script`
   bundled as `source-provenance.json` are inputs. The caller grants `contents: write` and keeps its triggers and
   concurrency.
+- `reusable-actions-bump.yml` moves every `uses:` ref in `.github`, each tracked `action.yml` and `action.yaml` and
+  the `paths` input to its latest major version with `gau --update --latest-tag --pin-style major --validate`. When
+  that changes a file it runs actionlint on the changed workflows, commits with `commit-message`, and pushes to the
+  default branch (`mode: push`) or opens or refreshes a pull request from `ci/actions-bump` (`mode: pr`, the
+  default). A caller whose `mise.toml` does not declare gau or actionlint gets this repository's pins. Callers own
+  the schedule and concurrency. A bump that changes a workflow file needs the `token` secret: GitHub rejects such a
+  push from `GITHUB_TOKEN`.
+- `actions-bump.yml` runs the bump here weekly in `pr` mode, and `.gh-actions-updater.toml` lists the upstreams
+  with no major tag in `allow_full`.
 
 ### Fixed
 
