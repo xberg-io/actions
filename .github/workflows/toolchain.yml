@@ -12,7 +12,6 @@ on:
       - "check-toolchain/**"
       - "setup-mise/**"
       - ".github/workflows/toolchain.yml"
-      - ".github/workflows/reusable-toolchain.yml"
   push:
     branches: [main]
     paths:
@@ -25,7 +24,6 @@ on:
       - "check-toolchain/**"
       - "setup-mise/**"
       - ".github/workflows/toolchain.yml"
-      - ".github/workflows/reusable-toolchain.yml"
   workflow_dispatch:
 
 permissions:
@@ -33,4 +31,10 @@ permissions:
 
 jobs:
   check-toolchain:
-    uses: ./.github/workflows/reusable-toolchain.yml
+    name: Toolchain baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./check-toolchain
+      - name: Install from the lock
+        uses: ./setup-mise

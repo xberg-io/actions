@@ -66,11 +66,18 @@ def test_install_covers_the_whole_lock():
         assert narrowing not in install.get("with", {}), narrowing
 
 
-def test_own_ci_calls_the_local_reusable():
-    """This repository's own toolchain gate is the reusable's dogfood caller. ~keep"""
-    caller = yaml.safe_load((_WORKFLOW.parent / "toolchain.yml").read_text())
-    triggers = _triggers(caller)
+def test_own_gate_runs_this_commits_composites():
+    """A reusable pins xberg-io/actions@v1, so only local steps test a PR's own check-toolchain. ~keep"""
+    gate = yaml.safe_load((_WORKFLOW.parent / "toolchain.yml").read_text())
+    steps = gate["jobs"]["check-toolchain"]["steps"]
 
-    assert caller["jobs"] == {"check-toolchain": {"uses": "./.github/workflows/reusable-toolchain.yml"}}
+    assert [step.get("uses") for step in steps] == ["actions/checkout@v7", "./check-toolchain", "./setup-mise"]
+
+
+def test_dogfood_workflow_calls_the_reusable_when_it_changes():
+    dogfood = yaml.safe_load((_WORKFLOW.parent / "test-reusable-governance.yml").read_text())
+    triggers = _triggers(dogfood)
+
+    assert dogfood["jobs"]["toolchain"] == {"uses": "./.github/workflows/reusable-toolchain.yml"}
     for event in ("push", "pull_request"):
         assert ".github/workflows/reusable-toolchain.yml" in triggers[event]["paths"], event

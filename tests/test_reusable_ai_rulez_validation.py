@@ -106,16 +106,30 @@ def test_runner_defaults_to_github_hosted_ubuntu():
     assert _inputs()["runner"]["default"] == "ubuntu-latest"
 
 
-def test_own_ci_calls_the_local_reusable_with_its_budgets():
-    """This repository's own governance gate is the reusable's dogfood caller. ~keep"""
-    caller = yaml.safe_load((_WORKFLOW.parent / "ai-rulez-validation.yml").read_text())
-    triggers = _triggers(caller)
+_BUDGETS = "claude=4300\ncodex=4800\n"
 
-    assert caller["jobs"] == {
-        "validate": {
-            "uses": "./.github/workflows/reusable-ai-rulez-validation.yml",
-            "with": {"budgets": "claude=4300\ncodex=4800\n"},
-        }
+
+def test_own_gate_runs_this_commits_composites_with_the_budgets():
+    """A reusable pins xberg-io/actions@v1, so only local steps test a PR's own validate-ai-rulez. ~keep"""
+    gate = yaml.safe_load((_WORKFLOW.parent / "ai-rulez-validation.yml").read_text())
+    steps = gate["jobs"]["validate"]["steps"]
+
+    assert [step.get("uses") for step in steps] == [
+        "actions/checkout@v7",
+        "./setup-ai-rulez",
+        "./validate-ai-rulez",
+        "xberg-io/agent-conventions/actions/context-exposure@v1",
+    ]
+    assert steps[-1]["with"]["budgets"] == _BUDGETS
+
+
+def test_dogfood_workflow_calls_the_reusable_when_it_changes():
+    dogfood = yaml.safe_load((_WORKFLOW.parent / "test-reusable-governance.yml").read_text())
+    triggers = _triggers(dogfood)
+
+    assert dogfood["jobs"]["ai-rulez-validation"] == {
+        "uses": "./.github/workflows/reusable-ai-rulez-validation.yml",
+        "with": {"budgets": _BUDGETS},
     }
     for event in ("push", "pull_request"):
         assert ".github/workflows/reusable-ai-rulez-validation.yml" in triggers[event]["paths"], event

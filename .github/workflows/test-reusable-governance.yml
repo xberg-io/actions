@@ -1,0 +1,29 @@
+name: Test reusable governance workflows
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/reusable-ai-rulez-validation.yml"
+      - ".github/workflows/reusable-toolchain.yml"
+      - ".github/workflows/test-reusable-governance.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/reusable-ai-rulez-validation.yml"
+      - ".github/workflows/reusable-toolchain.yml"
+      - ".github/workflows/test-reusable-governance.yml"
+
+permissions:
+  contents: read
+
+# ~keep The reusables pin xberg-io/actions@v1, so this proves their wiring only. The own gates in
+# ~keep ai-rulez-validation.yml and toolchain.yml run the local composites, which is what tests a PR's code.
+jobs:
+  ai-rulez-validation:
+    uses: ./.github/workflows/reusable-ai-rulez-validation.yml
+    with:
+      budgets: |
+        claude=4300
+        codex=4800
+
+  toolchain:
+    uses: ./.github/workflows/reusable-toolchain.yml
