@@ -202,6 +202,51 @@ jobs:
         run: |
           [[ "$OUTCOME" == "failure" ]]
 
+  # ~keep Release builds run setup-mise inside a Debian container, which has none of the hosted runner's tools.
+  # ~keep The preamble installs what ai-rulez's publish job installs before it.
+  container:
+    name: Selected tools in debian:bookworm on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    container: debian:bookworm
+    steps:
+      - name: Install the container prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends curl ca-certificates git
+
+      - uses: actions/checkout@v7
+
+      - name: Stop mise config discovery at the fixtures
+        shell: bash
+        run: echo "MISE_CEILING_PATHS=$PWD/setup-mise/tests/fixtures" >>"$GITHUB_ENV"
+
+      - name: Setup mise with Go
+        uses: ./setup-mise
+        with:
+          working-directory: setup-mise/tests/fixtures/container
+          tools: go
+          cache: "false"
+
+      - name: Verify Go matches the lock
+        shell: bash
+        working-directory: setup-mise/tests/fixtures/container
+        run: |
+          set -euo pipefail
+          locked="$(awk '/^\[\[tools\.go\]\]/ { found = 1 }
+            found && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' mise.lock)"
+          [[ -n "$locked" ]] || { echo "::error::mise.lock locks no Go version"; exit 1; }
+          go_version="$(go version)"
+          echo "go: $go_version (locked $locked)"
+          [[ "$go_version" == "go version go$locked linux/"* ]]
+          [[ "$(command -v go)" == "$(mise where go)/"* ]]
+          [[ "${MISE_LOCKED:-}" == "1" ]]
+
   mise-data-dir:
     name: Preset MISE_DATA_DIR is respected
     runs-on: ubuntu-latest
