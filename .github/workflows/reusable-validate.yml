@@ -205,7 +205,7 @@ on:
         description: "poly version to install. Empty installs the latest release."
         required: false
         type: string
-        default: "v0.31.2"
+        default: "v0.32.1"
       install-system-deps:
         description: >-
           Run this repo's install-system-deps composite action before linting (Linux only, requires
