@@ -47,7 +47,7 @@ jobs:
           cat >package.json <<'JSON'
           {
             "private": true,
-            "packageManager": "pnpm@12.15.0"
+            "packageManager": "pnpm@12.16.1"
           }
           JSON
           cat >packages/node/Cargo.toml <<'TOML'
@@ -234,7 +234,7 @@ jobs:
             - "packages/*"
           YAML
           cat >package.json <<'JSON'
-          {"private":true,"packageManager":"pnpm@12.15.0"}
+          {"private":true,"packageManager":"pnpm@12.16.1"}
           JSON
           cat >packages/gnu-arm/Cargo.toml <<'TOML'
           [package]
