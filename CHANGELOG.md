@@ -4,6 +4,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
+
 ## [1.42.1] - 2026-10-31
 
 ### Fixed

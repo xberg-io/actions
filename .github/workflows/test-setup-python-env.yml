@@ -34,7 +34,7 @@ jobs:
           [project]
           name = "test-project"
           version = "0.0.0"
-          requires-python = ">=3.10"
+          requires-python = ">=3.11"
           TOML
 
       - name: Setup Python environment

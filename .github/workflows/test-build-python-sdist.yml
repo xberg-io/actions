@@ -56,7 +56,7 @@ jobs:
           [project]
           name = "fixture-pyext"
           version = "0.0.1"
-          requires-python = ">=3.10"
+          requires-python = ">=3.11"
 
           [tool.maturin]
           module-name = "fixture_pyext"

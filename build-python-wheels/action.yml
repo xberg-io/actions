@@ -15,7 +15,7 @@ inputs:
   cibw-build:
     description: CIBW_BUILD filter
     required: false
-    default: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+    default: "cp311-* cp312-* cp313-* cp314-*"
   cibw-skip:
     description: CIBW_SKIP filter
     required: false

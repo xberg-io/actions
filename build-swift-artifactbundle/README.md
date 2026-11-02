@@ -81,7 +81,7 @@ are rejected; case-insensitive destination collisions are rejected on every host
 
 Blank lines are ignored and surrounding whitespace is trimmed. An explicitly whitespace-only list fails. Empty
 input retains existing behavior. Dry runs describe the files without reading or copying them; split build-only jobs
-validate declared files but leave staging and ZIP verification to the final assembly job. Python 3.10 or newer is
+validate declared files but leave staging and ZIP verification to the final assembly job. Python 3.11 or newer is
 required when this input is set.
 
 ## Bundle Structure

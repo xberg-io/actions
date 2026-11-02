@@ -47,7 +47,7 @@ case-sensitive Java payload names remain distinct. Archives are read without
 extracting files. Registry-specific envelope, identity, signatures and publication
 checks remain the caller's responsibility. The action provisions Python 3.13 only
 when notice verification is enabled. Direct helper callers need Python 3.11 or
-newer for sdist TOML parsing; the other formats support Python 3.10 or newer.
+newer for sdist TOML parsing; the other formats support Python 3.11 or newer.
 
 The pure standard-library helper in `scripts/notices.py` is also available to
 publisher scripts:
