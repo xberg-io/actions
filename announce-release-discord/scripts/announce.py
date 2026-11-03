@@ -299,11 +299,11 @@ def main() -> None:
 
     if notes_override:
         description = normalize_notes(notes_override, tag)
-        timestamp = dt.datetime.now(tz=dt.timezone.utc).isoformat()
+        timestamp = dt.datetime.now(tz=dt.UTC).isoformat()
     else:
         release = fetch_release(tag, repo)
         description = normalize_notes(release_log_for_announcement(release, tag, repo), tag)
-        timestamp = release.get("publishedAt") or dt.datetime.now(tz=dt.timezone.utc).isoformat()
+        timestamp = release.get("publishedAt") or dt.datetime.now(tz=dt.UTC).isoformat()
 
     payload = build_payload(
         tag=tag,

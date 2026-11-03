@@ -1,10 +1,10 @@
 """The manual Ruby action fixture must expose its crate and package task."""
 
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
-import tomllib
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]

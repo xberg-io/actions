@@ -1,7 +1,6 @@
 """Policy checks for the decoded Cargo path-dependency graph; no fake Cargo success."""
 
 import importlib.util
-import sys
 from pathlib import Path
 
 import pytest
@@ -11,8 +10,6 @@ _PATH = _ROOT / "build-python-sdist/scripts/validate-workspace-closure.py"
 
 
 def guard():
-    if sys.version_info < (3, 11):
-        pytest.skip("workspace-closure guard requires Python 3.11 stdlib tomllib")
     specification = importlib.util.spec_from_file_location("source_closure_guard", _PATH)
     assert specification is not None
     assert specification.loader is not None

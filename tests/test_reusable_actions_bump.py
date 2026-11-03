@@ -1,7 +1,7 @@
 import re
+import tomllib
 from pathlib import Path
 
-import tomllib
 import yaml
 
 _ROOT = Path(__file__).resolve().parents[1]

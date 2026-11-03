@@ -3,10 +3,10 @@
 import os
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
-import tomllib
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -142,9 +142,9 @@ def assert_cross_tool_locks(config, lock):
 
 def test_both_managed_cross_tools_have_real_platform_locks_without_an_env_only_pin():
     import copy
+    import tomllib
 
     import pytest
-    import tomllib
 
     config = tomllib.loads((ROOT / "mise.toml").read_text())
     lock = tomllib.loads((ROOT / "mise.lock").read_text())
