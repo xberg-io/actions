@@ -4,6 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-swift-release-prepare.yml` and the `prepare-swift-release` action give every Swift-shipping repository
+  the same two-step release: prepare on `main` (build the bundle once, pin its checksum with alef, push the pin
+  commit and the tag in one non-forced atomic push, attach the exact ZIP and receipt to a draft release), then
+  Publish Release on the tag. The pin may change only the root `Package.swift` checksum value, Apple deployment
+  targets come from its `platforms`, and a rerun completes a partial run from the same bytes, recognising an
+  earlier pin or tag by content and failing when the branch moved or the tag diverges.
+
 ## [1.43.0] - 2026-11-04
 
 ### Added

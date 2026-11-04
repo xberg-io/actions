@@ -1,0 +1,471 @@
+name: Swift Release Preparation (Reusable)
+
+# ~keep SwiftPM resolves `from:`/`exact:` requirements to the core vX.Y.Z tag, so that tag's root Package.swift
+# ~keep must already pin the checksum of the bundle it downloads. This runs on the version-bump commit BEFORE the
+# ~keep tag exists: `build` makes the bundle once and pins its checksum with alef's version sync, `finalize` pushes
+# ~keep that one commit to the branch together with the tag, and `release` attaches the exact ZIP and receipt to a
+# ~keep draft release that Publish Release then verifies and reuses. The ZIP is not reproducible, so the jobs are
+# ~keep separate: "Re-run failed jobs" completes any partial state from the same uploaded bytes, never a rebuild.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to create (vX.Y.Z). Empty derives it from the Cargo version; set, it must match."
+        required: false
+        type: string
+        default: ""
+      dry-run:
+        description: "Build, pin and verify, and report the ref plan, without pushing, tagging or releasing."
+        required: false
+        type: boolean
+        default: false
+      branch:
+        description: "Branch the run must be on and the pin commit lands on."
+        required: false
+        type: string
+        default: "main"
+      cargo-toml:
+        description: "Cargo manifest whose [workspace.package] or [package] version names the release."
+        required: false
+        type: string
+        default: "Cargo.toml"
+      runner:
+        description: "macOS runner label for the bundle build."
+        required: false
+        type: string
+        default: "macos-26"
+      timeout-minutes:
+        description: "Timeout of the bundle build job."
+        required: false
+        type: number
+        default: 180
+      submodules:
+        description: "`submodules` of the source checkout (`false`, `true` or `recursive`)."
+        required: false
+        type: string
+        default: "false"
+      setup-artifact:
+        description: >-
+          Name of an artifact of this run (e.g. generated parser sources) downloaded into `setup-artifact-path`
+          before the build. Empty skips it.
+        required: false
+        type: string
+        default: ""
+      setup-artifact-path:
+        description: "Directory the setup artifact is downloaded into."
+        required: false
+        type: string
+        default: "."
+      crate-name:
+        description: "Cargo package of the Swift bridge (build-swift-artifactbundle `crate-name`)."
+        required: true
+        type: string
+      artifact-name:
+        description: "Bundle name without extension, e.g. `Example-rs` (build-swift-artifactbundle `artifact-name`)."
+        required: true
+        type: string
+      lib-name:
+        description: "Library base name; empty derives it from crate-name."
+        required: false
+        type: string
+        default: ""
+      binary-target-name:
+        description: "SwiftPM binary target name in the bundle; empty uses artifact-name."
+        required: false
+        type: string
+        default: ""
+      header-path:
+        description: "C headers directory embedded in the bundle; empty embeds none."
+        required: false
+        type: string
+        default: ""
+      additional-license-files:
+        description: "Newline-separated license or notice files embedded in the bundle."
+        required: false
+        type: string
+        default: ""
+      build-profile:
+        description: "Cargo build profile."
+        required: false
+        type: string
+        default: "release"
+      include-macos-x86_64:
+        description: "Build x86_64-apple-darwin."
+        required: false
+        type: string
+        default: "true"
+      include-ios-x86_64:
+        description: "Build x86_64-apple-ios (Intel simulator)."
+        required: false
+        type: string
+        default: "true"
+      zig-version:
+        description: "Exact Zig release for the Linux cross-compile; empty uses the caller's mise.toml."
+        required: false
+        type: string
+        default: ""
+      macos-deployment-target:
+        description: >-
+          MACOSX_DEPLOYMENT_TARGET of the build. Empty derives it from Package.swift's `.macOS` minimum; set, it must
+          equal that minimum.
+        required: false
+        type: string
+        default: ""
+      ios-deployment-target:
+        description: >-
+          IPHONEOS_DEPLOYMENT_TARGET of the build. Empty derives it from Package.swift's `.iOS` minimum; set, it may
+          lower it (e.g. for a dependency that links older runtime symbols), never raise it.
+        required: false
+        type: string
+        default: ""
+      expected-triples:
+        description: "Optional comma- or space-separated triples the bundle must contain exactly."
+        required: false
+        type: string
+        default: ""
+      rust-cache-key-prefix:
+        description: "setup-rust `cache-key-prefix`."
+        required: false
+        type: string
+        default: "publish-swift-artifactbundle"
+      use-sccache:
+        description: "setup-rust `use-sccache`."
+        required: false
+        type: string
+        default: "false"
+      macos-dynamic-lookup:
+        description: "setup-rust `macos-dynamic-lookup`."
+        required: false
+        type: string
+        default: "true"
+      cargo-zigbuild-revision:
+        description: "setup-rust `cargo-zigbuild-revision`: a full cargo-zigbuild commit to install from source."
+        required: false
+        type: string
+        default: ""
+      alef-version:
+        description: "install-alef `version`; `latest` reads the alef.toml pin. alef 0.115.15 or later pins receipts."
+        required: false
+        type: string
+        default: "latest"
+      legacy-branch:
+        description: >-
+          publish-swift-release `legacy-branch`. Empty leaves `release/swift/<version>` to Publish Release, which
+          creates it at the tagged commit.
+        required: false
+        type: string
+        default: ""
+      release-notes:
+        description: "Notes of the draft release when this run creates it."
+        required: false
+        type: string
+        default: "Release notes are written when the release is published."
+      retention-days:
+        description: "Retention of the prepared ZIP, receipt and Package.swift workflow artifact."
+        required: false
+        type: number
+        default: 90
+    secrets:
+      app-id:
+        description: >-
+          ID of the GitHub App that pushes the pin commit to the branch and creates the tag and the draft release.
+          It needs contents write on the caller and a bypass of the branch's protection. Not used on dry runs.
+        required: false
+      app-private-key:
+        description: "Private key of the app-id GitHub App."
+        required: false
+    outputs:
+      tag:
+        description: "Release tag"
+        value: ${{ jobs.build.outputs.tag }}
+      version:
+        description: "Release version"
+        value: ${{ jobs.build.outputs.version }}
+      checksum:
+        description: "SHA-256 pinned into Package.swift"
+        value: ${{ jobs.build.outputs.checksum }}
+      commit:
+        description: "Pin commit the tag names (empty on a dry run)"
+        value: ${{ jobs.finalize.outputs.commit }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and pin the Swift artifact bundle
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      checksum: ${{ steps.verify.outputs.checksum }}
+      bundle-zip: ${{ steps.paths.outputs.bundle-zip }}
+      receipt: ${{ steps.paths.outputs.receipt }}
+    steps:
+      - name: Require the release branch
+        env:
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/$BRANCH" ]; then
+            echo "::error::prepare a Swift release from $BRANCH, not $GITHUB_REF" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          submodules: ${{ inputs.submodules }}
+
+      - name: Download the setup artifact
+        if: inputs.setup-artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.setup-artifact }}
+          path: ${{ inputs.setup-artifact-path }}
+
+      - name: Require an unreleased tag that matches Cargo
+        id: resolve
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: resolve
+          tag: ${{ inputs.tag }}
+          cargo-toml: ${{ inputs.cargo-toml }}
+          branch: ${{ inputs.branch }}
+
+      - name: Derive the Apple deployment targets from Package.swift
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: targets
+          macos-deployment-target: ${{ inputs.macos-deployment-target }}
+          ios-deployment-target: ${{ inputs.ios-deployment-target }}
+
+      # ~keep rust is a mise lock gap (rustup script install); rust-toolchain.toml pins it.
+      - uses: xberg-io/actions/setup-rust@v1
+        with:
+          cache-key-prefix: ${{ inputs.rust-cache-key-prefix }}
+          use-sccache: ${{ inputs.use-sccache }}
+          macos-dynamic-lookup: ${{ inputs.macos-dynamic-lookup }}
+          cargo-zigbuild-revision: ${{ inputs.cargo-zigbuild-revision }}
+
+      - uses: xberg-io/actions/build-swift-artifactbundle@v1
+        id: bundle
+        with:
+          crate-name: ${{ inputs.crate-name }}
+          lib-name: ${{ inputs.lib-name }}
+          artifact-name: ${{ inputs.artifact-name }}
+          binary-target-name: ${{ inputs.binary-target-name }}
+          header-path: ${{ inputs.header-path }}
+          additional-license-files: ${{ inputs.additional-license-files }}
+          build-profile: ${{ inputs.build-profile }}
+          include-macos-x86_64: ${{ inputs.include-macos-x86_64 }}
+          include-ios-x86_64: ${{ inputs.include-ios-x86_64 }}
+          zig-version: ${{ inputs.zig-version }}
+          output-dir: dist/swift-artifactbundle
+          receipt-version: ${{ steps.resolve.outputs.version }}
+
+      - name: Name the prepared files
+        id: paths
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        run: |
+          echo "bundle-zip=dist/swift-artifactbundle/${ARTIFACT_NAME}.artifactbundle.zip" >>"$GITHUB_OUTPUT"
+          echo "receipt=dist/swift-artifactbundle/${ARTIFACT_NAME}.artifactbundle.release.json" >>"$GITHUB_OUTPUT"
+
+      - uses: xberg-io/actions/install-alef@v1
+        with:
+          version: ${{ inputs.alef-version }}
+
+      # ~keep Without --regen alef skips the prepared bundle and still exits 0; with it, alef also re-renders
+      # ~keep files `alef verify` holds main to byte for byte (alef#884), which pin restores from HEAD.
+      - name: Pin the bundle checksum into Package.swift
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: pin
+
+      - name: Verify the pin changes only the checksum
+        id: verify
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: verify
+          tag: ${{ steps.resolve.outputs.tag }}
+          bundle-zip: ${{ steps.paths.outputs.bundle-zip }}
+          receipt: ${{ steps.paths.outputs.receipt }}
+          expected-triples: ${{ inputs.expected-triples }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: swift-release-prepared
+          path: |
+            Package.swift
+            ${{ steps.paths.outputs.bundle-zip }}
+            ${{ steps.paths.outputs.receipt }}
+          if-no-files-found: error
+          # ~keep Only "Re-run all jobs" re-enters this step, before the tag exists, and that rebuilds on purpose.
+          overwrite: true
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: Report the ref plan
+        if: ${{ inputs.dry-run }}
+        uses: xberg-io/actions/prepare-swift-release@v1
+        env:
+          GIT_AUTHOR_NAME: dry-run
+          GIT_AUTHOR_EMAIL: dry-run@example.invalid
+          GIT_COMMITTER_NAME: dry-run
+          GIT_COMMITTER_EMAIL: dry-run@example.invalid
+        with:
+          command: finalize
+          tag: ${{ steps.resolve.outputs.tag }}
+          branch: ${{ inputs.branch }}
+          dry-run: "true"
+
+  finalize:
+    name: Push the pin and create the tag
+    needs: build
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      commit: ${{ steps.finalize.outputs.commit }}
+    steps:
+      # ~keep A secret cannot appear in an `if:`, so this step fails early when it is missing.
+      - name: Require the app secrets
+        env:
+          APP_ID: ${{ secrets.app-id }}
+          APP_PRIVATE_KEY: ${{ secrets.app-private-key }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo "::error::pass the app-id and app-private-key secrets of an app that can push $GITHUB_REF and tags" >&2
+            exit 1
+          fi
+
+      - uses: actions/create-github-app-token@v3
+        id: token
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+          permission-contents: write
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: swift-release-prepared
+          path: .
+
+      - name: Verify the downloaded pin
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: verify
+          tag: ${{ needs.build.outputs.tag }}
+          bundle-zip: ${{ needs.build.outputs.bundle-zip }}
+          receipt: ${{ needs.build.outputs.receipt }}
+          expected-triples: ${{ inputs.expected-triples }}
+
+      - name: Commit as the app
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          APP_SLUG: ${{ steps.token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          id="$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${id}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Push the pin commit and the tag
+        id: finalize
+        uses: xberg-io/actions/prepare-swift-release@v1
+        with:
+          command: finalize
+          tag: ${{ needs.build.outputs.tag }}
+          branch: ${{ inputs.branch }}
+
+  release:
+    name: Attach the bundle to the draft release
+    needs: [build, finalize]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: token
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+          permission-contents: write
+
+      # ~keep Full history: publish-swift-release checks the receipt's source is an ancestor of the tag.
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+          fetch-depth: 0
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: swift-release-prepared
+          path: .
+
+      - name: Ensure the draft release exists
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          NOTES: ${{ inputs.release-notes }}
+        run: |
+          set -euo pipefail
+          # ~keep Create only on "release not found": any other lookup error could otherwise open a second draft.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>"$RUNNER_TEMP/release-view.err"; then
+            echo "Release $TAG exists; reusing it."
+            exit 0
+          fi
+          if ! grep -qi "release not found" "$RUNNER_TEMP/release-view.err"; then
+            cat "$RUNNER_TEMP/release-view.err" >&2
+            echo "::error::cannot look up release $TAG; not creating one" >&2
+            exit 1
+          fi
+          prerelease=()
+          [[ "$TAG" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag "${prerelease[@]}" \
+            --title "$TAG" --notes "$NOTES"
+
+      # ~keep Uploads the ZIP only when the release lacks it and fails when an attached ZIP differs.
+      - uses: xberg-io/actions/publish-swift-release@v1
+        with:
+          tag: ${{ needs.build.outputs.tag }}
+          bundle-zip: ${{ needs.build.outputs.bundle-zip }}
+          receipt: ${{ needs.build.outputs.receipt }}
+          legacy-branch: ${{ inputs.legacy-branch }}
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Attach the receipt
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          RECEIPT: ${{ needs.build.outputs.receipt }}
+        run: |
+          set -euo pipefail
+          name="${RECEIPT##*/}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qxF "$name"; then
+            check="$(mktemp -d)"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir "$check"
+            cmp -s "$RECEIPT" "$check/$name" || { echo "::error::$TAG already carries a different $name" >&2; exit 1; }
+            echo "$name is already attached."
+          else
+            gh release upload "$TAG" "$RECEIPT" --repo "$GITHUB_REPOSITORY"
+          fi

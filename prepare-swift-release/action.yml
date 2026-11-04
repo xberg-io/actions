@@ -1,0 +1,154 @@
+name: Prepare Swift Release
+description: >
+  The pre-tag half of an immutable Swift release, one command per call. The tagged root Package.swift
+  must already pin the checksum of the bundle SwiftPM downloads, so the checksum is committed before the
+  tag exists and the tag is created once on that commit. Used by
+  `.github/workflows/reusable-swift-release-prepare.yml`; needs a full-history checkout of the source
+  commit and Python 3.11 or later.
+
+inputs:
+  command:
+    description: >
+      `resolve` derives the tag from the Cargo version and requires it absent and the source at the branch tip;
+      `targets` derives the Apple deployment targets from Package.swift and exports them;
+      `pin` runs `alef sync-versions --regen` on the clean tree and restores every other re-rendered path from HEAD;
+      `verify` proves the tree is the source with only its checksum value replaced by the bundle's digest;
+      `finalize` pushes the pin commit and an annotated tag without force, atomically, and recognises an earlier
+      partial run by content.
+    required: true
+  tag:
+    description: "Release tag (vX.Y.Z). `resolve` derives it from Cargo when empty; `verify` and `finalize` need it."
+    required: false
+    default: ""
+  cargo-toml:
+    description: "Cargo manifest whose [workspace.package] or [package] version names the release"
+    required: false
+    default: "Cargo.toml"
+  manifest-path:
+    description: "Root Swift manifest the pin may change"
+    required: false
+    default: "Package.swift"
+  bundle-dir:
+    description: "Directory holding the prepared ZIP and receipt, ignored by the clean-tree checks"
+    required: false
+    default: "dist/swift-artifactbundle"
+  bundle-zip:
+    description: "Prepared `.artifactbundle.zip` (`verify`)"
+    required: false
+    default: ""
+  receipt:
+    description: "The ZIP's `.artifactbundle.release.json` receipt (`verify`)"
+    required: false
+    default: ""
+  expected-triples:
+    description: "Optional comma- or space-separated triples the bundle must contain exactly (`verify`)"
+    required: false
+    default: ""
+  macos-deployment-target:
+    description: "Optional macOS target; must equal Package.swift's `.macOS` minimum (`targets`)"
+    required: false
+    default: ""
+  ios-deployment-target:
+    description: "Optional iOS target; may lower Package.swift's `.iOS` minimum, never raise it (`targets`)"
+    required: false
+    default: ""
+  alef:
+    description: "alef executable (`pin`)"
+    required: false
+    default: "alef"
+  branch:
+    description: "Branch the pin commit lands on (`resolve`, `finalize`)"
+    required: false
+    default: "main"
+  remote:
+    description: "Git remote holding the branch and tag"
+    required: false
+    default: "origin"
+  repository:
+    description: "Repository (owner/name) of the release and the binaryTarget URL"
+    required: false
+    default: ${{ github.repository }}
+  dry-run:
+    description: "`finalize` reports the plan and pushes nothing"
+    required: false
+    default: "false"
+
+outputs:
+  tag:
+    description: "Release tag (`resolve`)"
+    value: ${{ steps.run.outputs.tag }}
+  version:
+    description: "Release version without the leading v (`resolve`)"
+    value: ${{ steps.run.outputs.version }}
+  source:
+    description: "Source commit the bundle was built from (`resolve`)"
+    value: ${{ steps.run.outputs.source }}
+  macos:
+    description: "macOS deployment target exported as MACOSX_DEPLOYMENT_TARGET (`targets`)"
+    value: ${{ steps.run.outputs.macos }}
+  ios:
+    description: "iOS deployment target exported as IPHONEOS_DEPLOYMENT_TARGET (`targets`)"
+    value: ${{ steps.run.outputs.ios }}
+  restored:
+    description: "Paths `pin` put back after alef re-rendered them"
+    value: ${{ steps.run.outputs.restored }}
+  checksum:
+    description: "SHA-256 of the bundle pinned into the manifest (`verify`)"
+    value: ${{ steps.run.outputs.checksum }}
+  commit:
+    description: "Pin commit the tag names (`finalize`)"
+    value: ${{ steps.run.outputs.commit }}
+  tag-created:
+    description: "Whether this run created the tag (`finalize`)"
+    value: ${{ steps.run.outputs.tag-created }}
+  branch-updated:
+    description: "Whether this run pushed the pin commit to the branch (`finalize`)"
+    value: ${{ steps.run.outputs.branch-updated }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run ${{ inputs.command }}
+      id: run
+      shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
+        TAG: ${{ inputs.tag }}
+        CARGO_TOML: ${{ inputs.cargo-toml }}
+        MANIFEST_PATH: ${{ inputs.manifest-path }}
+        BUNDLE_DIR: ${{ inputs.bundle-dir }}
+        BUNDLE_ZIP: ${{ inputs.bundle-zip }}
+        RECEIPT: ${{ inputs.receipt }}
+        EXPECTED_TRIPLES: ${{ inputs.expected-triples }}
+        MACOS_TARGET: ${{ inputs.macos-deployment-target }}
+        IOS_TARGET: ${{ inputs.ios-deployment-target }}
+        ALEF: ${{ inputs.alef }}
+        BRANCH: ${{ inputs.branch }}
+        REMOTE: ${{ inputs.remote }}
+        REPOSITORY: ${{ inputs.repository }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        set -euo pipefail
+        script="$GITHUB_ACTION_PATH/scripts/prepare_swift_release.py"
+        if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+          echo "::error::prepare-swift-release needs Python 3.11 or later, found $(python3 --version 2>&1)" >&2
+          exit 1
+        fi
+        case "$COMMAND" in
+          resolve)
+            python3 "$script" resolve --tag "$TAG" --cargo-toml "$CARGO_TOML" --remote "$REMOTE" --branch "$BRANCH" ;;
+          targets)
+            python3 "$script" targets --manifest "$MANIFEST_PATH" --macos "$MACOS_TARGET" --ios "$IOS_TARGET" ;;
+          pin)
+            python3 "$script" pin --manifest "$MANIFEST_PATH" --bundle-dir "$BUNDLE_DIR" --alef "$ALEF" ;;
+          verify)
+            python3 "$script" verify --zip "$BUNDLE_ZIP" --receipt "$RECEIPT" --tag "$TAG" \
+              --repository "$REPOSITORY" --manifest "$MANIFEST_PATH" --expected-triples "$EXPECTED_TRIPLES" ;;
+          finalize)
+            args=(finalize --tag "$TAG" --remote "$REMOTE" --branch "$BRANCH" --manifest "$MANIFEST_PATH")
+            [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+            python3 "$script" "${args[@]}" ;;
+          *)
+            echo "::error::command must be resolve, targets, pin, verify or finalize, got '$COMMAND'" >&2
+            exit 1 ;;
+        esac
