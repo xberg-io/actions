@@ -6,6 +6,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Added
 
+- `publish-swift-release` publishes a prepared Swift bundle against a release tag that already pins its
+  checksum. It verifies the tagged root `Package.swift`, the exact bundle bytes, any existing release asset and
+  the legacy `release/swift/<version>` branch before mutating anything, uploads only a missing asset, creates
+  the branch create-only at the tagged commit and never moves the tag, replacing the per-repository jobs that
+  force-moved the core tag after publication had started.
 - `build-swift-artifactbundle` writes a preparation receipt beside the ZIP when `receipt-version` is set,
   binding it to the repository, HEAD, version and digest so alef's version sync can pin the checksum before
   tagging.

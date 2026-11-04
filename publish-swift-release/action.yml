@@ -1,0 +1,87 @@
+name: Publish Swift Release
+description: >
+  Publish a prepared Swift artifact bundle against an existing, immutable release tag.
+  The tagged root Package.swift must already pin the bundle's SHA-256 checksum and
+  binaryTarget URL. The action verifies the tagged manifest, the exact bundle bytes,
+  any release asset already present and the legacy branch before it changes anything,
+  then uploads the bundle only when the release lacks it and creates the legacy branch
+  at the tagged commit only when it is absent. It never creates, moves or deletes a tag.
+  Needs a checkout whose remote can fetch the tag and push the legacy branch.
+
+inputs:
+  tag:
+    description: "Release tag whose manifest pins the checksum (e.g. v1.2.3)"
+    required: true
+  bundle-zip:
+    description: >
+      Path to the prepared `.artifactbundle.zip`, the exact bytes the tagged checksum was computed from.
+      Empty reuses the asset already on the release, which must then exist and match.
+    required: false
+    default: ""
+  receipt:
+    description: >
+      Optional path to the bundle's preparation receipt (`*.artifactbundle.release.json`). When set,
+      its repository, archive and digest must match and its source must be an ancestor of the tagged commit.
+    required: false
+    default: ""
+  manifest-path:
+    description: "Root manifest path inside the tagged tree"
+    required: false
+    default: "Package.swift"
+  legacy-branch:
+    description: >
+      Branch created at the tagged commit for consumers that pin `branch:`; `{version}` expands to the tag
+      without its leading `v`. An existing branch must already point at that commit. Empty skips it.
+    required: false
+    default: "release/swift/{version}"
+  remote:
+    description: "Git remote holding the tag"
+    required: false
+    default: "origin"
+  repository:
+    description: "Repository (owner/name) of the release and the binaryTarget URL"
+    required: false
+    default: ${{ github.repository }}
+  dry-run:
+    description: "Verify everything and report the plan without uploading or pushing"
+    required: false
+    default: "false"
+  token:
+    description: "Token used for the release asset lookup and upload; the checkout's credentials push the branch"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  checksum:
+    description: "SHA-256 checksum pinned by the tagged manifest"
+    value: ${{ steps.publish.outputs.checksum }}
+  commit:
+    description: "Commit the tag peels to"
+    value: ${{ steps.publish.outputs.commit }}
+  tag-object:
+    description: "Object the tag ref names, unchanged by this action"
+    value: ${{ steps.publish.outputs.tag-object }}
+  asset-uploaded:
+    description: "Whether this run uploaded the bundle"
+    value: ${{ steps.publish.outputs.asset-uploaded }}
+  branch-created:
+    description: "Whether this run created the legacy branch"
+    value: ${{ steps.publish.outputs.branch-created }}
+
+runs:
+  using: composite
+  steps:
+    - name: Verify and publish the Swift bundle
+      id: publish
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_BUNDLE_ZIP: ${{ inputs.bundle-zip }}
+        INPUT_RECEIPT: ${{ inputs.receipt }}
+        INPUT_MANIFEST_PATH: ${{ inputs.manifest-path }}
+        INPUT_LEGACY_BRANCH: ${{ inputs.legacy-branch }}
+        INPUT_REMOTE: ${{ inputs.remote }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+      run: python3 "$GITHUB_ACTION_PATH/scripts/publish_swift_release.py"
