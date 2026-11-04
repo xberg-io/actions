@@ -20,6 +20,7 @@ CHECKSUM_FIELD = re.compile(r'checksum:\s*"([^"]*)"')
 SHA256 = re.compile(r"[0-9a-f]{64}")
 PLACEHOLDER = re.compile(r"__ALEF_[A-Z0-9_]+__")
 RECEIPT_SCHEMA = 1
+REMOTE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 class PublishError(Exception):
@@ -58,12 +59,20 @@ def gh(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return result
 
 
-def sha256_file(path: Path) -> str:
+def sha256_file(path: Path, label: str) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(chunk)
+    except OSError as error:
+        raise PublishError(f"Cannot read {label} {path}: {error.strerror or error}") from error
     return digest.hexdigest()
+
+
+def require_ref_name(kind: str, ref: str) -> None:
+    if ref.startswith("-") or git("check-ref-format", ref, check=False).returncode != 0:
+        raise PublishError(f"invalid {kind} {ref!r}")
 
 
 def remote_refs(remote: str, *refs: str) -> dict[str, str]:
@@ -108,35 +117,81 @@ def verify_manifest(manifest: str, inputs: Inputs, asset: str) -> str:
     return checksums[0]
 
 
+def read_receipt(path: Path) -> dict:
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise PublishError(f"Cannot read Swift receipt {path}: {error.strerror or error}") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise PublishError(f"Swift receipt {path} is not valid JSON: {error}") from error
+    if not isinstance(receipt, dict):
+        raise PublishError(f"Swift receipt {path} must be a JSON object")
+    return receipt
+
+
 def verify_receipt(path: Path, inputs: Inputs, asset: str, checksum: str, commit: str) -> None:
-    receipt = json.loads(path.read_text(encoding="utf-8"))
+    receipt = read_receipt(path)
     if receipt.get("schema") != RECEIPT_SCHEMA:
-        raise PublishError(f"Unsupported Swift receipt schema {receipt.get('schema')!r}")
-    expectations = {"repository": inputs.repository, "archive": asset, "sha256": checksum}
+        raise PublishError(f"Unsupported Swift receipt schema {receipt.get('schema')!r} in {path}")
+    expectations = {
+        "repository": inputs.repository,
+        "archive": asset,
+        "sha256": checksum,
+        "version": inputs.tag.removeprefix("v"),
+    }
     for field, expected in expectations.items():
         if receipt.get(field) != expected:
             raise PublishError(f"Swift receipt {field} {receipt.get(field)!r} differs from {expected!r}")
+    artifact_version = receipt.get("artifact_version")
+    if not isinstance(artifact_version, str) or not artifact_version:
+        raise PublishError(f"Swift receipt artifact_version {artifact_version!r} must be a non-empty string")
+    triples = receipt.get("triples")
+    if (
+        not isinstance(triples, list)
+        or not triples
+        or not all(isinstance(triple, str) and triple for triple in triples)
+        or len(set(triples)) != len(triples)
+    ):
+        raise PublishError(f"Swift receipt triples {triples!r} must be a non-empty list of distinct triples")
     source = str(receipt.get("source", ""))
     if re.fullmatch(r"[0-9a-f]{40}", source) is None:
         raise PublishError(f"Swift receipt source {source!r} is not a commit id")
+    if git("rev-parse", "--is-shallow-repository").stdout.strip() == "true":
+        raise PublishError(
+            "Checking the Swift receipt source needs full history (fetch-depth: 0); this checkout is shallow"
+        )
     if git("merge-base", "--is-ancestor", source, commit, check=False).returncode != 0:
         raise PublishError(f"Swift receipt source {source} is not an ancestor of the tagged commit {commit}")
 
 
 def release_asset_digest(inputs: Inputs, asset: str, workdir: Path) -> str | None:
-    view = gh("release", "view", inputs.tag, "--repo", inputs.repository, "--json", "assets")
-    names = [entry.get("name") for entry in json.loads(view.stdout).get("assets", [])]
+    # ~keep gh resolves the tag to a published release and falls back to a draft (verified with gh 2.103).
+    view = gh("release", "view", inputs.tag, "--repo", inputs.repository, "--json", "assets", check=False)
+    if view.returncode != 0:
+        raise PublishError(
+            f"Release {inputs.tag} was not found in {inputs.repository} (published or draft); "
+            f"create it before publishing the Swift bundle: {view.stderr.strip()}"
+        )
+    try:
+        names = [entry.get("name") for entry in json.loads(view.stdout).get("assets", [])]
+    except (json.JSONDecodeError, AttributeError) as error:
+        raise PublishError(f"gh release view {inputs.tag} returned an unexpected payload: {error}") from error
     if asset not in names:
         return None
     gh("release", "download", inputs.tag, "--repo", inputs.repository, "--pattern", asset, "--dir", str(workdir))
-    return sha256_file(workdir / asset)
+    return sha256_file(workdir / asset, "downloaded release asset")
 
 
 def create_branch(remote: str, branch: str, commit: str) -> None:
     ref = f"refs/heads/{branch}"
     # ~keep An empty lease value means "the ref must not exist": a plain push would fast-forward an
     # ~keep existing ancestor branch, which is a move, not a create.
-    git("push", "--quiet", f"--force-with-lease={ref}:", remote, f"{commit}:{ref}")
+    pushed = git("push", "--quiet", f"--force-with-lease={ref}:", remote, f"{commit}:{ref}", check=False)
+    if pushed.returncode != 0:
+        raise PublishError(
+            f"{branch} was created concurrently or could not be pushed; nothing was uploaded, rerun to verify it: "
+            f"{pushed.stderr.strip()}"
+        )
 
 
 def read_inputs() -> Inputs:
@@ -145,6 +200,13 @@ def read_inputs() -> Inputs:
     if not tag or not repository:
         raise PublishError("INPUT_TAG and INPUT_REPOSITORY (or GITHUB_REPOSITORY) are required")
     version = tag.removeprefix("v")
+    legacy_branch = os.environ.get("INPUT_LEGACY_BRANCH", "").strip().replace("{version}", version)
+    remote = os.environ.get("INPUT_REMOTE", "").strip() or "origin"
+    require_ref_name("tag", f"refs/tags/{tag}")
+    if legacy_branch:
+        require_ref_name("legacy branch", f"refs/heads/{legacy_branch}")
+    if REMOTE_NAME.fullmatch(remote) is None:
+        raise PublishError(f"invalid remote {remote!r}; pass a configured remote name")
     bundle = os.environ.get("INPUT_BUNDLE_ZIP", "").strip()
     receipt = os.environ.get("INPUT_RECEIPT", "").strip()
     return Inputs(
@@ -152,9 +214,9 @@ def read_inputs() -> Inputs:
         repository=repository,
         bundle_zip=Path(bundle) if bundle else None,
         manifest_path=os.environ.get("INPUT_MANIFEST_PATH", "").strip() or "Package.swift",
-        legacy_branch=os.environ.get("INPUT_LEGACY_BRANCH", "").strip().replace("{version}", version),
+        legacy_branch=legacy_branch,
         receipt=Path(receipt) if receipt else None,
-        remote=os.environ.get("INPUT_REMOTE", "").strip() or "origin",
+        remote=remote,
         dry_run=os.environ.get("INPUT_DRY_RUN", "false").strip().lower() == "true",
     )
 
@@ -177,7 +239,7 @@ def publish(inputs: Inputs, workdir: Path) -> dict[str, str]:
     checksum = verify_manifest(manifest, inputs, asset)
 
     if inputs.bundle_zip is not None:
-        local = sha256_file(inputs.bundle_zip)
+        local = sha256_file(inputs.bundle_zip, "prepared Swift bundle")
         if local != checksum:
             raise PublishError(
                 f"{inputs.bundle_zip} has SHA-256 {local}, which does not match the checksum pinned in "
@@ -213,10 +275,19 @@ def publish(inputs: Inputs, workdir: Path) -> dict[str, str]:
         print(f"[dry-run] upload asset: {upload}; create {inputs.legacy_branch or 'no branch'}: {create}")
         upload = create = False
     else:
-        if upload and inputs.bundle_zip is not None:
-            gh("release", "upload", inputs.tag, str(inputs.bundle_zip), "--repo", inputs.repository)
+        if read_tag_state(inputs.remote, inputs.tag) != state:
+            raise PublishError(f"Release tag {inputs.tag} moved after verification; nothing was published")
+        # ~keep The branch goes first: it is a pure create at the verified commit, so a failed upload
+        # ~keep leaves state a rerun accepts (branch at the tag commit, asset absent) and completes.
         if create:
             create_branch(inputs.remote, inputs.legacy_branch, state.commit)
+        if upload and inputs.bundle_zip is not None:
+            uploaded = gh(
+                "release", "upload", inputs.tag, str(inputs.bundle_zip), "--repo", inputs.repository, check=False
+            )
+            if uploaded.returncode != 0:
+                done = f"{inputs.legacy_branch} created, " if create else ""
+                raise PublishError(f"{done}asset upload failed; rerun to retry it: {uploaded.stderr.strip()}")
 
     if read_tag_state(inputs.remote, inputs.tag) != state:
         raise PublishError(f"Release tag {inputs.tag} moved during Swift publication")
@@ -241,7 +312,8 @@ def main() -> int:
     if github_output:
         with Path(github_output).open("a", encoding="utf-8") as handle:
             handle.writelines(f"{key}={value}\n" for key, value in outputs.items())
-    print(f"Published Swift bundle {outputs['checksum']} for {inputs.tag} at {outputs['commit']}")
+    verb = "Verified (dry run)" if inputs.dry_run else "Published"
+    print(f"{verb} Swift bundle {outputs['checksum']} for {inputs.tag} at {outputs['commit']}")
     return 0
 
 

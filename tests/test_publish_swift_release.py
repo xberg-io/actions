@@ -55,6 +55,10 @@ release = root / tag
 if not release.is_dir():
     sys.exit("release not found")
 if command == "view":
+    hook = os.environ.get("FAKE_GH_ON_VIEW")
+    if hook:
+        import subprocess
+        subprocess.run(hook, shell=True, check=True, capture_output=True)
     print(json.dumps({"assets": [{"name": path.name} for path in sorted(release.iterdir())]}))
 elif command == "download":
     shutil.copy(release / options["--pattern"], Path(options["--dir"]) / options["--pattern"])
@@ -79,7 +83,9 @@ def _sha256(data: bytes) -> str:
 class Release:
     """A bare origin, a tagged clone and a fake GitHub release store."""
 
-    def __init__(self, tmp_path: Path, checksum: str, *, tag_in_url: str = _TAG) -> None:
+    def __init__(
+        self, tmp_path: Path, checksum: str, *, tag_in_url: str = _TAG, lightweight: bool = False, extra: str = ""
+    ) -> None:
         self.tmp = tmp_path
         self.origin = tmp_path / "origin.git"
         self.clone = tmp_path / "clone"
@@ -93,12 +99,15 @@ class Release:
         _git(self.clone, "add", "src.rs")
         _git(self.clone, "commit", "--quiet", "-m", "source")
         self.source = _git(self.clone, "rev-parse", "HEAD")
-        manifest = _MANIFEST.format(repository=_REPOSITORY, tag=tag_in_url, asset=_ASSET, checksum=checksum)
+        manifest = _MANIFEST.format(repository=_REPOSITORY, tag=tag_in_url, asset=_ASSET, checksum=checksum) + extra
         (self.clone / "Package.swift").write_text(manifest)
         _git(self.clone, "add", "Package.swift")
         _git(self.clone, "commit", "--quiet", "-m", "chore(release): finalize Swift checksum")
         self.commit = _git(self.clone, "rev-parse", "HEAD")
-        _git(self.clone, "tag", "-a", _TAG, "-m", _TAG)
+        if lightweight:
+            _git(self.clone, "-c", "tag.gpgSign=false", "tag", _TAG)
+        else:
+            _git(self.clone, "tag", "-a", _TAG, "-m", _TAG)
         _git(self.clone, "push", "--quiet", "origin", "main", f"refs/tags/{_TAG}")
         self.tag_object = self.remote_ref(f"refs/tags/{_TAG}")
         (self.releases / _TAG).mkdir(parents=True)
@@ -128,8 +137,11 @@ class Release:
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
         return [call for call in calls if call[1] == command]
 
-    def run(self, bundle: Path | None, **inputs: str) -> subprocess.CompletedProcess[str]:
+    def run(
+        self, bundle: Path | None, *, cwd: Path | None = None, on_view: str = "", **inputs: str
+    ) -> subprocess.CompletedProcess[str]:
         env = {
+            "FAKE_GH_ON_VIEW": on_view,
             **os.environ,
             "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}",
             "FAKE_GH_RELEASES": str(self.releases),
@@ -147,7 +159,7 @@ class Release:
             **{f"INPUT_{key.upper()}": value for key, value in inputs.items()},
         }
         return subprocess.run(
-            [sys.executable, str(_SCRIPT)], cwd=self.clone, env=env, capture_output=True, text=True, check=False
+            [sys.executable, str(_SCRIPT)], cwd=cwd or self.clone, env=env, capture_output=True, text=True, check=False
         )
 
     def assert_tag_unchanged(self) -> None:
@@ -333,3 +345,167 @@ def test_receipt_mismatch_fails_before_publication(release: Release, overrides: 
     assert message in result.stderr
     assert release.gh_calls("upload") == []
     assert release.remote_ref("refs/heads/release/swift/1.2.3") == ""
+
+
+def test_lightweight_tag_is_verified_and_left_unchanged(tmp_path: Path) -> None:
+    release = Release(tmp_path, _sha256(_BUNDLE), lightweight=True)
+    assert release.tag_object == release.commit
+
+    result = release.run(release.write_bundle())
+
+    assert result.returncode == 0, result.stderr
+    assert release.outputs()["tag-object"] == release.commit
+    assert release.remote_ref("refs/heads/release/swift/1.2.3") == release.commit
+    release.assert_tag_unchanged()
+
+
+def test_manifest_with_two_checksums_is_rejected(tmp_path: Path) -> None:
+    release = Release(tmp_path, _sha256(_BUNDLE), extra=f'// checksum: "{"b" * 64}"\n')
+
+    result = release.run(release.write_bundle())
+
+    assert result.returncode != 0
+    assert "exactly one SHA-256 checksum" in result.stderr
+    assert release.gh_calls("upload") == []
+
+
+def test_missing_release_fails_with_an_explicit_message(release: Release) -> None:
+    (release.releases / _TAG).rmdir()
+
+    result = release.run(release.write_bundle())
+
+    assert result.returncode != 0
+    assert f"Release {_TAG} was not found" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert release.remote_ref("refs/heads/release/swift/1.2.3") == ""
+
+
+def test_missing_bundle_file_fails_without_a_traceback(release: Release) -> None:
+    result = release.run(release.tmp / "dist" / _ASSET)
+
+    assert result.returncode != 0
+    assert "Swift bundle" in result.stderr
+    assert str(release.tmp / "dist" / _ASSET) in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("content", ["{not json", "[]", ""], ids=["invalid-json", "not-an-object", "empty"])
+def test_malformed_receipt_fails_without_a_traceback(release: Release, content: str) -> None:
+    receipt = release.tmp / "receipt.json"
+    receipt.write_text(content)
+
+    result = release.run(release.write_bundle(), receipt=str(receipt))
+
+    assert result.returncode != 0
+    assert str(receipt) in result.stderr
+    assert "Traceback" not in result.stderr
+    assert release.gh_calls("upload") == []
+
+
+def test_missing_receipt_fails_without_a_traceback(release: Release) -> None:
+    receipt = release.tmp / "absent.json"
+
+    result = release.run(release.write_bundle(), receipt=str(receipt))
+
+    assert result.returncode != 0
+    assert str(receipt) in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"version": "1.2.2"}, "receipt version"),
+        ({"artifact_version": ""}, "artifact_version"),
+        ({"triples": []}, "triples"),
+        ({"triples": ["arm64-apple-macosx", "arm64-apple-macosx"]}, "triples"),
+    ],
+    ids=["version", "artifact-version", "no-triples", "duplicate-triples"],
+)
+def test_receipt_identity_mismatch_fails_before_publication(
+    release: Release, overrides: dict[str, object], message: str
+) -> None:
+    result = release.run(release.write_bundle(), receipt=str(_receipt(release, **overrides)))
+
+    assert result.returncode != 0
+    assert message in result.stderr
+    assert release.gh_calls("upload") == []
+
+
+def test_receipt_check_in_a_shallow_clone_asks_for_full_history(release: Release) -> None:
+    shallow = release.tmp / "shallow"
+    _git(release.tmp, "clone", "--quiet", "--depth", "1", f"file://{release.origin}", str(shallow))
+
+    result = release.run(release.write_bundle(), cwd=shallow, receipt=str(_receipt(release)))
+
+    assert result.returncode != 0
+    assert "needs full history (fetch-depth: 0)" in result.stderr
+    assert release.gh_calls("upload") == []
+
+
+def test_tag_moved_after_verification_stops_before_any_mutation(release: Release) -> None:
+    move = f"git -C {release.origin} tag -f {_TAG} {release.source}"
+
+    result = release.run(release.write_bundle(), on_view=move)
+
+    assert result.returncode != 0
+    assert "moved" in result.stderr
+    assert release.gh_calls("upload") == []
+    assert release.remote_ref("refs/heads/release/swift/1.2.3") == ""
+
+
+def test_branch_created_concurrently_is_not_overwritten(release: Release) -> None:
+    race = f"git -C {release.origin} update-ref refs/heads/release/swift/1.2.3 {release.source}"
+
+    result = release.run(release.write_bundle(), on_view=race)
+
+    assert result.returncode != 0
+    assert "created concurrently" in result.stderr
+    assert release.remote_ref("refs/heads/release/swift/1.2.3") == release.source
+    assert release.gh_calls("upload") == []
+    release.assert_tag_unchanged()
+
+
+def test_branch_is_created_before_the_upload_so_a_failed_upload_reruns_cleanly(release: Release) -> None:
+    fail_upload = release.bin / "gh-real"
+    (release.bin / "gh").rename(fail_upload)
+    (release.bin / "gh").write_text(
+        f'#!/bin/sh\n[ "$2" = upload ] && {{ echo upload failed >&2; exit 1; }}\nexec "{fail_upload}" "$@"\n'
+    )
+    (release.bin / "gh").chmod(0o755)
+
+    first = release.run(release.write_bundle())
+
+    assert first.returncode != 0
+    assert "rerun" in first.stderr
+    assert release.remote_ref("refs/heads/release/swift/1.2.3") == release.commit
+    (release.bin / "gh").unlink()
+    fail_upload.rename(release.bin / "gh")
+    release.output.write_text("")
+
+    second = release.run(release.write_bundle())
+
+    assert second.returncode == 0, second.stderr
+    assert release.outputs()["asset-uploaded"] == "true"
+    assert release.outputs()["branch-created"] == "false"
+    release.assert_tag_unchanged()
+
+
+@pytest.mark.parametrize(
+    "inputs",
+    [{"tag": "--upload-pack=touch pwned"}, {"remote": "-oProxyCommand=x"}, {"legacy_branch": "bad..branch"}],
+    ids=["tag", "remote", "branch"],
+)
+def test_option_shaped_or_invalid_ref_names_are_rejected(release: Release, inputs: dict[str, str]) -> None:
+    result = release.run(release.write_bundle(), **inputs)
+
+    assert result.returncode != 0
+    assert "invalid" in result.stderr
+    assert release.gh_calls("view") == []
+
+
+def test_dry_run_does_not_claim_to_have_published(release: Release) -> None:
+    result = release.run(release.write_bundle(), dry_run="true")
+
+    assert result.returncode == 0, result.stderr
+    assert "Published" not in result.stdout

@@ -9,22 +9,28 @@ Before anything is uploaded or pushed it requires:
 
 - the tag exists on the remote; its tagged root manifest holds no `__ALEF_*__` placeholder, exactly one
   SHA-256 `checksum:` and the binaryTarget URL `https://github.com/<repository>/releases/download/<tag>/<asset>`;
-- the supplied bundle's SHA-256 equals that checksum (and the optional receipt's repository, archive, digest
-  and ancestor source agree);
-- any asset of that name already on the release has the same bytes;
+- the supplied bundle's SHA-256 equals that checksum (and the optional receipt's repository, archive, digest,
+  version, triples and source agree; the source must be an ancestor of the tagged commit, which needs a full
+  checkout, `fetch-depth: 0`);
+- the release exists (published or draft; `gh` falls back to a draft for the tag) and any asset of that name
+  already on it has the same bytes;
 - the legacy branch is absent or already points at the tagged commit.
 
-It then uploads the bundle only if the release lacks it, creates the legacy branch only if it is absent
-(a create-only push), and confirms the tag object and peeled commit did not change. A rerun after success
-changes nothing.
+It then re-reads the tag, creates the legacy branch only if it is absent (a create-only push that fails if
+another run created it meanwhile), uploads the bundle only if the release lacks it, and confirms the tag
+object and peeled commit did not change. Every partial state it can leave (branch created, asset not yet
+uploaded) is one a rerun accepts and completes, so rerun to recover; a rerun after success changes nothing.
 
 ## Release order
 
-1. On the version-bump commit, build the bundle with `build-swift-artifactbundle` and `receipt-version`.
-2. Run alef's version sync with the ZIP and receipt in `dist/swift-artifactbundle/`; it pins the checksum
-   into the root `Package.swift`. Commit that, and keep the exact ZIP (for example on the draft release).
-3. Tag the finalized commit.
-4. Publish with this action, passing the same ZIP or leaving `bundle-zip` empty to reuse the release asset.
+1. On the version-bump commit, build the bundle with `build-swift-artifactbundle` and `receipt-version`. The
+   receipt records `github.repository`, the HEAD commit, the version and the ZIP digest.
+2. On that clean tree (alef rejects uncommitted or untracked changes), run alef's version sync with the ZIP and
+   receipt in `dist/swift-artifactbundle/`; it pins the checksum into the root `Package.swift`. Commit that.
+3. Preserve that exact ZIP, for example as a workflow artifact or a draft release asset. The ZIP is not
+   reproducible: a rebuild yields different bytes and fails the checksum check.
+4. Tag the finalized commit.
+5. Publish with this action, passing the same ZIP or leaving `bundle-zip` empty to reuse the release asset.
 
 ## Inputs
 

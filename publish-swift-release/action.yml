@@ -21,7 +21,8 @@ inputs:
   receipt:
     description: >
       Optional path to the bundle's preparation receipt (`*.artifactbundle.release.json`). When set,
-      its repository, archive and digest must match and its source must be an ancestor of the tagged commit.
+      its repository, archive, digest and version must match and its source must be an ancestor of the tagged
+      commit, which needs a full-history checkout (fetch-depth: 0).
     required: false
     default: ""
   manifest-path:
