@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.45.0] - 2026-11-04
+
 ### Added
 
 - `reusable-cli-release.yml` takes `macos-deployment-target` (e.g. `26.0`) and exports it as
