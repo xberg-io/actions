@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-cli-release.yml` takes `macos-deployment-target` (e.g. `26.0`) and exports it as
+  `MACOSX_DEPLOYMENT_TARGET` on the macOS build legs only. A caller's workflow-level `env` never reaches a reusable
+  workflow, so CLI binaries were built for rustc's default floor (11.0 arm64, 10.12 x86_64). Empty keeps that
+  default; a value that is not `<major>.<minor>` fails the build.
+
 ## [1.44.0] - 2026-11-04
 
 ### Added

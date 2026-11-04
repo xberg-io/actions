@@ -97,6 +97,16 @@ on:
         required: false
         type: string
         default: ""
+      macos-deployment-target:
+        description: >
+          MACOSX_DEPLOYMENT_TARGET for the macOS build legs (core and extra-targets), as
+          `<major>.<minor>` (e.g. `26.0`). A caller's workflow-level env does not reach a
+          reusable workflow, so this is the only way to raise the floor above rustc's default
+          (11.0 arm64, 10.12 x86_64). Empty (default) keeps the toolchain default; Linux and
+          Windows legs never see it.
+        required: false
+        type: string
+        default: ""
 
 jobs:
   cli-binaries:
@@ -125,6 +135,21 @@ jobs:
           use-sccache: ${{ inputs.rust-use-sccache }}
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
+
+      - name: Export macOS deployment target
+        if: ${{ inputs.macos-deployment-target != '' }}
+        env:
+          MACOS_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$MACOS_DEPLOYMENT_TARGET" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::macos-deployment-target must be <major>.<minor> (e.g. 26.0)" >&2
+            exit 1
+          fi
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=${MACOS_DEPLOYMENT_TARGET}" >> "$GITHUB_ENV"
+          fi
 
       - uses: xberg-io/actions/build-rust-cli@v1
         id: build
@@ -192,6 +217,21 @@ jobs:
           use-sccache: ${{ inputs.rust-use-sccache }}
           target: ${{ matrix.platform.target }}
           cache-key-prefix: publish-cli-${{ matrix.platform.target }}
+
+      - name: Export macOS deployment target
+        if: ${{ inputs.macos-deployment-target != '' }}
+        env:
+          MACOS_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$MACOS_DEPLOYMENT_TARGET" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::macos-deployment-target must be <major>.<minor> (e.g. 26.0)" >&2
+            exit 1
+          fi
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=${MACOS_DEPLOYMENT_TARGET}" >> "$GITHUB_ENV"
+          fi
 
       - uses: xberg-io/actions/build-rust-cli@v1
         id: build
