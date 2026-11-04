@@ -106,6 +106,14 @@ inputs:
     description: "Swift Package Manager binary target name (e.g., 'RustBridge'); defaults to artifact-name if not specified"
     required: false
     default: ""
+  receipt-version:
+    description: >
+      Release version the checked-out source declares (e.g. `1.2.3`). When set, writes
+      `<artifact-name>.artifactbundle.release.json` beside the ZIP, binding it to the repository, HEAD commit,
+      version and exact bytes, so alef's version sync can pin its checksum into Package.swift before the
+      release tag is created. Empty writes no receipt.
+    required: false
+    default: ""
 
 outputs:
   bundle-path:
@@ -126,6 +134,9 @@ outputs:
   package-manifest-updated:
     description: "Path to the updated Package.swift (if package-manifest-path was provided)"
     value: ${{ steps.substitute-manifest.outputs.package-manifest-path }}
+  receipt:
+    description: "Path to the preparation receipt (set only when receipt-version is provided)"
+    value: ${{ steps.receipt.outputs.receipt }}
 
 runs:
   using: composite
@@ -190,6 +201,20 @@ runs:
         INPUT_PACKAGE_MANIFEST_PATH: ${{ inputs.package-manifest-path }}
       run: |
         bash "$GITHUB_ACTION_PATH/scripts/build.sh"
+
+    - name: Write preparation receipt
+      id: receipt
+      if: >-
+        inputs.receipt-version != '' && inputs.dry-run != 'true' && inputs.targets == ''
+      shell: bash
+      env:
+        BUNDLE_ZIP: ${{ steps.build.outputs.bundle-zip }}
+        RECEIPT_VERSION: ${{ inputs.receipt-version }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        receipt=$(python3 "$GITHUB_ACTION_PATH/scripts/receipt.py" --zip "$BUNDLE_ZIP" \
+          --version "$RECEIPT_VERSION" --repository "$REPOSITORY" --source "$(git rev-parse HEAD)")
+        echo "receipt=$receipt" >>"$GITHUB_OUTPUT"
 
     - name: Substitute Package.swift placeholders
       id: substitute-manifest

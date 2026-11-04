@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `build-swift-artifactbundle` writes a preparation receipt beside the ZIP when `receipt-version` is set,
+  binding it to the repository, HEAD, version and digest so alef's version sync can pin the checksum before
+  tagging.
+
 ### Changed
 
 - Python 3.11 is now the minimum supported version; Python 3.10 reached end of life.
