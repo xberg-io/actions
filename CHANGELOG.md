@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.44.0] - 2026-11-04
+
 ### Added
 
 - `reusable-swift-release-prepare.yml` and the `prepare-swift-release` action give every Swift-shipping repository
