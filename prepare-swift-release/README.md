@@ -24,7 +24,7 @@ source commit.
 
 1. Land the version bump on `main`, then dispatch **Prepare Swift release** (the caller of the reusable workflow)
    on `main`. Its `build` job builds the bundle once on macOS with a receipt, pins the checksum, verifies the pin
-   and uploads the ZIP, receipt and `Package.swift` as the `swift-release-prepared` artifact. `finalize` pushes the
+   and uploads the ZIP, receipt and `Package.swift` as the `swift-release-prepared-<artifact-name>` artifact. `finalize` pushes the
    pin commit and the tag together, and `release` creates a draft release (`--verify-tag`) and attaches the exact
    ZIP (through `publish-swift-release`) and the receipt. A dry run stops after the build and prints the ref plan.
 2. Dispatch **Publish Release** on the tag. It verifies the tagged manifest against the attached ZIP and receipt
@@ -64,6 +64,12 @@ jobs:
       app-id: ${{ secrets.BOT_APP_ID }}
       app-private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
 ```
+
+The workflow calls `prepare-swift-release`, `publish-swift-release` and the build actions at `@v1`, not at the
+workflow's own ref, so move `v1` to the release that ships this workflow before any caller adopts it.
+
+A setup artifact's files must be gitignored: alef's version sync and the pin checks need a clean tree, and so does
+the build (keep `Cargo.lock` current; the bundle builds with `--locked`). `pin` names the paths that were dirty.
 
 The app needs contents write on the caller and must be allowed to push to the protected branch and create tags
 (a ruleset bypass); the pin commit touches only `Package.swift`, so workflows write is not needed. A caller whose

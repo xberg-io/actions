@@ -126,9 +126,45 @@ def render(version: tuple[int, ...]) -> str:
     return ".".join(str(part) for part in version)
 
 
+PLATFORM_CALL = re.compile(r"\.(macOS|iOS)\(")
+
+
+def strip_comments(source: str) -> str:
+    """Drop `//` and `/* */` comments outside string literals, keeping line structure."""
+    kept: list[str] = []
+    index, length = 0, len(source)
+    while index < length:
+        char = source[index]
+        if char == '"':
+            end = index + 1
+            while end < length and source[end] != '"' and source[end] != "\n":
+                end += 2 if source[end] == "\\" else 1
+            kept.append(source[index : end + 1])
+            index = end + 1
+        elif source.startswith("//", index):
+            end = source.find("\n", index)
+            index = length if end < 0 else end
+        elif source.startswith("/*", index):
+            end = source.find("*/", index + 2)
+            index = length if end < 0 else end + 2
+            kept.append(" ")
+        else:
+            kept.append(char)
+            index += 1
+    return "".join(kept)
+
+
 def manifest_platforms(manifest: str) -> dict[str, tuple[int, ...]]:
+    code = strip_comments(manifest)
+    literals = PLATFORM.findall(code)
+    calls = PLATFORM_CALL.findall(code)
+    if len(calls) != len(literals):
+        raise ReleaseError(
+            "Package.swift declares a .macOS or .iOS minimum that is not a literal (.vNN or a version string); "
+            "pass it as a literal so the archive's deployment target can be derived from it"
+        )
     found: dict[str, list[tuple[int, ...]]] = {}
-    for platform, major, minor, literal in PLATFORM.findall(manifest):
+    for platform, major, minor, literal in literals:
         version = literal or f"{major}.{minor or 0}"
         found.setdefault(platform, []).append(normalize(version))
     duplicated = sorted(platform for platform, versions in found.items() if len(set(versions)) > 1)
@@ -178,7 +214,11 @@ def pin(repo: Path, *, manifest: str, bundle_dir: str, alef: str) -> list[str]:
     """Run alef's version sync on a clean tree and put back everything but the root manifest."""
     tracked, untracked = changed_paths(repo, bundle_dir)
     if tracked or untracked:
-        raise ReleaseError(f"version sync needs a clean tree; changed before it ran: {tracked + untracked}")
+        raise ReleaseError(
+            f"version sync needs a clean tree, but these paths changed before it ran: {tracked + untracked}. "
+            "Files a setup artifact or an earlier step writes must be gitignored, and the build must not touch "
+            "tracked files (keep Cargo.lock current; the bundle builds with --locked)"
+        )
     before = (repo / manifest).read_bytes()
     result = subprocess.run([alef, "sync-versions", "--regen"], cwd=repo, check=False)
     if result.returncode != 0:
@@ -228,12 +268,16 @@ def bundle_census(zip_path: Path) -> dict[str, object]:
             if archive.testzip() is not None:
                 raise ReleaseError(f"{zip_path.name} fails its CRC check")
             info = json.loads(archive.read(f"{root}/info.json"))
-            artifacts = info.get("artifacts", {})
-            if len(artifacts) != 1:
-                raise ReleaseError(f"{zip_path.name} must declare exactly one artifact, found {sorted(artifacts)}")
+            artifacts = info.get("artifacts") if isinstance(info, dict) else None
+            if not isinstance(artifacts, dict) or len(artifacts) != 1:
+                found = sorted(artifacts) if isinstance(artifacts, dict) else artifacts
+                raise ReleaseError(f"{zip_path.name} must declare exactly one artifact, found {found!r}")
             artifact = next(iter(artifacts.values()))
+            variants = artifact.get("variants") if isinstance(artifact, dict) else None
+            if not isinstance(variants, list) or not all(isinstance(variant, dict) for variant in variants):
+                raise ReleaseError(f"{zip_path.name} info.json artifact has no list of variants")
             triples: list[str] = []
-            for variant in artifact.get("variants", []):
+            for variant in variants:
                 member = f"{root}/{variant.get('path', '')}"
                 if member not in names or archive.getinfo(member).file_size <= 8:
                     raise ReleaseError(f"{zip_path.name} lacks the native library {member}")

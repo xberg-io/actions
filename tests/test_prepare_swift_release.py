@@ -182,11 +182,26 @@ class Release:
             os.environ.update(previous)
 
     def fresh_checkout(self) -> None:
-        """Put the work tree back in a rerun's state: HEAD at the source, the pin uncommitted."""
-        _git(self.repo, "reset", "--quiet", "--soft", self.source)
-        _git(self.repo, "reset", "--quiet")
-        if _git(self.repo, "tag", "--list", _TAG):
-            _git(self.repo, "tag", "-d", _TAG)
+        """Rerun from a new clone that fetched only the source commit, with the downloaded pin and bundle.
+
+        The clone lacks the objects of any earlier pin commit or tag, so the content checks must fetch them.
+        """
+        pinned = (self.repo / "Package.swift").read_bytes()
+        bundle = {path.name: path.read_bytes() for path in self.bundle_dir.iterdir()}
+        self.reruns = getattr(self, "reruns", 0) + 1
+        self.repo = self.base / f"rerun-{self.reruns}"
+        _git(self.base, "init", "--quiet", str(self.repo))
+        _git(self.repo, "remote", "add", "origin", str(self.origin))
+        _git(self.repo, "fetch", "--quiet", "--no-tags", "origin", self.source)
+        _git(self.repo, "checkout", "--quiet", "--detach", self.source)
+        assert not _git(self.repo, "tag", "--list"), "the rerun clone must not hold the release tag"
+        self.bundle_dir = self.repo / "dist" / "swift-artifactbundle"
+        self.bundle_dir.mkdir(parents=True)
+        for name, data in bundle.items():
+            (self.bundle_dir / name).write_bytes(data)
+        self.zip = self.bundle_dir / _ARCHIVE
+        self.receipt = self.bundle_dir / f"{_ARTIFACT}.artifactbundle.release.json"
+        (self.repo / "Package.swift").write_bytes(pinned)
 
     def push_from_other_clone(self, path: str, content: str) -> str:
         other = self.base / "other"
@@ -228,6 +243,22 @@ def test_deployment_targets_derive_from_the_manifest(macos: str, ios: str, expec
 def test_deployment_targets_read_minor_versions_and_string_forms() -> None:
     manifest = _SOURCE_MANIFEST.replace(".macOS(.v26)", ".macOS(.v13_5)").replace(".iOS(.v16)", '.iOS("17.2")')
     assert psr.deployment_targets(manifest, macos="", ios="") == {"macos": "13.5", "ios": "17.2"}
+
+
+def test_deployment_targets_ignore_commented_platforms() -> None:
+    decoy = "  // .macOS(.v13),\n  /* .iOS(.v12)\n  */\n"
+    manifest = _SOURCE_MANIFEST.replace("  platforms: [\n", "  platforms: [\n" + decoy)
+    assert psr.deployment_targets(manifest, macos="", ios="") == {"macos": "26.0", "ios": "16.0"}
+
+
+def test_deployment_targets_keep_comment_markers_inside_strings() -> None:
+    manifest = _SOURCE_MANIFEST.replace(".macOS(.v26)", '.macOS("26.0") // https://example.invalid/*')
+    assert psr.deployment_targets(manifest, macos="", ios="")["macos"] == "26.0"
+
+
+def test_deployment_targets_reject_a_non_literal_minimum_behind_a_commented_literal() -> None:
+    manifest = _SOURCE_MANIFEST.replace(".macOS(.v26),", "// .macOS(.v26),\n    .macOS(minimumMacOS),")
+    _raises(lambda: psr.deployment_targets(manifest, macos="", ios=""), "literal")
 
 
 def test_deployment_targets_reject_a_macos_input_that_disagrees_with_the_manifest() -> None:
@@ -298,7 +329,7 @@ def test_pin_refuses_a_dirty_tree(release: Release) -> None:
         lambda: psr.pin(
             release.repo, manifest="Package.swift", bundle_dir="dist/swift-artifactbundle", alef=str(release.alef)
         ),
-        "clean",
+        r"poly\.toml.*gitignore",
     )
 
 
@@ -346,6 +377,16 @@ def test_verify_rejects_a_receipt_that_does_not_describe_this_bundle(
     release.pin_manifest()
     release.write_receipt(**{field: value})
     _raises(release.verify, match)
+
+
+@pytest.mark.parametrize("info", [[], {"artifacts": []}, {"artifacts": {"RustBridgeBinary": []}}])
+def test_verify_rejects_a_malformed_info_json(release: Release, info: object) -> None:
+    with zipfile.ZipFile(release.zip, "w") as archive:
+        archive.writestr(f"{_ARTIFACT}.artifactbundle/info.json", json.dumps(info))
+    release.checksum = hashlib.sha256(release.zip.read_bytes()).hexdigest()
+    release.write_receipt(sha256=release.checksum)
+    release.pin_manifest()
+    _raises(release.verify, "exactly one artifact|list of variants")
 
 
 def test_verify_rejects_a_platform_census_mismatch(release: Release) -> None:
@@ -479,7 +520,7 @@ def test_a_pin_commit_with_different_bytes_on_main_is_not_resumed(release: Relea
     _git(release.repo, "push", "--quiet", "origin", "HEAD:refs/heads/main")
     moved = release.remote("refs/heads/main")
     release.fresh_checkout()
-    other.write_text(_SOURCE_MANIFEST)
+    (release.repo / "Package.swift").write_text(_SOURCE_MANIFEST)
     release.pin_manifest()
     _raises(release.finalize, "moved")
     assert release.remote("refs/heads/main") == moved
@@ -533,6 +574,42 @@ def test_dry_run_with_the_pin_already_on_the_branch_creates_no_tag(release: Rele
     release.fresh_checkout()
     assert release.finalize(dry_run=True)["tag-created"] == "false"
     assert not release.remote_has(f"refs/tags/{_TAG}")
+
+
+def _race(monkeypatch: pytest.MonkeyPatch, racer) -> None:
+    real_push = psr.push
+
+    def racing_push(repo: Path, remote: str, *refspecs: str) -> None:
+        racer()
+        real_push(repo, remote, *refspecs)
+
+    monkeypatch.setattr(psr, "push", racing_push)
+
+
+def test_a_main_push_that_races_the_atomic_push_lands_nothing(release: Release, monkeypatch) -> None:
+    moved: list[str] = []
+    _race(monkeypatch, lambda: moved.append(release.push_from_other_clone("README.md", "racer\n")))
+    release.pin_manifest()
+    _raises(release.finalize, "push")
+    assert release.remote("refs/heads/main") == moved[0]
+    assert not release.remote_has(f"refs/tags/{_TAG}")
+
+
+def test_a_tag_that_races_the_atomic_push_lands_nothing(release: Release, monkeypatch) -> None:
+    competitor: list[str] = []
+
+    def push_competing_tag() -> None:
+        other = release.base / "competitor"
+        _git(release.base, "clone", "--quiet", str(release.origin), str(other))
+        _git(other, "tag", "-a", _TAG, "-m", "competitor")
+        _git(other, "push", "--quiet", "origin", f"refs/tags/{_TAG}")
+        competitor.append(release.remote(f"refs/tags/{_TAG}"))
+
+    _race(monkeypatch, push_competing_tag)
+    release.pin_manifest()
+    _raises(release.finalize, "push")
+    assert release.remote("refs/heads/main") == release.source
+    assert release.remote(f"refs/tags/{_TAG}") == competitor[0]
 
 
 def test_dry_run_pushes_nothing(release: Release) -> None:
@@ -658,6 +735,7 @@ def test_later_jobs_reuse_the_uploaded_bytes() -> None:
     for name in ("finalize", "release"):
         (download,) = _uses(jobs[name], "actions/download-artifact@")
         assert download["with"]["name"] == upload["with"]["name"]
+    assert upload["with"]["name"] == "swift-release-prepared-${{ inputs.artifact-name }}"
 
 
 def test_release_job_publishes_through_the_shared_action_and_a_verified_draft() -> None:

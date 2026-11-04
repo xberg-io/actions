@@ -48,7 +48,8 @@ on:
       setup-artifact:
         description: >-
           Name of an artifact of this run (e.g. generated parser sources) downloaded into `setup-artifact-path`
-          before the build. Empty skips it.
+          before the build. Empty skips it. Its files must be gitignored: alef's version sync and the pin checks
+          need a clean tree, so must the build (keep Cargo.lock current; the bundle builds with --locked).
         required: false
         type: string
         default: ""
@@ -300,7 +301,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: swift-release-prepared
+          name: swift-release-prepared-${{ inputs.artifact-name }}
           path: |
             Package.swift
             ${{ steps.paths.outputs.bundle-zip }}
@@ -363,7 +364,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: swift-release-prepared
+          name: swift-release-prepared-${{ inputs.artifact-name }}
           path: .
 
       - name: Verify the downloaded pin
@@ -419,7 +420,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: swift-release-prepared
+          name: swift-release-prepared-${{ inputs.artifact-name }}
           path: .
 
       - name: Ensure the draft release exists
