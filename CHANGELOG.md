@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `reusable-validate.yml`: `go-version` defaults to `1.27` and `golangci-lint-version` to `v2.15.0`. Modules now declare
+  `go 1.27`, which auto-downloads Go 1.27, and the old default golangci-lint v2.12.2 (built with Go 1.26) failed typecheck on
+  its standard library.
+
 ## [1.45.0] - 2026-11-04
 
 ### Added

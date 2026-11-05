@@ -72,16 +72,17 @@ on:
         default: false
       go-version:
         description: >-
-          Go version, installed through mise and matched against the caller's mise locks. It stays 1.26, not the
-          caller's mise.toml, while the default golangci-lint v2.12.2 panics on the Go 1.27 standard library.
+          Go version, installed through mise and matched against the caller's mise locks. golangci-lint must be
+          built with a Go at least this new: a module declaring `go 1.27` auto-downloads Go 1.27, and a
+          golangci-lint built with Go 1.26 (v2.12.x and older) then fails typecheck on the Go 1.27 standard library.
         required: false
         type: string
-        default: "1.26"
+        default: "1.27"
       golangci-lint-version:
-        description: "golangci-lint version to install (module path tag, e.g. v2.12.2)."
+        description: "golangci-lint version to install (module path tag, e.g. v2.15.0); v2.13.0 or newer for Go 1.27."
         required: false
         type: string
-        default: "v2.12.2"
+        default: "v2.15.0"
       go-working-directory:
         description: "Directory holding the Go module, used to resolve its toolchain."
         required: false

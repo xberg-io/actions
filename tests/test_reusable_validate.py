@@ -22,7 +22,10 @@ def test_go_toolchain_default_matches_consumer_workspaces():
     content = _workflow_content()
     go_input = content.split("go-version:", 1)[1].split("golangci-lint-version:", 1)[0]
 
-    assert 'default: "1.26"' in go_input
+    lint_input = content.split("golangci-lint-version:", 1)[1].split("go-working-directory:", 1)[0]
+
+    assert 'default: "1.27"' in go_input
+    assert 'default: "v2.15.0"' in lint_input
 
 
 def test_fixture_snippet_gate_installs_generates_checks_drift_and_validates():
