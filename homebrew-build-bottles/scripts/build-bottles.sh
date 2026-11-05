@@ -213,16 +213,16 @@ apply_bottle_floor() {
 
   local floor_version
   case "$bottle_floor" in
-  big_sur) floor_version=11.0 ;;
-  monterey) floor_version=12.0 ;;
-  ventura) floor_version=13.0 ;;
-  sonoma) floor_version=14.0 ;;
-  sequoia) floor_version=15.0 ;;
-  tahoe) floor_version=26.0 ;;
-  *)
-    echo "ERROR: BOTTLE_FLOOR '${bottle_floor}' is not a macOS bottle tag Homebrew knows (big_sur, monterey, ventura, sonoma, sequoia, tahoe)" >&2
-    return 1
-    ;;
+    big_sur) floor_version=11.0 ;;
+    monterey) floor_version=12.0 ;;
+    ventura) floor_version=13.0 ;;
+    sonoma) floor_version=14.0 ;;
+    sequoia) floor_version=15.0 ;;
+    tahoe) floor_version=26.0 ;;
+    *)
+      echo "ERROR: BOTTLE_FLOOR '${bottle_floor}' is not a macOS bottle tag Homebrew knows (big_sur, monterey, ventura, sonoma, sequoia, tahoe)" >&2
+      return 1
+      ;;
   esac
 
   local floor_tag="$bottle_floor"
