@@ -289,7 +289,10 @@ PYEOF
     return 0
   fi
 
-  local floored_tarball="${tarball/".${host_tag}.bottle."/".${floor_tag}.bottle."}"
+  # Splice by prefix and suffix: bash 3.2 (the macOS /bin/bash) keeps quotes inside a ${var/a/b}
+  # replacement literally, so a quoted replacement would land in the file name.
+  local suffix="${rest#"$host_tag"}"
+  local floored_tarball="${tarball%"$rest"}${floor_tag}${suffix}"
   mv "$tarball" "$floored_tarball" || return 1
 
   local json_file="${prefix}${host_tag}.bottle.json"
