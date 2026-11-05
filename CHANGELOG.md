@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.45.2] - 2026-11-05
+
 ### Fixed
 
 - `setup-rust`: the lint-support probes compile into a temporary directory instead of writing `rust_out` into the
