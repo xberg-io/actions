@@ -68,6 +68,17 @@ setup() {
 	[ "$(cat "$GITHUB_ENV")" = $'SCCACHE_GHA_ENABLED=false\nRUSTC_WRAPPER=\nRUSTFLAGS=-D warnings -A unpredictable-function-pointer-comparisons -A mismatched-lifetime-syntaxes -A fn_ptr_eq --cfg has_fn_ptr_eq_lint' ]
 }
 
+@test "should_not_leave_probe_output_in_the_working_directory" {
+	# rustc reading `-` writes its binary as ./rust_out unless told otherwise; a stray file in the
+	# checkout fails clean-tree gates such as prepare-swift-release's pin step.
+	xberg_stub rustc 'set -eu' 'if [[ "$1" == "-V" ]]; then echo "rustc 1.80"; exit 0; fi' \
+		'out=.; while [[ $# -gt 0 ]]; do if [[ "$1" == "--out-dir" ]]; then out="$2"; fi; shift; done' \
+		'touch "$out/rust_out"'
+	run bash -c 'cd "$1" && "$2/configure-flags.sh" false false' _ "$WORK" "$SCRIPT_DIR"
+	[ "$status" -eq 0 ]
+	[ ! -e "$WORK/rust_out" ]
+}
+
 @test "should_add_sccache_directory_to_github_path_when_executable_exists" {
 	local cache="$BATS_TEST_TMPDIR/sccache"
 	mkdir -p "$cache"

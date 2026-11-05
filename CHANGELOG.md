@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `setup-rust`: the lint-support probes compile into a temporary directory instead of writing `rust_out` into the
+  caller's checkout, which made `prepare-swift-release` refuse the tree as dirty.
+
 ## [1.45.1] - 2026-11-05
 
 ### Changed

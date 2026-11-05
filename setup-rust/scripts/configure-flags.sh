@@ -48,8 +48,12 @@ if [ "$macos_dynamic_lookup" = "true" ]; then
   fi
 fi
 
+# rustc compiling stdin writes ./rust_out; keep probe output out of the caller's checkout.
+probe_dir="$(mktemp -d)"
+trap 'rm -rf "$probe_dir"' EXIT
+
 check_output=""
-if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W unpredictable-function-pointer-comparisons - 2>&1)"; then
+if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc --out-dir "$probe_dir" -W unpredictable-function-pointer-comparisons - 2>&1)"; then
   :
 fi
 if grep -qi "unknown lint" <<<"$check_output"; then
@@ -60,7 +64,7 @@ else
 fi
 
 check_output=""
-if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W mismatched-lifetime-syntaxes - 2>&1)"; then
+if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc --out-dir "$probe_dir" -W mismatched-lifetime-syntaxes - 2>&1)"; then
   :
 fi
 if grep -qi "unknown lint" <<<"$check_output"; then
@@ -71,7 +75,7 @@ else
 fi
 
 check_output=""
-if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1)"; then
+if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc --out-dir "$probe_dir" -W fn_ptr_eq - 2>&1)"; then
   :
 fi
 if grep -qi "unknown lint" <<<"$check_output"; then
