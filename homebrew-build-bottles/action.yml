@@ -40,6 +40,16 @@ inputs:
       it with a freshly minted token (avoids the 1h App-token TTL 401 on slow builds).
     required: false
     default: "true"
+  bottle-floor:
+    description: >
+      Oldest macOS bottle tag to publish macOS bottles under (big_sur, monterey, ventura,
+      sonoma, sequoia or tahoe). Homebrew installs a bottle on its own macOS and every newer
+      one, so a bottle built on macos-26 and tagged arm64_big_sur (big_sur on Intel) installs
+      on macOS 11 and later. The build fails if a Mach-O in the bottle has an LC_BUILD_VERSION
+      minos newer than the floor; set MACOSX_DEPLOYMENT_TARGET in the formula to match.
+      Linux bottles keep their tag.
+    required: false
+    default: "big_sur"
 
 runs:
   using: composite
@@ -55,6 +65,7 @@ runs:
         OUT_DIR: ${{ inputs.out-dir }}
         GITHUB_REPO: ${{ inputs.github-repo }}
         UPLOAD: ${{ inputs.upload }}
+        BOTTLE_FLOOR: ${{ inputs.bottle-floor }}
         HOMEBREW_NO_INSTALL_FROM_API: "1"
         HOMEBREW_NO_SANDBOX_LINUX: "1"
       run: '"$GITHUB_ACTION_PATH/scripts/build-bottles.sh"'

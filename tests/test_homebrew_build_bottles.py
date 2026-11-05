@@ -29,8 +29,8 @@ case "${1:-}" in
   list) exit 1 ;;
   install) ;;
   bottle)
-    touch "sample--${VERSION}.arm64_test.bottle.tar.gz"
-    echo '{}' > "sample--${VERSION}.arm64_test.bottle.json"
+    touch "sample--${VERSION}.x86_64_linux.bottle.tar.gz"
+    echo '{}' > "sample--${VERSION}.x86_64_linux.bottle.json"
     ;;
   *) echo "unexpected brew command: $*" >&2; exit 1 ;;
 esac
@@ -59,4 +59,4 @@ esac
 
     assert result.returncode == 0, result.stderr
     assert attempts_file.read_text().strip() == "2"
-    assert (output_dir / "sample-1.2.3.arm64_test.bottle.tar.gz").is_file()
+    assert (output_dir / "sample-1.2.3.x86_64_linux.bottle.tar.gz").is_file()

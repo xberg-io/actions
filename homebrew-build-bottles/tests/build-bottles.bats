@@ -26,12 +26,39 @@ setup() {
 		'  exit 0 ;;' \
 		'update|tap|install) exit 0 ;;' \
 		'uninstall|list) exit 1 ;;' \
-		'bottle)' \
-		'  printf bottle > "demo--1.2.3.arm64_sonoma.bottle.tar.gz"' \
-		'  printf "{}" > "demo--1.2.3.arm64_sonoma.bottle.json" ;;' \
+		'bottle) "$BOTTLE_STUB" ;;' \
 		'esac' >"$STUB_BIN/brew"
 	printf '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >>"$GH_TRACE"\n' >"$STUB_BIN/gh"
-	chmod +x "$STUB_BIN/brew" "$STUB_BIN/gh"
+	# `brew bottle` writes a real tarball holding one Mach-O (by magic bytes) and a manifest
+	# shaped like `brew bottle --json`, tagged $BOTTLE_HOST_TAG. ~keep
+	export BOTTLE_STUB="$TEST_ROOT/bottle-stub"
+	cat >"$BOTTLE_STUB" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+tag="${BOTTLE_HOST_TAG:-arm64_sonoma}"
+stage="$(mktemp -d)"
+mkdir -p "$stage/demo/1.2.3/bin"
+printf '\317\372\355\376stub' >"$stage/demo/1.2.3/bin/demo"
+printf 'readme' >"$stage/demo/1.2.3/README"
+tar -czf "demo--1.2.3.${tag}.bottle.tar.gz" -C "$stage" demo
+printf '{"example/tap/demo":{"bottle":{"tags":{"%s":{"filename":"demo-1.2.3.%s.bottle.tar.gz","local_filename":"demo--1.2.3.%s.bottle.tar.gz","sha256":"abc"}}}}}' \
+	"$tag" "$tag" "$tag" >"demo--1.2.3.${tag}.bottle.json"
+STUB
+	# otool reports one LC_BUILD_VERSION whose minos is $OTOOL_MINOS. ~keep
+	cat >"$STUB_BIN/otool" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "${@: -1}:" "Load command 9" "      cmd LC_BUILD_VERSION" "  cmdsize 32" " platform 1" \
+	"    minos ${OTOOL_MINOS:-11.0}" "      sdk 26.0"
+STUB
+	chmod +x "$STUB_BIN/brew" "$STUB_BIN/gh" "$STUB_BIN/otool" "$BOTTLE_STUB"
+}
+
+# Runs the action script with the default stubs; extra VAR=value pairs go first.
+run_build() {
+	run env PATH="$STUB_BIN:$ORIGINAL_PATH" BREW_TRACE="$TRACE" GH_TRACE="$TEST_ROOT/gh-trace" "$@" \
+		TAG=v1.2.3 VERSION=1.2.3 TAP=example/tap FORMULAS=demo OUT_DIR="$TEST_ROOT/output" \
+		GITHUB_REPO=example/project UPLOAD=false RUNNER_OS=macOS \
+		bash "$ACTION_DIR/scripts/build-bottles.sh"
 }
 
 teardown() {
@@ -48,11 +75,11 @@ teardown() {
 		bash "$ACTION_DIR/scripts/build-bottles.sh"
 
 	[ "$status" -eq 0 ]
-	[ "$(cat "$out_dir/demo-1.2.3.arm64_sonoma.bottle.tar.gz")" = "bottle" ]
-	[ "$(cat "$out_dir/demo--1.2.3.arm64_sonoma.bottle.json")" = "{}" ]
+	tar -tzf "$out_dir/demo-1.2.3.arm64_big_sur.bottle.tar.gz" | grep -qx 'demo/1.2.3/bin/demo'
+	[ -f "$out_dir/demo--1.2.3.arm64_big_sur.bottle.json" ]
 	[ ! -e "$gh_trace" ]
 	[ "$(cat "$TRACE")" = $'--version\nconfig\nupdate --quiet\ntrust --help\ntrust --tap example/tap\ntrust --json v1\ntap example/tap\nuninstall --force example/tap/demo\n--repository example/tap\nlist libheif\ninstall --build-bottle --verbose example/tap/demo\nbottle --json --no-rebuild example/tap/demo' ]
-	[[ "$output" == *"UPLOAD=false: staged demo-1.2.3.arm64_sonoma.bottle.tar.gz in $out_dir for caller-side upload"* ]]
+	[[ "$output" == *"UPLOAD=false: staged demo-1.2.3.arm64_big_sur.bottle.tar.gz in $out_dir for caller-side upload"* ]]
 }
 
 @test "should_return_error_when_brew_produces_no_bottle_tarball" {
@@ -128,4 +155,58 @@ teardown() {
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Trusted tap verified in store: example/tap"* ]]
 	[[ "$output" != *"absent from the trust store"* ]]
+}
+
+@test "should_retag_the_arm64_bottle_and_manifest_to_the_floor" {
+	run_build BOTTLE_HOST_TAG=arm64_tahoe
+
+	[ "$status" -eq 0 ]
+	out_dir="$TEST_ROOT/output"
+	[ -f "$out_dir/demo-1.2.3.arm64_big_sur.bottle.tar.gz" ]
+	[ ! -e "$out_dir/demo--1.2.3.arm64_tahoe.bottle.json" ]
+	manifest="$out_dir/demo--1.2.3.arm64_big_sur.bottle.json"
+	[ "$(jq -r '.[].bottle.tags | keys | join(",")' "$manifest")" = "arm64_big_sur" ]
+	[ "$(jq -r '.[].bottle.tags.arm64_big_sur.filename' "$manifest")" = "demo-1.2.3.arm64_big_sur.bottle.tar.gz" ]
+	[ "$(jq -r '.[].bottle.tags.arm64_big_sur.local_filename' "$manifest")" = "demo--1.2.3.arm64_big_sur.bottle.tar.gz" ]
+	[ "$(jq -r '.[].bottle.tags.arm64_big_sur.sha256' "$manifest")" = "abc" ]
+	[[ "$output" == *"Retagged demo bottle arm64_tahoe -> arm64_big_sur"* ]]
+}
+
+@test "should_retag_the_intel_bottle_to_the_floor_without_an_arch_prefix" {
+	run_build BOTTLE_HOST_TAG=tahoe
+
+	[ "$status" -eq 0 ]
+	[ -f "$TEST_ROOT/output/demo-1.2.3.big_sur.bottle.tar.gz" ]
+	[ "$(jq -r '.[].bottle.tags | keys | join(",")' "$TEST_ROOT/output/demo--1.2.3.big_sur.bottle.json")" = "big_sur" ]
+}
+
+@test "should_retag_to_the_floor_input_when_one_is_given" {
+	run_build BOTTLE_HOST_TAG=arm64_tahoe BOTTLE_FLOOR=sonoma OTOOL_MINOS=14.0
+
+	[ "$status" -eq 0 ]
+	[ -f "$TEST_ROOT/output/demo-1.2.3.arm64_sonoma.bottle.tar.gz" ]
+}
+
+@test "should_leave_linux_bottle_tags_untouched" {
+	run_build BOTTLE_HOST_TAG=x86_64_linux OTOOL_MINOS=26.0
+
+	[ "$status" -eq 0 ]
+	[ -f "$TEST_ROOT/output/demo-1.2.3.x86_64_linux.bottle.tar.gz" ]
+	[ "$(jq -r '.[].bottle.tags | keys | join(",")' "$TEST_ROOT/output/demo--1.2.3.x86_64_linux.bottle.json")" = "x86_64_linux" ]
+	[[ "$output" != *"Bottle floor check"* ]]
+}
+
+@test "should_fail_when_a_mach_o_needs_a_newer_macos_than_the_floor" {
+	run_build BOTTLE_HOST_TAG=arm64_tahoe OTOOL_MINOS=26.0
+
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"ERROR: demo/1.2.3/bin/demo needs macOS 26.0, newer than the arm64_big_sur bottle floor (macOS 11.0)"* ]]
+	[ ! -e "$TEST_ROOT/output/demo-1.2.3.arm64_big_sur.bottle.tar.gz" ]
+}
+
+@test "should_fail_when_the_floor_is_not_a_known_macos_tag" {
+	run_build BOTTLE_HOST_TAG=arm64_tahoe BOTTLE_FLOOR=catalina
+
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"BOTTLE_FLOOR 'catalina' is not a macOS bottle tag"* ]]
 }
