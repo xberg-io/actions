@@ -54,6 +54,11 @@ tools = ["find_skill", "load_skill"]
 [lint]
 allow_overrides = ["testing-conventions", "basemind-usage"]
 
+[exposure]
+mcp_server_tokens = 1150
+start_budget = 4600
+codex_start_budget = 5100
+
 [lock]
 include_outputs = false
 
