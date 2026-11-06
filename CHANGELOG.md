@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.46.0] - 2026-11-06
+
 ### Changed
 
 - `homebrew-build-bottles`: macOS bottles are retagged to the new `bottle-floor` input (default `sequoia`), so a bottle
