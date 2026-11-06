@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.46.1] - 2026-11-06
+
 ### Fixed
 
 - `publish-packagist`: polls `repo.packagist.org/p2/<package>.json` for the released version instead of
