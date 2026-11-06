@@ -16,12 +16,12 @@ upload="${UPLOAD:-true}"
 # Oldest macOS bottle tag to publish macOS bottles under (see apply_bottle_floor).
 bottle_floor="${BOTTLE_FLOOR:-sequoia}"
 
-# Homebrew 6.0.13 regressed `brew install --build-bottle` on Linux: the keg builds
-# (🍺 prints) but the process then exits 1 with the underlying error swallowed, which
-# aborts this script under `set -e` before `brew bottle` runs. 6.0.12 was the last
-# green Linux bottle build, whereas 6.0.13 fails it (seen on crawlberg v1.0.11). macOS
-# is unaffected, so we pin only the Linux leg. Override via LINUX_BREW_PIN if needed.
-linux_brew_pin="${LINUX_BREW_PIN:-6.0.12}"
+# The Linux leg runs the Homebrew that install-homebrew-linux just installed (latest stable)
+# with homebrew/core at HEAD, as macOS does after `brew update`. It was pinned to 6.0.12 to
+# dodge a 6.0.13 `--build-bottle` exit-1 regression, but that froze core with it, and core's
+# rust stayed at 1.97.1 while formulas moved on to rustc 1.99 (crawlberg v1.13.0). Set
+# LINUX_BREW_PIN to a brew tag to pin again; core is then pinned to the tag's date.
+linux_brew_pin="${LINUX_BREW_PIN:-}"
 
 retry() {
   local -r max_attempts=5
@@ -56,9 +56,19 @@ echo "::endgroup::"
 
 echo "::group::Tap ${tap}"
 export HOMEBREW_NO_INSTALL_FROM_API=1
-if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
-  # Pin brew to the last-known-good release instead of updating to latest (see
-  # linux_brew_pin).
+if [[ "${RUNNER_OS:-}" == "Linux" && -z "$linux_brew_pin" ]]; then
+  # install.sh taps no homebrew/core, and HOMEBREW_NO_INSTALL_FROM_API=1 needs it on disk.
+  # Left to brew, the first formula load clones core with full history (over 1.3 GB);
+  # a depth-1 clone of HEAD is all a bottle build reads.
+  export HOMEBREW_NO_AUTO_UPDATE=1
+  core_repo="$(brew --repository homebrew/core)"
+  clone_core_head() {
+    rm -rf "$core_repo"
+    git clone --quiet --depth 1 https://github.com/Homebrew/homebrew-core "$core_repo"
+  }
+  retry clone_core_head
+  echo "Cloned homebrew/core at $(git -C "$core_repo" rev-parse HEAD) for $(brew --version | head -1)"
+elif [[ "${RUNNER_OS:-}" == "Linux" ]]; then
   brew_repo="$(brew --repository)"
   git -C "$brew_repo" fetch --force --tags origin "refs/tags/${linux_brew_pin}:refs/tags/${linux_brew_pin}"
   git -C "$brew_repo" -c advice.detachedHead=false checkout --force --quiet "$linux_brew_pin"
@@ -66,12 +76,9 @@ if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
   echo "Pinned Linux Homebrew to ${linux_brew_pin}: $(brew --version | head -1)"
 
   # HOMEBREW_NO_INSTALL_FROM_API=1 makes brew evaluate core formulae from the on-disk
-  # homebrew/core tap, which install.sh clones at latest. Core formulae adopted the
-  # `run` install-steps DSL in Homebrew 6.0.13, which the pinned 6.0.12 brew cannot
-  # parse — dependency import (ca-certificates, …) then dies with "undefined method
-  # 'run'", which is what silently broke every Linux bottle after the pin landed
-  # (crawlberg v1.0.11/v1.0.12). Pin the core tap to its state as of the brew tag so
-  # the on-disk formulae match the running brew. A blobless shallow clone bounded to a
+  # homebrew/core tap. Core at HEAD uses DSL an older brew cannot parse (6.0.12 died on
+  # the `run` install step with "undefined method 'run'", crawlberg v1.0.11/v1.0.12), so
+  # core is pinned to its state as of the brew tag. A blobless shallow clone bounded to a
   # few days around the tag keeps this cheap; checkout under `set -e` fails loudly if
   # no matching commit is found rather than silently re-introducing the skew.
   core_repo="$(brew --repository homebrew/core)"

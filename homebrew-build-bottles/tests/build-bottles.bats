@@ -228,3 +228,30 @@ teardown() {
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"BOTTLE_FLOOR 'sonoma' is not a supported macOS bottle floor"* ]]
 }
+
+@test "should_build_linux_bottles_on_the_installed_brew_with_core_at_head" {
+	git_trace="$TEST_ROOT/git-trace"
+	linux_bin="$TEST_ROOT/linux-bin"
+	mkdir -p "$linux_bin"
+	printf '%s\n' '#!/usr/bin/env bash' \
+		'[ "$1" != --repository ] || { echo "$REPO_ROOT/${2:-brew}"; exit 0; }' \
+		'exec "$STUB_BIN/brew" "$@"' >"$linux_bin/brew"
+	printf '%s\n' '#!/usr/bin/env bash' \
+		'printf "%s\n" "$*" >>"$GIT_TRACE"' \
+		'[[ "$*" != *rev-parse* ]] || echo 0123abc' >"$linux_bin/git"
+	chmod +x "$linux_bin/brew" "$linux_bin/git"
+
+	run env PATH="$linux_bin:$STUB_BIN:$ORIGINAL_PATH" STUB_BIN="$STUB_BIN" REPO_ROOT="$TEST_ROOT/repos" \
+		BREW_TRACE="$TRACE" GIT_TRACE="$git_trace" BOTTLE_HOST_TAG=x86_64_linux \
+		TAG=v1.2.3 VERSION=1.2.3 TAP=example/tap FORMULAS=demo OUT_DIR="$TEST_ROOT/output" \
+		GITHUB_REPO=example/project UPLOAD=false RUNNER_OS=Linux \
+		bash "$ACTION_DIR/scripts/build-bottles.sh"
+
+	[ "$status" -eq 0 ]
+	# Pinning brew froze homebrew/core with it, and core's rust then fell behind the rustc the
+	# formulas need (crawlberg v1.13.0). Linux must neither move brew nor pin core. ~keep
+	[ "$(cat "$git_trace")" = "clone --quiet --depth 1 https://github.com/Homebrew/homebrew-core $TEST_ROOT/repos/homebrew/core"$'\n'"-C $TEST_ROOT/repos/homebrew/core rev-parse HEAD" ]
+	[[ "$(cat "$TRACE")" != *update* ]]
+	[[ "$output" == *"Cloned homebrew/core at 0123abc for Homebrew 7.0.0"* ]]
+	[ -f "$TEST_ROOT/output/demo-1.2.3.x86_64_linux.bottle.tar.gz" ]
+}

@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `homebrew-build-bottles`: Linux bottles build with the latest Homebrew and `homebrew/core` at HEAD instead of
+  Homebrew 6.0.12 and core as of July 2026, whose `rust` is 1.97.1. Formulas that need a newer rustc failed both Linux
+  legs (crawlberg v1.13.0 requires rustc 1.99). The 6.0.13 `--build-bottle` regression the pin dodged could not be
+  reproduced, and a full crawlberg 1.13.0 Linux bottle builds on Homebrew 7.0.12.
+  `LINUX_BREW_PIN` still pins a brew tag, with core pinned to its date.
+
 ## [1.46.1] - 2026-11-06
 
 ### Fixed
