@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.46.2] - 2026-11-06
+
 ### Fixed
 
 - `homebrew-build-bottles`: Linux bottles build with the latest Homebrew and `homebrew/core` at HEAD instead of
