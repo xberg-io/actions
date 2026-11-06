@@ -17,22 +17,47 @@ def _import_script(name, path):
 packagist_mod = _import_script("publish_packagist", _SCRIPT_PATH)
 
 
+def _p2_body(package_name, versions):
+    return json.dumps({"packages": {package_name: [{"version": v} for v in versions]}, "minified": "composer/2.0"})
+
+
 def test_check_packagist_version_found(monkeypatch):
-    body = json.dumps({"package": {"versions": {"1.2.3": {}, "1.2.2": {}}}})
+    body = _p2_body("vendor/pkg", ["1.2.3", "1.2.2"])
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
 
     assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is True
 
 
 def test_check_packagist_version_with_v_prefix(monkeypatch):
-    body = json.dumps({"package": {"versions": {"v1.2.3": {}, "v1.2.2": {}}}})
+    body = _p2_body("vendor/pkg", ["v1.2.3", "v1.2.2"])
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
 
     assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is True
 
 
 def test_check_packagist_version_not_found(monkeypatch):
-    body = json.dumps({"package": {"versions": {"1.2.2": {}, "1.2.1": {}}}})
+    body = _p2_body("vendor/pkg", ["1.2.2", "1.2.1"])
+    monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
+
+    assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is False
+
+
+def test_check_packagist_version_reads_uncached_p2_metadata(monkeypatch):
+    # packagist.org/packages/<name>.json is CDN-cached for 12 hours, so a new tag stays invisible there.
+    requested = []
+
+    def fake_get(url, **kwargs):
+        requested.append(url)
+        return 200, _p2_body("vendor/pkg", ["1.2.3"])
+
+    monkeypatch.setattr(packagist_mod, "http_get", fake_get)
+
+    assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is True
+    assert requested == ["https://repo.packagist.org/p2/vendor/pkg.json"]
+
+
+def test_check_packagist_version_ignores_other_packages(monkeypatch):
+    body = _p2_body("vendor/other", ["1.2.3"])
     monkeypatch.setattr(packagist_mod, "http_get", lambda url, **kwargs: (200, body))
 
     assert packagist_mod.check_packagist_version("vendor/pkg", "1.2.3") is False

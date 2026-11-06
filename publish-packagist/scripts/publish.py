@@ -70,20 +70,19 @@ def trigger_packagist_update(username: str, api_token: str, repository_url: str)
 
 def check_packagist_version(package_name: str, version: str) -> bool:
     """Return True if the given version is listed on Packagist for the package."""
-    status, body = http_get(f"https://packagist.org/packages/{package_name}.json")
+    # Composer v2 metadata is refreshed on update; packagist.org/packages/<name>.json is CDN-cached for 12 hours.
+    status, body = http_get(f"https://repo.packagist.org/p2/{package_name}.json")
     if status != HTTP_OK or not body:
         return False
     try:
         data = json.loads(body)
     except json.JSONDecodeError:
         return False
-    versions: dict[str, object] = data.get("package", {}).get("versions", {})
+    releases = data.get("packages", {}).get(package_name, [])
     target = version.lstrip("v")
-    for version_key in versions:
-        normalized = version_key.lstrip("v")
-        if normalized == target or version_key == version:
-            return True
-    return False
+    return any(
+        isinstance(release, dict) and str(release.get("version", "")).lstrip("v") == target for release in releases
+    )
 
 
 def poll_packagist(package_name: str, version: str, max_attempts: int, poll_interval: int) -> bool:

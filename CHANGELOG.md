@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `publish-packagist`: polls `repo.packagist.org/p2/<package>.json` for the released version instead of
+  `packagist.org/packages/<package>.json`, which the CDN caches for 12 hours. A new tag never showed up there within the
+  poll window, so the job failed after Packagist had already published the version (liter-llm 2.7.0).
+
 ## [1.46.0] - 2026-11-06
 
 ### Changed
