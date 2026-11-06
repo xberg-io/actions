@@ -4,7 +4,22 @@ import os
 import subprocess
 from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "homebrew-build-bottles" / "scripts" / "build-bottles.sh"
+import yaml
+
+_ACTION_DIR = Path(__file__).resolve().parents[1] / "homebrew-build-bottles"
+_SCRIPT = _ACTION_DIR / "scripts" / "build-bottles.sh"
+# The org macOS floor: the oldest macOS Apple still supports. Bottles are tagged for it so
+# they install on every supported macOS, not only the runner's.
+_MACOS_FLOOR_TAG = "sequoia"
+
+
+def test_bottle_floor_defaults_to_the_org_macos_floor() -> None:
+    action = yaml.safe_load((_ACTION_DIR / "action.yml").read_text())
+    build = next(step for step in action["runs"]["steps"] if step["name"] == "Build bottles")
+
+    assert action["inputs"]["bottle-floor"]["default"] == _MACOS_FLOOR_TAG
+    assert build["env"]["BOTTLE_FLOOR"] == "${{ inputs.bottle-floor }}"
+    assert f'bottle_floor="${{BOTTLE_FLOOR:-{_MACOS_FLOOR_TAG}}}"' in _SCRIPT.read_text()
 
 
 def test_tap_clone_retries_transient_failure(tmp_path: Path) -> None:
@@ -29,8 +44,8 @@ case "${1:-}" in
   list) exit 1 ;;
   install) ;;
   bottle)
-    touch "sample--${VERSION}.arm64_test.bottle.tar.gz"
-    echo '{}' > "sample--${VERSION}.arm64_test.bottle.json"
+    touch "sample--${VERSION}.x86_64_linux.bottle.tar.gz"
+    echo '{}' > "sample--${VERSION}.x86_64_linux.bottle.json"
     ;;
   *) echo "unexpected brew command: $*" >&2; exit 1 ;;
 esac
@@ -59,4 +74,4 @@ esac
 
     assert result.returncode == 0, result.stderr
     assert attempts_file.read_text().strip() == "2"
-    assert (output_dir / "sample-1.2.3.arm64_test.bottle.tar.gz").is_file()
+    assert (output_dir / "sample-1.2.3.x86_64_linux.bottle.tar.gz").is_file()

@@ -40,6 +40,17 @@ inputs:
       it with a freshly minted token (avoids the 1h App-token TTL 401 on slow builds).
     required: false
     default: "true"
+  bottle-floor:
+    description: >
+      Oldest macOS bottle tag to publish macOS bottles under: sequoia or tahoe, macOS 15 being
+      the lowest the org supports. Homebrew installs a bottle on its own macOS and every newer
+      one, so a bottle built on macos-26 and tagged arm64_sequoia (sequoia on Intel) installs
+      on macOS 15 and later. The default follows the org macOS floor: the oldest macOS Apple
+      still supports. The build fails if a Mach-O in the bottle has an LC_BUILD_VERSION
+      minos newer than the floor; set MACOSX_DEPLOYMENT_TARGET in the formula to match.
+      Linux bottles keep their tag.
+    required: false
+    default: "sequoia"
 
 runs:
   using: composite
@@ -55,6 +66,7 @@ runs:
         OUT_DIR: ${{ inputs.out-dir }}
         GITHUB_REPO: ${{ inputs.github-repo }}
         UPLOAD: ${{ inputs.upload }}
+        BOTTLE_FLOOR: ${{ inputs.bottle-floor }}
         HOMEBREW_NO_INSTALL_FROM_API: "1"
         HOMEBREW_NO_SANDBOX_LINUX: "1"
       run: '"$GITHUB_ACTION_PATH/scripts/build-bottles.sh"'

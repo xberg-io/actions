@@ -4,6 +4,15 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `homebrew-build-bottles`: macOS bottles are retagged to the new `bottle-floor` input (default `sequoia`), so a bottle
+  built on macos-26 installs on macOS 15 and later instead of macOS 26 only. macOS 15 is the oldest macOS Apple still
+  supports and the minimum for every macOS artifact. Homebrew uses a bottle tagged for the host macOS or an older one,
+  and `brew bottle` always tags with the host. The tarball name and the JSON manifest both carry the floor tag; Linux
+  tags are unchanged. The build fails if any Mach-O in the bottle has an `LC_BUILD_VERSION` minos newer than the floor,
+  so formulas that compile must set `MACOSX_DEPLOYMENT_TARGET=15.0`.
+
 ## [1.45.2] - 2026-11-05
 
 ### Fixed

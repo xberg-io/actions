@@ -13,6 +13,8 @@ github_repo="${GITHUB_REPO:?GITHUB_REPO is required (e.g. xberg-io/foo)}"
 # with (that stale-token 401 is what failed the rc.36 sequoia leg). Default "true" keeps
 # the self-contained behavior for other callers. ~keep
 upload="${UPLOAD:-true}"
+# Oldest macOS bottle tag to publish macOS bottles under (see apply_bottle_floor).
+bottle_floor="${BOTTLE_FLOOR:-sequoia}"
 
 # Homebrew 6.0.13 regressed `brew install --build-bottle` on Linux: the keg builds
 # (🍺 prints) but the process then exits 1 with the underlying error swallowed, which
@@ -191,6 +193,137 @@ PYEOF
   done
 }
 
+# Homebrew installs a bottle tagged for the host macOS or any older one with the same
+# architecture, and `brew bottle` always tags with the host. A bottle built on macos-26
+# would therefore reach macOS 26 only. Retag every macOS bottle to the floor (default
+# sequoia, macOS 15: the oldest macOS Apple still supports, which is the org floor for
+# every macOS artifact) so the older-tag fallback serves every macOS from the floor up.
+# The retag is honest only if no Mach-O in the bottle needs a newer macOS than the
+# floor, so the LC_BUILD_VERSION minos of each one is checked first. Linux tags are
+# never touched. Prints the tarball name after the retag. ~keep
+apply_bottle_floor() {
+  local formula="$1" tarball="$2"
+  local prefix="${formula}--${version}."
+  local rest="${tarball#"$prefix"}"
+  local host_tag="${rest%%.bottle.*}"
+
+  if [[ "$host_tag" == *_linux ]]; then
+    printf '%s\n' "$tarball"
+    return 0
+  fi
+
+  local floor_version
+  case "$bottle_floor" in
+  sequoia) floor_version=15.0 ;;
+  tahoe) floor_version=26.0 ;;
+  *)
+    echo "ERROR: BOTTLE_FLOOR '${bottle_floor}' is not a supported macOS bottle floor (sequoia, tahoe)" >&2
+    return 1
+    ;;
+  esac
+
+  local floor_tag="$bottle_floor"
+  [[ "$host_tag" == arm64_* ]] && floor_tag="arm64_${bottle_floor}"
+
+  local unpack_dir="${work_dir}/floor-check-${formula}"
+  mkdir -p "$unpack_dir"
+  # This runs inside a command substitution, where errexit does not apply, so every
+  # step returns on failure explicitly. ~keep
+  tar -xzf "$tarball" -C "$unpack_dir" || return 1
+  python3 - "$unpack_dir" "$floor_version" "$floor_tag" <<'PYEOF' >&2 || return 1
+import os
+import subprocess
+import sys
+
+root, floor, floor_tag = sys.argv[1], sys.argv[2], sys.argv[3]
+THIN_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xfe\xed\xfa\xce"}
+FAT_MAGICS = {b"\xca\xfe\xba\xbe", b"\xca\xfe\xba\xbf"}
+# A Java class file starts with the fat Mach-O magic too; its next word (the class version)
+# is at least 45, while a universal binary's arch count is small, as file(1) assumes. ~keep
+MAX_FAT_ARCHS = 20
+
+
+def is_macho(head):
+    if head[:4] in THIN_MAGICS:
+        return True
+    return head[:4] in FAT_MAGICS and len(head) == 8 and int.from_bytes(head[4:], "big") < MAX_FAT_ARCHS
+
+
+def key(v):
+    return tuple(int(p) for p in v.split("."))
+
+
+def min_versions(path):
+    out = subprocess.run(["otool", "-arch", "all", "-l", path], check=True, capture_output=True, text=True).stdout
+    found, cmd = [], None
+    for line in out.splitlines():
+        fields = line.split()
+        if len(fields) == 2 and fields[0] == "cmd":
+            cmd = fields[1]
+        elif len(fields) == 2 and cmd == "LC_BUILD_VERSION" and fields[0] == "minos":
+            found.append(fields[1])
+        elif len(fields) == 2 and cmd == "LC_VERSION_MIN_MACOSX" and fields[0] == "version":
+            found.append(fields[1])
+    return found
+
+
+too_new, checked = [], 0
+for dirpath, _, names in os.walk(root):
+    for name in names:
+        path = os.path.join(dirpath, name)
+        if os.path.islink(path) or not os.path.isfile(path):
+            continue
+        with open(path, "rb") as fh:
+            if not is_macho(fh.read(8)):
+                continue
+        checked += 1
+        too_new += [(os.path.relpath(path, root), v) for v in min_versions(path) if key(v) > key(floor)]
+
+if too_new:
+    for rel, v in too_new:
+        sys.stderr.write("ERROR: %s needs macOS %s, newer than the %s bottle floor (macOS %s)\n" % (rel, v, floor_tag, floor))
+    sys.stderr.write("Set MACOSX_DEPLOYMENT_TARGET=%s in the formula's install block, or raise bottle-floor.\n" % floor)
+    raise SystemExit(1)
+print("Bottle floor check: %d Mach-O file(s) run on macOS %s (%s)" % (checked, floor, floor_tag))
+PYEOF
+
+  if [[ "$host_tag" == "$floor_tag" ]]; then
+    printf '%s\n' "$tarball"
+    return 0
+  fi
+
+  # Splice by prefix and suffix: bash 3.2 (the macOS /bin/bash) keeps quotes inside a ${var/a/b}
+  # replacement literally, so a quoted replacement would land in the file name.
+  local suffix="${rest#"$host_tag"}"
+  local floored_tarball="${tarball%"$rest"}${floor_tag}${suffix}"
+  mv "$tarball" "$floored_tarball" || return 1
+
+  local json_file="${prefix}${host_tag}.bottle.json"
+  local floored_json="${prefix}${floor_tag}.bottle.json"
+  python3 - "$json_file" "$floored_json" "$host_tag" "$floor_tag" <<'PYEOF' || return 1
+import json
+import os
+import sys
+
+src, dst, host_tag, floor_tag = sys.argv[1:5]
+with open(src) as fh:
+    manifest = json.load(fh)
+for entry in manifest.values():
+    tags = entry["bottle"]["tags"]
+    tag_entry = tags.pop(host_tag)
+    for field in ("filename", "local_filename"):
+        if field in tag_entry:
+            tag_entry[field] = tag_entry[field].replace(".%s.bottle." % host_tag, ".%s.bottle." % floor_tag)
+    tags[floor_tag] = tag_entry
+with open(dst, "w") as fh:
+    json.dump(manifest, fh, indent=2)
+    fh.write("\n")
+os.remove(src)
+PYEOF
+  echo "Retagged ${formula} bottle ${host_tag} -> ${floor_tag}" >&2
+  printf '%s\n' "$floored_tarball"
+}
+
 build_one_bottle() {
   local formula="$1"
   echo "::group::Building bottle for ${formula}"
@@ -219,6 +352,8 @@ build_one_bottle() {
     return 1
   fi
   original_tarball="${tarballs[0]}"
+
+  original_tarball="$(apply_bottle_floor "$formula" "$original_tarball")"
 
   local renamed_tarball="${original_tarball/--/-}"
   if [[ "$renamed_tarball" != "$original_tarball" ]]; then
