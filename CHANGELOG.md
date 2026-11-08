@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-cli-release`: optional `binary-aliases` input ships extra names for the CLI binary in every archive: a
+  copy of the binary in the `.tar.gz` legs and of the `.exe` in the Windows `.zip`. A crate that declares a second
+  `[[bin]]` for the same program (html-to-markdown's `h2m`) needs it, or `cargo binstall` cannot find that binary in the
+  archive and falls back to compiling from source.
+
 ## [1.46.2] - 2026-11-06
 
 ### Fixed

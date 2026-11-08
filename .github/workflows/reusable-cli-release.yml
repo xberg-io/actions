@@ -11,6 +11,11 @@ on:
         description: "Output binary name without extension (e.g. html-to-markdown)"
         required: true
         type: string
+      binary-aliases:
+        description: "Space-separated extra names for the same binary, shipped in every archive (e.g. h2m)"
+        required: false
+        type: string
+        default: ""
       tag:
         description: "Git tag of the GitHub Release to upload assets to"
         required: true
@@ -164,19 +169,27 @@ jobs:
           BINARY_PATH: ${{ steps.build.outputs.binary-path }}
           TARGET: ${{ matrix.platform.target }}
           BINARY_NAME: ${{ inputs.binary-name }}
+          BINARY_ALIASES: ${{ inputs.binary-aliases }}
           ASSET_PREFIX: ${{ inputs.asset-prefix }}
         shell: bash
         run: |
           set -euo pipefail
+          for alias in $BINARY_ALIASES; do
+            [[ "$alias" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::invalid binary alias '$alias'"; exit 1; }
+          done
           STAGE="${ASSET_PREFIX}${TARGET}"
           mkdir -p "$STAGE"
           cp LICENSE "$STAGE/" 2>/dev/null || true
           cp README.md "$STAGE/" 2>/dev/null || true
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}.exe"
+            for alias in $BINARY_ALIASES; do cp "$BINARY_PATH" "$STAGE/${alias}.exe"; done
             7z a "${STAGE}.zip" "$STAGE" >/dev/null
           else
             cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+            # ~keep Copies, not hard links: an extractor that mishandles tar link entries (cargo-binstall
+            # ~keep is not verified to handle them) must still find every alias as a plain file.
+            for alias in $BINARY_ALIASES; do cp "$BINARY_PATH" "$STAGE/${alias}"; done
             tar -czf "${STAGE}.tar.gz" "$STAGE"
           fi
 
@@ -246,19 +259,27 @@ jobs:
           BINARY_PATH: ${{ steps.build.outputs.binary-path }}
           TARGET: ${{ matrix.platform.target }}
           BINARY_NAME: ${{ inputs.binary-name }}
+          BINARY_ALIASES: ${{ inputs.binary-aliases }}
           ASSET_PREFIX: ${{ inputs.asset-prefix }}
         shell: bash
         run: |
           set -euo pipefail
+          for alias in $BINARY_ALIASES; do
+            [[ "$alias" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::invalid binary alias '$alias'"; exit 1; }
+          done
           STAGE="${ASSET_PREFIX}${TARGET}"
           mkdir -p "$STAGE"
           cp LICENSE "$STAGE/" 2>/dev/null || true
           cp README.md "$STAGE/" 2>/dev/null || true
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}.exe"
+            for alias in $BINARY_ALIASES; do cp "$BINARY_PATH" "$STAGE/${alias}.exe"; done
             7z a "${STAGE}.zip" "$STAGE" >/dev/null
           else
             cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+            # ~keep Copies, not hard links: an extractor that mishandles tar link entries (cargo-binstall
+            # ~keep is not verified to handle them) must still find every alias as a plain file.
+            for alias in $BINARY_ALIASES; do cp "$BINARY_PATH" "$STAGE/${alias}"; done
             tar -czf "${STAGE}.tar.gz" "$STAGE"
           fi
 
@@ -310,15 +331,20 @@ jobs:
         env:
           BINARY_PATH: ${{ steps.build.outputs.binary-path }}
           BINARY_NAME: ${{ inputs.binary-name }}
+          BINARY_ALIASES: ${{ inputs.binary-aliases }}
           ASSET_PREFIX: ${{ inputs.asset-prefix }}
         shell: bash
         run: |
           set -euo pipefail
+          for alias in $BINARY_ALIASES; do
+            [[ "$alias" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::invalid binary alias '$alias'"; exit 1; }
+          done
           STAGE="${ASSET_PREFIX}x86_64-unknown-linux-musl"
           mkdir -p "$STAGE"
           cp LICENSE "$STAGE/" 2>/dev/null || true
           cp README.md "$STAGE/" 2>/dev/null || true
           cp "$BINARY_PATH" "$STAGE/${BINARY_NAME}"
+          for alias in $BINARY_ALIASES; do cp "$BINARY_PATH" "$STAGE/${alias}"; done
           tar -czf "${STAGE}.tar.gz" "$STAGE"
 
       - uses: actions/upload-artifact@v7
