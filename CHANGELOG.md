@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.47.0] - 2026-11-08
+
 ### Added
 
 - `reusable-cli-release`: optional `binary-aliases` input ships extra names for the CLI binary in every archive: a
