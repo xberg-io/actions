@@ -39,10 +39,11 @@ def formatter_command(mise):
 
 def assert_ownership(poly, mise):
     command = formatter_command(mise)
-    assert command[:4] == ["poly", "fmt", "--check", "."]
-    assert len(command[4:]) == 2 * len(INDEXES)
-    assert command[4::2] == ["--exclude"] * len(INDEXES)
-    assert set(command[5::2]) == INDEXES
+    assert command[:3] == ["poly", "fmt", "."]
+    assert "--check" not in command
+    assert len(command[3:]) == 2 * len(INDEXES)
+    assert command[3::2] == ["--exclude"] * len(INDEXES)
+    assert set(command[4::2]) == INDEXES
     hook = poly["hooks"]["builtin"]
     additions = set(hook["fmt"]["exclude"]) - set(hook["lint"]["exclude"])
     assert additions == INDEXES
@@ -93,7 +94,7 @@ def test_real_formatter_still_rejects_authored_markdown_and_lints_all_indexes(tm
     assert "2 files checked" in clean.stdout
     assert "6 files excluded by config" in clean.stdout
     lint = subprocess.run(
-        [binary, "lint", "--no-workspace", *sorted(path.lstrip("/") for path in INDEXES)],
+        [binary, "lint", "--workspace", "never", *sorted(path.lstrip("/") for path in INDEXES)],
         cwd=tmp_path,
         capture_output=True,
         text=True,

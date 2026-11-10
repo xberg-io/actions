@@ -4,13 +4,13 @@ lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "macos-x64", "w
 
 [tools]
 python = "3.15.2"
-uv = "0.13.6"
-"github:Goldziher/poly" = "0.32.1"
+uv = "0.13.7"
+"github:Goldziher/poly" = "0.34.2"
 "github:Goldziher/gh-actions-updater" = "0.4.0"
 "github:rustwasm/wasm-pack" = "0.15.1"
-"github:rust-cross/cargo-zigbuild" = "0.24.0"
+"github:rust-cross/cargo-zigbuild" = "0.24.1"
 node = "26.13.0"
-pnpm = "12.16.1"
+pnpm = "12.18.0"
 zig = "0.17.0"
 actionlint = "1.7.12"
 bats = "1.14.0"
@@ -33,7 +33,7 @@ run = ["uv sync --group dev --upgrade", "gau --update ."]
 
 [tasks.lint]
 description = "Run all linters and formatting checks via poly"
-run = ["poly lint .", """poly fmt --check . \
+run = ["poly lint .", """poly fmt . \
     --exclude '/.ai-rulez/index.md' \
     --exclude '/.ai-rulez/context/index.md' \
     --exclude '/.ai-rulez/rules/index.md' \

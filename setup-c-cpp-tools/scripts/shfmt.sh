@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ~keep shfmt's output gates `poly fmt --check` and every shell file `alef generate` emits, and
+# ~keep shfmt's output gates the `poly fmt` dry run and every shell file `alef generate` emits, and
 # poly skips shell entirely when shfmt is absent rather than failing. That silence is how
 # unformatted generated scripts reach main: html-to-markdown run 35080918605 regenerated
 # e2e/c/download_ffi.sh without formatting and failed the drift check against a tree formatted by

@@ -77,9 +77,9 @@ def test_publisher_installs_uv_locked_from_its_owner_config(artifact_job, caller
         assert trace.read_text().splitlines() == [f"{caller}|1|install uv"]
         expected_path = "/selected/uv/bin\n"
     else:
-        assert trace.read_text().splitlines() == [f"{ROOT.resolve()}|1|install uv@0.13.6"]
+        assert trace.read_text().splitlines() == [f"{ROOT.resolve()}|1|install uv@0.13.7"]
         assert "uv is not declared" in result.stdout
-        expected_path = "/selected/uv@0.13.6/bin\n"
+        expected_path = "/selected/uv@0.13.7/bin\n"
     assert Path(env["GITHUB_PATH"]).read_text() == expected_path
     assert sorted(path.name for path in caller.iterdir()) == (
         ["dist", "mise.lock", "mise.toml"] if caller_pin else ["dist"]
