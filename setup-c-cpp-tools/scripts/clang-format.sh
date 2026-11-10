@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ~keep clang-format's output gates `poly fmt --check`, so an unpinned install makes formatting
+# ~keep clang-format's output gates the `poly fmt` dry run, so an unpinned install makes formatting
 # non-deterministic across machines. apt ships 18 on Ubuntu while brew ships 22 on macOS, and 18
 # misformats C# nullable types (`object? x` -> `object ? x`), so the same tree passed locally and
 # failed in CI. The PyPI wheel is the only source that gives every platform the same binary.

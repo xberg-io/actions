@@ -5,7 +5,7 @@ description: |
   xberg-io/pre-commit-hooks (currently 2.20.0) — Ubuntu's stock package is
   too old, so cppcheck is built from source via CMake when not already on PATH
   at the expected version. clang-format is pinned to the same version on every
-  platform, since its output decides whether `poly fmt --check` passes.
+  platform, since its output decides whether the `poly fmt` dry run passes.
 
 inputs:
   cppcheck-version:
@@ -15,7 +15,7 @@ inputs:
   clang-format-version:
     description: >-
       clang-format version to install, from the PyPI wheel so every platform gets the same binary.
-      Its output gates `poly fmt --check`, so this must stay pinned — apt and brew disagree, and
+      Its output gates the `poly fmt` dry run, so this must stay pinned — apt and brew disagree, and
       clang-format 18 misformats C# nullable types.
     required: false
     default: "22.1.8"
@@ -40,7 +40,7 @@ inputs:
   shfmt-version:
     description: >-
       shfmt version to install, from the upstream release binary so every platform gets the same
-      formatter. Its output gates `poly fmt --check` and every shell file `alef generate` emits,
+      formatter. Its output gates the `poly fmt` dry run and every shell file `alef generate` emits,
       and poly skips shell entirely when shfmt is absent, so this must stay pinned.
     required: false
     default: "3.14.1"

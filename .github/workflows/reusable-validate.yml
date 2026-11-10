@@ -206,7 +206,7 @@ on:
         description: "poly version to install. Empty installs the latest release."
         required: false
         type: string
-        default: "v0.32.1"
+        default: "v0.34.2"
       install-system-deps:
         description: >-
           Run this repo's install-system-deps composite action before linting (Linux only, requires
@@ -602,7 +602,7 @@ jobs:
           php-version: ${{ inputs.php-version }}
 
       # ~keep poly delegates C, C++, and C# formatting to clang-format and shell formatting to
-      # shfmt, so their versions decide whether `poly fmt --check` passes. Without this the job
+      # shfmt, so their versions decide whether the `poly fmt` dry run passes. Without this the job
       # silently used the runner image's clang-format 18, which rewrites `object? x` to
       # `object ? x` and failed correct generated C#. Installed unconditionally: an absent
       # formatter makes poly skip those files instead, which is how drift reaches main in the
@@ -628,7 +628,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Goldziher/poly@v0 resolves "latest" with `gh`, which is absent on
+          # Goldziher/polylint@v0 resolves "latest" with `gh`, which is absent on
           # self-hosted ARC runners. Resolve the tag via the REST API (curl) so
           # latest works everywhere, then pass it to the action as an explicit
           # version (skipping the action's own gh-based path). Capture the full
@@ -638,7 +638,7 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            https://api.github.com/repos/Goldziher/poly/releases/latest)"
+            https://api.github.com/repos/Goldziher/polylint/releases/latest)"
           tag="$(printf '%s\n' "$response" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
           if [ -z "$tag" ]; then
             echo "::error::failed to resolve latest poly release from the GitHub API" >&2
@@ -648,7 +648,7 @@ jobs:
           echo "Resolved latest poly: $tag"
 
       - name: Install poly
-        uses: Goldziher/poly@v0
+        uses: Goldziher/polylint@v0
         with:
           version: ${{ inputs.poly-version != '' && inputs.poly-version || steps.poly-latest.outputs.version }}
 
@@ -689,8 +689,12 @@ jobs:
         if: ${{ inputs.check-fixture-snippets }}
         run: alef snippets check --strict --cache off
 
+      # ~keep poly 0.33 made the dry run the default and rejects `--check`; on an older
+      # `poly-version` a bare `poly fmt` rewrites files instead, which the diff still fails.
       - name: Format check
-        run: poly fmt --check .
+        run: |
+          poly fmt .
+          git diff --exit-code
 
       - name: Lint
         run: poly lint .

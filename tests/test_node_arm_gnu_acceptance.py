@@ -128,7 +128,7 @@ def test_command_line_verifier_requires_both_binary_checks_and_the_loader(tmp_pa
 
 def assert_cross_tool_locks(config, lock):
     assert config["tools"]["zig"] == "0.17.0"
-    assert config["tools"]["github:rust-cross/cargo-zigbuild"] == "0.24.0"
+    assert config["tools"]["github:rust-cross/cargo-zigbuild"] == "0.24.1"
     for tool in ["zig", "github:rust-cross/cargo-zigbuild"]:
         rows = lock["tools"][tool]
         assert len(rows) == 1

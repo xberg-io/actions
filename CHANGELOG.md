@@ -4,6 +4,17 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.48.0] - 2026-11-10
+
+### Changed
+
+- `reusable-validate` installs poly 0.34.2 by default (was 0.32.1) from `Goldziher/polylint@v0`, the repository's new
+  name. Its format step runs `poly fmt .` and then `git diff --exit-code`: poly 0.33 made the dry run the default and
+  rejects `--check`, and a caller pinning an older `poly-version` gets a rewrite instead, which the diff still fails.
+- This repository follows toolchains v1.17.0: poly 0.34.2, uv 0.13.7, pnpm 12.18.0 and cargo-zigbuild 0.24.1. The
+  `lint` task's format check drops `--check` for the same reason.
+- Hook sources are pinned in `poly.lock`, written by `poly lock`; poly 0.34 no longer reads `poly-hooks.lock`.
+
 ## [1.47.0] - 2026-11-08
 
 ### Added
