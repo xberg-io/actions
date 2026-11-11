@@ -30,12 +30,42 @@ def apt_boundary(tmp_path: Path):
     log.write_text("")
     github_env = tmp_path / "github.env"
     github_env.write_text("")
+    github_path = tmp_path / "github.path"
+    github_path.write_text("")
+    runner_temp = tmp_path / "runner-temp"
+    runner_temp.mkdir()
     for name in ("grep", "tr"):
         executable = shutil.which(name)
         assert executable is not None
         (bin_dir / name).symlink_to(executable)
     _tool(bin_dir, "sudo", 'import os, sys\nos.execv(os.path.join(os.environ["PATH"], sys.argv[1]), sys.argv[1:])')
-    _tool(bin_dir, "uname", 'print("x86_64")')
+    _tool(bin_dir, "uname", 'import os\nprint(os.environ.get("UNAME_TEST_MACHINE", "x86_64"))')
+    _tool(
+        bin_dir,
+        "curl",
+        """import os, sys
+from pathlib import Path
+with Path(os.environ["APT_TEST_LOG"]).open("a") as log:
+    log.write("curl " + sys.argv[-1] + "\\n")
+sys.exit(int(os.environ["CURL_TEST_CODE"]))
+""",
+    )
+    _tool(
+        bin_dir,
+        "unzip",
+        """import os, sys
+from pathlib import Path
+with Path(os.environ["APT_TEST_LOG"]).open("a") as log:
+    log.write("unzip\\n")
+bin_dir = Path(sys.argv[sys.argv.index("-d") + 1]) / "bin"
+bin_dir.mkdir(parents=True)
+path = bin_dir / "protoc"
+path.write_text("#!" + sys.executable + "\\nimport os\\nfrom pathlib import Path\\n"
+                "with Path(os.environ['APT_TEST_LOG']).open('a') as log: log.write('protoc --version\\\\n')\\n"
+                "print('libprotoc 29.3')\\n")
+path.chmod(0o755)
+""",
+    )
     _tool(bin_dir, "rustup", f'print("{_TARGET} (installed)")')
     _tool(
         bin_dir,
@@ -61,6 +91,9 @@ sys.exit(code)
         "PATH": str(bin_dir),
         "RUNNER_OS": "Linux",
         "GITHUB_ENV": str(github_env),
+        "GITHUB_PATH": str(github_path),
+        "RUNNER_TEMP": str(runner_temp),
+        "CURL_TEST_CODE": "0",
         "APT_TEST_LOG": str(log),
         "APT_TEST_UPDATE_CODE": "100",
         "APT_TEST_INSTALL_CODE": "0",
@@ -101,28 +134,54 @@ def test_protoc_installs_and_verifies_after_unrelated_index_failure(apt_boundary
     assert "libprotoc 29.3" in result.stdout
 
 
+_APT_INSTALL = "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev"
+_RELEASE = "https://github.com/protocolbuffers/protobuf/releases/download/v29.3/protoc-29.3-{}.zip"
+
+
 @pytest.mark.parametrize("update_code", ["0", "100"])
-def test_protoc_install_failure_remains_fatal(apt_boundary, update_code):
+def test_protoc_falls_back_to_the_release_zip_when_apt_fails(apt_boundary, update_code):
     env, log, _ = apt_boundary
     env.update(APT_TEST_UPDATE_CODE=update_code, APT_TEST_INSTALL_CODE=str(_INSTALL_FAILURE))
     result = _run_protoc(env)
-    assert result.returncode == _INSTALL_FAILURE, result.stdout + result.stderr
+    assert result.returncode == 0, result.stdout + result.stderr
     assert log.read_text().splitlines() == [
         "apt-get update -y",
-        "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev",
+        _APT_INSTALL,
+        "curl " + _RELEASE.format("linux-x86_64"),
+        "unzip",
+        "protoc --version",
     ]
+    assert Path(env["GITHUB_PATH"]).read_text().splitlines() == [str(Path(env["RUNNER_TEMP"]) / "protoc" / "bin")]
 
 
-def test_protoc_missing_after_successful_install_remains_fatal(apt_boundary):
+@pytest.mark.parametrize("machine", ["aarch64", "arm64"])
+def test_protoc_release_zip_matches_the_runner_architecture(apt_boundary, machine):
+    env, log, _ = apt_boundary
+    env.update(APT_TEST_INSTALL_CODE=str(_INSTALL_FAILURE), UNAME_TEST_MACHINE=machine)
+    result = _run_protoc(env)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "curl " + _RELEASE.format("linux-aarch_64") in log.read_text().splitlines()
+
+
+def test_protoc_falls_back_to_the_release_zip_when_apt_leaves_it_off_path(apt_boundary):
     env, log, _ = apt_boundary
     env.update(APT_TEST_UPDATE_CODE="0", APT_TEST_PROVIDE_PROTOC="0")
     result = _run_protoc(env)
-    assert result.returncode == 1, result.stdout + result.stderr
-    assert "protoc installation failed; not on PATH" in result.stdout
-    assert (
-        log.read_text().splitlines()[-1]
-        == "apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev"
-    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert log.read_text().splitlines()[-3:] == ["curl " + _RELEASE.format("linux-x86_64"), "unzip", "protoc --version"]
+
+
+def test_protoc_release_zip_failure_after_apt_failure_remains_fatal(apt_boundary):
+    env, log, _ = apt_boundary
+    env.update(APT_TEST_INSTALL_CODE=str(_INSTALL_FAILURE), CURL_TEST_CODE="22")
+    result = _run_protoc(env)
+    assert result.returncode == 22, result.stdout + result.stderr
+    assert log.read_text().splitlines() == [
+        "apt-get update -y",
+        _APT_INSTALL,
+        "curl " + _RELEASE.format("linux-x86_64"),
+    ]
+    assert Path(env["GITHUB_PATH"]).read_text() == ""
 
 
 def test_musl_installs_after_unrelated_index_failure_before_exporting_compiler(apt_boundary):

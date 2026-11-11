@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.48.1] - 2026-11-11
+
+### Fixed
+
+- `setup-rust` installs protoc from the official prebuilt release zip (29.3, matching the runner OS and architecture)
+  when the package manager fails or leaves `protoc` off `PATH` on Linux and macOS, as it already did on Windows. A
+  runner whose apt mirrors cannot be resolved no longer fails every job that sets up Rust.
+
 ## [1.48.0] - 2026-11-10
 
 ### Changed

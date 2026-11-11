@@ -123,38 +123,54 @@ runs:
           echo "protoc already present: $(protoc --version)"
           exit 0
         fi
+        # The package manager is tried first; when it fails (an unreachable mirror, a flaky choco shim) or leaves
+        # protoc off PATH, the official prebuilt release zip is installed instead and its bin exported via GITHUB_PATH
+        # so later steps find it. The zip ships the well-known type includes that libprotobuf-dev provides.
+        protoc_version="29.3"
+        install_release_zip() {
+          local platform
+          case "$RUNNER_OS:$(uname -m)" in
+            Linux:x86_64) platform="linux-x86_64" ;;
+            Linux:aarch64 | Linux:arm64) platform="linux-aarch_64" ;;
+            macOS:*) platform="osx-universal_binary" ;;
+            Windows:*) platform="win64" ;;
+            *)
+              echo "::error::No protoc release zip for RUNNER_OS=$RUNNER_OS on $(uname -m)"
+              return 1
+              ;;
+          esac
+          echo "Installing protoc ${protoc_version} from the release zip (${platform})"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${protoc_version}/protoc-${protoc_version}-${platform}.zip"
+          unzip -q -o "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/protoc/bin:$PATH"
+        }
         case "$RUNNER_OS" in
           Linux)
             if ! sudo apt-get update -y; then
               echo "::warning::Some package indexes could not be refreshed; attempting protobuf-compiler installation with available indexes."
             fi
-            sudo apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev
+            if ! sudo apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev; then
+              echo "::warning::apt could not install protobuf-compiler; falling back to the release zip."
+            fi
             ;;
           macOS)
-            brew install protobuf
+            if ! brew install protobuf; then
+              echo "::warning::brew could not install protobuf; falling back to the release zip."
+            fi
             ;;
           Windows)
             choco install protoc -y --no-progress || true
-            # choco's shim dir is normally on PATH, but step-to-step PATH
-            # propagation can lag and the install itself occasionally flakes,
-            # leaving later steps with "protoc: command not found". If protoc
-            # still isn't resolvable, fall back to the official prebuilt zip and
-            # export its bin via GITHUB_PATH so subsequent steps can find it.
-            if ! command -v protoc >/dev/null 2>&1; then
-              echo "choco protoc not resolvable; falling back to prebuilt release zip"
-              protoc_version="29.3"
-              curl -fsSL -o "$RUNNER_TEMP/protoc.zip" \
-                "https://github.com/protocolbuffers/protobuf/releases/download/v${protoc_version}/protoc-${protoc_version}-win64.zip"
-              unzip -q -o "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-              echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
-              export PATH="$RUNNER_TEMP/protoc/bin:$PATH"
-            fi
             ;;
           *)
             echo "::error::Unknown RUNNER_OS=$RUNNER_OS; cannot install protoc"
             exit 1
             ;;
         esac
+        if ! command -v protoc >/dev/null 2>&1; then
+          install_release_zip
+        fi
         if ! command -v protoc >/dev/null 2>&1; then
           echo "::error::protoc installation failed; not on PATH (RUNNER_OS=$RUNNER_OS)"
           exit 1
