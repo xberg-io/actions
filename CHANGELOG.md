@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.48.2] - 2026-11-13
+
+### Changed
+
+- Use Rust 1.100.0 for the C#, Elixir, and Java musl builders and the Node GNU arm64 acceptance workflow.
+
 ## [1.48.1] - 2026-11-11
 
 ### Fixed

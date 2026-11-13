@@ -19,7 +19,7 @@ def test_gnu_arm_lane_builds_and_loads_the_canonical_target_without_ignoring_fai
     assert job["env"]["RUSTFLAGS"] == "-D warnings"
     steps = job["steps"]
     rust = next(s for s in steps if s.get("uses") == "dtolnay/rust-toolchain@v1")
-    assert rust["with"]["toolchain"] == "1.99.1"
+    assert rust["with"]["toolchain"] == "1.100.0"
     build = next(s for s in steps if s.get("uses") == "./build-node-napi")
     assert build["with"]["target"] == "aarch64-unknown-linux-gnu"
     assert build["with"]["use-napi-cross"] == "true"

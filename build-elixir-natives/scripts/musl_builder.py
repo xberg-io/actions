@@ -50,7 +50,7 @@ def build_in_docker(
         raise ValueError(f"Docker build is only for musl targets, got {target}")
 
     get_alpine_arch(target)
-    image = "rust:1.99.1-alpine3.24"
+    image = "rust:1.100.0-alpine3.24"
 
     cwd = Path.cwd().resolve()
 
