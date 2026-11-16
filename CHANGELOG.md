@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `check-registry` normalises `assets` before handing it to alef: commas and newlines both separate names, and
+  surrounding whitespace and empty entries are dropped. alef splits on commas only and compares names exactly, so the
+  trailing newline of an `assets: |` block made the last asset unmatchable and a complete release always read as
+  missing (xberg's CLI assets were rebuilt on every re-run).
+
 ## [1.48.3] - 2026-11-16
 
 ### Fixed

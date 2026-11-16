@@ -43,7 +43,9 @@ inputs:
     required: false
     default: ""
   assets:
-    description: "Comma-separated list of required asset names — github-release only."
+    description: >
+      Required asset names — github-release only. Separate them with commas, newlines or both;
+      surrounding whitespace and empty entries are dropped, so a `|` block scalar is fine.
     required: false
     default: ""
   repo:
@@ -120,6 +122,11 @@ runs:
         # assumption the action silently makes instead: if the caller's tag names a version other
         # than `version`, the answer would be about a different release, so say so rather than
         # returning a confident result for the wrong tag.
+        # alef splits `--required-assets` on commas only and compares names exactly, so the
+        # trailing newline a `|` block scalar keeps made the last asset unmatchable and the
+        # release always read as incomplete. Normalise to a clean comma list. ~keep
+        REQUIRED_ASSETS="$(tr ',' '\n' <<<"${REQUIRED_ASSETS}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed '/^$/d' | paste -sd, -)"
+
         if [[ -n "${TAG}" && "${TAG#v}" != "${VERSION#v}" ]]; then
           echo "::error::tag ${TAG} and version ${VERSION} name different releases, and alef check-registry can only query the tag implied by version. Pass a tag that matches the version, or drop the tag input." >&2
           exit 1

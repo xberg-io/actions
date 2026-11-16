@@ -44,6 +44,7 @@ def _stub_alef(bin_dir: Path, existing: list[str]) -> None:
         "package=\n"
         "while [[ $# -gt 0 ]]; do\n"
         '  if [[ "$1" == "--package" ]]; then package="$2"; shift; fi\n'
+        '  if [[ "$1" == "--required-assets" && -n "${ASSETS_LOG:-}" ]]; then printf \'%s\' "$2" >"${ASSETS_LOG}"; fi\n'
         "  shift\n"
         "done\n"
         "for bad in ${FAILING_PACKAGES:-}; do\n"
@@ -97,6 +98,7 @@ def _execute(
     broken_output: list[str] | None = None,
     flaky: list[str] | None = None,
     tag: str = "",
+    required_assets: str = "",
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
     """Execute the action's own check step; return the process and its $GITHUB_OUTPUT keys."""
     bin_dir = tmp_path / "bin"
@@ -123,7 +125,8 @@ def _execute(
         "REPO_INPUT": "",
         "SOURCE": "",
         "ASSET_PREFIX": "",
-        "REQUIRED_ASSETS": "",
+        "REQUIRED_ASSETS": required_assets,
+        "ASSETS_LOG": str(tmp_path / "assets-log"),
         "GITHUB_TOKEN": "stub-token",
     }
     result = subprocess.run(
@@ -318,3 +321,28 @@ def test_a_tag_naming_a_different_release_fails_instead_of_answering_about_the_w
     assert result.returncode == 1
     assert "name different releases" in result.stderr
     assert outputs == {}, "no result may be reported for a tag the check cannot honour"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "a.tar.gz,b.zip\n",
+        "a.tar.gz,b.zip",
+        "a.tar.gz\nb.zip\n",
+        " a.tar.gz ,\n b.zip ,\n",
+    ],
+)
+def test_required_assets_reach_alef_as_a_clean_comma_list(tmp_path, raw):
+    """alef splits on commas only, so a `|` scalar's trailing newline made `b.zip\\n` unmatchable."""
+    result, _ = _execute(tmp_path, package="widget", extra_packages="", existing=["widget"], required_assets=raw)
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "assets-log").read_text() == "a.tar.gz,b.zip"
+
+
+def test_no_required_assets_passes_no_asset_filter_to_alef(tmp_path):
+    result, outputs = _execute(tmp_path, package="widget", extra_packages="", existing=["widget"])
+
+    assert result.returncode == 0, result.stderr
+    assert not (tmp_path / "assets-log").exists(), "an empty asset list must not become --required-assets ''"
+    assert outputs["exists"] == "true"
