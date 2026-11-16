@@ -65,11 +65,17 @@ echo "=== Building cargo crate $CRATE_NAME (profile: $BUILD_PROFILE) ==="
 # shellcheck disable=SC2086
 cargo build --locked -p "$CRATE_NAME" $profile_flag
 
+# ~keep Cargo 1.100 gives every unit build/<pkg>/<hash>/out, older Cargo build/<pkg>-<hash>/out.
+# The new layout also gives the build script's own compile unit an out/, so only a directory
+# holding the generated header is the swift-bridge output.
 shopt -s nullglob
-candidates=("$build_root/$CRATE_NAME"-*/out)
+candidates=()
+for candidate in "$build_root/$CRATE_NAME"/*/out "$build_root/$CRATE_NAME"-*/out; do
+  [[ -f "$candidate/SwiftBridgeCore.h" ]] && candidates+=("$candidate")
+done
 shopt -u nullglob
 if [[ ${#candidates[@]} -eq 0 ]]; then
-  echo "Error: no swift-bridge out/ directory found under $build_root/$CRATE_NAME-*/" >&2
+  echo "Error: no swift-bridge out/ directory with SwiftBridgeCore.h under $build_root/$CRATE_NAME/*/ or $build_root/$CRATE_NAME-*/" >&2
   exit 1
 fi
 

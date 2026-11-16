@@ -6,6 +6,9 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `build-swift-package` finds the swift-bridge output under Cargo 1.100's `build/<crate>/<hash>/out` layout as well as
+  the older `build/<crate>-<hash>/out`, choosing the directory that holds `SwiftBridgeCore.h`. Under Rust 1.100 the
+  lookup found nothing and failed the job after a full build.
 - `reusable-validate.yml` installs the adrlint entry the caller's `mise.toml` declares (`github:polylint/adrlint` or
   the old `github:Goldziher/adrlint`), and `github:polylint/adrlint` when it declares neither, so a caller pinned to
   adrlint's new home no longer fails at setup.

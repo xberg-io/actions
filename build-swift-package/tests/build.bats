@@ -40,3 +40,29 @@ setup() {
 	[ "$(cat "$ROOT/pkg/Sources/RustBridge/SwiftBridgeCore.swift")" = $'import RustBridgeC\nextension RustStr: @retroactive Identifiable {' ]
 	[ "$(cat "$ROOT/pkg/Sources/RustBridge/Bridge.swift")" = $'import RustBridgeC\npublic func bridge() {}' ]
 }
+
+@test "should_pick_the_header_out_dir_in_the_cargo_1_100_build_layout" {
+	BUILD="$ROOT/target/release/build/my-bridge"
+	OUT="$BUILD/1111111111111111/out"
+	mkdir -p "$OUT/my-bridge" "$BUILD/2222222222222222/out"
+	printf 'CORE\n' >"$OUT/SwiftBridgeCore.h"
+	printf 'CRATE\n' >"$OUT/my-bridge/my-bridge.h"
+	printf 'extension RustStr: Identifiable {\n' >"$OUT/SwiftBridgeCore.swift"
+	printf 'public func bridge() {}\n' >"$OUT/my-bridge/Bridge.swift"
+	touch -t 203001010000 "$BUILD/2222222222222222/out"
+	xberg_stub cargo 'exit 0'
+	export INPUT_PACKAGE_DIR="$ROOT/pkg" INPUT_CRATE_NAME=my-bridge
+	run bash "$SCRIPT"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"Resolved swift-bridge out/: $OUT"* ]]
+	[ "$(cat "$ROOT/pkg/Sources/RustBridgeC/RustBridgeC.h")" = $'CORE\nCRATE' ]
+}
+
+@test "should_fail_when_no_out_dir_holds_the_swift_bridge_header" {
+	mkdir -p "$ROOT/target/release/build/my-bridge/3333333333333333/out"
+	xberg_stub cargo 'exit 0'
+	export INPUT_PACKAGE_DIR="$ROOT/pkg" INPUT_CRATE_NAME=my-bridge
+	run bash "$SCRIPT"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"no swift-bridge out/ directory with SwiftBridgeCore.h"* ]]
+}
