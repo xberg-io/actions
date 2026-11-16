@@ -1,0 +1,41 @@
+name: Require job results
+description: >
+  Fail a publish job, naming its channel, when a job it depends on did not finish the way the
+  channel needs. A job whose `if:` requires `needs.<build>.result == 'success'` is SKIPPED when
+  one matrix leg fails, and a skipped job leaves no failure behind, so a release can lose a
+  whole channel while the job that would have published it looks merely not applicable. Gate
+  the job on whether the channel is wanted, then run this as its first step to turn a blocked
+  channel into a red job that says why.
+
+inputs:
+  channel:
+    description: "Channel name for the error message (e.g. 'PyPI', 'npm')."
+    required: true
+  needs:
+    description: "The caller's `needs` context: pass `${{ toJSON(needs) }}`."
+    required: true
+  succeeded:
+    description: >
+      Jobs (from `needs`) that must have finished `success`. Separate with newlines or commas;
+      blank entries are ignored, so an entry can be an expression that renders empty.
+    required: false
+    default: ""
+  succeeded-or-skipped:
+    description: >
+      Jobs that must have finished `success` or `skipped` — a skipped job here means its work
+      was already done (for example, the asset is already on the release). Any other result
+      (`failure`, `cancelled`) blocks the channel.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Require job results
+      shell: bash
+      env:
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_NEEDS: ${{ inputs.needs }}
+        INPUT_SUCCEEDED: ${{ inputs.succeeded }}
+        INPUT_SUCCEEDED_OR_SKIPPED: ${{ inputs.succeeded-or-skipped }}
+      run: python3 "$GITHUB_ACTION_PATH/scripts/require_results.py"

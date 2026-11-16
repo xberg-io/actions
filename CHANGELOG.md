@@ -6,6 +6,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Added
 
+- `require-job-results` action: fails a publish job, naming its channel, when a job in its `needs` did not finish
+  `success` (or `success`/`skipped` for `succeeded-or-skipped`). A publish job whose `if:` requires a matrix build to
+  succeed is skipped when one leg fails, and a skipped job records no failure, so a channel could drop out of a
+  release unnoticed. Gate the job on whether the channel is wanted and run this as its first step instead.
 - `publish-scoop-manifests`: `commit: 'true'` commits the rendered manifests and pushes them, rebasing and retrying when
   another release pushed to the bucket first; new `committed` output. Callers ran this step inline, guarded by
   `git diff --quiet bucket/`, which ignores untracked files, so an app's first manifest was never committed (xberg was
@@ -20,7 +24,6 @@ All notable changes to xberg-io/actions are documented in this file.
 - `publish-pypi` names the cause when PyPI rejects an upload with `400 Project size too large` and no
   `fallback-index-url` is set: the error says the project is over its total size limit and that a maintainer must
   request a size increase or delete old files. The step still fails.
-
 - `check-registry` normalises `assets` before handing it to alef: commas and newlines both separate names, and
   surrounding whitespace and empty entries are dropped. alef splits on commas only and compares names exactly, so the
   trailing newline of an `assets: |` block made the last asset unmatchable and a complete release always read as
