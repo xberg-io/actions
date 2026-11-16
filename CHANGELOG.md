@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.49.0] - 2026-11-16
+
 ### Added
 
 - `require-job-results` action: fails a publish job, naming its channel, when a job in its `needs` did not finish
