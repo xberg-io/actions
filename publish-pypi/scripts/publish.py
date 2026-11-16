@@ -6,8 +6,8 @@ Usage (GitHub Actions via env vars):
 
 Outputs `version_published=true` to `$GITHUB_OUTPUT` only when every local dist
 file is already on the configured index, so the calling action can skip the
-`uv publish` invocation. A partially published version falls through to
-`uv publish --check-url`, which skips the files that are present.
+`uv publish` invocation. For a partially published version it also emits
+`skip_files`, the local files already on the registry, which upload.py leaves out.
 """
 
 import json
@@ -78,8 +78,9 @@ def published_filenames(name: str, version: str, upload_url: str) -> set[str] | 
     ~keep Presence is decided per FILE, never per version. xberg v1.2.5 uploaded 2 of 8 wheels
     before PyPI's project quota returned 400; the rerun found the version on the registry,
     skipped the whole publish and reported success having uploaded nothing (xberg GH#1699).
-    `uv publish --check-url` skips the files that are present, so publishing a partial set is
-    safe and the skip is only ever legitimate when nothing at all is left to upload.
+    The files already present are left out of the upload (`skip_files`), since `uv publish
+    --check-url` rejects a same-name file whose hash differs; the skip is only ever legitimate
+    when nothing at all is left to upload.
 
     Best-effort: any network failure or non-200/404 response returns `None` so we fall through
     to the publish attempt rather than skipping incorrectly.
