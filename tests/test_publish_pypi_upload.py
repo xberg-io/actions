@@ -45,7 +45,9 @@ def test_parser_preserves_hash_and_python_requirement():
         (1, "403 Forbidden", "https://example.org/simple/", None),
     ],
 )
-def test_publishing_attempts_pypi_first_and_gates_fallback(tmp_path, monkeypatch, *, code, message, index, expected):
+def test_publishing_attempts_pypi_first_and_gates_fallback(
+    tmp_path, monkeypatch, capsys, *, code, message, index, expected
+):
     from types import SimpleNamespace
 
     module = load()
@@ -77,6 +79,8 @@ def test_publishing_attempts_pypi_first_and_gates_fallback(tmp_path, monkeypatch
             module.main()
         assert error.value.code == code
         assert calls == ["publish"]
+        quota_error = "over its total size limit" in capsys.readouterr().out
+        assert quota_error is ("Project size too large" in message and not index)
         assert not output.exists()
     else:
         module.main()

@@ -122,7 +122,15 @@ def main() -> None:
     fallback = False
     if result.returncode:
         index = os.environ.get("INPUT_FALLBACK_INDEX_URL", "")
-        if not index or not storage_quota_failure(result.stdout + result.stderr):
+        quota = storage_quota_failure(result.stdout + result.stderr)
+        if quota and not index:
+            print(
+                "::error::PyPI rejected the upload because the project is over its total size limit "
+                "(10 GB by default). Files already on PyPI were kept; the rest were not uploaded. "
+                "This needs a maintainer: request a project size increase from PyPI or delete old "
+                "release files, then re-run the publish."
+            )
+        if not index or not quota:
             raise SystemExit(result.returncode)
         verify_index(files, index)
         fallback = True

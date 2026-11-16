@@ -17,6 +17,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `publish-pypi` names the cause when PyPI rejects an upload with `400 Project size too large` and no
+  `fallback-index-url` is set: the error says the project is over its total size limit and that a maintainer must
+  request a size increase or delete old files. The step still fails.
+
 - `check-registry` normalises `assets` before handing it to alef: commas and newlines both separate names, and
   surrounding whitespace and empty entries are dropped. alef splits on commas only and compares names exactly, so the
   trailing newline of an `assets: |` block made the last asset unmatchable and a complete release always read as
