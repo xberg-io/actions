@@ -10,6 +10,10 @@ All notable changes to xberg-io/actions are documented in this file.
   another release pushed to the bucket first; new `committed` output. Callers ran this step inline, guarded by
   `git diff --quiet bucket/`, which ignores untracked files, so an app's first manifest was never committed (xberg was
   never added to the bucket). The action stages before comparing.
+- `check-registry`: `required-files` (pypi only) lists filename globs that must each match a file of the version. A
+  version PyPI holds only part of (xberg 1.3.9 has no Windows wheel and no sdist) then reports `exists=false`, so a
+  caller that gates its build on `exists` rebuilds and `publish-pypi` uploads the missing files instead of the release
+  staying incomplete.
 
 ### Fixed
 

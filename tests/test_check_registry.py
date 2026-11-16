@@ -87,6 +87,15 @@ def _stub_sleep(bin_dir: Path) -> None:
     stub.chmod(0o755)
 
 
+def _stub_curl(bin_dir: Path) -> None:
+    """A `curl` that prints `$PYPI_JSON`, or fails like a network error when it is unset."""
+    stub = bin_dir / "curl"
+    stub.write_text(
+        '#!/usr/bin/env bash\nif [[ -z "${PYPI_JSON:-}" ]]; then exit 22; fi\nprintf \'%s\' "${PYPI_JSON}"\n'
+    )
+    stub.chmod(0o755)
+
+
 def _execute(
     tmp_path: Path,
     *,
@@ -98,12 +107,13 @@ def _execute(
     broken_output: list[str] | None = None,
     flaky: list[str] | None = None,
     tag: str = "",
-    required_assets: str = "",
+    overrides: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
     """Execute the action's own check step; return the process and its $GITHUB_OUTPUT keys."""
     bin_dir = tmp_path / "bin"
     _stub_alef(bin_dir, existing)
     _stub_sleep(bin_dir)
+    _stub_curl(bin_dir)
     github_output = tmp_path / "github_output"
     github_output.write_text("")
 
@@ -125,10 +135,12 @@ def _execute(
         "REPO_INPUT": "",
         "SOURCE": "",
         "ASSET_PREFIX": "",
-        "REQUIRED_ASSETS": required_assets,
+        "REQUIRED_ASSETS": "",
         "ASSETS_LOG": str(tmp_path / "assets-log"),
+        "REQUIRED_FILES": "",
         "GITHUB_TOKEN": "stub-token",
     }
+    env.update(overrides or {})
     result = subprocess.run(
         ["bash", "-c", _check_script()],
         env=env,
@@ -334,7 +346,9 @@ def test_a_tag_naming_a_different_release_fails_instead_of_answering_about_the_w
 )
 def test_required_assets_reach_alef_as_a_clean_comma_list(tmp_path, raw):
     """alef splits on commas only, so a `|` scalar's trailing newline made `b.zip\\n` unmatchable."""
-    result, _ = _execute(tmp_path, package="widget", extra_packages="", existing=["widget"], required_assets=raw)
+    result, _ = _execute(
+        tmp_path, package="widget", extra_packages="", existing=["widget"], overrides={"REQUIRED_ASSETS": raw}
+    )
 
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "assets-log").read_text() == "a.tar.gz,b.zip"
@@ -346,3 +360,66 @@ def test_no_required_assets_passes_no_asset_filter_to_alef(tmp_path):
     assert result.returncode == 0, result.stderr
     assert not (tmp_path / "assets-log").exists(), "an empty asset list must not become --required-assets ''"
     assert outputs["exists"] == "true"
+
+
+_PARTIAL_PYPI = json.dumps(
+    {"urls": [{"filename": "widget-1.2.3-cp310-abi3-manylinux_2_28_x86_64.whl"}, {"filename": "widget-1.2.3.tar.gz"}]}
+)
+_WIDGET_FILES = "*manylinux*x86_64.whl\n*win_amd64.whl\n*.tar.gz\n"
+
+
+def test_a_partially_uploaded_pypi_version_reads_as_not_published(tmp_path):
+    result, outputs = _execute(
+        tmp_path,
+        package="widget",
+        extra_packages="",
+        existing=["widget"],
+        overrides={"REGISTRY": "pypi", "REQUIRED_FILES": _WIDGET_FILES, "PYPI_JSON": _PARTIAL_PYPI},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert outputs["exists"] == "false"
+    assert "no file matching: *win_amd64.whl" in result.stdout
+
+
+def test_a_complete_pypi_version_reads_as_published(tmp_path):
+    complete = json.loads(_PARTIAL_PYPI)
+    complete["urls"].append({"filename": "widget-1.2.3-cp310-abi3-win_amd64.whl"})
+    result, outputs = _execute(
+        tmp_path,
+        package="widget",
+        extra_packages="",
+        existing=["widget"],
+        overrides={"REGISTRY": "pypi", "REQUIRED_FILES": _WIDGET_FILES, "PYPI_JSON": json.dumps(complete)},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert outputs["exists"] == "true"
+
+
+def test_an_unreadable_pypi_file_list_reads_as_not_published(tmp_path):
+    result, outputs = _execute(
+        tmp_path,
+        package="widget",
+        extra_packages="",
+        existing=["widget"],
+        overrides={"REGISTRY": "pypi", "REQUIRED_FILES": _WIDGET_FILES},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert outputs["exists"] == "false"
+    assert "Could not list the files" in result.stdout
+
+
+def test_required_files_are_ignored_for_a_version_that_is_not_published(tmp_path):
+    result, outputs = _execute(
+        tmp_path,
+        package="widget",
+        extra_packages="",
+        existing=[],
+        overrides={"REGISTRY": "pypi", "REQUIRED_FILES": _WIDGET_FILES, "PYPI_JSON": _PARTIAL_PYPI},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert outputs["exists"] == "false"
+    assert "no file matching" not in result.stdout

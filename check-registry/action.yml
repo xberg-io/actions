@@ -48,6 +48,14 @@ inputs:
       surrounding whitespace and empty entries are dropped, so a `|` block scalar is fine.
     required: false
     default: ""
+  required-files:
+    description: >
+      Filename glob patterns, one per line, that must each match at least one file of the
+      primary package's version — pypi only. When set, a version that is on PyPI but lacks a
+      matching file (a partial upload) reports `exists=false`, so the caller rebuilds and
+      re-uploads; publish-pypi then uploads only the missing files.
+    required: false
+    default: ""
   repo:
     description: "GitHub repository (owner/repo) — github-release only."
     required: false
@@ -112,6 +120,7 @@ runs:
         ASSET_PREFIX: ${{ inputs.asset-prefix }}
         REQUIRED_ASSETS: ${{ inputs.assets }}
         TAG: ${{ inputs.tag }}
+        REQUIRED_FILES: ${{ inputs.required-files }}
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
@@ -212,6 +221,39 @@ runs:
           fi
         }
 
+        # A PyPI version is per-file: an upload that stopped part-way (xberg 1.3.9 has no Windows
+        # wheel and no sdist) still answers "exists" at the version level, and a caller gating its
+        # build on that never completes the release. Sets `package_exists=false` when a required
+        # pattern matches no published file, or when the file list cannot be read. ~keep
+        check_pypi_files() {
+          local pkg="$1" json pattern name matched missing=()
+          if ! json=$(curl --silent --show-error --fail --retry 3 --max-time 60 \
+              "https://pypi.org/pypi/${pkg}/${VERSION#v}/json"); then
+            echo "::warning::Could not list the files of ${pkg} ${VERSION} on PyPI; treating it as not published"
+            package_exists="${UNKNOWN_RESULT}"
+            return 0
+          fi
+          local names
+          names=$(jq -r '.urls[]?.filename // empty' <<<"${json}" 2>/dev/null) || names=""
+          while IFS= read -r pattern; do
+            pattern="$(xargs <<<"${pattern}")"
+            [[ -z "${pattern}" ]] && continue
+            matched=false
+            while IFS= read -r name; do
+              # shellcheck disable=SC2053 # the pattern is a glob on purpose
+              if [[ -n "${name}" && "${name}" == ${pattern} ]]; then
+                matched=true
+                break
+              fi
+            done <<<"${names}"
+            [[ "${matched}" == true ]] || missing+=("${pattern}")
+          done <<<"${REQUIRED_FILES}"
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::warning::${pkg} ${VERSION} is on PyPI but has no file matching: ${missing[*]}; treating it as not published"
+            package_exists=false
+          fi
+        }
+
         record_result() {
           local key="$1" value="$2"
           # `jq --argjson` exits 2 on anything that is not JSON, which turned a failed check into
@@ -227,6 +269,9 @@ runs:
 
         # Primary package check.
         check_package "${PACKAGE}"
+        if [[ "${package_exists}" == "true" && "${REGISTRY}" == "pypi" && -n "${REQUIRED_FILES//[[:space:]]/}" ]]; then
+          check_pypi_files "${PACKAGE}"
+        fi
         primary_exists="${package_exists}"
         echo "exists=${primary_exists}" >>"$GITHUB_OUTPUT"
         record_result exists "${primary_exists}"
