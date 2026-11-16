@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.48.3] - 2026-11-16
+
 ### Fixed
 
 - `setup-rust` leaves sccache off on Windows when `use-sccache` is `true` (the default). sccache spawns rustc with
