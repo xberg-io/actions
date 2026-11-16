@@ -124,3 +124,34 @@ setup() {
 	[ "$status" -eq 0 ]
 	[ "$output" = $'Rust toolchain information:\nrustc 1.80.0\nrustup 1.27.0\ncargo 1.80.0\nAvailable targets:\naarch64-unknown-linux-gnu (installed)' ]
 }
+
+@test "should_turn_sccache_off_on_windows_when_use_sccache_is_true" {
+	RUNNER_OS=Windows run "$SCRIPT_DIR/resolve-sccache.sh" true
+	[ "$status" -eq 0 ]
+	[ "$(cat "$GITHUB_OUTPUT")" = "enabled=false" ]
+}
+
+@test "should_keep_sccache_on_off_windows_when_use_sccache_is_true" {
+	RUNNER_OS=Linux run "$SCRIPT_DIR/resolve-sccache.sh" true
+	[ "$status" -eq 0 ]
+	[ "$(cat "$GITHUB_OUTPUT")" = "enabled=true" ]
+}
+
+@test "should_keep_sccache_on_windows_when_use_sccache_is_force" {
+	RUNNER_OS=Windows run "$SCRIPT_DIR/resolve-sccache.sh" force
+	[ "$status" -eq 0 ]
+	[ "$(cat "$GITHUB_OUTPUT")" = "enabled=true" ]
+}
+
+@test "should_turn_sccache_off_when_use_sccache_is_false" {
+	RUNNER_OS=Linux run "$SCRIPT_DIR/resolve-sccache.sh" false
+	[ "$status" -eq 0 ]
+	[ "$(cat "$GITHUB_OUTPUT")" = "enabled=false" ]
+}
+
+@test "should_reject_an_unknown_use_sccache_value" {
+	RUNNER_OS=Linux run "$SCRIPT_DIR/resolve-sccache.sh" yes
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"use-sccache must be true, force or false, got 'yes'"* ]]
+	[ ! -s "$GITHUB_OUTPUT" ]
+}

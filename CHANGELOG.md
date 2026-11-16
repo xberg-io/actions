@@ -6,6 +6,10 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ### Fixed
 
+- `setup-rust` leaves sccache off on Windows when `use-sccache` is `true` (the default). sccache spawns rustc with
+  the full command line, which exceeds the Windows limit (os error 206) for crates with many dependencies under
+  Cargo 1.100's `build/<pkg>/<hash>/out` layout; without a wrapper cargo falls back to an argfile. The new value
+  `force` keeps sccache on Windows.
 - `build-swift-package` finds the swift-bridge output under Cargo 1.100's `build/<crate>/<hash>/out` layout as well as
   the older `build/<crate>-<hash>/out`, choosing the directory that holds `SwiftBridgeCore.h`. Under Rust 1.100 the
   lookup found nothing and failed the job after a full build.

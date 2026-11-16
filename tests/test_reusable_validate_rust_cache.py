@@ -23,7 +23,7 @@ def _rust_environment(tmp_path: Path, requested: bool | None) -> dict[str, str]:
         value = default if requested is None else requested
     steps = [step for step in action["runs"]["steps"] if step.get("name") == "Configure Rust flags"]
     assert len(steps) == 1
-    assert steps[0]["env"]["RUST_USE_SCCACHE"] == "${{ inputs.use-sccache }}"
+    assert steps[0]["env"]["RUST_USE_SCCACHE"] == "${{ steps.sccache-mode.outputs.enabled }}"
     tools = tmp_path / "bin"
     tools.mkdir()
     for name, body in {"rustc": "", "sccache": 'print("test sccache")'}.items():

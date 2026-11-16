@@ -18,7 +18,9 @@ inputs:
     required: false
     default: ""
   use-sccache:
-    description: Enable sccache as the Rust compiler wrapper
+    description: >-
+      Use sccache as the Rust compiler wrapper: "true" (on, except on Windows, where long rustc
+      command lines fail with os error 206), "force" (on everywhere) or "false"
     required: false
     default: "true"
   report-stats:
@@ -177,15 +179,23 @@ runs:
         fi
         protoc --version
 
+    - name: Resolve sccache mode
+      id: sccache-mode
+      shell: bash
+      env:
+        RUST_USE_SCCACHE: ${{ inputs.use-sccache }}
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/resolve-sccache.sh" "$RUST_USE_SCCACHE"
+
     - name: Setup sccache
-      if: inputs.use-sccache == 'true'
+      if: steps.sccache-mode.outputs.enabled == 'true'
       uses: mozilla-actions/sccache-action@v0.0.11
       continue-on-error: true
 
     - name: Configure Rust flags
       shell: bash
       env:
-        RUST_USE_SCCACHE: ${{ inputs.use-sccache }}
+        RUST_USE_SCCACHE: ${{ steps.sccache-mode.outputs.enabled }}
         RUST_MACOS_DYNAMIC_LOOKUP: ${{ inputs.macos-dynamic-lookup }}
       run: |
         "$GITHUB_ACTION_PATH/scripts/configure-flags.sh" "$RUST_USE_SCCACHE" "$RUST_MACOS_DYNAMIC_LOOKUP"
@@ -226,13 +236,13 @@ runs:
           ${{ inputs.shared-core-cache == 'true' && format('shared-core-v4-{0}-{1}-', runner.os, runner.arch) || format('{0}-v4-{1}-{2}-{3}-', inputs.cache-key-prefix, runner.os, runner.arch, inputs.target || 'default') }}
 
     - name: Validate sccache installation
-      if: inputs.use-sccache == 'true'
+      if: steps.sccache-mode.outputs.enabled == 'true'
       shell: bash
       run: |
         "$GITHUB_ACTION_PATH/scripts/validate-sccache.sh"
 
     - name: Ensure sccache is on PATH
-      if: inputs.use-sccache == 'true' && env.SCCACHE_PATH != ''
+      if: steps.sccache-mode.outputs.enabled == 'true' && env.SCCACHE_PATH != ''
       shell: bash
       run: |
         "$GITHUB_ACTION_PATH/scripts/ensure-sccache-path.sh"
@@ -277,7 +287,7 @@ runs:
           bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" github:taiki-e/cargo-llvm-cov
 
     - name: Report sccache statistics
-      if: inputs.use-sccache == 'true' && inputs.report-stats == 'true' && always()
+      if: steps.sccache-mode.outputs.enabled == 'true' && inputs.report-stats == 'true' && always()
       shell: bash
       run: |
         "$GITHUB_ACTION_PATH/scripts/report-sccache-stats.sh"
