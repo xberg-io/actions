@@ -88,10 +88,17 @@ def _stub_sleep(bin_dir: Path) -> None:
 
 
 def _stub_curl(bin_dir: Path) -> None:
-    """A `curl` that prints `$PYPI_JSON`, or fails like a network error when it is unset."""
+    """A `curl` that prints `$PYPI_JSON`, or fails like a network error when it is unset.
+
+    It also fails without `--location`: PyPI redirects a non-normalised version, and an
+    unfollowed redirect yields an empty body that reads as every file missing.
+    """
     stub = bin_dir / "curl"
     stub.write_text(
-        '#!/usr/bin/env bash\nif [[ -z "${PYPI_JSON:-}" ]]; then exit 22; fi\nprintf \'%s\' "${PYPI_JSON}"\n'
+        "#!/usr/bin/env bash\n"
+        '[[ " $* " == *" --location "* || " $* " == *" -L "* ]] || { echo "redirect not followed" >&2; exit 22; }\n'
+        'if [[ -z "${PYPI_JSON:-}" ]]; then exit 22; fi\n'
+        "printf '%s' \"${PYPI_JSON}\"\n"
     )
     stub.chmod(0o755)
 
@@ -423,3 +430,18 @@ def test_required_files_are_ignored_for_a_version_that_is_not_published(tmp_path
     assert result.returncode == 0, result.stderr
     assert outputs["exists"] == "false"
     assert "no file matching" not in result.stdout
+
+
+def test_required_file_patterns_with_quotes_are_matched_literally(tmp_path):
+    """xargs aborted on a quote, killing the step under `set -e`."""
+    listing = json.dumps({"urls": [{"filename": "widget's-1.2.3.tar.gz"}]})
+    result, outputs = _execute(
+        tmp_path,
+        package="widget",
+        extra_packages="",
+        existing=["widget"],
+        overrides={"REGISTRY": "pypi", "REQUIRED_FILES": "  widget's-*.tar.gz  \n", "PYPI_JSON": listing},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert outputs["exists"] == "true"

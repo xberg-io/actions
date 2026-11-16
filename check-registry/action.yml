@@ -236,7 +236,9 @@ runs:
           local names
           names=$(jq -r '.urls[]?.filename // empty' <<<"${json}" 2>/dev/null) || names=""
           while IFS= read -r pattern; do
-            pattern="$(xargs <<<"${pattern}")"
+            # Trim with parameter expansion: xargs dies on a quote or backslash. ~keep
+            pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+            pattern="${pattern%"${pattern##*[![:space:]]}"}"
             [[ -z "${pattern}" ]] && continue
             matched=false
             while IFS= read -r name; do
