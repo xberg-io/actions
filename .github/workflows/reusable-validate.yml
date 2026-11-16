@@ -268,11 +268,22 @@ jobs:
         if: ${{ inputs.check-toolchain }}
         uses: xberg-io/actions/check-toolchain@v1
 
+      # ~keep adrlint moved from Goldziher/adrlint to polylint/adrlint. Install whichever entry the caller's
+      # mise config declares, so callers on either name pass; one that declares neither gets the new name.
+      - name: Resolve the adrlint tool
+        id: adrlint-tool
+        if: ${{ inputs.check-adrs }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool=$(grep -hoE 'github:[A-Za-z0-9_.-]+/adrlint' mise.toml .mise.toml 2>/dev/null | head -1 || true)
+          echo "tool=${tool:-github:polylint/adrlint}" >> "$GITHUB_OUTPUT"
+
       - name: Set up adrlint
         if: ${{ inputs.check-adrs }}
         uses: xberg-io/actions/setup-mise@v1
         with:
-          install-args: github:Goldziher/adrlint
+          install-args: ${{ steps.adrlint-tool.outputs.tool }}
 
       - name: Check the ADR log
         if: ${{ inputs.check-adrs }}

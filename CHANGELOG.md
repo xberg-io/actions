@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `reusable-validate.yml` installs the adrlint entry the caller's `mise.toml` declares (`github:polylint/adrlint` or
+  the old `github:Goldziher/adrlint`), and `github:polylint/adrlint` when it declares neither, so a caller pinned to
+  adrlint's new home no longer fails at setup.
+
 ## [1.48.2] - 2026-11-13
 
 ### Changed
