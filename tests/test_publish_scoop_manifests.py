@@ -396,3 +396,20 @@ def test_action_commit_step_is_opt_in_and_never_runs_on_dry_run() -> None:
     assert action["inputs"]["commit"]["default"] == "false"
     assert step["if"] == "${{ inputs.commit == 'true' && inputs.dry-run != 'true' }}"
     assert "commit-and-push.sh" in step["run"]
+
+
+def test_commit_stops_after_the_last_rejected_push(tmp_path: Path) -> None:
+    """The final failed push must not be followed by another fetch, rebase and sleep."""
+    origin, clone = _bucket_with_origin(tmp_path)
+    hook = origin / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.chmod(0o755)
+    manifest = clone / "bucket" / "demo.json"
+    manifest.write_text('{"version": "9.9.9"}\n')
+
+    result, outputs = _run_commit(clone, tmp_path, [manifest])
+
+    assert result.returncode == 1
+    assert "Could not push to the bucket after 5 attempts" in result.stdout
+    assert result.stdout.count("rebasing onto the current bucket tip") == 4
+    assert "committed=true" not in outputs

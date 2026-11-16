@@ -57,6 +57,9 @@ for ((attempt = 1; attempt <= attempts; attempt++)); do
     echo "committed=true" >>"${GITHUB_OUTPUT:-/dev/null}"
     exit 0
   fi
+  if ((attempt == attempts)); then
+    break
+  fi
   echo "Push rejected (attempt ${attempt}/${attempts}); rebasing onto the current bucket tip"
   git fetch origin "${branch}"
   if ! git rebase "origin/${branch}"; then
