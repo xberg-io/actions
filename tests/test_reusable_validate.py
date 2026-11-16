@@ -100,9 +100,12 @@ def test_adr_gate_installs_adrlint_from_mise_then_lints_formats_and_checks_the_l
     steps = _workflow()["jobs"]["validate"]["steps"]
     gated = [step for step in steps if "inputs.check-adrs" in str(step.get("if", ""))]
 
-    assert [step.get("uses") for step in gated] == ["xberg-io/actions/setup-mise@v1", None]
-    assert gated[0]["with"]["install-args"] == "github:Goldziher/adrlint"
-    script = gated[1]["run"]
+    assert [step.get("uses") for step in gated] == [None, "xberg-io/actions/setup-mise@v1", None]
+    resolve = gated[0]["run"]
+    assert "mise.toml" in resolve
+    assert "github:polylint/adrlint" in resolve
+    assert gated[1]["with"]["install-args"] == "${{ steps.adrlint-tool.outputs.tool }}"
+    script = gated[2]["run"]
     commands = ["adrlint lint --format github", "adrlint format --check", "adrlint lock --check"]
     positions = [script.index(command) for command in commands]
     assert positions == sorted(positions)
