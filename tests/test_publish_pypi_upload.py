@@ -173,3 +173,27 @@ def test_sdist_python_requirement_must_match_pkg_info(tmp_path, monkeypatch, req
         with pytest.raises(ValueError, match="Requires-Python"):
             module.verify_index([path], "https://example.org/simple/")
         assert len(calls) == 1
+
+
+def test_files_already_on_the_registry_are_left_out_of_the_upload(tmp_path, monkeypatch):
+    """uv rejects a same-name file with a different hash, which a rebuilt wheel usually has."""
+    from types import SimpleNamespace
+
+    module = load()
+    for name in ("a-1-py3-none-any.whl", "a-1-cp310-abi3-win_amd64.whl", "a-1.tar.gz"):
+        (tmp_path / name).write_bytes(b"x")
+    monkeypatch.setenv("PACKAGES_DIR", str(tmp_path))
+    monkeypatch.setenv("UV_PUBLISH_URL", "https://upload.pypi.org/legacy/")
+    monkeypatch.setenv("INPUT_FALLBACK_INDEX_URL", "")
+    monkeypatch.setenv("SKIP_FILES", "a-1-py3-none-any.whl,a-1.tar.gz")
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    uploaded = []
+
+    def publish(args, **kwargs):
+        uploaded.extend(Path(arg).name for arg in args if arg.endswith((".whl", ".tar.gz")))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", publish)
+    module.main()
+
+    assert uploaded == ["a-1-cp310-abi3-win_amd64.whl"]

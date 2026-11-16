@@ -85,6 +85,7 @@ runs:
         UV_PUBLISH_URL: ${{ inputs.repository-url }}
         PACKAGES_DIR: ${{ inputs.packages-dir }}
         INPUT_FALLBACK_INDEX_URL: ${{ inputs.fallback-index-url }}
+        SKIP_FILES: ${{ steps.validate.outputs.skip_files }}
       run: python3 "$GITHUB_ACTION_PATH/scripts/upload.py"
 
     - name: Set output

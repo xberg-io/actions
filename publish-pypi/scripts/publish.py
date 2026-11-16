@@ -228,6 +228,10 @@ def main() -> None:
         )
         for filename in missing:
             print(f"  {filename}")
+        # ~keep A rebuilt wheel rarely matches the published bytes, and `uv publish --check-url`
+        # rejects a same-name file whose hash differs instead of skipping it, so the files
+        # already on the registry are left out of the upload altogether.
+        _emit_output("skip_files", ",".join(sorted(local_names & on_registry)))
     print(f"Ready to publish {name} {version}")
     _emit_output("version_published", "false")
 

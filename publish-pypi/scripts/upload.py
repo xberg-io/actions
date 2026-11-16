@@ -97,6 +97,10 @@ def verify_index(files: list[Path], index_url: str) -> None:
 def main() -> None:
     directory = Path(os.environ["PACKAGES_DIR"])
     files = sorted(path for path in directory.iterdir() if path.name.endswith((".whl", ".tar.gz")))
+    skip = {name for name in os.environ.get("SKIP_FILES", "").split(",") if name}
+    if skip:
+        print(f"Leaving out {len(skip & {path.name for path in files})} file(s) already on the registry")
+        files = [path for path in files if path.name not in skip]
     if not files:
         raise ValueError("No distributions to publish")
     upload_url = os.environ["UV_PUBLISH_URL"]

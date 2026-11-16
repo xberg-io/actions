@@ -182,6 +182,7 @@ def test_main_publishes_when_the_registry_holds_only_part_of_the_release(monkeyp
 
     assert "version_published=false" in result
     assert "version_published=true" not in result
+    assert f"skip_files={local[0]},{local[1]}" in result
 
 
 def test_main_publishes_when_the_registry_response_lists_no_files(monkeypatch, tmp_path):
