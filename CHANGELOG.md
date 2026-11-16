@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `publish-scoop-manifests`: `commit: 'true'` commits the rendered manifests and pushes them, rebasing and retrying when
+  another release pushed to the bucket first; new `committed` output. Callers ran this step inline, guarded by
+  `git diff --quiet bucket/`, which ignores untracked files, so an app's first manifest was never committed (xberg was
+  never added to the bucket). The action stages before comparing.
+
 ### Fixed
 
 - `check-registry` normalises `assets` before handing it to alef: commas and newlines both separate names, and

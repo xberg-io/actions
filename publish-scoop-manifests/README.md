@@ -7,8 +7,11 @@ into a checked-out Scoop bucket. The Windows counterpart of
 
 Scoop manifests point straight at the prebuilt `*-pc-windows-msvc.zip` release
 assets, so a release only ever needs the version bumped and the hashes
-recomputed — this action does both. Committing and pushing the bucket is the
-calling workflow's job, because the bot identity is repo-specific.
+recomputed — this action does both. With `commit: 'true'` it also commits the
+rendered manifests and pushes them through the bucket checkout's persisted
+credentials, rebasing and retrying when another release pushed first. A
+manifest new to the bucket is staged before the change check, so an app's
+first release is committed too.
 
 Every rendered manifest is parsed as JSON before it is written; a template that
 renders to malformed JSON fails the step rather than reaching the bucket, where
@@ -17,21 +20,26 @@ published.
 
 ## Inputs
 
-| Name          | Required | Default               | Description                                                                                                                                     |
-| ------------- | -------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bucket-dir`  | yes      | —                     | Path to a checked-out Scoop bucket repository. Must contain `bucket/`.                                                                          |
-| `config-file` | yes      | —                     | Path, relative to the source repo, of the JSON config describing each manifest.                                                                 |
-| `tag`         | yes      | —                     | Git tag for the release (e.g. `v3.4.0-rc.42`).                                                                                                  |
-| `version`     | yes      | —                     | Semantic version (e.g. `3.4.0-rc.42`). Scoop versions carry no `v` prefix.                                                                      |
-| `github-repo` | yes      | —                     | Source repository for `gh release download` (e.g. `xberg-io/html-to-markdown`).                                                                 |
-| `dry-run`     | no       | `false`               | Tolerate a missing release or asset: substitute a zero-SHA placeholder and warn, so the rendered shape can be diffed before the release exists. |
-| `token`       | no       | `${{ github.token }}` | GitHub token with read access for `gh release download`.                                                                                        |
+| Name             | Required | Default                    | Description                                                                                                                                     |
+| ---------------- | -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bucket-dir`     | yes      | —                          | Path to a checked-out Scoop bucket repository. Must contain `bucket/`.                                                                          |
+| `config-file`    | yes      | —                          | Path, relative to the source repo, of the JSON config describing each manifest.                                                                 |
+| `tag`            | yes      | —                          | Git tag for the release (e.g. `v3.4.0-rc.42`).                                                                                                  |
+| `version`        | yes      | —                          | Semantic version (e.g. `3.4.0-rc.42`). Scoop versions carry no `v` prefix.                                                                      |
+| `github-repo`    | yes      | —                          | Source repository for `gh release download` (e.g. `xberg-io/html-to-markdown`).                                                                 |
+| `dry-run`        | no       | `false`                    | Tolerate a missing release or asset: substitute a zero-SHA placeholder and warn, so the rendered shape can be diffed before the release exists. |
+| `token`          | no       | `${{ github.token }}`      | GitHub token with read access for `gh release download`.                                                                                        |
+| `commit`         | no       | `false`                    | Commit and push the rendered manifests (skipped on dry runs). The bucket checkout must persist push credentials.                                |
+| `commit-message` | no       | `<app names> <version>`    | Commit subject.                                                                                                                                 |
+| `git-user-name`  | no       | `xberg-dev-publisher[bot]` | Committer name.                                                                                                                                 |
+| `git-user-email` | no       | the bot's noreply address  | Committer email.                                                                                                                                |
 
 ## Outputs
 
 | Name                | Description                                                                 |
 | ------------------- | --------------------------------------------------------------------------- |
 | `manifests-changed` | Newline-separated list of manifest paths written into `bucket-dir/bucket/`. |
+| `committed`         | `true` when a bucket commit was pushed; `false` otherwise.                  |
 
 ## Config schema
 

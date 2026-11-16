@@ -10,8 +10,9 @@ description: >
   a zero-SHA placeholder and emits a warning so the rendered shape can still be
   diffed.
 
-  The calling workflow is responsible for committing/pushing the resulting
-  bucket changes — bot identity is repo-specific.
+  With `commit: 'true'` it also commits the rendered manifests and pushes them
+  through the bucket checkout's credentials, retrying on a concurrent push;
+  otherwise committing is left to the caller.
 
 inputs:
   bucket-dir:
@@ -43,11 +44,33 @@ inputs:
     description: "GitHub token with read access for `gh release download`."
     required: false
     default: ${{ github.token }}
+  commit:
+    description: >
+      When 'true' (and not a dry run), commit the rendered manifests in bucket-dir and push
+      them using the checkout's persisted credentials. A manifest new to the bucket counts as
+      a change.
+    required: false
+    default: "false"
+  commit-message:
+    description: "Commit subject. Defaults to '<app names> <version>'."
+    required: false
+    default: ""
+  git-user-name:
+    description: "Committer name for the bucket commit."
+    required: false
+    default: "xberg-dev-publisher[bot]"
+  git-user-email:
+    description: "Committer email for the bucket commit."
+    required: false
+    default: "291994444+xberg-dev-publisher[bot]@users.noreply.github.com"
 
 outputs:
   manifests-changed:
     description: "Newline-separated list of manifest paths written into bucket-dir/bucket/."
     value: ${{ steps.render.outputs.manifests-changed }}
+  committed:
+    description: "'true' when a bucket commit was pushed; 'false' when nothing changed or commit is off."
+    value: ${{ steps.commit.outputs.committed || 'false' }}
 
 runs:
   using: composite
@@ -109,3 +132,28 @@ runs:
           fi
           echo "✓ $app_name declares version ${VERSION}"
         done <<< "${MANIFESTS_CHANGED}"
+
+    - name: Commit and push manifests
+      id: commit
+      if: ${{ inputs.commit == 'true' && inputs.dry-run != 'true' }}
+      shell: bash
+      env:
+        BUCKET_DIR: ${{ inputs.bucket-dir }}
+        MANIFESTS_CHANGED: ${{ steps.render.outputs.manifests-changed }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        VERSION: ${{ inputs.version }}
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+      run: |
+        set -euo pipefail
+        if [[ -n "${INPUT_COMMIT_MESSAGE}" ]]; then
+          COMMIT_MESSAGE="${INPUT_COMMIT_MESSAGE}"
+        else
+          names=()
+          while IFS= read -r manifest; do
+            [[ -n "${manifest}" ]] && names+=("$(basename "${manifest}" .json)")
+          done <<<"${MANIFESTS_CHANGED}"
+          COMMIT_MESSAGE="${names[*]:-scoop} ${VERSION}"
+        fi
+        export COMMIT_MESSAGE
+        bash "$GITHUB_ACTION_PATH/scripts/commit-and-push.sh"

@@ -5,10 +5,13 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+import yaml
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -288,3 +291,108 @@ def test_autoupdate_dollar_version_survives_rendering(tmp_path: Path, monkeypatc
     assert arch["url"] == "https://example.invalid/v$version/demo.zip"
     assert arch["extract_dir"] == "demo-$version-x86_64-pc-windows-msvc"
     assert "9.9.9" not in json.dumps(autoupdate)
+
+
+_COMMIT_SCRIPT = _ACTION / "scripts" / "commit-and-push.sh"
+
+
+def _git(cwd: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout
+
+
+def _bucket_with_origin(tmp_path: Path) -> tuple[Path, Path]:
+    """A bare `origin` holding one existing manifest, and a clone of it."""
+    origin = tmp_path / "origin.git"
+    _git(tmp_path, "init", "--quiet", "--bare", "--initial-branch=main", str(origin))
+    seed = tmp_path / "seed"
+    _git(tmp_path, "clone", "--quiet", str(origin), str(seed))
+    (seed / "bucket").mkdir()
+    (seed / "bucket" / "other.json").write_text('{"version": "1.0.0"}\n')
+    _git(seed, "add", "bucket/other.json")
+    _git(seed, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "seed")
+    _git(seed, "push", "--quiet", "origin", "HEAD:main")
+    clone = tmp_path / "clone"
+    _git(tmp_path, "clone", "--quiet", str(origin), str(clone))
+    return origin, clone
+
+
+def _run_commit(clone: Path, tmp_path: Path, manifests: list[Path]) -> tuple[subprocess.CompletedProcess[str], str]:
+    github_output = tmp_path / "commit_output"
+    github_output.write_text("")
+    env = {
+        **os.environ,
+        "BUCKET_DIR": str(clone),
+        "MANIFESTS_CHANGED": "\n".join(str(m) for m in manifests),
+        "COMMIT_MESSAGE": "demo 9.9.9",
+        "GIT_USER_NAME": "bot",
+        "GIT_USER_EMAIL": "bot@example.invalid",
+        "PUSH_BACKOFF": "0",
+        "GITHUB_OUTPUT": str(github_output),
+    }
+    result = subprocess.run(["bash", str(_COMMIT_SCRIPT)], env=env, capture_output=True, text=True, check=False)
+    return result, github_output.read_text()
+
+
+def test_commit_pushes_a_manifest_new_to_the_bucket(tmp_path: Path) -> None:
+    """`git diff --quiet` ignores untracked files, so xberg's first manifest was never committed."""
+    origin, clone = _bucket_with_origin(tmp_path)
+    manifest = clone / "bucket" / "demo.json"
+    manifest.write_text('{"version": "9.9.9"}\n')
+
+    result, outputs = _run_commit(clone, tmp_path, [manifest])
+
+    assert result.returncode == 0, result.stderr
+    assert "committed=true" in outputs
+    assert _git(origin, "show", "main:bucket/demo.json") == '{"version": "9.9.9"}\n'
+    assert _git(origin, "log", "-1", "--format=%s %an", "main").strip() == "demo 9.9.9 bot"
+
+
+def test_commit_skips_when_the_manifest_already_matches(tmp_path: Path) -> None:
+    origin, clone = _bucket_with_origin(tmp_path)
+    before = _git(origin, "rev-parse", "main")
+
+    result, outputs = _run_commit(clone, tmp_path, [clone / "bucket" / "other.json"])
+
+    assert result.returncode == 0, result.stderr
+    assert "committed=false" in outputs
+    assert _git(origin, "rev-parse", "main") == before
+
+
+def test_commit_rebases_over_a_concurrent_push(tmp_path: Path) -> None:
+    origin, clone = _bucket_with_origin(tmp_path)
+    racer = tmp_path / "racer"
+    _git(tmp_path, "clone", "--quiet", str(origin), str(racer))
+    (racer / "bucket" / "racer.json").write_text('{"version": "2.0.0"}\n')
+    _git(racer, "add", "bucket/racer.json")
+    _git(racer, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "racer")
+    _git(racer, "push", "--quiet", "origin", "HEAD:main")
+    manifest = clone / "bucket" / "demo.json"
+    manifest.write_text('{"version": "9.9.9"}\n')
+
+    result, outputs = _run_commit(clone, tmp_path, [manifest])
+
+    assert result.returncode == 0, result.stderr
+    assert "committed=true" in outputs
+    assert "Push rejected (attempt 1/5)" in result.stdout
+    tree = _git(origin, "ls-tree", "--name-only", "main", "bucket/").split()
+    assert tree == ["bucket/demo.json", "bucket/other.json", "bucket/racer.json"]
+
+
+def test_commit_with_no_rendered_manifests_is_a_no_op(tmp_path: Path) -> None:
+    origin, clone = _bucket_with_origin(tmp_path)
+    before = _git(origin, "rev-parse", "main")
+
+    result, outputs = _run_commit(clone, tmp_path, [])
+
+    assert result.returncode == 0, result.stderr
+    assert "committed=false" in outputs
+    assert _git(origin, "rev-parse", "main") == before
+
+
+def test_action_commit_step_is_opt_in_and_never_runs_on_dry_run() -> None:
+    action = yaml.safe_load((_ACTION / "action.yml").read_text())
+    step = next(s for s in action["runs"]["steps"] if s.get("id") == "commit")
+
+    assert action["inputs"]["commit"]["default"] == "false"
+    assert step["if"] == "${{ inputs.commit == 'true' && inputs.dry-run != 'true' }}"
+    assert "commit-and-push.sh" in step["run"]
