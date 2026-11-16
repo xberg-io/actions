@@ -227,7 +227,7 @@ runs:
         # pattern matches no published file, or when the file list cannot be read. ~keep
         check_pypi_files() {
           local pkg="$1" json pattern name matched missing=()
-          if ! json=$(curl --silent --show-error --fail --retry 3 --max-time 60 \
+          if ! json=$(curl --silent --show-error --fail --location --retry 3 --max-time 60 \
               "https://pypi.org/pypi/${pkg}/${VERSION#v}/json"); then
             echo "::warning::Could not list the files of ${pkg} ${VERSION} on PyPI; treating it as not published"
             package_exists="${UNKNOWN_RESULT}"
