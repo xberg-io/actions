@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.49.1] - 2026-11-19
+
+### Fixed
+
+- `require-job-results` loads again. Its `needs` input description held a `${{ }}` expression, which GitHub evaluates
+  when it loads the action, where `needs` does not exist, so every job using the action failed before its first step.
+
 ## [1.49.0] - 2026-11-16
 
 ### Added
