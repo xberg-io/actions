@@ -4,19 +4,19 @@ lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "macos-x64", "w
 
 [tools]
 python = "3.15.2"
-uv = "0.13.7"
-"github:Goldziher/poly" = "0.34.2"
+uv = "0.13.9"
+"github:Goldziher/poly" = "0.36.0"
 "github:Goldziher/gh-actions-updater" = "0.4.0"
 "github:rustwasm/wasm-pack" = "0.15.1"
 "github:rust-cross/cargo-zigbuild" = "0.24.1"
-node = "26.13.0"
-pnpm = "12.18.0"
-zig = "0.17.0"
+node = "26.13.1"
+pnpm = "12.21.0"
+zig = "0.17.1"
 actionlint = "1.7.12"
 bats = "1.14.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
-helm = "4.3.1"
+helm = "4.3.2"
 "github:taiki-e/cargo-llvm-cov" = "0.9.1"
 
 [tasks.default]
