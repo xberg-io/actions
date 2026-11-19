@@ -654,11 +654,20 @@ def publish_crate(crate: str, manifest_args: list[str]) -> tuple[int, str]:
     return exit_code, output
 
 
-def _dry_run_crate(crate: str, manifest_args: list[str], crate_manifest: str | None, version: str) -> None:
-    print(f"  [dry-run] cargo publish -p {crate} --dry-run")
-    with _temporarily_inject_versions(crate_manifest, version) as injected:
-        dirty_args = ["--allow-dirty"] if injected else []
-        exit_code, output = _run(["cargo", "publish", "-p", crate, *manifest_args, "--dry-run", *dirty_args])
+def _dry_run_all(crates: list[str], manifest_args: list[str], manifests: list[str | None], version: str) -> None:
+    """Verify the whole publish set in one multi-package ``cargo publish --dry-run``.
+
+    ~keep A per-crate dry run resolves workspace siblings from crates.io, so it fails for any
+    sibling not yet published. One multi-package invocation packages the set together and
+    verifies each crate against its unpublished siblings locally. ``--allow-dirty`` is always
+    passed: every manifest carries the ephemeral path-dep version injection.
+    """
+    package_args = [arg for crate in crates for arg in ("-p", crate)]
+    print(f"  [dry-run] cargo publish --dry-run {' '.join(package_args)}")
+    with contextlib.ExitStack() as stack:
+        for manifest in dict.fromkeys(manifests):
+            stack.enter_context(_temporarily_inject_versions(manifest, version))
+        exit_code, output = _run(["cargo", "publish", "--dry-run", "--allow-dirty", *package_args, *manifest_args])
     if output:
         print(
             output,
@@ -694,16 +703,22 @@ def main() -> None:
         version,
     )
 
+    if dry_run:
+        _dry_run_all(
+            crate_list,
+            manifest_args,
+            [wp.manifest_path if (wp := workspace_packages.get(crate)) else None for crate in crate_list],
+            version,
+        )
+        print("Dry run verified all crates")
+        return
+
     new_crates_needing_manual_publish: list[str] = []
 
     for index, crate in enumerate(crate_list, start=1):
         print(f"Publishing {crate} ({index}/{total})...")
         workspace_package = workspace_packages.get(crate)
         crate_manifest = workspace_package.manifest_path if workspace_package else None
-
-        if dry_run:
-            _dry_run_crate(crate, manifest_args, crate_manifest, version)
-            continue
 
         with _temporarily_inject_versions(crate_manifest, version):
             exit_code, output = publish_crate(crate, manifest_args)
