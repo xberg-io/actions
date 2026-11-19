@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.50.1] - 2026-11-19
+
 ### Changed
 
 - `reusable-validate.yml` installs poly 0.36.1 by default (was 0.36.0). clang-format no longer claims JSON, JavaScript,
