@@ -10,6 +10,12 @@ All notable changes to xberg-io/actions are documented in this file.
   whole publish set instead of one dry run per crate, so the verification build resolves unpublished workspace
   siblings locally rather than failing against crates.io. Real publishing stays per crate.
 
+### Fixed
+
+- `install-system-deps` keys its Windows libheif/vcpkg and Tesseract caches on the runner image (`ImageOS`) and the
+  MSVC toolset major.minor, in the key and every `restore-keys` prefix. A cache built by one toolset was restored on
+  another and failed to link (undefined `__std_rotate`); `ImageVersion` is not used because it changes weekly.
+
 ## [1.50.1] - 2026-11-19
 
 ### Changed
