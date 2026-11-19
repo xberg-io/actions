@@ -38,11 +38,11 @@ def dry_run(tmp_path):
         '    print(json.dumps({"packages": [{"name": n, "version": "1.2.3", "manifest_path": p} '
         'for n, p in json.loads(os.environ["FIXTURE_MANIFESTS"]).items()]}))\n'
         'elif args[:1] == ["publish"] and "--dry-run" in args:\n'
-        '    crate = args[args.index("-p") + 1]\n'
-        '    if crate == os.environ.get("FAIL_CRATE"):\n'
+        '    crates = [args[i + 1] for i, a in enumerate(args) if a == "-p"]\n'
+        '    if os.environ.get("FAIL_CRATE") in crates:\n'
         f"        print({_DIAGNOSTIC!r}, file=sys.stderr)\n"
         "        raise SystemExit(37)\n"
-        '    print("DRYRUN_SUCCESS_SENTINEL: " + crate)\n'
+        '    print("DRYRUN_SUCCESS_SENTINEL: " + " ".join(crates))\n'
         "else:\n"
         '    raise SystemExit("UNEXPECTED_CARGO_COMMAND: " + repr(args))\n'
     )
@@ -79,24 +79,30 @@ def test_dry_run_accepts_successful_package(dry_run):
     result, calls = dry_run()
     assert result.returncode == 0
     assert "DRYRUN_SUCCESS_SENTINEL: crate-a\n" in result.stdout
-    assert calls == [["publish", "-p", "crate-a", "--dry-run"]]
+    assert calls == [["publish", "--dry-run", "--allow-dirty", "-p", "crate-a"]]
 
 
 def test_dry_run_returns_failure_when_package_verification_fails(dry_run):
     result, calls = dry_run(fail_crate="crate-a")
-    assert calls == [["publish", "-p", "crate-a", "--dry-run"]]
+    assert calls == [["publish", "--dry-run", "--allow-dirty", "-p", "crate-a"]]
     assert result.returncode == 37
 
 
 def test_dry_run_reports_cargo_failure_diagnostic(dry_run):
     result, calls = dry_run(fail_crate="crate-a")
-    assert calls == [["publish", "-p", "crate-a", "--dry-run"]]
+    assert calls == [["publish", "--dry-run", "--allow-dirty", "-p", "crate-a"]]
     assert _DIAGNOSTIC in result.stdout + result.stderr
 
 
-def test_dry_run_stops_before_next_crate_after_failure(dry_run):
-    result, calls = dry_run(fail_crate="crate-a", crates="crate-a crate-b")
-    assert calls == [["publish", "-p", "crate-a", "--dry-run"]]
+def test_dry_run_verifies_the_whole_set_in_one_multi_package_invocation(dry_run):
+    result, calls = dry_run(crates="crate-a crate-b")
+    assert result.returncode == 0
+    assert calls == [["publish", "--dry-run", "--allow-dirty", "-p", "crate-a", "-p", "crate-b"]]
+
+
+def test_dry_run_fails_the_set_when_any_crate_fails(dry_run):
+    result, calls = dry_run(fail_crate="crate-b", crates="crate-a crate-b")
+    assert calls == [["publish", "--dry-run", "--allow-dirty", "-p", "crate-a", "-p", "crate-b"]]
     assert result.returncode == 37
 
 
@@ -132,18 +138,14 @@ def test_main_dry_run_retains_success_output_and_restores_manifest(publish_modul
 
     def publish(command):
         calls.append(command)
-        if len(calls) == 1:
-            assert 'version = "1.2.3"' in manifest.read_text().split("[dependencies]")[1]
+        assert 'version = "1.2.3"' in manifest.read_text().split("[dependencies]")[1]
         return 0, "DRYRUN_SUCCESS_SENTINEL\n"
 
     monkeypatch.setattr(module, "_run", publish)
     module.main()
     captured = capsys.readouterr()
-    assert calls == [
-        ["cargo", "publish", "-p", "crate-a", "--dry-run", "--allow-dirty"],
-        ["cargo", "publish", "-p", "crate-b", "--dry-run"],
-    ]
-    assert captured.out.count("DRYRUN_SUCCESS_SENTINEL\n") == 2
+    assert calls == [["cargo", "publish", "--dry-run", "--allow-dirty", "-p", "crate-a", "-p", "crate-b"]]
+    assert captured.out.count("DRYRUN_SUCCESS_SENTINEL\n") == 1
     assert captured.err == ""
     assert manifest.read_bytes() == original
 
@@ -154,8 +156,7 @@ def test_main_dry_run_reports_failure_stops_and_restores_manifest(publish_module
 
     def publish(command):
         calls.append(command)
-        if len(calls) == 1:
-            assert 'version = "1.2.3"' in manifest.read_text().split("[dependencies]")[1]
+        assert 'version = "1.2.3"' in manifest.read_text().split("[dependencies]")[1]
         return 37, _DIAGNOSTIC + "\n"
 
     monkeypatch.setattr(module, "_run", publish)
@@ -163,7 +164,7 @@ def test_main_dry_run_reports_failure_stops_and_restores_manifest(publish_module
         module.main()
     captured = capsys.readouterr()
     assert exc_info.value.code == 37
-    assert calls == [["cargo", "publish", "-p", "crate-a", "--dry-run", "--allow-dirty"]]
+    assert calls == [["cargo", "publish", "--dry-run", "--allow-dirty", "-p", "crate-a", "-p", "crate-b"]]
     assert captured.err == _DIAGNOSTIC + "\n"
     assert "All crates published successfully" not in captured.out
     assert manifest.read_bytes() == original

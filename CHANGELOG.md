@@ -4,6 +4,12 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `publish-crates` in dry-run mode runs one multi-package `cargo publish --dry-run --allow-dirty -p a -p b ...` over the
+  whole publish set instead of one dry run per crate, so the verification build resolves unpublished workspace
+  siblings locally rather than failing against crates.io. Real publishing stays per crate.
+
 ## [1.50.1] - 2026-11-19
 
 ### Changed
