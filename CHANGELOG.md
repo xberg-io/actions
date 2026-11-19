@@ -4,6 +4,13 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `reusable-validate.yml` installs poly 0.36.1 by default (was 0.36.0). clang-format no longer claims JSON, JavaScript,
+  Java, C# or protobuf files unless `[tools.clang-format] files` names them, and catalog tools honour their
+  `files`/`exclude` settings, so a caller's `poly fmt` dry run stops reporting files its config excludes.
+- Tooling follows the toolchains baseline v1.21.0: poly 0.36.1.
+
 ## [1.50.0] - 2026-11-19
 
 ### Changed
