@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.51.0] - 2026-11-19
+
 ### Changed
 
 - `publish-crates` in dry-run mode runs one multi-package `cargo publish --dry-run --allow-dirty -p a -p b ...` over the
