@@ -12,7 +12,7 @@ inputs:
     description: "Channel name for the error message (e.g. 'PyPI', 'npm')."
     required: true
   needs:
-    description: "The caller's `needs` context: pass `${{ toJSON(needs) }}`."
+    description: "The caller's `needs` context as JSON: pass the toJSON(needs) expression."
     required: true
   succeeded:
     description: >
