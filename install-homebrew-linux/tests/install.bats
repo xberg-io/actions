@@ -39,7 +39,7 @@ teardown() {
 	xberg_stub curl '#!/usr/bin/env bash' 'printf "%s\n" "exit 7"'
 	local command_log="$TEST_ROOT/commands"
 
-	run env PATH="$STUB_BIN:/bin" COMMAND_LOG="$command_log" \
+	run env PATH="$STUB_BIN:$XBERG_SYS_BIN" COMMAND_LOG="$command_log" \
 		/bin/bash "$BATS_TEST_DIRNAME/../scripts/install.sh"
 
 	[ "$status" -eq 7 ]
