@@ -51,6 +51,8 @@ jobs:
     # ~keep every consumer of one platform while CI stayed green. The Bats job already runs
     # ~keep both; this closes the same gap for Python.
     runs-on: ${{ matrix.os }}
+    env:
+      POLY_TRUST: "1"
     strategy:
       fail-fast: false
       matrix:

@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `reusable-validate.yml` installs poly 0.36.0 by default (was 0.34.2) through `polylint/polylint@v0`, where the
+  Action and its releases moved, and sets `POLY_TRUST=1` on its job: poly 0.36 ignores config keys that run programs
+  (`[hooks]` jobs, `[tools]` overrides) in a repository nobody trusted, and a caller cannot set that env itself.
+- Tooling follows the toolchains baseline v1.20.0: poly 0.36.0 with the v2 `poly.toml`, uv 0.13.9, node 26.13.1,
+  pnpm 12.21.0, zig 0.17.1 and helm 4.3.2.
+
 ## [1.49.1] - 2026-11-19
 
 ### Fixed

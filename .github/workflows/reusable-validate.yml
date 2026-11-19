@@ -206,7 +206,7 @@ on:
         description: "poly version to install. Empty installs the latest release."
         required: false
         type: string
-        default: "v0.34.2"
+        default: "v0.36.0"
       install-system-deps:
         description: >-
           Run this repo's install-system-deps composite action before linting (Linux only, requires
@@ -261,6 +261,8 @@ jobs:
   validate:
     name: Validate (poly)
     runs-on: ${{ inputs.runner }}
+    env:
+      POLY_TRUST: "1"
     steps:
       - uses: actions/checkout@v7
 
@@ -639,7 +641,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Goldziher/polylint@v0 resolves "latest" with `gh`, which is absent on
+          # polylint/polylint@v0 resolves "latest" with `gh`, which is absent on
           # self-hosted ARC runners. Resolve the tag via the REST API (curl) so
           # latest works everywhere, then pass it to the action as an explicit
           # version (skipping the action's own gh-based path). Capture the full
@@ -649,7 +651,7 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            https://api.github.com/repos/Goldziher/polylint/releases/latest)"
+            https://api.github.com/repos/polylint/polylint/releases/latest)"
           tag="$(printf '%s\n' "$response" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
           if [ -z "$tag" ]; then
             echo "::error::failed to resolve latest poly release from the GitHub API" >&2
@@ -659,7 +661,7 @@ jobs:
           echo "Resolved latest poly: $tag"
 
       - name: Install poly
-        uses: Goldziher/polylint@v0
+        uses: polylint/polylint@v0
         with:
           version: ${{ inputs.poly-version != '' && inputs.poly-version || steps.poly-latest.outputs.version }}
 
