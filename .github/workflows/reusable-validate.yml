@@ -217,6 +217,14 @@ on:
         required: false
         type: boolean
         default: false
+      poly-workspace-timeout-secs:
+        description: >-
+          Seconds poly lets a whole-project check (cargo-clippy, pyrefly) run before killing it, exported as
+          POLY_HOOK_WORKSPACE_TIMEOUT. Empty keeps poly's default (1800); 0 removes the limit. Raise it for a
+          workspace whose cold clippy build exceeds the default.
+        required: false
+        type: string
+        default: ""
       check-fixture-snippets:
         description: >-
           Generate fixture-backed documentation snippets, fail if tracked files drift, and run the
@@ -710,4 +718,11 @@ jobs:
           git diff --exit-code
 
       - name: Lint
-        run: poly lint .
+        shell: bash
+        env:
+          POLY_WORKSPACE_TIMEOUT_INPUT: ${{ inputs.poly-workspace-timeout-secs }}
+        run: |
+          if [ -n "$POLY_WORKSPACE_TIMEOUT_INPUT" ]; then
+            export POLY_HOOK_WORKSPACE_TIMEOUT="$POLY_WORKSPACE_TIMEOUT_INPUT"
+          fi
+          poly lint .

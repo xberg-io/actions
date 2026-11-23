@@ -4,6 +4,11 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `reusable-validate.yml` takes an optional `poly-workspace-timeout-secs` input, exported to `poly lint` as
+  `POLY_HOOK_WORKSPACE_TIMEOUT`, so a workspace whose cold clippy build exceeds poly's 1800s default can raise the limit.
+
 ## [1.51.0] - 2026-11-19
 
 ### Changed
