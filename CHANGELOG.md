@@ -4,6 +4,8 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.52.0] - 2026-11-23
+
 ### Added
 
 - `reusable-validate.yml` takes an optional `poly-workspace-timeout-secs` input, exported to `poly lint` as
