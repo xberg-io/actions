@@ -4,6 +4,14 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.52.2] - 2026-11-26
+
+### Fixed
+
+- `setup-mise`'s `install-tools.sh` reads the runner architecture from `RUNNER_ARCH` before `uname -m`. Git Bash on a
+  Windows arm64 runner is an emulated x64 build, so the platform resolved to windows-x64 while mise installed for
+  windows-arm64, and setup-rust's cargo-llvm-cov skip from 1.52.1 never applied there.
+
 ## [1.52.1] - 2026-11-26
 
 ### Fixed
