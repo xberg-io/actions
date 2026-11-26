@@ -4,12 +4,18 @@ All notable changes to xberg-io/actions are documented in this file.
 
 ## [Unreleased]
 
+## [1.52.1] - 2026-11-26
+
 ### Fixed
 
 - `setup-rust` skips cargo-llvm-cov with a warning, instead of failing the job, on a runner platform its mise lock has
   no entry for (windows-arm64 and macos-x64 release builds failed with mise's "No lockfile URL found ... (--locked
   mode)"). `setup-mise`'s `install-tools.sh` gains the opt-in `INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true` for this;
   a version no lock pins, or any other install failure, still fails.
+
+### Changed
+
+- `reusable-binstall-verify.yml` uses `cargo-bins/cargo-binstall@v1.28.0`.
 
 ## [1.52.0] - 2026-11-23
 
