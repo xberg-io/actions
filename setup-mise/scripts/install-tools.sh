@@ -14,6 +14,10 @@
 # MISE_ENV, MISE_<TOOL>_VERSION and config-file overrides do not apply there. A fallback version that lock lacks,
 # or lacks for the runner's platform, fails, as does a short name that matches more than one of its tools.
 #
+# INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true makes the requested tools optional on a platform their lock leaves out:
+# a tool that installs --locked, at a version an active lock (or the fallback lock) pins without an entry for this
+# runner's platform, is skipped with a warning instead of failing. Every other failure still fails.
+#
 # The caller's config is trusted for these mise calls, through MISE_TRUSTED_CONFIG_PATHS (a value the job sets is
 # appended to), only on the events listed in trusted_event; any other event must trust it itself.
 set -euo pipefail
@@ -221,6 +225,49 @@ lock_covers_platform() {
   ' <<<"$content")" == yes ]]
 }
 
+# Whether to skip <id> at the given versions, with a warning, under INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true. It
+# skips when a lock pins every version and none of those locks has this runner's platform for it, so a --locked
+# install has no URL to fetch. The locks are the ones named after "--", or the active ones. A version no lock pins
+# is not skipped.
+skip_unlocked_platform() {
+  local id="$1" versions=() version lock platform pinned
+  shift
+  while (($#)) && [[ "$1" != -- ]]; do
+    versions+=("$1")
+    shift
+  done
+  (($#)) && shift
+  (($#)) || set -- "${lockfiles[@]}"
+  [[ "${INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM:-}" == true ]] || return 1
+  ((${#versions[@]})) || return 1
+  platform="$(runner_platform)"
+  for version in "${versions[@]}"; do
+    pinned=false
+    for lock in "$@"; do
+      [[ -f "$lock" ]] || continue
+      grep -Fxq -- "$version" <<<"$(locked_versions "$id" "$lock")" || continue
+      lock_covers_platform "$lock" "$id" "$version" "$platform" && return 1
+      pinned=true
+    done
+    [[ "$pinned" == true ]] || return 1
+  done
+  echo "::warning::Skipping $id@${versions[*]}: its mise lock has no $platform entry, so a --locked install" \
+    "cannot fetch it. Add $platform to lockfile_platforms and run mise lock to install it on this runner."
+}
+
+# Whether the job's own MISE_LOCKED makes `mise install` run --locked.
+locked_mode() {
+  case "$(tr '[:upper:]' '[:lower:]' <<<"${MISE_LOCKED:-}")" in
+  1 | true | yes | on) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+# The versions `mise current` selects for <id>.
+configured_versions() {
+  tr -d '\r' <<<"$current_tools" | awk -v id="$1" '$1 == id { for (i = 2; i <= NF; i++) print $i }'
+}
+
 # Run a command in the fallback root with only its own config in effect: no caller profile, version override or
 # config-file override, and no config from a directory above it.
 fallback_run() {
@@ -317,6 +364,9 @@ for request in "$@"; do
         echo "::error::$fallback_lock does not lock $pinned_id@$pinned; run mise lock in $fallback_root" >&2
         exit 1
       fi
+      if skip_unlocked_platform "$pinned_id" "$pinned" -- "$fallback_lock"; then
+        continue
+      fi
       if ! lock_covers_platform "$fallback_lock" "$pinned_id" "$pinned" "$(runner_platform)"; then
         echo "::error::$fallback_lock has no $(runner_platform) entry for $pinned_id@$pinned; add the platform" \
           "to lockfile_platforms and run mise lock, or declare $tool in the mise config for $PWD" >&2
@@ -335,13 +385,24 @@ for request in "$@"; do
         "Add it to mise.toml (then run mise lock) or pass the action's version input." >&2
       exit 1
     fi
+    if locked_mode; then
+      versions=()
+      while IFS= read -r version; do
+        versions+=("$version")
+      done < <(configured_versions "$id")
+      if skip_unlocked_platform "$id" ${versions[@]+"${versions[@]}"}; then
+        continue
+      fi
+    fi
     locked_specs+=("$id")
     continue
   fi
 
   target="${id:-$tool}"
   match="$(locked_match "$target" "$requested")"
-  if [[ -n "$match" ]]; then
+  if [[ -n "$match" ]] && skip_unlocked_platform "$target" "$match"; then
+    continue
+  elif [[ -n "$match" ]]; then
     matched_specs+=("$target@$match")
   else
     unlocked_specs+=("$target@$requested")
@@ -368,7 +429,7 @@ fi
 all_specs=(${locked_specs[@]+"${locked_specs[@]}"} ${matched_specs[@]+"${matched_specs[@]}"}
   ${unlocked_specs[@]+"${unlocked_specs[@]}"} ${fallback_specs[@]+"${fallback_specs[@]}"})
 paths=()
-for spec in "${all_specs[@]}"; do
+for spec in ${all_specs[@]+"${all_specs[@]}"}; do
   spec_paths=()
   while IFS= read -r path; do
     [[ -n "$path" ]] && spec_paths+=("$path")
@@ -390,7 +451,7 @@ done
 # `mise env` also prints the config's [env] values, which can hold secrets; only the allowed tool variables are
 # kept, and nothing it prints is echoed. ~keep
 variables=()
-for spec in "${all_specs[@]}"; do
+for spec in ${all_specs[@]+"${all_specs[@]}"}; do
   while IFS= read -r variable; do
     variables+=("$variable")
   done < <(tool_variables "${spec%@*}")

@@ -88,6 +88,13 @@ mise reads the fallback root with only its own config: the caller's `MISE_ENV`, 
 that lock lacks the selected version or the runner's platform for it, when the config selects more than one
 version, or when a short name matches more than one of its tools.
 
+### Optional tools on unlocked platforms
+
+`INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true` skips, with a warning, a tool that installs `--locked` at a version a lock
+pins (the active locks, or the fallback lock) without an entry for the runner's platform, where mise would fail with
+"No lockfile URL found". `setup-rust` sets it for cargo-llvm-cov, so a platform outside the caller's
+`lockfile_platforms` builds without coverage. A version no lock pins, and every other failure, still fails.
+
 ### Trust
 
 The script trusts the caller's working directory for its own mise calls through `MISE_TRUSTED_CONFIG_PATHS`, never

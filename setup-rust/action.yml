@@ -282,6 +282,8 @@ runs:
       env:
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         MISE_GITHUB_TOKEN: ${{ env.MISE_GITHUB_TOKEN || github.token }}
+        # ~keep A lock without this runner's platform skips cargo-llvm-cov with a warning instead of failing the build.
+        INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM: "true"
       run: |
         INSTALL_TOOLS_FALLBACK_ROOT="$GITHUB_ACTION_PATH/.." \
           bash "$GITHUB_ACTION_PATH/../setup-mise/scripts/install-tools.sh" "$WORKING_DIRECTORY" github:taiki-e/cargo-llvm-cov

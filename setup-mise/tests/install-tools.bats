@@ -161,6 +161,102 @@ write_fallback_root() {
 	xberg_assert_trace_empty
 }
 
+@test "install_tools should_skip_with_a_warning_where_the_fallback_lock_lacks_the_platform_and_skipping_is_allowed" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+
+	run_script INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" \
+		"$SCRIPT" "$REPO" uv helm
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::warning::Skipping uv@0.13.6: its mise lock has no "
+	[[ "$output" != *"::error::"* ]] || false
+	xberg_assert_trace "install MISE_LOCKED=1 helm@4.3.1"
+	xberg_assert_github_path "/installs/helm@4.3.1/bin"
+}
+
+# A caller lock pinning cargo-llvm-cov 0.9.1 for no platform, so no runner this suite runs on has an entry.
+write_caller_lock_without_platforms() {
+	printf '%s\n' '[[tools."github:taiki-e/cargo-llvm-cov"]]' 'version = "0.9.1"' \
+		'backend = "github:taiki-e/cargo-llvm-cov"' >"$REPO/mise.lock"
+}
+
+@test "install_tools should_skip_with_a_warning_where_the_callers_lock_lacks_the_platform_and_skipping_is_allowed" {
+	STUB_CURRENT=$'github:taiki-e/cargo-llvm-cov 0.9.1\n'
+	write_caller_lock_without_platforms
+
+	run_script MISE_LOCKED=1 INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true "$SCRIPT" "$REPO" github:taiki-e/cargo-llvm-cov
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::warning::Skipping github:taiki-e/cargo-llvm-cov@0.9.1: its mise lock has no "
+	xberg_assert_trace_empty
+	xberg_assert_github_path ""
+}
+
+@test "install_tools should_skip_with_a_warning_a_passed_version_whose_lock_lacks_the_platform_when_allowed" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_caller_lock_without_platforms
+
+	run_script INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true "$SCRIPT" "$REPO" github:taiki-e/cargo-llvm-cov=0.9
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::warning::Skipping github:taiki-e/cargo-llvm-cov@0.9.1: its mise lock has no "
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_install_a_tool_whose_lock_lacks_the_platform_when_skipping_is_not_allowed" {
+	STUB_CURRENT=$'github:taiki-e/cargo-llvm-cov 0.9.1\n'
+	write_caller_lock_without_platforms
+
+	run_script MISE_LOCKED=1 "$SCRIPT" "$REPO" github:taiki-e/cargo-llvm-cov
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED=1 github:taiki-e/cargo-llvm-cov"
+	[[ "$output" != *"::warning::"* ]] || false
+}
+
+@test "install_tools should_install_a_tool_whose_lock_lacks_the_platform_when_the_install_is_not_locked" {
+	STUB_CURRENT=$'github:taiki-e/cargo-llvm-cov 0.9.1\n'
+	write_caller_lock_without_platforms
+
+	run_script INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true "$SCRIPT" "$REPO" github:taiki-e/cargo-llvm-cov
+
+	xberg_assert_status 0
+	xberg_assert_trace "install MISE_LOCKED= github:taiki-e/cargo-llvm-cov"
+	[[ "$output" != *"::warning::"* ]] || false
+}
+
+@test "install_tools should_still_fail_when_skipping_is_allowed_but_the_lock_does_not_pin_the_version" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	STUB_FALLBACK_CURRENT=$'helm 4.4.0\n'
+
+	run_script INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" helm
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "::error::$FALLBACK/mise.lock does not lock helm@4.4.0"
+	[[ "$output" != *"::warning::"* ]] || false
+	xberg_assert_trace_empty
+}
+
+@test "install_tools should_still_fail_when_skipping_is_allowed_and_the_locked_install_fails" {
+	STUB_CURRENT=$'github:taiki-e/cargo-llvm-cov 0.9.1\n'
+	{
+		printf '%s\n' '[[tools."github:taiki-e/cargo-llvm-cov"]]' 'version = "0.9.1"' ''
+		for platform in linux-x64 linux-arm64 macos-x64 macos-arm64 windows-x64 windows-arm64; do
+			printf '%s\n' "[tools.\"github:taiki-e/cargo-llvm-cov\".\"platforms.$platform\"]" 'url = "https://example.invalid/c"' ''
+		done
+	} >"$REPO/mise.lock"
+	xberg_stub mise \
+		'case "$1" in current) printf "%s" "$STUB_CURRENT" ;; install) echo "download failed" >&2; exit 1 ;; *) exit 64 ;; esac'
+
+	run_script MISE_LOCKED=1 INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true "$SCRIPT" "$REPO" github:taiki-e/cargo-llvm-cov
+
+	xberg_assert_status 1
+	xberg_assert_output_contains "download failed"
+	[[ "$output" != *"::warning::"* ]] || false
+}
+
 @test "install_tools should_fail_when_the_fallback_lock_lacks_the_version_its_config_selects" {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root

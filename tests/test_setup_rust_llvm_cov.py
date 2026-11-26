@@ -14,6 +14,7 @@ def test_cargo_llvm_cov_installs_through_mise_with_the_actions_pin_as_fallback()
     assert len(llvm_cov_steps) == 1
     install = llvm_cov_steps[0]
     assert install["if"] == "inputs.install-llvm-cov == 'true'"
+    assert install["env"]["INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM"] == "true"
     assert_installs_through_mise("setup-rust", install, "github:taiki-e/cargo-llvm-cov")
     setup = next(step for step in steps if step.get("uses") == "xberg-io/actions/setup-mise@v1")
     assert setup["if"] == "inputs.install-llvm-cov == 'true' && steps.mise.outputs.present != 'true'"
