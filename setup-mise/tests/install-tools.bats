@@ -161,6 +161,21 @@ write_fallback_root() {
 	xberg_assert_trace_empty
 }
 
+@test "install_tools should_take_the_platform_from_the_runner_not_an_emulated_shell" {
+	STUB_CURRENT=$'python 3.13.18\n'
+	write_fallback_root
+	# Git Bash on a Windows arm64 runner is an x64 build, so uname reports x86_64 while mise installs for arm64.
+	xberg_stub uname 'case "$1" in -s) echo MINGW64_NT-10.0-26100 ;; -m) echo x86_64 ;; *) echo MINGW64_NT ;; esac'
+	xberg_stub cygpath 'printf "%s\\n" "$2"'
+
+	run_script RUNNER_OS=Windows RUNNER_ARCH=ARM64 INSTALL_TOOLS_SKIP_UNLOCKED_PLATFORM=true \
+		INSTALL_TOOLS_FALLBACK_ROOT="$FALLBACK" "$SCRIPT" "$REPO" cargo-llvm-cov
+
+	xberg_assert_status 0
+	xberg_assert_output_contains "::warning::Skipping github:taiki-e/cargo-llvm-cov@0.9.1: its mise lock has no windows-arm64 entry"
+	xberg_assert_trace_empty
+}
+
 @test "install_tools should_skip_with_a_warning_where_the_fallback_lock_lacks_the_platform_and_skipping_is_allowed" {
 	STUB_CURRENT=$'python 3.13.18\n'
 	write_fallback_root

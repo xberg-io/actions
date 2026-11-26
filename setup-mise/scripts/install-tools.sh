@@ -197,10 +197,12 @@ runner_platform() {
   MINGW* | MSYS* | CYGWIN*) os=windows ;;
   *) os="$(uname -s)" ;;
   esac
-  case "$(uname -m)" in
-  x86_64 | amd64) arch=x64 ;;
-  aarch64 | arm64) arch=arm64 ;;
-  *) arch="$(uname -m)" ;;
+  # ~keep Prefer the runner's own architecture: Git Bash on a Windows arm64 runner is an emulated x64 build, so
+  # ~keep uname -m says x86_64 while the native mise installs, and looks up its lock, for arm64.
+  case "${RUNNER_ARCH:-$(uname -m)}" in
+  X64 | x86_64 | amd64) arch=x64 ;;
+  ARM64 | aarch64 | arm64) arch=arm64 ;;
+  *) arch="${RUNNER_ARCH:-$(uname -m)}" ;;
   esac
   printf '%s-%s' "$os" "$arch"
 }
